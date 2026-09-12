@@ -13,12 +13,13 @@ class NotificationService {
   // ─── Message formatters (used ONLY for the audit log's human-readable copy,
   //     NOT sent to the WhatsApp API — the API only receives `params`) ───────
 
-  static formatPointsEarnedMessage({ points, transactionType, totalPoints, value }) {
+  static formatPointsEarnedMessage({ points, transactionType, totalPoints, value, passUrl }) {
     return (
       `🎉 Congratulations!\n` +
       `You have earned ${points} loyalty points from your recent ${transactionType} transaction.\n` +
       `⭐ Points earned: ${points}\n` +
       `💰 New total balance: ${totalPoints} points (Worth ₹${value})\n` +
+      (passUrl ? `📱 View your digital balance & eligibility pass: ${passUrl}\n` : '') +
       `💡 How to redeem: Every 4 points = ₹1 discount on your next service or purchase. Simply quote your registered phone number at the counter!\n` +
       `Thank you for choosing Bellad & Company!`
     );
@@ -35,12 +36,13 @@ class NotificationService {
     );
   }
 
-  static formatRedemptionMessage({ pointsRedeemed, discountRupees, remainingBalance }) {
+  static formatRedemptionMessage({ pointsRedeemed, discountRupees, remainingBalance, passUrl }) {
     return (
       `✅ Redemption Confirmed Successfully!\n` +
       `🎟️ Points redeemed: ${pointsRedeemed} PTS\n` +
       `💰 Discount amount applied: ₹${discountRupees}\n` +
       `📊 Remaining points balance: ${remainingBalance} PTS (≈ ₹${Math.floor(remainingBalance / 4)})\n` +
+      (passUrl ? `📱 View your digital balance & eligibility pass: ${passUrl}\n` : '') +
       `Thank you for choosing Bellad & Company! Visit us again soon.`
     );
   }
@@ -110,7 +112,7 @@ class NotificationService {
    * Returns { success, error? } — never throws.
    */
   static async sendOtpNotification({ customer_id, phone, otp, tenant_id }) {
-    const templateName = 'otp_verification'; // exact approved template name from Reltigrow dashboard
+    const templateName = 'loyalty_program_customer_otp'; // exact approved template name from Reltigrow dashboard
     let messageBody = '';
     let providerName = 'unknown';
 
@@ -121,10 +123,11 @@ class NotificationService {
       const provider = getWhatsAppProvider();
       providerName = provider.name;
 
-      const result = await provider.sendMessage({
+      const result = await provider.sendOtpTemplate({
         toPhone: phone,
         templateName,
-        params: [otp], // fills {{1}} in your approved otp_verification template
+        code: otp,
+        expiryMinutes: 5, // matches your DB's actual 5-minute OTP expiry
       });
 
       await this._logMessageAttempt({
@@ -191,12 +194,18 @@ class NotificationService {
       const valueRupees = Math.floor(totalPoints / 4);
       const displayTxType = transaction_type === 'earn_referral' ? 'referral' : transaction_type;
 
+      const PublicBalanceService = require('./publicBalance.service');
+      const token = await PublicBalanceService.getOrCreateToken(customer_id, tenant_id);
+      const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const passUrl = `${frontendBase}/balance/${token}`;
+
       messageBody = this.formatPointsEarnedMessage({
         points,
         transactionType: displayTxType,
         totalPoints,
         value: valueRupees,
-      }); // kept only for the audit log
+        passUrl,
+      }); // kept for audit log & messaging
 
       const provider = getWhatsAppProvider();
       providerName = provider.name;
@@ -270,7 +279,17 @@ class NotificationService {
         return { success: false, reason: 'No phone number registered' };
       }
 
-      messageBody = this.formatRedemptionMessage({ pointsRedeemed, discountRupees, remainingBalance }); // kept only for the audit log
+      const PublicBalanceService = require('./publicBalance.service');
+      const token = await PublicBalanceService.getOrCreateToken(customer_id, tenant_id);
+      const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const passUrl = `${frontendBase}/balance/${token}`;
+
+      messageBody = this.formatRedemptionMessage({
+        pointsRedeemed,
+        discountRupees,
+        remainingBalance,
+        passUrl,
+      }); // kept for audit log & messaging
 
       const provider = getWhatsAppProvider();
       providerName = provider.name;
@@ -297,9 +316,92 @@ class NotificationService {
         tenant_id,
       });
 
-      return { success: result.success, messageId: result.messageId };
+      return { success: result.success, messageId: result.messageId, to_phone: toPhone };
     } catch (err) {
       console.error(`❌ [Redemption Notification] Failed for customer '${customer_id}':`, err.message);
+
+      await this._logMessageAttempt({
+        customer_id,
+        phone_number: toPhone || 'unknown',
+        template_name: templateName,
+        message_body: messageBody,
+        status: 'failed',
+        error_message: err.message,
+        provider: providerName,
+        tenant_id,
+      });
+
+      return { success: false, error: err.message };
+    }
+  }
+
+  // ─── Expiry Reminder Notification ─────────────────────────────────────────
+
+  static formatExpiryReminderMessage({ points, expires_at, vehicle_reg, reminder_type }) {
+    const formattedDate = expires_at
+      ? new Date(expires_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+      : '—';
+    const urgency = reminder_type === '1m' ? '⚠️ URGENT: ' : '🔔 ';
+    return (
+      `${urgency}Points Expiry Reminder!\n` +
+      `Vehicle: ${vehicle_reg || 'N/A'}\n` +
+      `You have ${points} loyalty points (worth ₹${Math.floor(points / 4)}) expiring on ${formattedDate}.\n` +
+      `Please visit your nearest Bellad & Company dealership to redeem before they are permanently forfeited.`
+    );
+  }
+
+  /**
+   * Sends 3-month or 1-month WhatsApp expiry reminder.
+   */
+  static async sendExpiryReminderNotification({ customer_id, phone, points, expires_at, vehicle_reg, reminder_type, tenant_id }) {
+    const templateName = 'loyalty_expiry_reminder';
+    let messageBody = '';
+    let providerName = 'unknown';
+    let toPhone = phone;
+
+    try {
+      if (!toPhone) {
+        toPhone = await this._resolvePrimaryPhone(customer_id, tenant_id);
+      }
+      if (!toPhone) {
+        console.warn(`⚠️ [Expiry Reminder] No phone for customer '${customer_id}'. Skipping.`);
+        return { success: false, reason: 'No phone number registered' };
+      }
+
+      messageBody = this.formatExpiryReminderMessage({ points, expires_at, vehicle_reg, reminder_type });
+
+      const provider = getWhatsAppProvider();
+      providerName = provider.name;
+
+      const formattedDate = expires_at
+        ? new Date(expires_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+        : '—';
+
+      const result = await provider.sendMessage({
+        toPhone,
+        templateName,
+        params: [
+          String(points),
+          String(Math.floor(points / 4)),
+          formattedDate,
+          vehicle_reg || 'your vehicle',
+        ],
+      });
+
+      await this._logMessageAttempt({
+        customer_id,
+        phone_number: toPhone,
+        template_name: templateName,
+        message_body: messageBody,
+        status: result.success ? 'sent' : 'failed',
+        error_message: result.success ? null : (result.error || 'Provider returned failure'),
+        provider: result.provider || providerName,
+        tenant_id,
+      });
+
+      return { success: result.success, messageId: result.messageId, to_phone: toPhone };
+    } catch (err) {
+      console.error(`❌ [Expiry Reminder Notification] Failed for customer '${customer_id}':`, err.message);
 
       await this._logMessageAttempt({
         customer_id,
@@ -343,6 +445,85 @@ class NotificationService {
         console.error('[NotificationService] Async redemption notification worker error:', err)
       );
     });
+  }
+
+  // ─── Referral Link Reminder Notification ──────────────────────────────────
+
+  /**
+   * Sends WhatsApp referral link reminder to customer using `loyalty_refferral_progrm_reminder` template.
+   */
+  static async sendReferralReminderNotification({ customer_id, phone, tenant_id }) {
+    const templateName = 'loyalty_refferral_progrm_reminder';
+    let messageBody = '';
+    let providerName = 'unknown';
+    let toPhone = phone;
+
+    try {
+      if (!toPhone) {
+        toPhone = await this._resolvePrimaryPhone(customer_id, tenant_id);
+      }
+      if (!toPhone) {
+        console.warn(`⚠️ [Referral Reminder] No phone for customer '${customer_id}'. Skipping.`);
+        return { success: false, reason: 'No phone number registered' };
+      }
+
+      const CustomerService = require('./customer.service');
+      const customer = await CustomerService.getCustomerById(customer_id, tenant_id);
+      const referralCode = customer.referral_code || customer.customer_id;
+      const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const referralLink = `${frontendBase}/refer/${referralCode}`;
+      const customerName = customer.customer_name || customer.name || 'Valued Customer';
+
+      messageBody = `Hi ${customerName}, share your referral link with friends to earn loyalty rewards: ${referralLink}`;
+
+      const provider = getWhatsAppProvider();
+      providerName = provider.name;
+
+      const result = await provider.sendMessage({
+        toPhone,
+        templateName,
+        params: [
+          customerName,    // {{1}} Customer Name
+          referralCode,    // {{2}} Referral Code
+          referralLink,    // {{3}} Referral Share Link
+        ],
+      });
+
+      await this._logMessageAttempt({
+        customer_id,
+        phone_number: toPhone,
+        template_name: templateName,
+        message_body: messageBody,
+        status: result.success ? 'sent' : 'failed',
+        error_message: result.success ? null : (result.error || 'Provider returned failure'),
+        provider: result.provider || providerName,
+        tenant_id,
+      });
+
+      return {
+        success: result.success,
+        customer_id,
+        to_phone: toPhone,
+        referral_code: referralCode,
+        referral_link: referralLink,
+        messageId: result.messageId,
+      };
+    } catch (err) {
+      console.error(`❌ [Referral Reminder Notification] Failed for customer '${customer_id}':`, err.message);
+
+      await this._logMessageAttempt({
+        customer_id,
+        phone_number: toPhone || 'unknown',
+        template_name: templateName,
+        message_body: messageBody,
+        status: 'failed',
+        error_message: err.message,
+        provider: providerName,
+        tenant_id,
+      });
+
+      return { success: false, error: err.message };
+    }
   }
 }
 

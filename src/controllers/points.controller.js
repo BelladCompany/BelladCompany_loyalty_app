@@ -6,12 +6,13 @@ class PointsController {
    */
   static async earnPoints(req, res, next) {
     try {
-      const { customer_id, branch_id, amount, type, reference_id, description } = req.body;
+      const { customer_id, vehicle_id, branch_id, amount, type, reference_id, description } = req.body;
       const tenantId = req.tenantId;
       const createdBy = req.user?.id || null;
 
       const result = await PointsService.recordEarning({
         customer_id,
+        vehicle_id: vehicle_id ? parseInt(vehicle_id, 10) : null,
         branch_id,
         amount,
         type,

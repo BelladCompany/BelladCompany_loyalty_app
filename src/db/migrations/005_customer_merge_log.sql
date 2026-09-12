@@ -20,8 +20,17 @@ CREATE TABLE IF NOT EXISTS customer_merge_log (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_customer_merge_log_surviving ON customer_merge_log (tenant_id, surviving_customer_id);
-CREATE INDEX IF NOT EXISTS idx_customer_merge_log_merged ON customer_merge_log (tenant_id, merged_customer_id);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'customer_merge_log' AND column_name = 'surviving_customer_id') THEN
+    CREATE INDEX IF NOT EXISTS idx_customer_merge_log_surviving ON customer_merge_log (tenant_id, surviving_customer_id);
+    CREATE INDEX IF NOT EXISTS idx_customer_merge_log_merged ON customer_merge_log (tenant_id, merged_customer_id);
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'customer_merge_log' AND column_name = 'merged_into_id') THEN
+    CREATE INDEX IF NOT EXISTS idx_customer_merge_log_surviving ON customer_merge_log (tenant_id, merged_into_id);
+    CREATE INDEX IF NOT EXISTS idx_customer_merge_log_merged ON customer_merge_log (tenant_id, merged_from_id);
+  END IF;
+END
+$$;
 CREATE INDEX IF NOT EXISTS idx_customer_merge_log_created ON customer_merge_log (created_at DESC);
 
 -- 3. UPDATE points_ledger TRIGGER TO ALLOW MERGE REASSOCIATION

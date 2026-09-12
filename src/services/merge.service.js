@@ -4,10 +4,28 @@ const AuditLogService = require('./audit.service');
 
 class MergeService {
   /**
-   * Detects duplicate customer candidates based on phone overlap or high name similarity
+   * Detects duplicate customer candidates based on Aadhaar hash match, phone overlap, or high name similarity
    */
   static async detectDuplicates(tenantId) {
-    // 1. Find pairs with phone number overlap or suffix match
+    // 1. Find pairs with matching Aadhaar hash (Top-confidence verified match)
+    const aadhaarMatchRes = await pool.query(
+      `SELECT c1.customer_id AS id_a, c2.customer_id AS id_b,
+              'Verified Aadhaar Match' AS match_reason,
+              1.0 AS similarity_score,
+              'Identical verified Aadhaar hash' AS detail
+       FROM customers c1
+       JOIN customers c2 ON c1.tenant_id = c2.tenant_id
+                        AND c1.customer_id < c2.customer_id
+                        AND c1.is_merged = FALSE
+                        AND c2.is_merged = FALSE
+                        AND c1.aadhaar_hash IS NOT NULL
+                        AND c1.aadhaar_hash = c2.aadhaar_hash
+       WHERE c1.tenant_id = $1
+       LIMIT 25;`,
+      [tenantId]
+    );
+
+    // 2. Find pairs with phone number overlap or suffix match (excluding differing Aadhaar)
     const phoneOverlapRes = await pool.query(
       `SELECT DISTINCT cp1.customer_id AS id_a, cp2.customer_id AS id_b,
               'phone_overlap' AS match_reason,
@@ -19,11 +37,12 @@ class MergeService {
        JOIN customers c1 ON cp1.customer_id = c1.customer_id AND c1.is_merged = FALSE
        JOIN customers c2 ON cp2.customer_id = c2.customer_id AND c2.is_merged = FALSE
        WHERE cp1.tenant_id = $1
+         AND NOT (c1.aadhaar_hash IS NOT NULL AND c2.aadhaar_hash IS NOT NULL AND c1.aadhaar_hash <> c2.aadhaar_hash)
        LIMIT 25;`,
       [tenantId]
     );
 
-    // 2. Find pairs with high name similarity using pg_trgm
+    // 3. Find pairs with high name similarity using pg_trgm (excluding differing Aadhaar)
     const nameSimilarityRes = await pool.query(
       `SELECT c1.customer_id AS id_a, c2.customer_id AS id_b,
               'name_similarity' AS match_reason,
@@ -34,6 +53,7 @@ class MergeService {
                         AND c1.is_merged = FALSE 
                         AND c2.is_merged = FALSE
                         AND (SIMILARITY(c1.customer_name, c2.customer_name) >= 0.35 OR c1.customer_name % c2.customer_name)
+                        AND NOT (c1.aadhaar_hash IS NOT NULL AND c2.aadhaar_hash IS NOT NULL AND c1.aadhaar_hash <> c2.aadhaar_hash)
        WHERE c1.tenant_id = $1
        ORDER BY similarity_score DESC
        LIMIT 25;`,
@@ -48,6 +68,11 @@ class MergeService {
         pairMap.set(key, { id_a: idA, id_b: idB, reason, score, detail });
       }
     };
+
+    // Ranked order: Verified Aadhaar Match first (score 1.0), then Phone, then Name Similarity
+    aadhaarMatchRes.rows.forEach((r) =>
+      addPair(r.id_a, r.id_b, 'Verified Aadhaar Match', 1.0, r.detail)
+    );
 
     phoneOverlapRes.rows.forEach((r) =>
       addPair(r.id_a, r.id_b, 'Phone Number Match', 1.0, `Matched phone: ${r.matched_phone}`)
@@ -122,7 +147,7 @@ class MergeService {
 
       // 1. Verify surviving customer
       const survRes = await client.query(
-        `SELECT customer_id, customer_name AS name, is_merged FROM customers WHERE customer_id = $1 AND tenant_id = $2 FOR UPDATE;`,
+        `SELECT customer_id, customer_name AS name, aadhaar_hash, is_merged FROM customers WHERE customer_id = $1 AND tenant_id = $2 FOR UPDATE;`,
         [surviving_customer_id, tenant_id]
       );
       if (survRes.rows.length === 0) {
@@ -134,7 +159,7 @@ class MergeService {
 
       // 2. Verify customer to be merged
       const mergeRes = await client.query(
-        `SELECT customer_id, customer_name AS name, is_merged FROM customers WHERE customer_id = $1 AND tenant_id = $2 FOR UPDATE;`,
+        `SELECT customer_id, customer_name AS name, aadhaar_hash, is_merged FROM customers WHERE customer_id = $1 AND tenant_id = $2 FOR UPDATE;`,
         [merged_customer_id, tenant_id]
       );
       if (mergeRes.rows.length === 0) {
@@ -142,6 +167,17 @@ class MergeService {
       }
       if (mergeRes.rows[0].is_merged) {
         throw { statusCode: 400, message: `Customer '${merged_customer_id}' has already been merged.` };
+      }
+
+      // Hard guard: refuse merge if both customers have non-null differing Aadhaar hashes
+      const survAadhaar = survRes.rows[0].aadhaar_hash;
+      const mergedAadhaar = mergeRes.rows[0].aadhaar_hash;
+
+      if (survAadhaar && mergedAadhaar && survAadhaar !== mergedAadhaar) {
+        throw {
+          statusCode: 400,
+          message: 'Cannot merge customers with differing Aadhaar numbers: they belong to different verified individuals.',
+        };
       }
 
       // Fetch surviving balance before merge

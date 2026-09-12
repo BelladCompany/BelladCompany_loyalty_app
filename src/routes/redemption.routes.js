@@ -27,7 +27,14 @@ router.post(
   RedemptionController.redeemPoints
 );
 
-// 3. Get redemption details by unique redemption code (Cashier or Admin)
+// 3. Get vehicle redemption eligibility status (Cashier or Admin)
+router.get(
+  '/vehicle/:vehicle_id/status',
+  requireRole(['cashier', 'admin']),
+  RedemptionController.getVehicleRedemptionStatus
+);
+
+// 4. Get redemption details by unique redemption code (Cashier or Admin)
 router.get(
   '/:code',
   requireRole(['cashier', 'admin']),

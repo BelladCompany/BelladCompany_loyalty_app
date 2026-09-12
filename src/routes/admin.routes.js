@@ -28,4 +28,7 @@ router.post('/realbooks/retry/:id', AdminController.retryRealBooksSync);
 // 6. View WhatsApp message delivery logs
 router.get('/whatsapp-logs', AdminController.getWhatsAppLogs);
 
+// 7. View AppSheet webhook transaction log entries
+router.get('/appsheet-logs', AdminController.getAppSheetWebhookLogs);
+
 module.exports = router;

@@ -47,13 +47,30 @@ const createCustomerSchema = z.object({
     vin: z.string().trim().optional().nullable(),
     chassis_no: z.string().trim().optional().nullable(),
     model: z.string().trim().optional().nullable(),
+    variant: z.string().trim().optional().nullable(),
+    brand_name: z.string().trim().optional().nullable(),
+    branch_name: z.string().trim().optional().nullable(),
+    fuel_type: z.string().trim().optional().nullable(),
     brand_id: z.number().int().positive().optional().nullable(),
     purchase_date: z.string().optional().nullable(),           // ISO date string e.g. "2026-09-01"
     ex_showroom_price: z.number().nonnegative().optional().nullable(), // In rupees; stored as paise
     vehicle_city: z.string().trim().optional().nullable(),
+    firm_name: z.string().trim().optional().nullable(),
   }).optional().nullable(),
   // Optional opening points (admin-only meaningful; cashier always gets 0 enforced server-side)
   opening_points: z.coerce.number().int().min(0, 'Opening points cannot be negative').default(0).optional(),
+  // Optional 12-digit Aadhaar number for customer identity verification
+  aadhaar_number: z
+    .string()
+    .trim()
+    .regex(/^\d{12}$/, 'Aadhaar number must be exactly 12 numeric digits.')
+    .optional()
+    .nullable(),
+  age: z.coerce.number().int().positive().optional().nullable(),
+  firm_name: z.string().trim().optional().nullable(),
+  address: z.string().trim().optional().nullable(),
+  visit_type: z.string().trim().optional().nullable(),
+  is_first_time_visitor: z.boolean().optional().nullable(),
 });
 
 const updateCustomerSchema = z.object({
@@ -134,6 +151,7 @@ const searchSchema = z.object({
 // Points Earning Validator
 const earnPointsSchema = z.object({
   customer_id: z.string({ required_error: 'Customer ID is required' }).min(1, 'Customer ID cannot be empty'),
+  vehicle_id: z.number().int().positive().optional().nullable(),
   branch_id: z.number({ required_error: 'Branch ID is required' }).int().positive('Branch ID must be a positive integer'),
   amount: positiveInteger,
   type: z.enum(['sale', 'service'], {
@@ -181,11 +199,31 @@ const requestOtpSchema = z.object({
 });
 
 const redeemPointsSchema = z.object({
-  phone: phoneSchema,
+  phone: phoneSchema.optional(),
+  customer_id: z.string().trim().optional(),
   otp: z.string({ required_error: 'OTP is required' }).trim().regex(/^\d{6}$/, 'OTP must be a 6-digit numeric code'),
-  points: positiveInteger,
-  branch_id: z.number({ required_error: 'Branch ID is required' }).int().positive(),
-  bypass_lock_in: z.boolean().optional(),
+  bill_amount: z.coerce.number().positive('Bill amount must be a positive number').optional(),
+  points: z.coerce.number().int().min(0).optional(),
+  category: z.string().optional().default('service'),
+  receipt_no: z.string().optional().nullable(),
+  account_ledger_no: z.string().optional().nullable(),
+  branch_id: z.coerce.number().int().optional().nullable(),
+  vehicle_id: z.coerce.number().int().optional().nullable(),
+});
+
+// Notification (Manual WhatsApp Send) Validators
+const sendPointsEarnedNowSchema = z.object({
+  customer_id: z.string({ required_error: 'Customer ID is required' }).min(1, 'Customer ID cannot be empty'),
+  points: z.coerce.number().int('Points must be an integer').min(1, 'Points must be a positive number'),
+  transaction_type: z.string().trim().optional().nullable(),
+});
+
+const sendRedemptionNowSchema = z.object({
+  customer_id: z.string({ required_error: 'Customer ID is required' }).min(1, 'Customer ID cannot be empty'),
+  phone: phoneSchema.optional(),
+  pointsRedeemed: z.coerce.number().int('Points must be an integer').min(1, 'Points redeemed must be a positive number'),
+  discountRupees: z.coerce.number().int().min(0).default(0),
+  remainingBalance: z.coerce.number().int().min(0).default(0),
 });
 
 // Merge Validator
@@ -223,5 +261,7 @@ module.exports = {
   createApproverSchema,
   requestOtpSchema,
   redeemPointsSchema,
+  sendPointsEarnedNowSchema,
+  sendRedemptionNowSchema,
   mergeCustomersSchema,
 };

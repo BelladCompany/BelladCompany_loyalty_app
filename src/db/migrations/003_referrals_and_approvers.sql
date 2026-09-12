@@ -38,7 +38,16 @@ CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals (tenant_id, refer
 CREATE INDEX IF NOT EXISTS idx_referrals_referred ON referrals (tenant_id, referred_customer_id);
 CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals (tenant_id, status);
 
--- 3. UPDATE points_ledger transaction_type CHECK constraint to accept 'earn_referral'
-ALTER TABLE points_ledger DROP CONSTRAINT IF EXISTS points_ledger_transaction_type_check;
-ALTER TABLE points_ledger ADD CONSTRAINT points_ledger_transaction_type_check
-  CHECK (transaction_type IN ('sale', 'service', 'referral', 'earn_referral', 'redemption', 'adjustment'));
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'points_ledger' AND column_name = 'transaction_type') THEN
+    ALTER TABLE points_ledger DROP CONSTRAINT IF EXISTS points_ledger_transaction_type_check;
+    ALTER TABLE points_ledger ADD CONSTRAINT points_ledger_transaction_type_check
+      CHECK (transaction_type IN ('sale', 'service', 'referral', 'earn_referral', 'redemption', 'adjustment'));
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'points_ledger' AND column_name = 'type') THEN
+    ALTER TABLE points_ledger DROP CONSTRAINT IF EXISTS points_ledger_type_check;
+    ALTER TABLE points_ledger ADD CONSTRAINT points_ledger_type_check
+      CHECK (type IN ('sale', 'service', 'referral', 'earn_referral', 'earn_sale', 'earn_service', 'redeem', 'redemption', 'adjustment'));
+  END IF;
+END
+$$;

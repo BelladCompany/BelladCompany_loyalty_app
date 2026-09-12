@@ -11,14 +11,23 @@ CREATE TABLE IF NOT EXISTS point_rules (
   CONSTRAINT uq_point_rules_tenant_type UNIQUE (tenant_id, rule_type)
 );
 
--- Seed initial standard rules into point_rules
--- Sale: points = ex-showroom / 100 -> (amount * 1) / 100
--- Service: points = (bill amount / 100) * 4 -> (amount * 4) / 100
-INSERT INTO point_rules (rule_type, multiplier_numerator, multiplier_denominator, description, tenant_id)
-VALUES 
-  ('sale', 1, 100, 'Sale points: ex-showroom price / 100', 'BAC-MAIN'),
-  ('service', 4, 100, 'Service points: (bill amount / 100) * 4', 'BAC-MAIN')
-ON CONFLICT (tenant_id, rule_type) DO NOTHING;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'rate_type') THEN
+    INSERT INTO point_rules (rate_type, points_per_100, tenant_id)
+    VALUES 
+      ('sale', 1.00, 'BAC-MAIN'),
+      ('service', 4.00, 'BAC-MAIN')
+    ON CONFLICT DO NOTHING;
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'rule_type') THEN
+    INSERT INTO point_rules (rule_type, multiplier_numerator, multiplier_denominator, description, tenant_id)
+    VALUES 
+      ('sale', 1, 100, 'Sale points: ex-showroom price / 100', 'BAC-MAIN'),
+      ('service', 4, 100, 'Service points: (bill amount / 100) * 4', 'BAC-MAIN')
+    ON CONFLICT (tenant_id, rule_type) DO NOTHING;
+  END IF;
+END
+$$;
 
 -- 2. CUSTOMER_TIER_SNAPSHOT (Stores the calculated current tier and balance snapshot for each customer)
 CREATE TABLE IF NOT EXISTS customer_tier_snapshot (

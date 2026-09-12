@@ -16,6 +16,22 @@ CREATE TABLE IF NOT EXISTS realbooks_sync_log (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_realbooks_sync_log_status ON realbooks_sync_log (tenant_id, status, next_retry_at);
-CREATE INDEX IF NOT EXISTS idx_realbooks_sync_log_redemption ON realbooks_sync_log (tenant_id, redemption_id);
-CREATE INDEX IF NOT EXISTS idx_realbooks_sync_log_code ON realbooks_sync_log (tenant_id, redemption_code);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'realbooks_sync_log' AND column_name = 'status') THEN
+    CREATE INDEX IF NOT EXISTS idx_realbooks_sync_log_status ON realbooks_sync_log (tenant_id, status, next_retry_at);
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'realbooks_sync_log' AND column_name = 'api_status') THEN
+    CREATE INDEX IF NOT EXISTS idx_realbooks_sync_log_status ON realbooks_sync_log (tenant_id, api_status);
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'realbooks_sync_log' AND column_name = 'redemption_id') THEN
+    CREATE INDEX IF NOT EXISTS idx_realbooks_sync_log_redemption ON realbooks_sync_log (tenant_id, redemption_id);
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'realbooks_sync_log' AND column_name = 'entity_id') THEN
+    CREATE INDEX IF NOT EXISTS idx_realbooks_sync_log_redemption ON realbooks_sync_log (tenant_id, entity_id);
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'realbooks_sync_log' AND column_name = 'redemption_code') THEN
+    CREATE INDEX IF NOT EXISTS idx_realbooks_sync_log_code ON realbooks_sync_log (tenant_id, redemption_code);
+  END IF;
+END
+$$;

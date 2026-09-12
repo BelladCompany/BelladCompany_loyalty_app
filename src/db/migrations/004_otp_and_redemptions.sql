@@ -14,7 +14,15 @@ CREATE TABLE IF NOT EXISTS otp_requests (
 );
 
 CREATE INDEX IF NOT EXISTS idx_otp_requests_rate_limit ON otp_requests (tenant_id, customer_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_otp_requests_validation ON otp_requests (tenant_id, customer_id, is_used, expires_at);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'otp_requests' AND column_name = 'is_used') THEN
+    CREATE INDEX IF NOT EXISTS idx_otp_requests_validation ON otp_requests (tenant_id, customer_id, is_used, expires_at);
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'otp_requests' AND column_name = 'is_verified') THEN
+    CREATE INDEX IF NOT EXISTS idx_otp_requests_validation ON otp_requests (tenant_id, customer_id, is_verified, expires_at);
+  END IF;
+END
+$$;
 
 -- 2. REDEMPTIONS
 -- Stores completed redemptions, discount amounts, and unique redemption codes

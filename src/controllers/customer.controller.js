@@ -3,7 +3,7 @@ const CustomerService = require('../services/customer.service');
 class CustomerController {
   static async createCustomer(req, res, next) {
     try {
-      const { name, email, phone_numbers, vehicle, opening_points } = req.body;
+      const { name, email, phone_numbers, vehicle, opening_points, aadhaar_number, age, firm_name, address, visit_type, is_first_time_visitor } = req.body;
       const tenantId = req.tenantId;
 
       const customer = await CustomerService.createCustomer({
@@ -12,8 +12,15 @@ class CustomerController {
         phone_numbers,
         vehicle,
         opening_points,
+        aadhaar_number,
+        age,
+        firm_name,
+        address,
+        visit_type,
+        is_first_time_visitor,
         created_by: req.user?.id || null,
         tenant_id: tenantId,
+        award_auto_sales_points: false, // Explicitly false for cashier manual customer creation
       });
 
       res.status(201).json({
@@ -46,6 +53,22 @@ class CustomerController {
           error: `Customer not found with customer_id: '${customerId}'`,
         });
       }
+
+      res.status(200).json({
+        status: 'success',
+        data: customer,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getByReferralCode(req, res, next) {
+    try {
+      const { code } = req.params;
+      const tenantId = req.tenantId;
+
+      const customer = await CustomerService.getCustomerByReferralCode(code, tenantId);
 
       res.status(200).json({
         status: 'success',

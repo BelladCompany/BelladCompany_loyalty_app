@@ -30,7 +30,7 @@ export const ConfirmationModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="w-full max-w-lg bg-white border-2 border-surface-border rounded-lg shadow-xl overflow-hidden">
+      <div className="w-full max-w-lg bg-white border-2 border-surface-border rounded-lg shadow-xl max-h-[92vh] overflow-y-auto">
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-100 border-b border-surface-border">

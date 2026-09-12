@@ -35,4 +35,9 @@ router.get('/', requireRole(['cashier', 'admin']), ReferralController.listReferr
 router.get('/approvers/list', requireRole(['admin']), ReferralController.listApprovers);
 router.post('/approvers', requireRole(['admin']), validate(createApproverSchema), ReferralController.addApprover);
 
+// 5. Referral Leads Pipeline - Admin & Cashier
+router.get('/leads/pipeline', requireRole(['admin', 'cashier']), ReferralController.getReferralLeadsPipeline);
+router.post('/leads/:id/confirm-rc', requireRole(['admin']), ReferralController.confirmRcCompletion);
+router.post('/send-reminder', requireRole(['admin', 'cashier']), ReferralController.sendReferralReminder);
+
 module.exports = router;

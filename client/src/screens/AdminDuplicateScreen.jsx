@@ -16,9 +16,10 @@ import { Button, Input, StatusBadge, DataTable, ConfirmationModal } from '../com
 import ApiService from '../services/api';
 
 export const AdminDuplicateScreen = () => {
-  const [activeTab, setActiveTab] = useState('queue'); // 'queue' | 'logs'
+  const [activeTab, setActiveTab] = useState('queue'); // 'queue' | 'logs' | 'appsheet'
   const [candidates, setCandidates] = useState([]);
   const [mergeLogs, setMergeLogs] = useState([]);
+  const [appsheetLogs, setAppsheetLogs] = useState([]);
   const [selectedPair, setSelectedPair] = useState(null);
   const [survivingId, setSurvivingId] = useState('');
   const [mergeReason, setMergeReason] = useState('');
@@ -28,25 +29,27 @@ export const AdminDuplicateScreen = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Load candidate duplicate pairs and merge logs
+  // Load candidate duplicate pairs, merge logs, and appsheet logs
   const loadData = async () => {
     setIsLoading(true);
     setError('');
     try {
-      const [dupRes, logRes] = await Promise.all([
+      const [dupRes, logRes, appsheetRes] = await Promise.all([
         ApiService.getDuplicateQueue(),
         ApiService.getMergeLogs(),
+        ApiService.getAppSheetWebhookLogs().catch(() => ({ data: [] })),
       ]);
 
       const pairList = dupRes.data || [];
       setCandidates(pairList);
       setMergeLogs(logRes.data || []);
+      setAppsheetLogs(appsheetRes.data || []);
 
       if (pairList.length > 0 && !selectedPair) {
         selectPair(pairList[0]);
       }
     } catch (err) {
-      setError(err.message || 'Failed to load duplicate candidates.');
+      setError(err.message || 'Failed to load administration data.');
     } finally {
       setIsLoading(false);
     }
@@ -160,6 +163,71 @@ export const AdminDuplicateScreen = () => {
     },
   ];
 
+  // AppSheet Webhook Logs Columns
+  const appsheetColumns = [
+    { field: 'id', header: 'Log ID', sortable: true, cellClassName: 'font-mono text-xs' },
+    {
+      field: 'appsheet_row_id',
+      header: 'AppSheet Row ID',
+      sortable: true,
+      render: (val) => <span className="font-mono text-xs font-bold text-slate-800">{val || 'N/A'}</span>,
+    },
+    {
+      field: 'result',
+      header: 'Status',
+      sortable: true,
+      render: (val) => {
+        const colorClass =
+          val === 'success'
+            ? 'bg-green-100 text-green-800 border-green-300'
+            : val === 'duplicate'
+            ? 'bg-amber-100 text-amber-800 border-amber-300'
+            : val === 'not_found'
+            ? 'bg-orange-100 text-orange-800 border-orange-300'
+            : 'bg-red-100 text-red-800 border-red-300';
+        return (
+          <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-bold uppercase border ${colorClass}`}>
+            {val}
+          </span>
+        );
+      },
+    },
+    {
+      field: 'error_message',
+      header: 'Details / Error',
+      sortable: false,
+      render: (val, row) => (
+        <div className="max-w-xs text-xs">
+          {val ? (
+            <span className="text-red-600 font-semibold">{val}</span>
+          ) : (
+            <span className="text-slate-500 italic">Synced successfully</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      field: 'payload',
+      header: 'Payload Summary',
+      sortable: false,
+      render: (val) => (
+        <div className="font-mono text-xs text-slate-600 truncate max-w-xs">
+          {val ? `Phone: ${val.customer_phone || '-'} | Job: ${val.job_card_number || val.reference_id || '-'} | Amount: ₹${val.bill_amount || 0}` : '-'}
+        </div>
+      ),
+    },
+    {
+      field: 'received_at',
+      header: 'Timestamp',
+      sortable: true,
+      render: (val) => (
+        <span className="text-xs text-ink-secondary">
+          {new Date(val).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       
@@ -168,10 +236,10 @@ export const AdminDuplicateScreen = () => {
         <div>
           <div className="flex items-center gap-2.5">
             <GitMerge className="w-6 h-6 text-action-primary" />
-            <h2 className="text-2xl font-bold text-ink-primary">Duplicate Customers Resolution</h2>
+            <h2 className="text-2xl font-bold text-ink-primary">Duplicate Customers & Integration Audit</h2>
           </div>
           <p className="text-base text-ink-secondary mt-1">
-            Review flagged duplicate candidates side-by-side and consolidate under a single master record with full audit logging.
+            Review flagged duplicate candidates side-by-side, consolidate records, and monitor AppSheet billing webhook connection status.
           </p>
         </div>
 
@@ -200,6 +268,19 @@ export const AdminDuplicateScreen = () => {
             >
               <History className="w-4 h-4" />
               <span>Merge Audit Logs</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('appsheet')}
+              className={`
+                h-10 px-4 rounded font-bold text-base transition-colors flex items-center gap-2
+                ${activeTab === 'appsheet' ? 'bg-white text-ink-primary shadow-sm' : 'text-ink-secondary hover:text-ink-primary'}
+              `}
+            >
+              <span>AppSheet Logs</span>
+              <span className="text-xs px-2 py-0.5 bg-slate-700 text-white font-mono rounded-full font-bold">
+                {appsheetLogs.length}
+              </span>
             </button>
           </div>
 
@@ -483,6 +564,28 @@ export const AdminDuplicateScreen = () => {
             data={mergeLogs}
             keyField="id"
             emptyMessage="No customer merges have been executed yet."
+          />
+        </div>
+      )}
+
+      {/* TAB 3: APPSHEET WEBHOOK LOGS */}
+      {activeTab === 'appsheet' && (
+        <div className="bg-white border border-surface-border rounded-lg p-6 space-y-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-ink-primary">AppSheet Webhook Ingestion Log (Last 50 Entries)</h3>
+              <p className="text-sm text-ink-secondary mt-0.5">
+                Real-time log of billing transactions posted by AppSheet Bots. Check here to confirm connection health and troubleshoot missing transactions.
+              </p>
+            </div>
+            <span className="text-sm font-semibold text-ink-secondary">{appsheetLogs.length} Entries</span>
+          </div>
+
+          <DataTable
+            columns={appsheetColumns}
+            data={appsheetLogs}
+            keyField="id"
+            emptyMessage="No AppSheet webhooks received yet."
           />
         </div>
       )}

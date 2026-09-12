@@ -11,13 +11,12 @@ import {
   ChevronRight,
   ShieldCheck,
   X,
-  Sparkles
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { Button, DataTable, StatusBadge } from '../components/ui';
 import ApiService from '../services/api';
 
-// Layered name field with live fuzzy search. Searching by name lets the
-// clerk cross-verify the customer name against its Customer ID before submitting.
 const CustomerNameSelect = ({
   label,
   helpText,
@@ -139,6 +138,54 @@ export const ReferralsScreen = ({ user }) => {
 
   const isAdmin = user?.role === 'admin';
 
+  // Referral Leads Pipeline State
+  const [activeTab, setActiveTab] = useState('leads'); // 'leads' | 'manual'
+  const [leadsPipeline, setLeadsPipeline] = useState([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [leadStatusFilter, setLeadStatusFilter] = useState('all');
+  const [leadSearch, setLeadSearch] = useState('');
+  const [rcActionLoading, setRcActionLoading] = useState(false);
+  const [rcActionSuccess, setRcActionSuccess] = useState('');
+  const [rcActionError, setRcActionError] = useState('');
+
+  const loadLeadsPipeline = async () => {
+    setLeadsLoading(true);
+    setRcActionError('');
+    try {
+      const res = await ApiService.getReferralLeadsPipeline(leadStatusFilter, leadSearch);
+      setLeadsPipeline(res.data || []);
+    } catch (err) {
+      setRcActionError(err.message || 'Failed to load referral leads pipeline.');
+    } finally {
+      setLeadsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'leads') {
+      loadLeadsPipeline();
+    }
+  }, [activeTab, leadStatusFilter, leadSearch]);
+
+  const handleConfirmRc = async (leadId) => {
+    if (!window.confirm(`Confirm RC Completion for Lead #${leadId}? This will credit referral bonus points to both referrer and buyer.`)) {
+      return;
+    }
+
+    setRcActionLoading(true);
+    setRcActionSuccess('');
+    setRcActionError('');
+    try {
+      const res = await ApiService.confirmRcCompletion(leadId);
+      setRcActionSuccess(res.message || `RC Completion confirmed for Lead #${leadId}!`);
+      loadLeadsPipeline();
+    } catch (err) {
+      setRcActionError(err.message || 'Failed to confirm RC completion.');
+    } finally {
+      setRcActionLoading(false);
+    }
+  };
+
   const loadReferrals = async () => {
     setIsLoading(true);
     setError('');
@@ -174,7 +221,6 @@ export const ReferralsScreen = ({ user }) => {
     loadApprovers();
   }, [isAdmin]);
 
-  // Debounced live customer name search (fuzzy, run while the modal is open)
   useEffect(() => {
     if (!registerModalOpen) return;
     const q = referrerName.trim();
@@ -213,7 +259,6 @@ export const ReferralsScreen = ({ user }) => {
     return () => clearTimeout(t);
   }, [referredName, registerModalOpen, referredSelected]);
 
-  // Handle Referral Registration
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setRegisterError('');
@@ -257,17 +302,16 @@ export const ReferralsScreen = ({ user }) => {
     }
   };
 
-  // Open Approval Dialog
   const openApproveModal = (referral) => {
     setSelectedReferral(referral);
-    setAwardPoints('500');
-    setApprovalReason(`Referred customer completed vehicle service / purchase`);
+    const suggested = referral.suggested_points || referral.points_awarded || 500;
+    setAwardPoints(suggested.toString());
+    setApprovalReason(referral.approval_reason || 'Verified vehicle purchase referral');
     setApproveError('');
     setApproveSuccess('');
     setApproveModalOpen(true);
   };
 
-  // Handle Approval Submit
   const handleApproveSubmit = async (e) => {
     e.preventDefault();
     setApproveError('');
@@ -306,6 +350,128 @@ export const ReferralsScreen = ({ user }) => {
       setApproveLoading(false);
     }
   };
+
+  const leadColumns = [
+    {
+      field: 'id',
+      header: 'Lead ID',
+      sortable: true,
+      render: (_, row) => (
+        <span className="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+          #{row.id}
+        </span>
+      ),
+    },
+    {
+      field: 'generated_code',
+      header: 'Referral Lead Code',
+      render: (val) => (
+        <span className="font-mono font-black text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded shadow-2xs">
+          {val}
+        </span>
+      ),
+    },
+    {
+      field: 'lead_name',
+      header: 'Lead Details (Friend)',
+      render: (val, row) => (
+        <div>
+          <div className="font-extrabold text-slate-900 text-sm">{val}</div>
+          <div className="font-mono text-xs text-slate-500 font-semibold">{row.lead_phone}</div>
+        </div>
+      ),
+    },
+    {
+      field: 'referrer_name',
+      header: 'Referrer Customer',
+      render: (val, row) => (
+        <div>
+          <div className="font-bold text-slate-900 text-sm">{val || 'Referrer'}</div>
+          <div className="font-mono text-xs text-indigo-600 font-bold">{row.referrer_customer_id}</div>
+        </div>
+      ),
+    },
+    {
+      field: 'status',
+      header: 'Pipeline Status',
+      render: (val) => {
+        if (val === 'rc_completed') {
+          return (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full text-xs font-extrabold">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> RC Completed (Credited)
+            </span>
+          );
+        }
+        if (val === 'used') {
+          return (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-950 border border-amber-400 rounded-full text-xs font-extrabold">
+              <Clock className="w-4 h-4 text-amber-600 animate-pulse" /> Used (Awaiting RC)
+            </span>
+          );
+        }
+        if (val === 'mismatched') {
+          return (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-950 border border-rose-400 rounded-full text-xs font-extrabold">
+              <AlertCircle className="w-4 h-4 text-rose-600" /> Aadhaar Mismatch
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 border border-slate-300 rounded-full text-xs font-bold">
+            Pending Purchase
+          </span>
+        );
+      },
+    },
+    {
+      field: 'matched_sale_reference',
+      header: 'Matched Sale / Invoice',
+      render: (val, row) => (
+        <div>
+          <div className="font-mono text-xs font-bold text-slate-800">{val || '—'}</div>
+          {row.flagged_reason && <div className="text-[11px] text-rose-600 font-semibold">{row.flagged_reason}</div>}
+        </div>
+      ),
+    },
+    {
+      field: 'created_at',
+      header: 'Date Registered',
+      render: (val) => (
+        <span className="text-xs text-slate-500 font-medium">
+          {val ? new Date(val).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+        </span>
+      ),
+    },
+    {
+      field: 'actions',
+      header: 'Action',
+      align: 'right',
+      render: (_, row) => {
+        if (row.status === 'rc_completed') {
+          return (
+            <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-300">
+              Credited
+            </span>
+          );
+        }
+
+        if (row.status === 'used' || row.status === 'mismatched') {
+          return (
+            <button
+              type="button"
+              onClick={() => handleConfirmRc(row.id)}
+              disabled={rcActionLoading}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all whitespace-nowrap"
+            >
+              {rcActionLoading ? 'Processing…' : 'Confirm RC & Credit'}
+            </button>
+          );
+        }
+
+        return <span className="text-xs text-slate-400 font-medium">Awaiting Sale</span>;
+      },
+    },
+  ];
 
   const columns = [
     {
@@ -356,17 +522,30 @@ export const ReferralsScreen = ({ user }) => {
     },
     {
       field: 'points_awarded',
-      header: 'Points Awarded',
+      header: 'Points (Suggested / Final)',
       align: 'right',
-      render: (val) => (
-        <span className="font-mono font-bold text-sm text-ink-primary">
-          {Number(val || 0) > 0 ? `+${Number(val).toLocaleString()} PTS` : '0 PTS'}
-        </span>
-      ),
+      render: (val, row) => {
+        const isPending = (row.status || 'pending') === 'pending';
+        const suggested = Number(row.suggested_points || 0);
+        const awarded = Number(val || 0);
+        return (
+          <div className="space-y-0.5 text-right">
+            {isPending && suggested > 0 ? (
+              <div className="inline-flex items-center gap-1 text-xs font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                <Zap className="w-3 h-3 text-action-primary" /> Suggested: +{suggested.toLocaleString()} PTS
+              </div>
+            ) : (
+              <span className="font-mono font-bold text-sm text-ink-primary">
+                {awarded > 0 ? `+${awarded.toLocaleString()} PTS` : '0 PTS'}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       field: 'approval_reason',
-      header: 'Approval Notes & Approver',
+      header: 'Notes & Approver',
       render: (val, row) => (
         <div className="max-w-xs text-xs space-y-0.5">
           {val ? (
@@ -409,7 +588,7 @@ export const ReferralsScreen = ({ user }) => {
               size="sm"
               variant="primary"
               onClick={() => openApproveModal(row)}
-              className="text-xs h-8 px-2.5 whitespace-nowrap shadow-xs"
+              className="text-xs h-8 px-2.5 whitespace-nowrap shadow-xs font-bold"
             >
               Approve & Award
             </Button>
@@ -428,138 +607,253 @@ export const ReferralsScreen = ({ user }) => {
   return (
     <div className="space-y-6">
 
-      {/* ── 1. DEALERSHIP REFERRAL LOGIC EXPLANATION ── */}
-      <div className="bg-white border-2 border-surface-border rounded-xl p-6 shadow-sm relative overflow-hidden">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-surface-border">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-action-primary flex-shrink-0">
-              <Users className="w-6 h-6" />
-            </div>
+      {/* Navigation Sub-Tabs */}
+      <div className="flex border-b-2 border-slate-200 gap-6 text-base font-bold bg-white px-6 py-2 rounded-xl shadow-xs">
+        <button
+          type="button"
+          onClick={() => setActiveTab('leads')}
+          className={`pb-2 pt-2 border-b-4 transition-all flex items-center gap-2 ${
+            activeTab === 'leads'
+              ? 'border-indigo-600 text-indigo-900 font-black'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <Sparkles className="w-5 h-5 text-indigo-600" />
+          Referral Leads Pipeline (RC Deferred Crediting)
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('manual')}
+          className={`pb-2 pt-2 border-b-4 transition-all flex items-center gap-2 ${
+            activeTab === 'manual'
+              ? 'border-indigo-600 text-indigo-900 font-black'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <Users className="w-5 h-5 text-slate-600" />
+          Manual Referrals & Approvals
+        </button>
+      </div>
+
+      {activeTab === 'leads' && (
+        <div className="bg-white border border-surface-border rounded-xl p-6 shadow-sm space-y-4 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-ink-primary tracking-tight">Dealership Customer Referral Program</h2>
-              <p className="text-sm text-ink-secondary font-medium">
-                Verified, audit-controlled customer referrals with anti-fraud safeguards.
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-indigo-600" />
+                Referral Leads Pipeline
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Tracks leads generated via public links. Crediting triggers strictly upon RC Completion confirmation.
               </p>
             </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                placeholder="Search lead name, phone, code..."
+                value={leadSearch}
+                onChange={(e) => setLeadSearch(e.target.value)}
+                className="h-10 px-3 border border-slate-300 rounded-lg text-xs font-semibold w-48 sm:w-64 focus:outline-none focus:border-indigo-500"
+              />
+
+              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold">
+                {['all', 'pending', 'used', 'rc_completed', 'mismatched'].map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setLeadStatusFilter(st)}
+                    className={`px-3 py-1 rounded-md capitalize transition-all ${
+                      leadStatusFilter === st
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {st === 'used' ? 'Awaiting RC' : st === 'rc_completed' ? 'RC Completed' : st}
+                  </button>
+                ))}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                icon={RefreshCw}
+                onClick={loadLeadsPipeline}
+                disabled={leadsLoading}
+                className="h-10 px-3"
+              >
+                Refresh
+              </Button>
+            </div>
           </div>
 
-          <Button
-            variant="primary"
-            size="md"
-            icon={UserPlus}
-            onClick={() => {
-              setRegisterError('');
-              setRegisterSuccess('');
-              setRegisterModalOpen(true);
-            }}
-            className="shadow-sm whitespace-nowrap"
-          >
-            + Register Referral
-          </Button>
+          {rcActionSuccess && (
+            <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-lg flex items-center justify-between text-emerald-900 font-extrabold text-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <span>{rcActionSuccess}</span>
+              </div>
+              <button onClick={() => setRcActionSuccess('')} className="text-emerald-800 hover:text-emerald-950 font-black">✕</button>
+            </div>
+          )}
+
+          {rcActionError && (
+            <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-lg flex items-center justify-between text-rose-900 font-bold text-sm">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-600" />
+                <span>{rcActionError}</span>
+              </div>
+              <button onClick={() => setRcActionError('')} className="text-rose-800 hover:text-rose-950 font-bold">✕</button>
+            </div>
+          )}
+
+          <DataTable
+            columns={leadColumns}
+            data={leadsPipeline}
+            isLoading={leadsLoading}
+            keyField="id"
+            emptyMessage="No referral leads found in pipeline matching filter criteria."
+          />
         </div>
+      )}
 
-        {/* 4-Step Dealership Logic Explainer */}
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold font-mono px-2 py-0.5 bg-blue-100 text-blue-800 rounded">STEP 1</span>
-              <UserPlus className="w-4 h-4 text-action-primary" />
+      {activeTab === 'manual' && (
+        <>
+          {/* ── 1. DEALERSHIP REFERRAL LOGIC EXPLANATION ── */}
+          <div className="bg-white border-2 border-surface-border rounded-xl p-6 shadow-sm relative overflow-hidden animate-in fade-in duration-200">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-surface-border">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-action-primary flex-shrink-0">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-ink-primary tracking-tight">Manual Referral Entry & Approvals</h2>
+                  <p className="text-sm text-ink-secondary font-medium">
+                    Auto-calculated slab rewards with mandatory approver sign-off and audit logging.
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                variant="primary"
+                size="md"
+                icon={UserPlus}
+                onClick={() => {
+                  setRegisterError('');
+                  setRegisterSuccess('');
+                  setRegisterModalOpen(true);
+                }}
+                className="shadow-sm whitespace-nowrap"
+              >
+                + Register Referral
+              </Button>
             </div>
-            <h4 className="text-sm font-bold text-ink-primary">Link Referrer & Friend</h4>
-            <p className="text-xs text-ink-secondary leading-relaxed">
-              When an existing loyal customer introduces a friend or relative, register their linkage.
-            </p>
-          </div>
 
-          <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold font-mono px-2 py-0.5 bg-amber-100 text-amber-800 rounded">STEP 2</span>
-              <Clock className="w-4 h-4 text-amber-600" />
+            {/* 4-Step Dealership Logic Explainer */}
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono px-2 py-0.5 bg-blue-100 text-blue-800 rounded">STEP 1</span>
+                  <UserPlus className="w-4 h-4 text-action-primary" />
+                </div>
+                <h4 className="text-sm font-bold text-ink-primary">Link Referrer & Friend</h4>
+                <p className="text-xs text-ink-secondary leading-relaxed">
+                  When an existing loyal customer introduces a friend, register their linkage.
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono px-2 py-0.5 bg-amber-100 text-amber-800 rounded">STEP 2</span>
+                  <Zap className="w-4 h-4 text-amber-600" />
+                </div>
+                <h4 className="text-sm font-bold text-ink-primary">Auto Slab Pre-Fill</h4>
+                <p className="text-xs text-ink-secondary leading-relaxed">
+                  Upon vehicle purchase, system auto-matches 2W/4W slab price range & pre-fills suggested points.
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono px-2 py-0.5 bg-purple-100 text-purple-800 rounded">STEP 3</span>
+                  <ShieldCheck className="w-4 h-4 text-purple-700" />
+                </div>
+                <h4 className="text-sm font-bold text-ink-primary">Manager Sign-Off</h4>
+                <p className="text-xs text-ink-secondary leading-relaxed">
+                  Approver reviews suggested amount, overrides with mandatory note if needed, and signs off.
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded">STEP 4</span>
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                </div>
+                <h4 className="text-sm font-bold text-ink-primary">Instant Credit & Audit</h4>
+                <p className="text-xs text-ink-secondary leading-relaxed">
+                  Points posted to referrer's ledger, logged in audit trail (suggested vs final), and WhatsApp sent!
+                </p>
+              </div>
             </div>
-            <h4 className="text-sm font-bold text-ink-primary">Pending Verification (0 Pts)</h4>
-            <p className="text-xs text-ink-secondary leading-relaxed">
-              Referral starts with 0 points. No auto-points to prevent fake accounts or self-referral inflation.
-            </p>
           </div>
 
-          <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold font-mono px-2 py-0.5 bg-purple-100 text-purple-800 rounded">STEP 3</span>
-              <ShieldCheck className="w-4 h-4 text-purple-700" />
+          {/* ── 2. REFERRAL LIST TABLE & FILTERS ── */}
+          <div className="bg-white border border-surface-border rounded-xl p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-ink-primary">Manual Referral Records</h3>
+                <span className="text-xs font-semibold px-2.5 py-0.5 bg-slate-100 border border-slate-300 rounded-full text-ink-secondary">
+                  {referrals.length} Total
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="h-10 px-3 border border-surface-border rounded-md text-sm font-medium bg-white text-ink-primary focus:outline-none focus:border-action-primary"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending Approval Only</option>
+                  <option value="approved">Approved Only</option>
+                </select>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={RefreshCw}
+                  onClick={loadReferrals}
+                  disabled={isLoading}
+                  className="h-10 px-3"
+                >
+                  Refresh
+                </Button>
+              </div>
             </div>
-            <h4 className="text-sm font-bold text-ink-primary">Manager / Admin Audit</h4>
-            <p className="text-xs text-ink-secondary leading-relaxed">
-              Once the friend buys a car or services a vehicle, an authorized approver reviews & awards points with a reason.
-            </p>
+
+            {error && (
+              <div className="p-4 bg-action-danger-light border border-red-300 rounded-lg flex items-center gap-2 text-action-danger font-semibold text-sm">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <DataTable
+              columns={columns}
+              data={referrals}
+              isLoading={isLoading}
+              keyField="id"
+              emptyMessage="No referrals found matching your filter criteria. Register a new referral to get started."
+            />
           </div>
-
-          <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold font-mono px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded">STEP 4</span>
-              <Sparkles className="w-4 h-4 text-emerald-600" />
-            </div>
-            <h4 className="text-sm font-bold text-ink-primary">Instant Credit & WhatsApp</h4>
-            <p className="text-xs text-ink-secondary leading-relaxed">
-              Points are posted to the referrer's ledger, tier is upgraded, and an async WhatsApp alert confirms the reward!
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 2. REFERRAL LIST TABLE & FILTERS ── */}
-      <div className="bg-white border border-surface-border rounded-xl p-6 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-ink-primary">Referral Records</h3>
-            <span className="text-xs font-semibold px-2.5 py-0.5 bg-slate-100 border border-slate-300 rounded-full text-ink-secondary">
-              {referrals.length} Total
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 px-3 border border-surface-border rounded-md text-sm font-medium bg-white text-ink-primary focus:outline-none focus:border-action-primary"
-            >
-              <option value="">All Statuses</option>
-              <option value="pending">Pending Approval Only</option>
-              <option value="approved">Approved Only</option>
-            </select>
-
-            <Button
-              variant="outline"
-              size="sm"
-              icon={RefreshCw}
-              onClick={loadReferrals}
-              disabled={isLoading}
-              className="h-10 px-3"
-            >
-              Refresh
-            </Button>
-          </div>
-        </div>
-
-        {error && (
-          <div className="p-4 bg-action-danger-light border border-red-300 rounded-lg flex items-center gap-2 text-action-danger font-semibold text-sm">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <DataTable
-          columns={columns}
-          data={referrals}
-          isLoading={isLoading}
-          keyField="id"
-          emptyMessage="No referrals found matching your filter criteria. Register a new referral to get started."
-        />
-      </div>
+        </>
+      )}
 
       {/* ── 3. MODAL: REGISTER NEW REFERRAL ── */}
       {registerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg bg-white border border-surface-border rounded-xl shadow-2xl overflow-hidden">
+          <div className="w-full max-w-lg bg-white border border-surface-border rounded-xl shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-surface-border">
               <div className="flex items-center gap-2.5">
                 <UserPlus className="w-5 h-5 text-action-primary" />
@@ -589,7 +883,6 @@ export const ReferralsScreen = ({ user }) => {
                 </div>
               )}
 
-              {/* ── Referrer Field ── */}
               <CustomerNameSelect
                 label="Referrer Customer Name (Existing Customer)"
                 helpText="Search by customer name, then select the row to verify the Customer ID before registering."
@@ -603,7 +896,6 @@ export const ReferralsScreen = ({ user }) => {
                 disabled={registerLoading}
               />
 
-              {/* ── Referred Field ── */}
               <CustomerNameSelect
                 label="Referred Customer Name (New Customer)"
                 helpText="Search by customer name, then select the row to verify the Customer ID before registering."
@@ -618,8 +910,7 @@ export const ReferralsScreen = ({ user }) => {
               />
 
               <div className="p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 leading-relaxed space-y-1">
-                <p>ℹ️ The referral will be registered in <strong>Pending status with 0 points</strong>. Points can be awarded upon vehicle delivery or service invoice confirmation by an authorized manager.</p>
-                <p>🔍 <strong>Cross-verify Name ↔ ID:</strong> type the customer name, confirm the matching Customer ID shown in the search results, then select that row before submitting.</p>
+                <p>ℹ️ The referral will be registered in <strong>Pending status with 0 points</strong>. Points will be automatically suggested when the friend completes a vehicle purchase based on slab rates.</p>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-divider">
@@ -638,7 +929,7 @@ export const ReferralsScreen = ({ user }) => {
       {/* ── 4. MODAL: APPROVE REFERRAL (ADMIN ONLY) ── */}
       {approveModalOpen && selectedReferral && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg bg-white border border-surface-border rounded-xl shadow-2xl overflow-hidden">
+          <div className="w-full max-w-lg bg-white border border-surface-border rounded-xl shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-surface-border">
               <div className="flex items-center gap-2.5">
                 <Award className="w-5 h-5 text-action-primary" />
@@ -680,6 +971,19 @@ export const ReferralsScreen = ({ user }) => {
                 </div>
               </div>
 
+              {/* Auto-Suggested Points Banner */}
+              {selectedReferral.suggested_points > 0 && (
+                <div className="p-3 bg-blue-50 border border-blue-300 rounded-lg flex items-center justify-between text-xs text-blue-900 font-bold">
+                  <div className="flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-action-primary" />
+                    <span>Auto-Suggested Points (from Slab):</span>
+                  </div>
+                  <span className="text-sm font-mono font-extrabold text-action-primary">
+                    +{selectedReferral.suggested_points.toLocaleString()} PTS
+                  </span>
+                </div>
+              )}
+
               {/* Points to Award */}
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-ink-primary block">
@@ -690,7 +994,7 @@ export const ReferralsScreen = ({ user }) => {
                     type="number"
                     min="1"
                     step="1"
-                    placeholder="e.g. 500 or 1000"
+                    placeholder="e.g. 2500"
                     value={awardPoints}
                     onChange={(e) => setAwardPoints(e.target.value)}
                     required
@@ -703,32 +1007,24 @@ export const ReferralsScreen = ({ user }) => {
                 </div>
               </div>
 
-              {/* Quick Select Buttons */}
-              <div className="flex items-center gap-2">
-                {[250, 500, 1000, 2000].map((pts) => (
-                  <button
-                    key={pts}
-                    type="button"
-                    onClick={() => setAwardPoints(pts.toString())}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded border transition-colors ${
-                      awardPoints === pts.toString()
-                        ? 'bg-action-primary text-white border-action-primary'
-                        : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
-                    }`}
-                  >
-                    {pts} pts
-                  </button>
-                ))}
-              </div>
+              {/* Override Warning Notice */}
+              {selectedReferral.suggested_points > 0 && parseInt(awardPoints || '0', 10) !== selectedReferral.suggested_points && (
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs font-semibold text-amber-900 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span>
+                    Override Notice: Changing points from suggested slab (+{selectedReferral.suggested_points} pts) to +{awardPoints || 0} pts will be logged in audit trail.
+                  </span>
+                </div>
+              )}
 
               {/* Mandatory Reason */}
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-ink-primary block">
-                  Approval Reason / Transaction Note <span className="text-action-danger">*</span>
+                  Approval Reason / Override Explanation <span className="text-action-danger">*</span>
                 </label>
                 <textarea
                   rows="2"
-                  placeholder="e.g. New vehicle Swift Dzire delivered, invoice #INV-2026-99"
+                  placeholder="e.g. Auto-calculated from referral slab: 5-10L"
                   value={approvalReason}
                   onChange={(e) => setApprovalReason(e.target.value)}
                   required

@@ -53,6 +53,14 @@ class MockWhatsAppProvider extends BaseWhatsAppProvider {
       status: 'delivered',
     };
   }
+  async sendOtpTemplate({ toPhone, templateName, code, expiryMinutes = 5 }) {
+    const messageId = `WA-MOCK-OTP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    console.log(`\n📲 [WhatsApp OTP Sent via ${this.name}]`);
+    console.log(`Recipient: ${toPhone}`);
+    console.log(`Template: ${templateName}`);
+    console.log(`Code: ${code} | Expiry: ${expiryMinutes}min`);
+    return { success: true, messageId, provider: this.name, status: 'delivered' };
+  }
 }
 
 let providerInstance = null;

@@ -4,6 +4,11 @@ import LoginScreen from './screens/LoginScreen';
 import CashierDashboard from './screens/CashierDashboard';
 import AdminDuplicateScreen from './screens/AdminDuplicateScreen';
 import ReferralsScreen from './screens/ReferralsScreen';
+import KycApprovalsScreen from './screens/KycApprovalsScreen';
+import CorrectionsQueueScreen from './screens/CorrectionsQueueScreen';
+import PublicBalancePassScreen from './screens/PublicBalancePassScreen';
+import PublicReferralLeadScreen from './screens/PublicReferralLeadScreen';
+import ReportsScreen from './screens/ReportsScreen';
 import ApiService from './services/api';
 
 export function App() {
@@ -11,7 +16,13 @@ export function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchResetNonce, setSearchResetNonce] = useState(0);
 
+  // Check if current path is a public page (/balance/:token or /refer/:referrerCode)
+  const isPublicBalancePass = window.location.pathname.startsWith('/balance/');
+  const isPublicReferralLead = window.location.pathname.startsWith('/refer/');
+
   useEffect(() => {
+    if (isPublicBalancePass || isPublicReferralLead) return;
+
     // Validate stored token on mount
     const token = ApiService.getToken();
     if (token) {
@@ -27,7 +38,17 @@ export function App() {
           setUser(null);
         });
     }
-  }, []);
+  }, [isPublicBalancePass, isPublicReferralLead]);
+
+  // Public balance pass does not require user authentication
+  if (isPublicBalancePass) {
+    return <PublicBalancePassScreen />;
+  }
+
+  // Public referral lead form does not require user authentication
+  if (isPublicReferralLead) {
+    return <PublicReferralLeadScreen />;
+  }
 
   const handleLoginSuccess = (loggedInUser) => {
     setUser(loggedInUser);
@@ -57,24 +78,20 @@ export function App() {
       user={user}
       onLogout={handleLogout}
     >
-      {activeTab === 'dashboard' || activeTab === 'search' ? (
+      {activeTab === 'dashboard' || activeTab === 'search' || activeTab === 'redemptions' ? (
         <CashierDashboard
           user={user}
           activeTab={activeTab}
           resetNonce={searchResetNonce}
         />
-      ) : activeTab === 'redemptions' ? (
-        <div className="space-y-6">
-          <div className="p-6 bg-white border border-surface-border rounded-lg shadow-sm">
-            <h2 className="text-2xl font-bold text-ink-primary mb-2">Redemptions Counter</h2>
-            <p className="text-base text-ink-secondary mb-4">
-              To process an OTP redemption for a customer, lookup their phone number or vehicle chassis/VIN number in the search bar below.
-            </p>
-            <CashierDashboard user={user} activeTab={activeTab} resetNonce={searchResetNonce} />
-          </div>
-        </div>
       ) : activeTab === 'referrals' ? (
         <ReferralsScreen user={user} />
+      ) : activeTab === 'reports' ? (
+        <ReportsScreen user={user} />
+      ) : activeTab === 'kyc_approvals' ? (
+        <KycApprovalsScreen />
+      ) : activeTab === 'corrections_queue' ? (
+        <CorrectionsQueueScreen />
       ) : activeTab === 'admin' ? (
         <AdminDuplicateScreen />
       ) : (

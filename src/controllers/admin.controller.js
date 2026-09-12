@@ -144,6 +144,34 @@ class AdminController {
       next(error);
     }
   }
+
+  /**
+   * List last 50 AppSheet webhook transaction log entries with status
+   */
+  static async getAppSheetWebhookLogs(req, res, next) {
+    try {
+      const tenantId = req.tenantId;
+      const limit = parseInt(req.query.limit || '50', 10);
+      const offset = parseInt(req.query.offset || '0', 10);
+
+      const logsRes = await pool.query(
+        `SELECT id, appsheet_row_id, payload, result, error_message, tenant_id, received_at
+         FROM appsheet_webhook_log
+         WHERE tenant_id = $1
+         ORDER BY received_at DESC
+         LIMIT $2 OFFSET $3;`,
+        [tenantId, limit, offset]
+      );
+
+      res.status(200).json({
+        status: 'success',
+        results: logsRes.rows.length,
+        data: logsRes.rows,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = AdminController;

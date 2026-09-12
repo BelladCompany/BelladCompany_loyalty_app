@@ -121,6 +121,84 @@ class ReferralController {
       next(error);
     }
   }
+
+  /**
+   * Admin list referral leads pipeline
+   */
+  static async getReferralLeadsPipeline(req, res, next) {
+    try {
+      const tenantId = req.tenantId;
+      const { status, search } = req.query;
+
+      const leads = await ReferralService.getReferralLeadsPipeline({
+        tenant_id: tenantId,
+        status,
+        search,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        results: leads.length,
+        data: leads,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Admin confirm RC completion and credit points for a lead
+   */
+  static async confirmRcCompletion(req, res, next) {
+    try {
+      const { id } = req.params;
+      const tenantId = req.tenantId;
+      const adminUserId = req.user ? req.user.id : 'ADMIN';
+
+      const result = await ReferralService.confirmRcCompletionAndCredit({
+        lead_id: parseInt(id, 10),
+        admin_user_id: adminUserId,
+        tenant_id: tenantId,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: 'RC completion confirmed and referral points credited successfully.',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Send WhatsApp Referral Link Reminder to customer using template `loyalty_refferral_progrm_reminder`
+   */
+  static async sendReferralReminder(req, res, next) {
+    try {
+      const { customer_id, phone } = req.body;
+      const tenantId = req.tenantId;
+
+      if (!customer_id) {
+        return res.status(400).json({ status: 'fail', message: 'customer_id is required.' });
+      }
+
+      const NotificationService = require('../services/notification.service');
+      const result = await NotificationService.sendReferralReminderNotification({
+        customer_id,
+        phone,
+        tenant_id: tenantId,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: `Referral WhatsApp link reminder sent to customer ${customer_id}`,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = ReferralController;

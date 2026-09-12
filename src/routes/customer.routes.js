@@ -21,6 +21,9 @@ router.post('/', requireRole(['cashier', 'admin']), validate(createCustomerSchem
 // List customers
 router.get('/', requireRole(['cashier', 'admin']), CustomerController.listCustomers);
 
+// Lookup referring customer profile by referral code (customer_id or phone)
+router.get('/by-referral-code/:code', requireRole(['cashier', 'admin']), CustomerController.getByReferralCode);
+
 // Get customer by customer_id (e.g. BAC-100001)
 router.get('/:customerId', requireRole(['cashier', 'admin']), CustomerController.getCustomer);
 

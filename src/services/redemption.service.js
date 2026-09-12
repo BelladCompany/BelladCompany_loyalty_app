@@ -1,9 +1,11 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
+const { POINTS_PER_RUPEE_REDEMPTION, POINTS_PER_100_RUPEES_EARNED } = require('../config/loyalty.config');
 const RealBooksService = require('./realbooks/realbooks.service');
 const AuditLogService = require('./audit.service');
 const NotificationService = require('./notification.service');
+const RedemptionEligibilityService = require('./redemption_eligibility.service');
 
 class RedemptionService {
   /**
@@ -39,6 +41,21 @@ class RedemptionService {
         throw { statusCode: 404, message: `No registered phone number found for customer '${resolvedCustomerId}'` };
       }
       resolvedPhone = phoneRes.rows[0].phone_number;
+    }
+
+    // Check for pending billing correction ticket
+    const pendingTicketRes = await pool.query(
+      `SELECT id, points_ledger_reference FROM correction_requests
+       WHERE customer_id = $1 AND tenant_id = $2 AND status = 'pending' LIMIT 1;`,
+      [resolvedCustomerId, tenant_id]
+    );
+
+    if (pendingTicketRes.rows.length > 0) {
+      const ticket = pendingTicketRes.rows[0];
+      throw {
+        statusCode: 400,
+        message: `Billing Correction Ticket #${ticket.id} is pending Admin review. Redemption & point actions are locked until Admin approves or rejects the request.`,
+      };
     }
 
     // Rate limiting: check requests in the last 1 hour
@@ -97,43 +114,62 @@ class RedemptionService {
   }
 
   /**
-   * Validates OTP, lock-in period, points balance, applies 4 points = 1 rupee discount,
-   * generates unique redemption code, and records reversing ledger entry.
+   * Validates OTP, vehicle redemption status (locked/eligible/expired), points balance,
+   * applies 4 points = 1 rupee discount, generates unique redemption code,
+   * records reversing ledger entry, and resets the vehicle redemption clock.
    */
   static async redeemPoints({
     phone,
+    customer_id,
     otp,
+    bill_amount,
     points,
+    category = 'service',
+    receipt_no,
+    account_ledger_no,
     branch_id,
+    vehicle_id,
+    referral_code,
     created_by,
     tenant_id,
-    bypass_lock_in = false,
-    lock_in_days = 365,
   }) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // 1. Resolve phone to customer_id
-      const phoneRes = await client.query(
-        `SELECT customer_id FROM customer_phones WHERE phone_number = $1 AND tenant_id = $2 LIMIT 1;`,
-        [phone, tenant_id]
-      );
-      if (phoneRes.rows.length === 0) {
-        throw { statusCode: 404, message: `No customer found associated with phone number '${phone}'` };
-      }
-      const customerId = phoneRes.rows[0].customer_id;
-
-      // 2. Validate branch exists
-      const branchRes = await client.query(
-        `SELECT branch_id AS id, branch_name AS name FROM branches WHERE branch_id = $1 AND tenant_id = $2;`,
-        [branch_id, tenant_id]
-      );
-      if (branchRes.rows.length === 0) {
-        throw { statusCode: 404, message: `Branch ID '${branch_id}' not found.` };
+      // 1. Resolve customer_id
+      let customerId = customer_id;
+      if (!customerId && phone) {
+        const phoneRes = await client.query(
+          `SELECT customer_id FROM customer_phones WHERE phone_number = $1 AND tenant_id = $2 LIMIT 1;`,
+          [phone, tenant_id]
+        );
+        if (phoneRes.rows.length === 0) {
+          throw { statusCode: 404, message: `No customer found associated with phone number '${phone}'` };
+        }
+        customerId = phoneRes.rows[0].customer_id;
       }
 
-      // 3. Find latest active, unused, non-expired OTP for customer
+      if (!customerId) {
+        throw { statusCode: 400, message: 'Customer ID or valid Phone number is required for redemption.' };
+      }
+
+      // Check for pending billing correction ticket
+      const pendingTicketRes = await client.query(
+        `SELECT id FROM correction_requests
+         WHERE customer_id = $1 AND tenant_id = $2 AND status = 'pending' LIMIT 1;`,
+        [customerId, tenant_id]
+      );
+
+      if (pendingTicketRes.rows.length > 0) {
+        const ticket = pendingTicketRes.rows[0];
+        throw {
+          statusCode: 400,
+          message: `Billing Correction Ticket #${ticket.id} is pending Admin review. Redemption & point actions are locked until Admin approves or rejects the request.`,
+        };
+      }
+
+      // 2. Validate active OTP for customer
       const otpRes = await client.query(
         `SELECT otp_id AS id, otp_hash, expires_at, used_at
          FROM otp_requests
@@ -149,7 +185,7 @@ class RedemptionService {
       }
 
       const activeOtp = otpRes.rows[0];
-      const isOtpValid = await bcrypt.compare(otp, activeOtp.otp_hash);
+      const isOtpValid = await bcrypt.compare(otp.toString(), activeOtp.otp_hash);
       if (!isOtpValid) {
         throw { statusCode: 400, message: 'Invalid OTP code provided.' };
       }
@@ -160,95 +196,172 @@ class RedemptionService {
         [activeOtp.id]
       );
 
-      // 4. Check sufficient points balance
-      const balanceRes = await client.query(
-        `SELECT COALESCE(SUM(points), 0) AS current_balance
+      // 2b. Special Handling for Manual Fallback Referral Tab
+      if (category === 'referral') {
+        if (!referral_code || !referral_code.trim()) {
+          throw { statusCode: 400, message: 'Referral code is required.' };
+        }
+
+        const ReferralService = require('./referral.service');
+        const refResult = await ReferralService.processReferralBonusForPurchase({
+          referral_code: referral_code.trim(),
+          buyer_customer_id: customerId,
+          vehicle_id,
+          receipt_no,
+          account_ledger_no,
+          branch_id,
+          cashier_id: created_by,
+          tenant_id,
+          externalClient: client,
+        });
+
+        await client.query('COMMIT');
+
+        return {
+          success: true,
+          category: 'referral',
+          discount_applied: 0,
+          points_redeemed: 0,
+          cash_paid: 0,
+          new_points_earned: 0,
+          points_awarded: refResult.points_awarded,
+          slab_label: refResult.slab_label,
+          referrer: refResult.referrer,
+          buyer: refResult.buyer,
+          receipt_no,
+          account_ledger_no,
+          message: `Referral bonus of ${refResult.points_awarded} points credited to both ${refResult.referrer.name} (${refResult.referrer.customer_id}) and buyer (${customerId}).`,
+        };
+      }
+
+      // 3. Fetch current points balance for customer
+      const balRes = await client.query(
+        `SELECT COALESCE(SUM(points), 0) AS total_balance
          FROM points_ledger
          WHERE customer_id = $1 AND tenant_id = $2;`,
         [customerId, tenant_id]
       );
+      const currentPointBalance = parseInt(balRes.rows[0].total_balance, 10);
 
-      const currentBalance = parseInt(balanceRes.rows[0].current_balance, 10);
-      if (currentBalance < points) {
-        throw {
-          statusCode: 400,
-          message: `Insufficient points balance. Customer balance is ${currentBalance} points, but ${points} points requested for redemption.`,
-        };
+      // 4. Calculate redemption & earning strictly using named constants
+      let discount_applied = 0;
+      let points_redeemed = 0;
+      let cash_paid = 0;
+      let new_points_earned = 0;
+      const billAmt = bill_amount ? parseFloat(bill_amount) : 0;
+
+      if (billAmt > 0) {
+        // a. redeemable_rupees = current_point_balance * POINTS_PER_RUPEE_REDEMPTION
+        const redeemable_rupees = currentPointBalance * POINTS_PER_RUPEE_REDEMPTION;
+        // b. discount_applied = MIN(redeemable_rupees, bill_amount)
+        discount_applied = Math.min(redeemable_rupees, billAmt);
+        // c. points_redeemed = discount_applied / POINTS_PER_RUPEE_REDEMPTION
+        points_redeemed = Math.round(discount_applied / POINTS_PER_RUPEE_REDEMPTION);
+        // d. cash_paid = bill_amount - discount_applied
+        cash_paid = billAmt - discount_applied;
+        // e. new_points_earned = (cash_paid / 100) * POINTS_PER_100_RUPEES_EARNED
+        new_points_earned = Math.floor((cash_paid / 100) * POINTS_PER_100_RUPEES_EARNED);
+      } else if (points && parseInt(points, 10) > 0) {
+        points_redeemed = parseInt(points, 10);
+        if (points_redeemed > currentPointBalance) {
+          throw { statusCode: 400, message: `Insufficient point balance. Current balance is ${currentPointBalance} pts.` };
+        }
+        discount_applied = points_redeemed * POINTS_PER_RUPEE_REDEMPTION;
+        cash_paid = 0;
+        new_points_earned = 0;
       }
 
-      // 5. Check redemption lock-in period (default 365 days since first purchase/earning)
-      const firstEarningRes = await client.query(
-        `SELECT MIN(created_at) AS first_earning_date
-         FROM points_ledger
-         WHERE customer_id = $1 AND tenant_id = $2 AND points > 0;`,
-        [customerId, tenant_id]
-      );
-
-      const firstEarningDate = firstEarningRes.rows[0]?.first_earning_date;
-      if (!firstEarningDate) {
-        throw { statusCode: 400, message: 'Customer has no qualifying purchase/earning records to redeem points against.' };
-      }
-
-      const elapsedDays = (Date.now() - new Date(firstEarningDate).getTime()) / (1000 * 60 * 60 * 24);
-      if (elapsedDays < lock_in_days && !bypass_lock_in) {
-        throw {
-          statusCode: 400,
-          message: `Redemption lock-in period not met. Points are locked for ${lock_in_days} days from initial purchase (${Math.floor(elapsedDays)} days elapsed).`,
-        };
-      }
-
-      // 6. Calculate discount at 4 points = 1 rupee (Exact integer math)
-      const pointsBig = BigInt(points);
-      const discountRupees = Number(pointsBig / 4n);
-      const discountPaise = Number((pointsBig * 100n) / 4n);
-
-      // 7. Generate unique redemption code
+      // 5. Generate unique redemption voucher code & store redemption record
       const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const randPart = crypto.randomBytes(3).toString('hex').toUpperCase();
       const redemptionCode = `RDM-${customerId}-${datePart}-${randPart}`;
 
-      // 8. Store redemption record
       const redemptionInsert = await client.query(
         `INSERT INTO redemptions (
-           redemption_code, tenant_id, customer_id, points_redeemed, discount_amount, branch_id, cashier_id
+           redemption_code, tenant_id, customer_id, vehicle_id, points_redeemed,
+           discount_amount, branch_id, cashier_id, receipt_no, account_ledger_no
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING redemption_code AS id, redemption_code, customer_id, branch_id, points_redeemed,
-                   discount_amount, discount_amount AS discount_amount_rupees, created_at;`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING redemption_code AS id, redemption_code, customer_id, vehicle_id, branch_id, points_redeemed,
+                   discount_amount, receipt_no, account_ledger_no, created_at;`,
         [
           redemptionCode,
           tenant_id,
           customerId,
-          points,
-          discountRupees,
-          branch_id,
+          vehicle_id || null,
+          points_redeemed,
+          discount_applied,
+          branch_id || null,
           created_by || null,
+          receipt_no || null,
+          account_ledger_no || null,
         ]
       );
-
       const redemption = redemptionInsert.rows[0];
 
-      // 9. Write reversing entry into points_ledger
-      const ledgerRes = await client.query(
-        `INSERT INTO points_ledger (
-           customer_id, branch_id, type, points, source_ref, cashier_id, tenant_id
-         )
-         VALUES ($1, $2, 'redeem', $3, $4, $5, $6)
-         RETURNING entry_id AS id, customer_id, type AS transaction_type, points, source_ref AS reference_id, created_at;`,
-        [
-          customerId,
-          branch_id,
-          -points, // Reversing negative points
-          `Redemption: ${points} points for ₹${discountRupees} discount (Code: ${redemptionCode})`,
-          created_by || null,
-          tenant_id,
-        ]
-      );
+      // 6. Write 'redeem' points_ledger row (negative points_redeemed)
+      let redeemLedgerEntry = null;
+      if (points_redeemed > 0) {
+        const rRes = await client.query(
+          `INSERT INTO points_ledger (
+             customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, cashier_id, tenant_id, receipt_no, account_ledger_no
+           )
+           VALUES ($1, $2, $3, 'redeem', 'redemption', $4, $5, $6, $7, $8, $9)
+           RETURNING entry_id AS id, customer_id, vehicle_id, type AS transaction_type, transaction_category, points, source_ref AS reference_id, created_at;`,
+          [
+            customerId,
+            vehicle_id || null,
+            branch_id || null,
+            -points_redeemed,
+            `Redemption discount of ₹${discount_applied} (Receipt: ${receipt_no || 'N/A'})`,
+            created_by || null,
+            tenant_id,
+            receipt_no || null,
+            account_ledger_no || null,
+          ]
+        );
+        redeemLedgerEntry = rRes.rows[0];
+      }
 
-      const ledgerEntry = ledgerRes.rows[0];
+      // 7. Write 'earn' points_ledger row (new_points_earned, correct category)
+      let normCategory = (category || 'service').toLowerCase();
+      if (normCategory === 'accessories') normCategory = 'accessory';
+      if (normCategory === 'body parts' || normCategory === 'bodyparts') normCategory = 'bodyshop';
+      if (!['service', 'sale', 'accessory', 'bodyshop', 'referral'].includes(normCategory)) {
+        normCategory = 'service';
+      }
 
-      // 10. Update customer_tier_snapshot current balance
-      const newBalance = currentBalance - points;
+      let earnLedgerEntry = null;
+      if (new_points_earned > 0) {
+        const eRes = await client.query(
+          `INSERT INTO points_ledger (
+             customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, cashier_id, tenant_id, receipt_no, account_ledger_no
+           )
+           VALUES ($1, $2, $3, 'earn', $4, $5, $6, $7, $8, $9, $10)
+           RETURNING entry_id AS id, customer_id, vehicle_id, type AS transaction_type, transaction_category, points, source_ref AS reference_id, created_at;`,
+          [
+            customerId,
+            vehicle_id || null,
+            branch_id || null,
+            normCategory,
+            new_points_earned,
+            `Earned points on cash paid ₹${cash_paid} (Receipt: ${receipt_no || 'N/A'})`,
+            created_by || null,
+            tenant_id,
+            receipt_no || null,
+            account_ledger_no || null,
+          ]
+        );
+        earnLedgerEntry = eRes.rows[0];
+      }
+
+      // 8. If vehicle_id provided, reset clock
+      if (vehicle_id) {
+        await RedemptionEligibilityService.resetClockOnRedemption(vehicle_id, new Date(), tenant_id, client);
+      }
+
+      const updated_total_balance = (currentPointBalance - points_redeemed) + new_points_earned;
+
       await client.query(
         `UPDATE customer_tier_snapshot
          SET updated_at = NOW()
@@ -256,28 +369,27 @@ class RedemptionService {
         [customerId, tenant_id]
       );
 
-      // 11. Audit log: redemption with before/after balance, actor, and timestamp
+      // Audit Log
       await AuditLogService.logEvent({
-        action: 'points_redemption',
+        action: 'points_redemption_and_earn',
         entity_type: 'redemption',
         entity_id: redemption.id.toString(),
         actor_user_id: created_by || null,
-        before_values: {
-          customer_id: customerId,
-          current_balance: currentBalance,
-        },
+        before_values: { customer_id: customerId, previous_balance: currentPointBalance },
         after_values: {
           customer_id: customerId,
-          current_balance: newBalance,
-          redemption_code: redemptionCode,
+          discount_applied,
+          points_redeemed,
+          cash_paid,
+          new_points_earned,
+          updated_total_balance,
         },
         metadata: {
           redemption_code: redemptionCode,
-          points_redeemed: points,
-          discount_amount_rupees: discountRupees,
-          discount_amount_paise: discountPaise,
+          receipt_no,
+          account_ledger_no,
+          bill_amount: billAmt,
           branch_id,
-          otp_request_id: activeOtp.id,
         },
         tenant_id,
         client,
@@ -285,36 +397,39 @@ class RedemptionService {
 
       await client.query('COMMIT');
 
-      // Asynchronously queue RealBooks API sync
-      RealBooksService.queueRedemptionSync({
-        redemption,
-        tenant_id,
-      }).catch((syncErr) => {
-        console.error('Failed to queue RealBooks sync:', syncErr.message);
-      });
-
-      // Non-blocking: send redemption confirmation WhatsApp to customer
-      NotificationService.queueRedemptionNotification({
-        customer_id: customerId,
-        phone,
-        pointsRedeemed: points,
-        discountRupees,
-        remainingBalance: newBalance,
-        tenant_id,
-      });
+      // Async RealBooks / Notification queue
+      RealBooksService.queueRedemptionSync({ redemption, tenant_id }).catch(() => {});
+      if (points_redeemed > 0) {
+        NotificationService.queueRedemptionNotification({
+          customer_id: customerId,
+          phone,
+          pointsRedeemed: points_redeemed,
+          discountRupees: discount_applied,
+          remainingBalance: updated_total_balance,
+          tenant_id,
+        });
+      }
 
       return {
+        discount_applied,
+        points_redeemed,
+        cash_paid,
+        new_points_earned,
+        updated_total_balance,
+        previous_balance: currentPointBalance,
+        redemption_code: redemptionCode,
+        receipt_no,
+        account_ledger_no,
         redemption,
-        ledger_entry: ledgerEntry,
+        redeem_ledger: redeemLedgerEntry,
+        earn_ledger: earnLedgerEntry,
         discount: {
-          rupees: discountRupees,
-          paise: discountPaise,
-          rate: '4 points = 1 rupee',
+          rupees: discount_applied,
         },
         balance: {
-          previous_balance: currentBalance,
-          points_redeemed: points,
-          remaining_balance: newBalance,
+          previous_balance: currentPointBalance,
+          points_redeemed,
+          remaining_balance: updated_total_balance,
         },
       };
     } catch (error) {
@@ -331,7 +446,7 @@ class RedemptionService {
   static async getRedemptionByCode(code, tenantId) {
     const res = await pool.query(
       `SELECT r.redemption_code AS id, r.customer_id, c.customer_name AS customer_name, r.branch_id, b.branch_name AS branch_name,
-              r.redemption_code, r.points_redeemed, r.discount_amount AS discount_amount_rupees, r.created_at
+              r.redemption_code, r.points_redeemed, r.discount_amount, r.discount_amount AS discount_amount_rupees, r.created_at
        FROM redemptions r
        JOIN customers c ON r.customer_id = c.customer_id AND r.tenant_id = c.tenant_id
        LEFT JOIN branches b ON r.branch_id = b.branch_id

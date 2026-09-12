@@ -281,7 +281,7 @@ Displayed immediately on customer identification. Three sections:
 - Label "Available Loyalty Balance" `text-sm font-bold uppercase tracking-wider`
 - Balance: `text-3xl font-extrabold text-action-primary tabular-nums`
 - Rupee equivalent: `text-base font-bold text-action-success` — `≈ ₹{n} Discount Value`
-- CTA buttons: `+ Add Points` (primary blue) and `Redeem (OTP)` (success green), `h-11`
+<!-- - CTA buttons: `+ Add Points` (primary blue) and `Redeem (OTP)` (success green), `h-11` -->
 
 ---
 

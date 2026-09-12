@@ -21,3 +21,10 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Temp archives & scratch scripts
+*.zip
+scratch/
+uploads/
+scratch_*.js
+test_*.js

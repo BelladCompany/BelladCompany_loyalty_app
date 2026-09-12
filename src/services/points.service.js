@@ -7,28 +7,54 @@ class PointsService {
    * Calculates points using exact integer arithmetic and configurable rates from point_rules table
    */
   static async calculatePoints(type, amount, tenantId, client = pool) {
+    const category = (type || 'sale').toLowerCase();
+    
+    // Dynamically check whether point_rules table has rate_type or rule_type column
+    const colRes = await client.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'point_rules';`
+    );
+    const colNames = colRes.rows.map(r => r.column_name);
+    const typeCol = colNames.includes('rate_type') ? 'rate_type' : (colNames.includes('rule_type') ? 'rule_type' : 'rate_type');
+
     const ruleRes = await client.query(
-      `SELECT points_per_100
-       FROM point_rules
-       WHERE rate_type = $1 AND tenant_id = $2;`,
-      [type, tenantId]
+      `SELECT * FROM point_rules WHERE LOWER(${typeCol}) = $1 AND tenant_id = $2;`,
+      [category, tenantId]
     );
 
-    // points_per_100 is stored as NUMERIC with up to 2 decimal places, e.g.
-    // sale = 1.00 (amount / 100), service = 4.00 ((amount / 100) * 4).
-    let scaledPer100 = type === 'service' ? 400n : 100n;
+    let num = 1n;
+    let den = 100n;
 
-    if (ruleRes.rows.length > 0) {
-      scaledPer100 = BigInt(Math.round(Number(ruleRes.rows[0].points_per_100) * 100));
+    // Standard fallback defaults if rule not in DB yet
+    const defaultRatios = {
+      sale: { num: 1n, den: 100n },
+      service: { num: 4n, den: 100n },
+      accessory: { num: 2n, den: 100n },
+      bodyshop: { num: 3n, den: 100n },
+    };
+
+    if (defaultRatios[category]) {
+      num = defaultRatios[category].num;
+      den = defaultRatios[category].den;
     }
 
-    if (scaledPer100 === 0n) {
-      throw new Error('Invalid point rule: points_per_100 cannot be zero');
+    if (ruleRes.rows.length > 0) {
+      const row = ruleRes.rows[0];
+      if (row.multiplier_numerator != null && row.multiplier_denominator != null) {
+        num = BigInt(row.multiplier_numerator);
+        den = BigInt(row.multiplier_denominator);
+      } else if (row.points_per_100 != null) {
+        num = BigInt(Math.round(Number(row.points_per_100) * 100));
+        den = 10000n;
+      }
+    }
+
+    if (den === 0n) {
+      throw new Error('Invalid point rule: denominator cannot be zero');
     }
 
     const amt = BigInt(amount);
-    // Exact integer math (never floating point): points = amount * points_per_100 / 100
-    const points = (amt * scaledPer100) / 10000n;
+    // Exact integer math (never floating point)
+    const points = (amt * num) / den;
 
     return Number(points);
   }
@@ -39,20 +65,24 @@ class PointsService {
    */
   static async recordEarning({
     customer_id,
+    vehicle_id,
     branch_id,
     amount,
     type,
+    category,
     reference_id,
     description,
     created_by,
     tenant_id,
   }) {
+    const activeCategory = (category || type || 'sale').toLowerCase();
+    const activeType = type || (activeCategory === 'sale' ? 'sale' : 'service');
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
       // 1. Verify customer exists and get before-balance snapshot
-      // NEW
       const custRes = await client.query(
         `SELECT c.customer_id, c.customer_name AS name
    FROM customers c
@@ -86,34 +116,67 @@ class PointsService {
       }
 
       // 3. Calculate points using configurable point_rules with exact integer math
-      const earnedPoints = await this.calculatePoints(type, amount, tenant_id, client);
+      const earnedPoints = await this.calculatePoints(activeCategory, amount, tenant_id, client);
 
       // 4. Insert immutable record into points_ledger
       const ledgerTypeMap = {
         sale: 'earn_sale',
         service: 'earn_service',
+        accessory: 'earn_service',
+        bodyshop: 'earn_service',
         referral: 'earn_referral',
       };
-      const ledgerType = ledgerTypeMap[type] || 'earn_sale';
+      const ledgerType = ledgerTypeMap[activeCategory] || ledgerTypeMap[activeType] || 'earn_sale';
 
-      const sourceRef = [reference_id, description].filter(Boolean).join(' | ') || `${type.toUpperCase()} transaction earning`;
-      const ledgerRes = await client.query(
-        `INSERT INTO points_ledger (
-          customer_id, branch_id, type, points, source_ref, cashier_id, tenant_id
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING entry_id AS id, customer_id, branch_id, type AS transaction_type, points,
-                  source_ref AS reference_id, cashier_id AS created_by, tenant_id, created_at;`,
-        [
-          customer_id,
-          branch_id,
-          ledgerType,
-          earnedPoints,
-          sourceRef,
-          created_by || null,
-          tenant_id,
-        ]
+      const sourceRef = [reference_id, description].filter(Boolean).join(' | ') || `${activeCategory.toUpperCase()} transaction earning`;
+      
+      // Check if transaction_category column exists in points_ledger
+      const hasCategoryColRes = await client.query(
+        `SELECT 1 FROM information_schema.columns WHERE table_name = 'points_ledger' AND column_name = 'transaction_category';`
       );
+      const hasCategoryCol = hasCategoryColRes.rows.length > 0;
+
+      let ledgerRes;
+      if (hasCategoryCol) {
+        ledgerRes = await client.query(
+          `INSERT INTO points_ledger (
+            customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, cashier_id, tenant_id
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          RETURNING entry_id AS id, customer_id, vehicle_id, branch_id, type AS transaction_type, transaction_category, points,
+                    source_ref AS reference_id, cashier_id AS created_by, tenant_id, created_at;`,
+          [
+            customer_id,
+            vehicle_id || null,
+            branch_id,
+            ledgerType,
+            activeCategory,
+            earnedPoints,
+            sourceRef,
+            created_by || null,
+            tenant_id,
+          ]
+        );
+      } else {
+        ledgerRes = await client.query(
+          `INSERT INTO points_ledger (
+            customer_id, vehicle_id, branch_id, type, points, source_ref, cashier_id, tenant_id
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING entry_id AS id, customer_id, vehicle_id, branch_id, type AS transaction_type, points,
+                    source_ref AS reference_id, cashier_id AS created_by, tenant_id, created_at;`,
+          [
+            customer_id,
+            vehicle_id || null,
+            branch_id,
+            ledgerType,
+            earnedPoints,
+            sourceRef,
+            created_by || null,
+            tenant_id,
+          ]
+        );
+      }
 
       const ledgerEntry = ledgerRes.rows[0];
 

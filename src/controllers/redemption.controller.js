@@ -1,4 +1,5 @@
 const RedemptionService = require('../services/redemption.service');
+const RedemptionEligibilityService = require('../services/redemption_eligibility.service');
 
 class RedemptionController {
   /**
@@ -26,35 +27,73 @@ class RedemptionController {
   }
 
   /**
-   * Cashier submits phone, OTP, points to redeem
+   * Fetch 12/24-month redemption eligibility status for a vehicle
    */
-  static async redeemPoints(req, res, next) {
+  static async getVehicleRedemptionStatus(req, res, next) {
     try {
-      const { phone, otp, points, branch_id, bypass_lock_in } = req.body;
+      const { vehicle_id } = req.params;
       const tenantId = req.tenantId;
-      const createdBy = req.user?.id || null;
 
-      const result = await RedemptionService.redeemPoints({
-        phone,
-        otp,
-        points,
-        branch_id,
-        created_by: createdBy,
-        tenant_id: tenantId,
-        bypass_lock_in: bypass_lock_in || false,
-      });
+      const status = await RedemptionEligibilityService.getVehicleRedemptionStatus(
+        parseInt(vehicle_id, 10),
+        tenantId
+      );
 
       res.status(200).json({
         status: 'success',
-        message: `Redemption successful. Discount of ₹${result.discount.rupees} applied.`,
-        data: {
-          redemption_code: result.redemption.redemption_code,
-          discount_amount_rupees: result.discount.rupees,
-          discount_amount_paise: result.discount.paise,
-          points_redeemed: result.balance.points_redeemed,
-          remaining_balance: result.balance.remaining_balance,
-          redemption_details: result.redemption,
-        },
+        data: status,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Cashier submits phone/customer_id, OTP, bill_amount, category, receipt_no, account_ledger_no
+   * NO branch dropdown — branch_id comes from logged-in cashier's session automatically.
+   */
+  static async redeemPoints(req, res, next) {
+    try {
+      const {
+        phone,
+        customer_id,
+        otp,
+        bill_amount,
+        points,
+        category,
+        receipt_no,
+        account_ledger_no,
+        vehicle_id,
+        referral_code,
+      } = req.body;
+
+      const tenantId = req.tenantId;
+      const createdBy = req.user?.id || null;
+      // branch_id comes from logged-in cashier's session automatically
+      const branchId = req.user?.branch_id || req.body.branch_id || 1;
+
+      const result = await RedemptionService.redeemPoints({
+        phone,
+        customer_id,
+        otp,
+        bill_amount: bill_amount ? parseFloat(bill_amount) : undefined,
+        points: points ? parseInt(points, 10) : undefined,
+        category: category || 'service',
+        receipt_no: receipt_no ? receipt_no.trim() : null,
+        account_ledger_no: account_ledger_no ? account_ledger_no.trim() : null,
+        branch_id: branchId ? parseInt(branchId, 10) : null,
+        vehicle_id: vehicle_id ? parseInt(vehicle_id, 10) : null,
+        referral_code: referral_code ? referral_code.trim() : null,
+        created_by: createdBy,
+        tenant_id: tenantId,
+      });
+
+      const message = result.message || `Redemption processed successfully. Discount of ₹${result.discount_applied} applied.`;
+
+      res.status(200).json({
+        status: 'success',
+        message,
+        data: result,
       });
     } catch (error) {
       next(error);

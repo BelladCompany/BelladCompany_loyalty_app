@@ -1,4 +1,6 @@
 const { pool } = require('../config/db');
+const { encrypt, decrypt, hashIdentifier, lastDigits } = require('../utils/crypto.util');
+const TransactionService = require('./transaction.service');
 
 class CustomerService {
   /**
@@ -8,20 +10,89 @@ class CustomerService {
    * exists in the live schema. We keep accepting/returning `email` on the API for backward
    * compatibility, but it is not persisted (always returned as null).
    */
-  static async createCustomer({ name, email, phone_numbers, vehicle, opening_points, created_by, tenant_id }) {
+  static async createCustomer({
+    name,
+    email,
+    phone_numbers,
+    vehicle,
+    opening_points,
+    aadhaar_number,
+    age,
+    firm_name,
+    address,
+    visit_type,
+    is_first_time_visitor,
+    created_by,
+    tenant_id,
+    explicit_customer_id,
+    award_auto_sales_points = false,
+  }) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // 1. Insert customer with system-generated BAC-100001 ID via sequence default
-      const customerRes = await client.query(
-        `INSERT INTO customers (customer_name, tenant_id)
-         VALUES ($1, $2)
-         RETURNING customer_id, customer_name AS name, NULL::text AS email, tenant_id, created_at, updated_at;`,
-        [name, tenant_id]
-      );
+      // Process optional Aadhaar number (HMAC-SHA256 hash & AES encrypted last-4)
+      let aadhaarHash = null;
+      let aadhaarLast4Enc = null;
+      let aadhaarLast4 = null;
 
-      const customer = customerRes.rows[0];
+      if (aadhaar_number && String(aadhaar_number).trim()) {
+        const cleanAadhaar = String(aadhaar_number).trim();
+        if (!/^\d{12}$/.test(cleanAadhaar)) {
+          throw { statusCode: 400, message: 'Aadhaar number must be exactly 12 numeric digits.' };
+        }
+
+        aadhaarHash = hashIdentifier(cleanAadhaar);
+        aadhaarLast4 = lastDigits(cleanAadhaar, 4);
+        aadhaarLast4Enc = encrypt(aadhaarLast4);
+
+        // Check if a customer with the same Aadhaar hash already exists for this tenant
+        const dupRes = await client.query(
+          `SELECT customer_id, customer_name FROM customers
+           WHERE tenant_id = $1 AND aadhaar_hash = $2 AND is_merged = FALSE
+           LIMIT 1;`,
+          [tenant_id, aadhaarHash]
+        );
+
+        if (dupRes.rows.length > 0) {
+          const existing = dupRes.rows[0];
+          throw {
+            statusCode: 409,
+            message: `Aadhaar number is already registered to ${existing.customer_name} (${existing.customer_id}).`,
+          };
+        }
+      }
+
+      const cleanAadhaarStr = aadhaar_number && String(aadhaar_number).trim() ? String(aadhaar_number).trim() : null;
+      const cleanAge = age ? parseInt(age, 10) : null;
+      const cleanFirm = firm_name ? String(firm_name).trim() : null;
+      const cleanAddress = address ? String(address).trim() : null;
+      const cleanVisitType = visit_type ? String(visit_type).trim() : 'first_time';
+      const cleanIsFirstTime = typeof is_first_time_visitor === 'boolean' ? is_first_time_visitor : cleanVisitType === 'first_time';
+
+      // 1. Insert customer (supporting explicit customer_id from AppSheet like BAC-E0122437)
+      let customerRes;
+      if (explicit_customer_id) {
+        customerRes = await client.query(
+          `INSERT INTO customers (customer_id, customer_name, aadhaar_hash, aadhaar_last4_enc, aadhaar_number, age, firm_name, address, visit_type, is_first_time_visitor, tenant_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           ON CONFLICT (customer_id) DO UPDATE SET customer_name = EXCLUDED.customer_name
+           RETURNING customer_id, customer_name AS name, NULL::text AS email, tenant_id, created_at, updated_at;`,
+          [explicit_customer_id, name, aadhaarHash, aadhaarLast4Enc, cleanAadhaarStr, cleanAge, cleanFirm, cleanAddress, cleanVisitType, cleanIsFirstTime, tenant_id]
+        );
+      } else {
+        customerRes = await client.query(
+          `INSERT INTO customers (customer_name, aadhaar_hash, aadhaar_last4_enc, aadhaar_number, age, firm_name, address, visit_type, is_first_time_visitor, tenant_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           RETURNING customer_id, customer_name AS name, NULL::text AS email, tenant_id, created_at, updated_at;`,
+          [name, aadhaarHash, aadhaarLast4Enc, cleanAadhaarStr, cleanAge, cleanFirm, cleanAddress, cleanVisitType, cleanIsFirstTime, tenant_id]
+        );
+      }
+
+      const customer = {
+        ...customerRes.rows[0],
+        aadhaar_last4: aadhaarLast4,
+      };
 
       // 2. Insert phone numbers linked to the new customer_id
       // DB NOTE: customer_phones.id -> phone_id, is_primary -> is_verified, created_at -> added_at
@@ -39,8 +110,20 @@ class CustomerService {
 
       // 3. Optionally insert vehicle record
       let vehicleRow = null;
-      if (vehicle && (vehicle.registration_number || vehicle.chassis_no || vehicle.vin)) {
-        const chassisNo = vehicle.registration_number || vehicle.chassis_no || vehicle.vin;
+      if (
+        vehicle &&
+        (vehicle.registration_number ||
+          vehicle.chassis_no ||
+          vehicle.vin ||
+          vehicle.model ||
+          vehicle.variant ||
+          vehicle.brand_name ||
+          vehicle.branch_name ||
+          vehicle.fuel_type ||
+          vehicle.vehicle_city ||
+          vehicle.firm_name)
+      ) {
+        const chassisNo = vehicle.registration_number || vehicle.chassis_no || vehicle.vin || null;
         // ex_showroom_price stored in paise (rupees * 100) for integer precision
         const exShowroomPaise = vehicle.ex_showroom_price
           ? Math.round(Number(vehicle.ex_showroom_price) * 100)
@@ -48,46 +131,68 @@ class CustomerService {
 
         const vehRes = await client.query(
           `INSERT INTO vehicles (
-             customer_id, brand_id, chassis_no, model,
-             purchase_date, ex_showroom_price, vehicle_city, tenant_id
+             customer_id, brand_id, chassis_no, registration_number, model, variant,
+             brand_name, branch_name, fuel_type, vehicle_city, firm_name,
+             purchase_date, ex_showroom_price, tenant_id
            )
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           RETURNING vehicle_id AS id, chassis_no AS registration_number, chassis_no AS vin, model,
-                     purchase_date, ex_showroom_price, vehicle_city, created_at;`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+           RETURNING vehicle_id AS id, registration_number, chassis_no AS vin, model, variant,
+                     brand_name, branch_name, fuel_type, purchase_date, ex_showroom_price, vehicle_city, created_at;`,
           [
             customer.customer_id,
             vehicle.brand_id || null,
             chassisNo,
+            vehicle.registration_number || null,
             vehicle.model || null,
+            vehicle.variant || null,
+            vehicle.brand_name || null,
+            vehicle.branch_name || null,
+            vehicle.fuel_type || null,
+            vehicle.vehicle_city || null,
+            vehicle.firm_name || cleanFirm || null,
             vehicle.purchase_date || null,
             exShowroomPaise,
-            vehicle.vehicle_city || null,
             tenant_id,
           ]
         );
         vehicleRow = vehRes.rows[0];
       }
 
-      // 4. Optionally record opening points balance as a ledger entry
-      const openingPts = parseInt(opening_points || '0', 10);
-      if (openingPts > 0) {
+      // 4. Record vehicle sales points automatically ONLY IF award_auto_sales_points is true (e.g. from VIN Order Form pull job)
+      const explicitOpeningPts = parseInt(opening_points || '0', 10);
+      let calculatedSalesPoints = 0;
+
+      if (award_auto_sales_points) {
+        if (vehicleRow && vehicleRow.ex_showroom_price) {
+          const exRupees = Math.floor(Number(vehicleRow.ex_showroom_price) / 100);
+          calculatedSalesPoints = Math.floor(exRupees / 100); // 1 point per ₹100 ex-showroom price
+        } else if (vehicle) {
+          const is2W = vehicle.vehicle_type === '2W' || /ather|hero|vida|scooter|bike|2w/i.test(vehicle.model || '');
+          calculatedSalesPoints = is2W ? 1250 : 10000;
+        }
+      }
+
+      const totalInitialPoints = Math.max(explicitOpeningPts, calculatedSalesPoints);
+
+      if (totalInitialPoints > 0) {
         // Requires a branch_id — use the first available branch for this tenant as a fallback
         const branchRes = await client.query(
           `SELECT branch_id FROM branches WHERE tenant_id = $1 ORDER BY branch_id ASC LIMIT 1;`,
           [tenant_id]
         );
-        const branchId = branchRes.rows[0]?.branch_id || null;
+        const branchId = branchRes.rows[0]?.branch_id || 1;
 
         await client.query(
           `INSERT INTO points_ledger (
-             customer_id, branch_id, type, points, source_ref, cashier_id, tenant_id
+             customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, cashier_id, tenant_id
            )
-           VALUES ($1, $2, 'earn_sale', $3, $4, $5, $6);`,
+           VALUES ($1, $2, $3, 'earn_sale', 'sale', $4, $5, $6, $7);`,
           [
             customer.customer_id,
+            vehicleRow?.id || null,
             branchId,
-            openingPts,
-            'Opening balance assigned at customer registration',
+            totalInitialPoints,
+            'Auto-calculated Vehicle Sales Points (Ex-Showroom)',
             created_by || null,
             tenant_id,
           ]
@@ -99,7 +204,7 @@ class CustomerService {
            VALUES ($1, 'Silver', $2, $3, NOW())
            ON CONFLICT (customer_id) DO UPDATE
              SET lifetime_points = EXCLUDED.lifetime_points, updated_at = NOW();`,
-          [customer.customer_id, openingPts, tenant_id]
+          [customer.customer_id, totalInitialPoints, tenant_id]
         );
       }
 
@@ -119,11 +224,177 @@ class CustomerService {
   }
 
   /**
+  /**
+   * Look up referring customer profile by referral code (customer_id or phone)
+   */
+  static async getCustomerByReferralCode(code, tenantId) {
+    if (!code || typeof code !== 'string') {
+      throw { statusCode: 400, message: 'Referral code is required.' };
+    }
+
+    const cleanCode = code.trim();
+    const phoneDigits = cleanCode.replace(/\D/g, '');
+
+    // 1. Search by customer_id (e.g. BAC-100001, BAC-API2)
+    let res = await pool.query(
+      `SELECT c.customer_id, c.customer_name AS name, c.aadhaar_number, p.phone_number
+       FROM customers c
+       LEFT JOIN customer_phones p ON c.customer_id = p.customer_id AND p.is_verified = TRUE
+       WHERE c.tenant_id = $1 AND (c.customer_id ILIKE $2 OR c.customer_id ILIKE ('BAC-' || $2))
+       LIMIT 1;`,
+      [tenantId, cleanCode]
+    );
+
+    // 2. If not found by customer_id, search by phone number
+    if (res.rows.length === 0 && phoneDigits.length >= 8) {
+      res = await pool.query(
+        `SELECT c.customer_id, c.customer_name AS name, c.aadhaar_number, p.phone_number
+         FROM customer_phones p
+         JOIN customers c ON p.customer_id = c.customer_id
+         WHERE p.tenant_id = $1 AND p.phone_number = $2
+         LIMIT 1;`,
+        [tenantId, phoneDigits]
+      );
+    }
+
+    if (res.rows.length === 0) {
+      throw { statusCode: 404, message: `Invalid referral code. No customer found matching '${cleanCode}'.` };
+    }
+
+    return {
+      customer_id: res.rows[0].customer_id,
+      customer_name: res.rows[0].name,
+      phone_number: res.rows[0].phone_number || '',
+      aadhaar_number: res.rows[0].aadhaar_number || null,
+    };
+  }
+
+  /**
    * Retrieves a full customer profile with all linked phones and vehicles
    */
   static async getCustomerById(customerId, tenantId) {
     const customerRes = await pool.query(
-      `SELECT customer_id, customer_name AS name, NULL::text AS email, tenant_id, created_at, updated_at
+      `SELECT customer_id, customer_name AS name, age, address, firm_name, firm_name AS firm, email,
+              branch_name, branch_name AS branch, branch_address, dms_invoice_number, dms_invoice_date,
+              sales_consultant, aadhaar_last4_enc, tenant_id, created_at, updated_at
+       FROM customers
+       WHERE customer_id = $1 AND tenant_id = $2;`,
+      [customerId, tenantId]
+    );
+
+    if (customerRes.rows.length === 0) {
+      // Fallback: If customer is from AppSheet and not yet in PostgreSQL, sync customer on demand
+      try {
+        const AppSheetSearchService = require('./appsheetSearch.service');
+        const AppSheetPullService = require('./appsheetPull.service');
+        const rawId = customerId.replace(/^BAC-/i, '');
+        const appMatches = await AppSheetSearchService.searchPrDoneCustomers(rawId, 5);
+        if (appMatches.length > 0) {
+          const matchedAppCust = appMatches[0];
+          // Auto sync this customer to PostgreSQL with explicit customerId
+          const cleanPhone = matchedAppCust.phones[0]?.phone_number || '';
+          const rowData = {
+            'Customer Name': matchedAppCust.name,
+            'Customer Number': cleanPhone,
+            'VIN Number': matchedAppCust.vehicles[0]?.vin,
+            'Reg Number': matchedAppCust.vehicles[0]?.registration_number,
+            'Model': matchedAppCust.vehicles[0]?.model,
+            'Brand': matchedAppCust.vehicles[0]?.brand,
+            'Branch': matchedAppCust.branch,
+            'Total Vehicle Billing Amount': matchedAppCust.vehicles[0]?.ex_showroom_price,
+            'Order Unique ID': rawId,
+          };
+          
+          await AppSheetPullService.resolveOrCreateCustomer(rowData, tenantId, customerId);
+
+          // Re-query PostgreSQL after auto-sync
+          const retryRes = await pool.query(
+            `SELECT customer_id, customer_name AS name, NULL::text AS email, address, gst_number, nominee_name, nominee_relation, firm_name, age, aadhaar_last4_enc, tenant_id, created_at, updated_at
+             FROM customers
+             WHERE customer_id = $1 AND tenant_id = $2;`,
+            [customerId, tenantId]
+          );
+
+          if (retryRes.rows.length > 0) {
+            const row = retryRes.rows[0];
+            const phonesRes = await pool.query(
+              `SELECT phone_id AS id, phone_number, is_verified AS is_primary, added_at AS created_at
+               FROM customer_phones WHERE customer_id = $1 AND tenant_id = $2 ORDER BY is_verified DESC, phone_id ASC;`,
+              [customerId, tenantId]
+            );
+            const vehiclesRes = await pool.query(
+              `SELECT v.vehicle_id AS id, v.brand_id, b.brand_name AS brand_name,
+                      v.chassis_no AS registration_number, v.chassis_no AS vin, v.chassis_no,
+                      v.model, v.purchase_date, v.ex_showroom_price, v.vehicle_city, v.created_at
+               FROM vehicles v LEFT JOIN brands b ON v.brand_id = b.brand_id
+               WHERE v.customer_id = $1 AND v.tenant_id = $2 ORDER BY v.vehicle_id ASC;`,
+              [customerId, tenantId]
+            );
+
+            // Also auto-create vehicle if PostgreSQL vehicle list is empty
+            if (vehiclesRes.rows.length === 0 && matchedAppCust.vehicles?.length > 0) {
+              const rowData = {
+                'Customer Name': matchedAppCust.name,
+                'Customer Number': cleanPhone,
+                'VIN Number': matchedAppCust.vehicles[0]?.vin,
+                'Reg Number': matchedAppCust.vehicles[0]?.registration_number,
+                'Model': matchedAppCust.vehicles[0]?.model,
+                'Brand': matchedAppCust.vehicles[0]?.brand,
+                'Branch': matchedAppCust.branch,
+                'Total Vehicle Billing Amount': matchedAppCust.vehicles[0]?.ex_showroom_price,
+                'Order Unique ID': rawId,
+              };
+              await AppSheetPullService.resolveOrCreateVehicle(rowData, customerId, tenantId);
+              
+              // Also sync transaction to grant points
+              await TransactionService.syncTransaction({
+                category: 'sale',
+                job_card_number: rawId,
+                reference_id: rawId,
+                bill_amount: matchedAppCust.vehicles[0]?.ex_showroom_price || 0,
+                customer_id: customerId,
+                registration_number: matchedAppCust.vehicles[0]?.vin,
+                branch_id: 1,
+                source: 'appsheet_bot',
+                tenant_id: tenantId,
+              }).catch((e) => console.warn('[AutoSync Tx Warning]', e.message || e));
+            }
+
+            const pointsRes = await pool.query(
+              `SELECT COALESCE(SUM(points), 0) AS total_points FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
+              [customerId, tenantId]
+            );
+            const livePoints = parseInt(pointsRes.rows[0]?.total_points || '0', 10) || matchedAppCust.points_balance || 0;
+
+            const finalVehicles = vehiclesRes.rows.length > 0 ? vehiclesRes.rows : matchedAppCust.vehicles;
+
+            return {
+              customer_id: row.customer_id,
+              name: row.name,
+              customer_name: row.name,
+              email: row.email,
+              tenant_id: row.tenant_id,
+              created_at: row.created_at,
+              updated_at: row.updated_at,
+              phones: phonesRes.rows.length > 0 ? phonesRes.rows : matchedAppCust.phones,
+              vehicles: finalVehicles,
+              points_balance: livePoints,
+              lifetime_points: livePoints,
+              current_tier: livePoints >= 10000 ? 'Gold' : livePoints >= 5000 ? 'Silver' : 'Bronze',
+              billing_status: matchedAppCust.billing_status || 'PR Done',
+            };
+          }
+
+          matchedAppCust.customer_id = customerId;
+          return matchedAppCust;
+        }
+      } catch (fallbackErr) {
+        console.error('[CustomerService AppSheet Fallback Warning]', fallbackErr.message || fallbackErr);
+      }
+      const customerRes = await pool.query(
+      `SELECT customer_id, customer_name AS name, age, aadhaar_number, address, firm_name, firm_name AS firm, email,
+              branch_name, branch_name AS branch, branch_address, dms_invoice_number, dms_invoice_date,
+              sales_consultant, aadhaar_last4_enc, tenant_id, created_at, updated_at
        FROM customers
        WHERE customer_id = $1 AND tenant_id = $2;`,
       [customerId, tenantId]
@@ -132,8 +403,42 @@ class CustomerService {
     if (customerRes.rows.length === 0) {
       return null;
     }
+    }
 
-    const customer = customerRes.rows[0];
+
+
+
+    const row = customerRes.rows[0];
+    let aadhaarLast4 = null;
+    if (row.aadhaar_last4_enc) {
+      try {
+        aadhaarLast4 = decrypt(row.aadhaar_last4_enc);
+      } catch (e) {
+        aadhaarLast4 = null;
+      }
+    }
+
+    const customer = {
+      customer_id: row.customer_id,
+      name: row.name || row.customer_name,
+      customer_name: row.name || row.customer_name,
+      age: row.age || null,
+      aadhaar_number: row.aadhaar_number || (aadhaarLast4 ? `XXXX-XXXX-${aadhaarLast4}` : null),
+      aadhaar_last4: aadhaarLast4,
+      address: row.address || null,
+      firm: row.firm_name || row.firm || null,
+      firm_name: row.firm_name || row.firm || null,
+      email: row.email || null,
+      branch: row.branch_name || row.branch || '',
+      branch_name: row.branch_name || row.branch || '',
+      branch_address: row.branch_address || null,
+      dms_invoice_number: row.dms_invoice_number || '',
+      dms_invoice_date: row.dms_invoice_date || '',
+      sales_consultant: row.sales_consultant || '',
+      tenant_id: row.tenant_id,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
 
     const phonesRes = await pool.query(
       `SELECT phone_id AS id, phone_number, is_verified AS is_primary, added_at AS created_at
@@ -143,13 +448,28 @@ class CustomerService {
       [customerId, tenantId]
     );
 
-    // DB NOTE: vehicles.id -> vehicle_id, vin -> chassis_no, registration_number column no
-    // longer exists at all; chassis_no is mirrored into both `vin` and `registration_number`
-    // in the API response so existing frontend code keeps working.
     const vehiclesRes = await pool.query(
-      `SELECT v.vehicle_id AS id, v.brand_id, b.brand_name AS brand_name,
-              v.chassis_no AS registration_number, v.chassis_no AS vin, v.chassis_no,
-              v.model, v.purchase_date, v.ex_showroom_price, v.vehicle_city, v.created_at
+      `SELECT v.vehicle_id AS id, v.brand_id,
+              COALESCE(v.brand_name, b.brand_name, 'Hero/Hyundai/Swaraj') AS brand_name,
+              COALESCE(v.brand_name, b.brand_name, 'Hero/Hyundai/Swaraj') AS brand,
+              COALESCE(v.registration_number, v.chassis_no, '') AS registration_number,
+              COALESCE(v.registration_number, v.chassis_no, '') AS reg_no,
+              COALESCE(v.vin, v.chassis_no, '') AS vin,
+              v.chassis_no,
+              COALESCE(v.model, 'Vehicle') AS model,
+              COALESCE(v.variant, '') AS variant,
+              COALESCE(v.variant, '') AS varient,
+              COALESCE(v.fuel_type, '') AS fuel_type,
+              COALESCE(v.firm_name, '') AS firm_name,
+              COALESCE(v.firm_name, '') AS firm,
+              COALESCE(v.branch_name, '') AS branch_name,
+              COALESCE(v.branch_name, '') AS branch,
+              v.branch_address,
+              v.dms_invoice_number, v.dms_invoice_date, v.sales_consultant,
+              v.purchase_date,
+              v.ex_showroom_price AS ex_showroom_price_paise,
+              FLOOR(COALESCE(v.ex_showroom_price, 0) / 100) AS ex_showroom_price,
+              v.vehicle_city, v.created_at
        FROM vehicles v
        LEFT JOIN brands b ON v.brand_id = b.brand_id
        WHERE v.customer_id = $1 AND v.tenant_id = $2
@@ -157,12 +477,27 @@ class CustomerService {
       [customerId, tenantId]
     );
 
+    let finalVehicles = vehiclesRes.rows;
+
+    // Check points ledger balance
+    const pointsRes = await pool.query(
+      `SELECT COALESCE(SUM(points), 0) AS total_points FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
+      [customerId, tenantId]
+    );
+    const livePoints = parseInt(pointsRes.rows[0]?.total_points || '0', 10);
+
     return {
       ...customer,
       phones: phonesRes.rows,
-      vehicles: vehiclesRes.rows,
+      vehicles: finalVehicles,
+      points_balance: livePoints,
+      lifetime_points: livePoints,
+      current_tier: livePoints >= 10000 ? 'Gold' : livePoints >= 5000 ? 'Silver' : 'Bronze',
+      billing_status: 'PR Done',
+      pr_status: 'PR Done',
     };
   }
+
 
   /**
    * Lists customers with pagination

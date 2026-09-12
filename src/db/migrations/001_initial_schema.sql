@@ -51,8 +51,15 @@ CREATE TABLE IF NOT EXISTS customers (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Trigram GIN index for fast fuzzy searching by customer name
-CREATE INDEX IF NOT EXISTS idx_customers_name_trgm ON customers USING gin (name gin_trgm_ops);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'customers' AND column_name = 'customer_name') THEN
+    CREATE INDEX IF NOT EXISTS idx_customers_name_trgm ON customers USING gin (customer_name gin_trgm_ops);
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'customers' AND column_name = 'name') THEN
+    CREATE INDEX IF NOT EXISTS idx_customers_name_trgm ON customers USING gin (name gin_trgm_ops);
+  END IF;
+END
+$$;
 CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers (tenant_id);
 
 -- 5. CUSTOMER_PHONES
@@ -87,7 +94,15 @@ CREATE TABLE IF NOT EXISTS vehicles (
 );
 
 CREATE INDEX IF NOT EXISTS idx_vehicles_customer_id ON vehicles (customer_id);
-CREATE INDEX IF NOT EXISTS idx_vehicles_reg_lookup ON vehicles (tenant_id, registration_number);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'chassis_no') THEN
+    CREATE INDEX IF NOT EXISTS idx_vehicles_reg_lookup ON vehicles (tenant_id, chassis_no);
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'registration_number') THEN
+    CREATE INDEX IF NOT EXISTS idx_vehicles_reg_lookup ON vehicles (tenant_id, registration_number);
+  END IF;
+END
+$$;
 
 -- 7. TIER_RULES
 CREATE TABLE IF NOT EXISTS tier_rules (

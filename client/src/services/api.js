@@ -32,8 +32,9 @@ export class ApiService {
 
   static async request(endpoint, options = {}) {
     const token = this.getToken();
+    const isFormData = options.body instanceof FormData;
     const headers = {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     };
@@ -41,7 +42,7 @@ export class ApiService {
     const config = {
       method: options.method || 'GET',
       headers,
-      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+      ...(options.body ? { body: isFormData ? options.body : JSON.stringify(options.body) } : {}),
     };
 
     const res = await fetch(`${API_BASE}${endpoint}`, config);
@@ -108,6 +109,23 @@ export class ApiService {
     });
   }
 
+  // Transactions Sync & Idempotency Lookup
+  static async syncTransaction(payload) {
+    return this.request('/transactions/sync', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async lookupTransaction(category, identifier, branchId = 1) {
+    const params = new URLSearchParams({
+      category: category || 'service',
+      identifier: identifier || '',
+      branch_id: branchId,
+    });
+    return this.request(`/transactions/lookup?${params.toString()}`);
+  }
+
   // Create Customer
   static async createCustomer(payload) {
     return this.request('/customers', {
@@ -131,6 +149,14 @@ export class ApiService {
     });
   }
 
+  /**
+   * Returns locked/eligible/expired status for a vehicle before the cashier initiates OTP.
+   * @param {number} vehicleId
+   */
+  static async getVehicleRedemptionStatus(vehicleId) {
+    return this.request(`/redemptions/vehicle/${vehicleId}/status`);
+  }
+
   // Admin & Duplicates Merge
   static async getDuplicateQueue() {
     return this.request('/admin/duplicates/queue');
@@ -147,7 +173,16 @@ export class ApiService {
     return this.request('/admin/duplicates/logs');
   }
 
+  static async getAppSheetWebhookLogs() {
+    return this.request('/admin/appsheet-logs');
+  }
+
   // Referrals
+  static async getByReferralCode(code) {
+    const encoded = encodeURIComponent(code.trim());
+    return this.request(`/customers/by-referral-code/${encoded}`);
+  }
+
   static async getReferrals(status) {
     const query = status ? `?status=${encodeURIComponent(status)}` : '';
     return this.request(`/referrals${query}`);
@@ -171,15 +206,194 @@ export class ApiService {
     return this.request('/referrals/approvers/list');
   }
 
+  // Public Referral Lead Generation
+  static async getPublicReferralInfo(referrerCode) {
+    const encoded = encodeURIComponent(referrerCode.trim());
+    return this.request(`/public/referral-info/${encoded}`);
+  }
+
+  static async requestPublicLeadOtp(payload) {
+    return this.request('/public/referral-leads/request-otp', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async verifyPublicLeadOtp(payload) {
+    return this.request('/public/referral-leads/verify-otp', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  // Admin Referral Leads Pipeline
+  static async getReferralLeadsPipeline(status = 'all', search = '') {
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.append('status', status);
+    if (search) params.append('search', search);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/referrals/leads/pipeline${query}`);
+  }
+
+  static async confirmRcCompletion(leadId) {
+    return this.request(`/referrals/leads/${leadId}/confirm-rc`, {
+      method: 'POST',
+    });
+  }
+
+  static async sendReferralReminder(customerId, phone) {
+    return this.request('/referrals/send-reminder', {
+      method: 'POST',
+      body: { customer_id: customerId, phone },
+    });
+  }
+
+  // Corrections API
+  static async previewCorrection(payload) {
+    return this.request('/corrections/preview', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async raiseCorrection(formData) {
+    return this.request('/corrections/raise', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  static async getCorrectionRequests(status = 'pending') {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request(`/admin/corrections/list${query}`);
+  }
+
+  static async approveCorrection(id, reviewNotes) {
+    return this.request(`/admin/corrections/${id}/approve`, {
+      method: 'POST',
+      body: { review_notes: reviewNotes },
+    });
+  }
+
+  static async rejectCorrection(id, reviewNotes) {
+    return this.request(`/admin/corrections/${id}/reject`, {
+      method: 'POST',
+      body: { review_notes: reviewNotes },
+    });
+  }
+
+  static getCorrectionProofUrl(filename) {
+    const token = this.getToken();
+    return `${API_BASE}/corrections/proof/${encodeURIComponent(filename)}?token=${encodeURIComponent(token)}`;
+  }
+
   // WhatsApp Message Logs (Admin)
   static async getWhatsAppLogs(status) {
     const query = status ? `?status=${encodeURIComponent(status)}` : '';
     return this.request(`/admin/whatsapp-logs${query}`);
   }
 
+  // Manual WhatsApp Sends & Message Log Viewer
+  static async sendPointsEarnedNow(payload) {
+    return this.request('/notifications/points-earned/send', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async sendRedemptionNow(payload) {
+    return this.request('/notifications/redemption/send', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async getNotificationLogs(limit = 20) {
+    return this.request(`/notifications/logs?limit=${encodeURIComponent(limit)}`);
+  }
+
   // Metadata
   static async getBranches() {
     return this.request('/branches');
+  }
+
+  // KYC Change Requests
+  static async submitKycChange(customerId, formData) {
+    return this.request(`/customers/${customerId}/kyc-change`, {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  static async getPendingKycRequests() {
+    return this.request('/admin/kyc-change/pending');
+  }
+
+  static async approveKycRequest(requestId, reviewNotes) {
+    return this.request(`/admin/kyc-change/${requestId}/approve`, {
+      method: 'POST',
+      body: { review_notes: reviewNotes },
+    });
+  }
+
+  static async rejectKycRequest(requestId, reviewNotes) {
+    return this.request(`/admin/kyc-change/${requestId}/reject`, {
+      method: 'POST',
+      body: { review_notes: reviewNotes },
+    });
+  }
+
+  // Public Balance Pass
+  static async getPublicBalance(token) {
+    return this.request(`/public/balance/${encodeURIComponent(token)}`);
+  }
+
+  // Reports
+  static async getPointsSummaryReport(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/reports/points-summary${query ? `?${query}` : ''}`);
+  }
+
+  static async getCustomerDistributionReport(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/reports/customer-distribution${query ? `?${query}` : ''}`);
+  }
+
+  static async getPointsLiabilityReport(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/reports/liability${query ? `?${query}` : ''}`);
+  }
+
+  static async getReferralConversionReport(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/reports/referrals${query ? `?${query}` : ''}`);
+  }
+
+  static async getKycAuditReport(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/reports/kyc-audit${query ? `?${query}` : ''}`);
+  }
+
+  static async downloadReportCsv(reportEndpoint, params = {}) {
+    const token = this.getToken();
+    const queryParams = new URLSearchParams({ ...params, format: 'csv' }).toString();
+    const res = await fetch(`${API_BASE}/reports/${reportEndpoint}?${queryParams}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to export CSV (HTTP ${res.status})`);
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${reportEndpoint}_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
   }
 }
 

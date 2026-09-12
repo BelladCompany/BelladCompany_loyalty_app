@@ -1,42 +1,44 @@
 import React, { useState } from 'react';
-import { X, UserPlus, Car, Calculator, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { Button, Input } from '../ui';
+import { X, UserPlus, Car, AlertCircle, CheckCircle2, UserCheck } from 'lucide-react';
+import { Button } from '../ui';
 import ApiService from '../../services/api';
 
 /**
  * AddCustomerModal
  *
- * Opens as a modal overlay. Fields:
- *  Required : Full Name, Phone Number (10-digit)
- *  Optional : Vehicle Reg No, Vehicle Model, Purchase Date, Ex-Showroom Price, Vehicle City
- *  Admin-only: Opening Points Balance
+ * Manual customer registration modal for Cashiers/Admins.
+ * Designed for registering First-Time Visiting Customers manually.
  *
- * On success, calls onSuccess(newCustomer) so the dashboard can immediately
- * navigate to the newly created customer's 360 profile.
+ * Form fields:
+ *  - Basic Customer Details: Name, Phone (10 digits), Age, Aadhaar No (12 digits), Address
+ *  - Vehicle Details (Optional): Brand, Branch, Model, Variant, Reg No, Fuel/Engine Type
+ *
+ * Excluded per requirement:
+ *  - Firm / Company Name
+ *  - Points Award / Opening Points (Manual customers start with 0 points)
+ *  - VIN No, Purchase Date, Ex-Showroom Price
  */
 export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
-  // ─── Form state ─────────────────────────────────────────────────────────────
+  // ─── Form State ─────────────────────────────────────────────────────────────
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [chassisOrVin, setChassisOrVin] = useState('');
+  const [age, setAge] = useState('');
+  const [aadhaar, setAadhaar] = useState('');
+  const [address, setAddress] = useState('');
+
+  const [brandName, setBrandName] = useState('');
+  const [branchName, setBranchName] = useState('');
   const [model, setModel] = useState('');
-  const [purchaseDate, setPurchaseDate] = useState('');
-  const [exShowroomPrice, setExShowroomPrice] = useState('');
-  const [vehicleCity, setVehicleCity] = useState('');
-  const [openingPoints, setOpeningPoints] = useState('0');
+  const [variant, setVariant] = useState('');
+  const [regNo, setRegNo] = useState('');
+  const [fuelType, setFuelType] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [success, setSuccess] = useState(null);
 
-  const isAdmin = user?.role === 'admin';
-
   if (!isOpen) return null;
-
-  // ─── Live points preview for opening balance ──────────────────────────────
-  const openingPtsNum = parseInt(openingPoints || '0', 10);
-  const openingPtsRupees = Math.floor(openingPtsNum / 4);
 
   // ─── Client-side validation ───────────────────────────────────────────────
   const validate = () => {
@@ -49,16 +51,16 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
     } else if (!/^\d{10}$/.test(phone.trim())) {
       errs.phone = 'Phone number must be exactly 10 digits.';
     }
-    if (exShowroomPrice && (isNaN(Number(exShowroomPrice)) || Number(exShowroomPrice) < 0)) {
-      errs.exShowroomPrice = 'Ex-showroom price must be a positive number.';
+    if (aadhaar.trim() && !/^\d{12}$/.test(aadhaar.trim())) {
+      errs.aadhaar = 'Aadhaar number must be exactly 12 numeric digits.';
     }
-    if (openingPtsNum < 0) {
-      errs.openingPoints = 'Opening points cannot be negative.';
+    if (age.trim() && (isNaN(Number(age)) || Number(age) <= 0 || Number(age) > 120)) {
+      errs.age = 'Please enter a valid age between 1 and 120.';
     }
     return errs;
   };
 
-  // ─── Submit ────────────────────────────────────────────────────────────────
+  // ─── Submit Handler ────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError('');
@@ -72,35 +74,48 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
 
     setIsLoading(true);
     try {
-      const hasVehicle = chassisOrVin.trim() || model.trim() || purchaseDate || exShowroomPrice || vehicleCity.trim();
+      const hasVehicleData =
+        brandName.trim() ||
+        branchName.trim() ||
+        model.trim() ||
+        variant.trim() ||
+        regNo.trim() ||
+        fuelType.trim();
+
       const payload = {
         name: name.trim(),
         phone_numbers: [phone.trim()],
-        ...(hasVehicle && {
+        visit_type: 'first_time',
+        is_first_time_visitor: true,
+        ...(aadhaar.trim() && { aadhaar_number: aadhaar.trim() }),
+        ...(age.trim() && { age: parseInt(age.trim(), 10) }),
+        ...(address.trim() && { address: address.trim() }),
+        ...(hasVehicleData && {
           vehicle: {
-            chassis_no: chassisOrVin.trim() || undefined,
-            vin: chassisOrVin.trim() || undefined,
-            registration_number: chassisOrVin.trim() || undefined,
+            brand_name: brandName.trim() || undefined,
+            branch_name: branchName.trim() || undefined,
             model: model.trim() || undefined,
-            purchase_date: purchaseDate || undefined,
-            ex_showroom_price: exShowroomPrice ? Number(exShowroomPrice) : undefined,
-            vehicle_city: vehicleCity.trim() || undefined,
+            variant: variant.trim() || undefined,
+            registration_number: regNo.trim() || undefined,
+            fuel_type: fuelType.trim() || undefined,
           },
         }),
-        // Only send opening_points if admin
-        ...(isAdmin && openingPtsNum > 0 && { opening_points: openingPtsNum }),
       };
 
       const res = await ApiService.createCustomer(payload);
       setSuccess(res.data);
-      // Small delay to show success state, then trigger parent callback
+
       setTimeout(() => {
         onSuccess(res.data);
         handleClose();
       }, 1200);
     } catch (err) {
       if (err.status === 409) {
-        setErrors({ phone: 'This phone number is already registered to another customer.' });
+        if (err.message && err.message.toLowerCase().includes('aadhaar')) {
+          setErrors({ aadhaar: err.message });
+        } else {
+          setErrors({ phone: err.message || 'This phone number is already registered to another customer.' });
+        }
       } else {
         setSubmitError(err.message || 'Failed to create customer. Please try again.');
       }
@@ -111,22 +126,31 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
 
   const handleClose = () => {
     if (isLoading) return;
-    // Reset all state
-    setName(''); setPhone(''); setChassisOrVin(''); setModel('');
-    setPurchaseDate(''); setExShowroomPrice(''); setVehicleCity('');
-    setOpeningPoints('0'); setErrors({}); setSubmitError(''); setSuccess(null);
+    setName('');
+    setPhone('');
+    setAge('');
+    setAadhaar('');
+    setAddress('');
+    setBrandName('');
+    setBranchName('');
+    setModel('');
+    setVariant('');
+    setRegNo('');
+    setFuelType('');
+    setErrors({});
+    setSubmitError('');
+    setSuccess(null);
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
       <div className="w-full max-w-2xl bg-white border-2 border-surface-border rounded-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-100 border-b border-surface-border flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <UserPlus className="w-6 h-6 text-action-primary" />
-            <h3 className="text-xl font-bold text-ink-primary">Register New Customer</h3>
+            <h3 className="text-xl font-bold text-ink-primary">Add First-Time Customer</h3>
           </div>
           <button
             type="button"
@@ -138,11 +162,9 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
           </button>
         </div>
 
-        {/* Scrollable form body */}
+        {/* Form Body */}
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
           <div className="p-6 space-y-6">
-            
-            {/* Submit error */}
             {submitError && (
               <div className="p-4 bg-action-danger-light border border-red-300 rounded flex items-start gap-2.5 text-action-danger font-bold text-base">
                 <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -150,23 +172,31 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
               </div>
             )}
 
-            {/* Success */}
             {success && (
               <div className="p-4 bg-action-success-light border border-green-300 rounded flex items-center gap-3 text-action-success font-bold text-base">
                 <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-                <span>Customer <span className="font-mono">{success.customer_id}</span> created! Loading profile…</span>
+                <span>
+                  Customer <span className="font-mono">{success.customer_id}</span> created! Loading profile…
+                </span>
               </div>
             )}
 
-            {/* ── SECTION 1: Basic Details ─────────────────────────────── */}
+            {/* Banner */}
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-sm text-brand-navy font-semibold">
+              <UserCheck className="w-5 h-5 text-action-primary flex-shrink-0" />
+              <span>Registering First-Time Visiting Customer. Initial points: 0. Points are calculated on service spend.</span>
+            </div>
+
+            {/* ── SECTION 1: Customer Details ─────────────────────────────── */}
             <div>
-              <h4 className="text-base font-bold text-ink-primary mb-3 pb-2 border-b border-surface-border">
-                Basic Details <span className="text-action-danger">*</span>
+              <h4 className="text-base font-bold text-ink-primary mb-3 pb-2 border-b border-surface-border flex items-center justify-between">
+                <span>Customer Profile Details</span>
+                <span className="text-xs text-action-danger font-bold">* Required</span>
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-bold text-ink-primary block mb-1.5">
-                    Full Name <span className="text-action-danger">*</span>
+                    Customer Name <span className="text-action-danger">*</span>
                   </label>
                   <input
                     id="add-cust-name"
@@ -200,6 +230,54 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
                   />
                   {errors.phone && <p className="text-xs text-action-danger font-semibold mt-1">{errors.phone}</p>}
                 </div>
+
+                <div>
+                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Age</label>
+                  <input
+                    id="add-cust-age"
+                    type="number"
+                    placeholder="e.g. 35"
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    disabled={isLoading || !!success}
+                    min={1}
+                    max={120}
+                    className={`w-full h-11 px-4 border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white transition-colors ${
+                      errors.age ? 'border-red-400 bg-red-50' : 'border-surface-border'
+                    }`}
+                  />
+                  {errors.age && <p className="text-xs text-action-danger font-semibold mt-1">{errors.age}</p>}
+                </div>
+
+                <div>
+                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Aadhaar Number</label>
+                  <input
+                    id="add-cust-aadhaar"
+                    type="text"
+                    placeholder="e.g. 123456789012 (12 digits)"
+                    value={aadhaar}
+                    onChange={(e) => setAadhaar(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                    disabled={isLoading || !!success}
+                    maxLength={12}
+                    className={`w-full h-11 px-4 border rounded text-base font-mono font-medium focus:outline-none focus:border-action-primary bg-white transition-colors ${
+                      errors.aadhaar ? 'border-red-400 bg-red-50' : 'border-surface-border'
+                    }`}
+                  />
+                  {errors.aadhaar && <p className="text-xs text-action-danger font-semibold mt-1">{errors.aadhaar}</p>}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Customer Address</label>
+                  <textarea
+                    id="add-cust-address"
+                    rows={2}
+                    placeholder="e.g. House No 42, Main Road, Tilakwadi, Belagavi"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    disabled={isLoading || !!success}
+                    className="w-full p-3 border border-surface-border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white resize-none"
+                  />
+                </div>
               </div>
             </div>
 
@@ -212,26 +290,37 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-semibold text-ink-primary block mb-1.5">
-                    Chassis No. / VIN No.
-                  </label>
+                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Brand</label>
                   <input
-                    id="add-cust-chassis"
+                    id="add-cust-brand"
                     type="text"
-                    placeholder="e.g. MA3EW... or 17-digit Chassis / VIN No"
-                    value={chassisOrVin}
-                    onChange={(e) => setChassisOrVin(e.target.value.toUpperCase())}
+                    placeholder="e.g. Maruti Suzuki, Hyundai"
+                    value={brandName}
+                    onChange={(e) => setBrandName(e.target.value)}
                     disabled={isLoading || !!success}
-                    className="w-full h-11 px-4 border border-surface-border rounded-md text-base font-mono font-medium focus:outline-none focus:border-action-primary bg-white shadow-xs transition-colors"
+                    className="w-full h-11 px-4 border border-surface-border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Vehicle Model</label>
+                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Branch</label>
+                  <input
+                    id="add-cust-branch"
+                    type="text"
+                    placeholder="e.g. Belgaum Main, Hubli"
+                    value={branchName}
+                    onChange={(e) => setBranchName(e.target.value)}
+                    disabled={isLoading || !!success}
+                    className="w-full h-11 px-4 border border-surface-border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Model</label>
                   <input
                     id="add-cust-model"
                     type="text"
-                    placeholder="e.g. Swift Dzire, Creta"
+                    placeholder="e.g. Swift, Creta"
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
                     disabled={isLoading || !!success}
@@ -240,87 +329,50 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Purchase Date</label>
+                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Variant</label>
                   <input
-                    id="add-cust-purchase-date"
-                    type="date"
-                    value={purchaseDate}
-                    onChange={(e) => setPurchaseDate(e.target.value)}
+                    id="add-cust-variant"
+                    type="text"
+                    placeholder="e.g. VXI, ZXI Plus"
+                    value={variant}
+                    onChange={(e) => setVariant(e.target.value)}
                     disabled={isLoading || !!success}
                     className="w-full h-11 px-4 border border-surface-border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Vehicle City</label>
+                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Registration No.</label>
                   <input
-                    id="add-cust-city"
+                    id="add-cust-regno"
                     type="text"
-                    placeholder="e.g. Bangalore"
-                    value={vehicleCity}
-                    onChange={(e) => setVehicleCity(e.target.value)}
+                    placeholder="e.g. KA-22-AB-1234"
+                    value={regNo}
+                    onChange={(e) => setRegNo(e.target.value.toUpperCase())}
                     disabled={isLoading || !!success}
-                    className="w-full h-11 px-4 border border-surface-border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white"
+                    className="w-full h-11 px-4 border border-surface-border rounded text-base font-mono font-medium focus:outline-none focus:border-action-primary bg-white"
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Ex-Showroom Price (₹)</label>
-                  <input
-                    id="add-cust-ex-showroom"
-                    type="number"
-                    placeholder="e.g. 850000 (pre-tax, not on-road price)"
-                    value={exShowroomPrice}
-                    onChange={(e) => setExShowroomPrice(e.target.value)}
+                <div>
+                  <label className="text-sm font-bold text-ink-primary block mb-1.5">Fuel / Engine Type</label>
+                  <select
+                    id="add-cust-fuel"
+                    value={fuelType}
+                    onChange={(e) => setFuelType(e.target.value)}
                     disabled={isLoading || !!success}
-                    min={0}
-                    className={`w-full h-11 px-4 border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white transition-colors ${
-                      errors.exShowroomPrice ? 'border-red-400 bg-red-50' : 'border-surface-border'
-                    }`}
-                  />
-                  {errors.exShowroomPrice && <p className="text-xs text-action-danger font-semibold mt-1">{errors.exShowroomPrice}</p>}
-                  <p className="text-xs text-ink-muted mt-1">Used to calculate loyalty points if you also apply points via "+ Add Points" after registration.</p>
+                    className="w-full h-11 px-4 border border-surface-border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white"
+                  >
+                    <option value="">Select Fuel Type (Optional)</option>
+                    <option value="Petrol">Petrol</option>
+                    <option value="Diesel">Diesel</option>
+                    <option value="EV">EV (Electric)</option>
+                    <option value="CNG">CNG</option>
+                    <option value="Hybrid">Hybrid</option>
+                  </select>
                 </div>
               </div>
             </div>
-
-            {/* ── SECTION 3: Opening Points (Admin only) ─────────────── */}
-            {isAdmin && (
-              <div>
-                <h4 className="text-base font-bold text-ink-primary mb-3 pb-2 border-b border-surface-border">
-                  Opening Points Balance
-                  <span className="ml-2 text-xs font-bold text-amber-700 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded">ADMIN ONLY</span>
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                  <div>
-                    <label className="text-sm font-bold text-ink-primary block mb-1.5">Points to Award</label>
-                    <input
-                      id="add-cust-opening-pts"
-                      type="number"
-                      placeholder="0"
-                      value={openingPoints}
-                      onChange={(e) => setOpeningPoints(e.target.value)}
-                      disabled={isLoading || !!success}
-                      min={0}
-                      className={`w-full h-11 px-4 border rounded text-base font-mono font-medium focus:outline-none focus:border-action-primary bg-white transition-colors ${
-                        errors.openingPoints ? 'border-red-400 bg-red-50' : 'border-surface-border'
-                      }`}
-                    />
-                    {errors.openingPoints && <p className="text-xs text-action-danger font-semibold mt-1">{errors.openingPoints}</p>}
-                  </div>
-
-                  {openingPtsNum > 0 && (
-                    <div className="p-3 bg-action-primary-light border border-blue-300 rounded flex items-center gap-2">
-                      <Calculator className="w-4 h-4 text-action-primary flex-shrink-0" />
-                      <span className="text-sm font-bold text-action-primary">
-                        ≈ ₹{openingPtsRupees.toLocaleString()} discount value
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
           </div>
 
           {/* Footer buttons */}
@@ -328,17 +380,11 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
             <Button variant="outline" size="lg" onClick={handleClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              disabled={isLoading || !!success}
-            >
+            <Button type="submit" variant="primary" size="lg" disabled={isLoading || !!success}>
               {isLoading ? 'Creating Customer…' : 'Create & Open Profile'}
             </Button>
           </div>
         </form>
-
       </div>
     </div>
   );
