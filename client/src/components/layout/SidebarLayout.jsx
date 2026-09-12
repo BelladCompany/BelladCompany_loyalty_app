@@ -62,11 +62,11 @@ export const SidebarLayout = ({
     <>
       {/* Brand Header */}
       <div className="flex flex-col min-h-0 flex-1">
-        <div className="h-16 px-5 flex items-center gap-3 border-b border-slate-800 bg-slate-950 flex-shrink-0">
+        <div className="h-16 lg:h-20 px-5 flex items-center gap-3 border-b border-slate-800 bg-slate-950 flex-shrink-0">
           <img
             src="/bellad-logo.png"
             alt="Bellad Logo"
-            className="h-9 w-9 object-contain bg-white/10 p-1 rounded-md flex-shrink-0"
+            className="h-12 w-auto max-w-[140px] object-contain flex-shrink-0"
           />
           <div className="flex flex-col">
             <span className="font-bold text-base text-white tracking-wide">BAC Loyalty</span>
@@ -199,7 +199,7 @@ export const SidebarLayout = ({
       <main className="flex-1 flex flex-col overflow-hidden bg-surface-screen">
 
         {/* Top Operational Bar */}
-        <header className="h-16 px-4 sm:px-6 bg-white border-b border-surface-border flex items-center justify-between gap-3 flex-shrink-0">
+        <header className="h-16 lg:h-20 px-4 sm:px-6 bg-white border-b border-surface-border flex items-center justify-between gap-3 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -228,13 +228,11 @@ export const SidebarLayout = ({
               <span className="hidden md:inline">Online / POS Ready</span>
             </div>
             <div className="hidden md:block h-6 w-px bg-surface-divider" />
-            <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 rounded-lg border border-surface-border shadow-xs hover:bg-slate-100 transition-colors">
-              <img
-                src="/bellad-logo.png"
-                alt="Bellad Logo"
-                className="h-8 w-auto max-w-[120px] object-contain drop-shadow-xs"
-              />
-            </div>
+            <img
+              src="/bellad-logo.png"
+              alt="Bellad Logo"
+              className="hidden sm:block h-12 w-auto max-w-[140px] object-contain flex-shrink-0"
+            />
           </div>
         </header>
 
