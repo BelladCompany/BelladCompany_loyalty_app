@@ -123,12 +123,21 @@ class NotificationService {
       const provider = getWhatsAppProvider();
       providerName = provider.name;
 
-      const result = await provider.sendOtpTemplate({
+      let result = await provider.sendOtpTemplate({
         toPhone: phone,
         templateName,
         code: otp,
         expiryMinutes: 5, // matches your DB's actual 5-minute OTP expiry
       });
+
+      if (!result.success) {
+        // Fallback to template field parameters if auth template endpoint expects standard body fields
+        result = await provider.sendMessage({
+          toPhone: phone,
+          templateName,
+          params: [customerName, String(otp)],
+        });
+      }
 
       await this._logMessageAttempt({
         customer_id,

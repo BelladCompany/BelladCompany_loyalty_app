@@ -54,7 +54,7 @@ class KycService {
         `SELECT otp_id AS id, otp_hash, expires_at, used_at
          FROM otp_requests
          WHERE customer_id = $1 AND tenant_id = $2 AND used_at IS NULL AND expires_at > NOW()
-         ORDER BY otp_id DESC
+         ORDER BY created_at DESC
          LIMIT 1
          FOR UPDATE;`,
         [customer_id, tenant_id]
@@ -71,7 +71,7 @@ class KycService {
       }
 
       // Mark OTP as used (single-use enforcement)
-      await client.query(`UPDATE otp_requests SET used_at = NOW() WHERE otp_id = $1;`, [activeOtp.id]);
+      await client.query(`UPDATE otp_requests SET used_at = NOW(), is_used = TRUE WHERE otp_id = $1;`, [activeOtp.id]);
 
       // 3. Encrypt file URL reference at rest
       const encryptedFileUrl = encrypt(id_proof_file_url || '');

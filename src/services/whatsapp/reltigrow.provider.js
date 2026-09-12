@@ -156,7 +156,7 @@ class ReltigrowWhatsAppProvider extends BaseWhatsAppProvider {
     const payload = JSON.stringify({
       phone: normalizedPhone,
       template_name: templateName,
-      code: String(code),
+      code: String(code).padStart(6, '0'),
       language: 'en',
       expiry_minutes: expiryMinutes,
       purpose: 'authentication',

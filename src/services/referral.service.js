@@ -572,9 +572,9 @@ class ReferralService {
     const otpHash = await bcrypt.hash(otp, 8);
 
     await pool.query(
-      `INSERT INTO otp_requests (customer_id, otp_hash, purpose, expires_at, tenant_id)
-       VALUES ($1, $2, 'referral_lead', NOW() + INTERVAL '5 minutes', $3);`,
-      [referrer.customer_id, otpHash, tenant_id]
+      `INSERT INTO otp_requests (customer_id, phone_number, otp_hash, purpose, expires_at, tenant_id)
+       VALUES ($1, $2, $3, 'referral_lead', NOW() + INTERVAL '5 minutes', $4);`,
+      [referrer.customer_id, lead_phone, otpHash, tenant_id]
     );
 
     // Send WhatsApp OTP
@@ -585,6 +585,8 @@ class ReferralService {
       tenant_id,
     });
 
+    const isDebugEnabled = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEBUG_OTP === 'true';
+
     return {
       success: true,
       message: `OTP sent to ${lead_phone}.`,
@@ -592,7 +594,7 @@ class ReferralService {
       referrer_name: referrer.customer_name,
       expires_in_seconds: 300,
       whatsapp_sent: otpSendResult.success,
-      ...(process.env.NODE_ENV !== 'production' && { debug_otp: otp }),
+      ...(isDebugEnabled && { debug_otp: otp }),
     };
   }
 
@@ -611,12 +613,12 @@ class ReferralService {
     const aadhaarHash = cryptoUtil.hashIdentifier(lead_aadhaar);
     const aadhaarLast4Enc = cryptoUtil.encrypt(lead_aadhaar.slice(-4));
 
-    // 3. Verify OTP
+    // 3. Verify OTP specifically bound to lead_phone and purpose='referral_lead'
     const otpRes = await pool.query(
       `SELECT otp_id, otp_hash FROM otp_requests
-       WHERE customer_id = $1 AND purpose = 'referral_lead' AND expires_at > NOW() AND used_at IS NULL
+       WHERE (phone_number = $1 OR customer_id = $2) AND purpose = 'referral_lead' AND expires_at > NOW() AND used_at IS NULL
        ORDER BY created_at DESC LIMIT 1;`,
-      [referrer.customer_id]
+      [lead_phone, referrer.customer_id]
     );
 
     if (otpRes.rows.length === 0) {
@@ -630,7 +632,7 @@ class ReferralService {
     }
 
     // Mark OTP used
-    await pool.query(`UPDATE otp_requests SET used_at = NOW() WHERE otp_id = $1;`, [otpRecord.otp_id]);
+    await pool.query(`UPDATE otp_requests SET used_at = NOW(), is_used = TRUE WHERE otp_id = $1;`, [otpRecord.otp_id]);
 
     // 4. Generate unique 8-character code: e.g. RF8K92X1
     const crypto = require('crypto');

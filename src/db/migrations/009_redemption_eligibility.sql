@@ -57,7 +57,7 @@ BEGIN
   ) THEN
     ALTER TABLE points_ledger
       ADD CONSTRAINT points_ledger_type_check
-      CHECK (type IN ('earn_sale', 'earn_service', 'earn_referral', 'redeem', 'adjust', 'expire'));
+      CHECK (type IN ('earn_sale', 'earn_service', 'earn_referral', 'redeem', 'adjust', 'expire', 'sale', 'service', 'referral', 'adjustment', 'earn', 'spend', 'correction_applied', 'correction_reversal'));
   END IF;
 END
 $$;

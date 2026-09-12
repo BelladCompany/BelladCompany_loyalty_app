@@ -79,10 +79,10 @@ class RedemptionService {
     const otpHash = await bcrypt.hash(otp, 8);
 
     const insertRes = await pool.query(
-      `INSERT INTO otp_requests (customer_id, otp_hash, purpose, expires_at, tenant_id)
-       VALUES ($1, $2, 'redemption', NOW() + INTERVAL '5 minutes', $3)
+      `INSERT INTO otp_requests (customer_id, phone_number, otp_hash, purpose, expires_at, tenant_id)
+       VALUES ($1, $2, $3, 'redemption', NOW() + INTERVAL '5 minutes', $4)
        RETURNING otp_id AS id, customer_id, expires_at, created_at;`,
-      [resolvedCustomerId, otpHash, tenant_id]
+      [resolvedCustomerId, resolvedPhone, otpHash, tenant_id]
     );
 
     const otpRecord = insertRes.rows[0];
@@ -174,7 +174,7 @@ class RedemptionService {
         `SELECT otp_id AS id, otp_hash, expires_at, used_at
          FROM otp_requests
          WHERE customer_id = $1 AND tenant_id = $2 AND used_at IS NULL AND expires_at > NOW()
-         ORDER BY otp_id DESC
+         ORDER BY created_at DESC
          LIMIT 1
          FOR UPDATE;`,
         [customerId, tenant_id]
@@ -192,7 +192,7 @@ class RedemptionService {
 
       // Mark OTP as used (single-use enforcement)
       await client.query(
-        `UPDATE otp_requests SET used_at = NOW() WHERE otp_id = $1;`,
+        `UPDATE otp_requests SET used_at = NOW(), is_used = TRUE WHERE otp_id = $1;`,
         [activeOtp.id]
       );
 
