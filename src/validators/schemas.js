@@ -59,18 +59,36 @@ const createCustomerSchema = z.object({
   }).optional().nullable(),
   // Optional opening points (admin-only meaningful; cashier always gets 0 enforced server-side)
   opening_points: z.coerce.number().int().min(0, 'Opening points cannot be negative').default(0).optional(),
-  // Optional 12-digit Aadhaar number for customer identity verification
+  // Mandatory Aadhaar & GST Number
   aadhaar_number: z
-    .string()
+    .string({ required_error: 'Aadhaar number is required' })
     .trim()
-    .regex(/^\d{12}$/, 'Aadhaar number must be exactly 12 numeric digits.')
-    .optional()
-    .nullable(),
+    .regex(/^\d{12}$/, 'Aadhaar number must be exactly 12 numeric digits.'),
+  gst_number: z
+    .string({ required_error: 'GST number is required' })
+    .trim()
+    .min(1, 'GST number is required'),
   age: z.coerce.number().int().positive().optional().nullable(),
   firm_name: z.string().trim().optional().nullable(),
   address: z.string().trim().optional().nullable(),
   visit_type: z.string().trim().optional().nullable(),
   is_first_time_visitor: z.boolean().optional().nullable(),
+  otp: z.string().trim().optional().nullable(),
+
+  // Tally / ERP Party & Ledger fields
+  ledger_name: z.string().trim().optional().nullable(),
+  ledger_code: z.string().trim().optional().nullable(),
+  ledger_group: z.string().trim().optional().nullable(),
+  party_type: z.string().trim().optional().nullable(),
+  customer_type: z.string().trim().optional().nullable(),
+  gst_registration_type: z.string().trim().optional().nullable(),
+  state: z.string().trim().optional().nullable(),
+  city: z.string().trim().optional().nullable(),
+  pincode: z.string().trim().optional().nullable(),
+  vat_no: z.string().trim().optional().nullable(),
+  pan_no: z.string().trim().optional().nullable(),
+  service_tax_no: z.string().trim().optional().nullable(),
+  ecc_no: z.string().trim().optional().nullable(),
 });
 
 const updateCustomerSchema = z.object({

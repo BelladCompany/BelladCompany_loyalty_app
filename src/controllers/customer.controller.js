@@ -1,9 +1,32 @@
 const CustomerService = require('../services/customer.service');
 
 class CustomerController {
+  static async requestCustomerCreationOtp(req, res, next) {
+    try {
+      const { phone } = req.body;
+      const tenantId = req.tenantId;
+
+      const result = await CustomerService.requestCustomerCreationOtp({
+        phone,
+        tenant_id: tenantId,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: result.message,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async createCustomer(req, res, next) {
     try {
-      const { name, email, phone_numbers, vehicle, opening_points, aadhaar_number, age, firm_name, address, visit_type, is_first_time_visitor } = req.body;
+      const {
+        name, email, phone_numbers, vehicle, opening_points, aadhaar_number, age, firm_name, address, visit_type, is_first_time_visitor, otp,
+        gst_number, ledger_name, ledger_code, ledger_group, party_type, customer_type, gst_registration_type, state, city, pincode, vat_no, pan_no, service_tax_no, ecc_no,
+      } = req.body;
       const tenantId = req.tenantId;
 
       const customer = await CustomerService.createCustomer({
@@ -21,6 +44,21 @@ class CustomerController {
         created_by: req.user?.id || null,
         tenant_id: tenantId,
         award_auto_sales_points: false, // Explicitly false for cashier manual customer creation
+        otp,
+        gst_number,
+        ledger_name,
+        ledger_code,
+        ledger_group,
+        party_type,
+        customer_type,
+        gst_registration_type,
+        state,
+        city,
+        pincode,
+        vat_no,
+        pan_no,
+        service_tax_no,
+        ecc_no,
       });
 
       res.status(201).json({

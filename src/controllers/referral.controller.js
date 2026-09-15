@@ -184,11 +184,29 @@ class ReferralController {
       }
 
       const NotificationService = require('../services/notification.service');
+      // Use the real frontend origin the user is calling from (works across ports
+      // 3000/3001/3002), falling back to FRONTEND_URL env, then a dev default.
+      const frontendBase = (req.headers.origin !== 'null' && req.headers.origin)
+        || process.env.FRONTEND_URL
+        || 'http://localhost:5173';
       const result = await NotificationService.sendReferralReminderNotification({
         customer_id,
         phone,
         tenant_id: tenantId,
+        frontendBase,
       });
+
+      if (!result.success) {
+        let errDetails = result.error || result.reason || 'Failed to send WhatsApp message';
+        if (typeof errDetails === 'string' && errDetails.includes('NOT_FOUND')) {
+          errDetails = 'Template not found in Reltigrow Dashboard. Please verify template name in Reltigrow or set RELTIGROW_REFERRAL_TEMPLATE in .env';
+        }
+        return res.status(400).json({
+          status: 'fail',
+          message: `WhatsApp send failed: ${errDetails}`,
+          data: result,
+        });
+      }
 
       res.status(200).json({
         status: 'success',

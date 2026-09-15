@@ -112,7 +112,7 @@ class NotificationService {
    * Returns { success, error? } — never throws.
    */
   static async sendOtpNotification({ customer_id, phone, otp, tenant_id }) {
-    const templateName = 'loyalty_program_customer_otp'; // exact approved template name from Reltigrow dashboard
+    const templateName = process.env.RELTIGROW_OTP_TEMPLATE || 'loyalty_program_customer_otp';
     let messageBody = '';
     let providerName = 'unknown';
 
@@ -180,7 +180,7 @@ class NotificationService {
    * Reads live balance from points_ledger at send time (never cached).
    */
   static async sendPointsEarnedNotification({ customer_id, points, transaction_type, tenant_id }) {
-    const templateName = 'points_earned'; // <-- CONFIRM this exact name + var count in Reltigrow dashboard
+    const templateName = process.env.RELTIGROW_POINTS_EARNED_TEMPLATE || 'points_earned';
     let messageBody = '';
     let providerName = 'unknown';
     let toPhone = null;
@@ -274,7 +274,7 @@ class NotificationService {
    * Sends "redemption confirmed" WhatsApp message after successful redemption.
    */
   static async sendRedemptionNotification({ customer_id, phone, pointsRedeemed, discountRupees, remainingBalance, tenant_id }) {
-    const templateName = 'loyalty_program_reedemption_msg'; // exact name from your Reltigrow dashboard (APPROVED)
+    const templateName = process.env.RELTIGROW_REDEMPTION_TEMPLATE || 'loyalty_program_reedemption_msg';
     let messageBody = '';
     let providerName = 'unknown';
     let toPhone = phone;
@@ -363,7 +363,7 @@ class NotificationService {
    * Sends 3-month or 1-month WhatsApp expiry reminder.
    */
   static async sendExpiryReminderNotification({ customer_id, phone, points, expires_at, vehicle_reg, reminder_type, tenant_id }) {
-    const templateName = 'loyalty_expiry_reminder';
+    const templateName = process.env.RELTIGROW_EXPIRY_TEMPLATE || 'loyalty_expiry_reminder';
     let messageBody = '';
     let providerName = 'unknown';
     let toPhone = phone;
@@ -461,8 +461,8 @@ class NotificationService {
   /**
    * Sends WhatsApp referral link reminder to customer using `loyalty_refferral_progrm_reminder` template.
    */
-  static async sendReferralReminderNotification({ customer_id, phone, tenant_id }) {
-    const templateName = 'loyalty_refferral_progrm_reminder';
+  static async sendReferralReminderNotification({ customer_id, phone, tenant_id, frontendBase }) {
+    const templateName = process.env.RELTIGROW_REFERRAL_TEMPLATE || 'loyalty_refferral_progrm_reminder';
     let messageBody = '';
     let providerName = 'unknown';
     let toPhone = phone;
@@ -478,9 +478,13 @@ class NotificationService {
 
       const CustomerService = require('./customer.service');
       const customer = await CustomerService.getCustomerById(customer_id, tenant_id);
+      if (!customer) {
+        console.warn(`⚠️ [Referral Reminder] Customer '${customer_id}' not found. Skipping.`);
+        return { success: false, reason: `Customer '${customer_id}' not found` };
+      }
       const referralCode = customer.referral_code || customer.customer_id;
-      const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
-      const referralLink = `${frontendBase}/refer/${referralCode}`;
+      const referralBase = frontendBase || process.env.FRONTEND_URL || 'http://localhost:5173';
+      const referralLink = `${referralBase}/refer/${referralCode}`;
       const customerName = customer.customer_name || customer.name || 'Valued Customer';
 
       messageBody = `Hi ${customerName}, share your referral link with friends to earn loyalty rewards: ${referralLink}`;
@@ -488,13 +492,19 @@ class NotificationService {
       const provider = getWhatsAppProvider();
       providerName = provider.name;
 
+      // Template `loyalty_refferral_progrm_reminder` has language `bn` and exactly 1 body
+      // variable ({{1}} = referral link). Language defaults from env, falls back to 'bn'
+      // to match the template registered in the Reltigrow dashboard.
+      const referralLanguage = process.env.RELTIGROW_REFERRAL_LANGUAGE || 'bn';
+
+      console.log(`📤 [Referral Reminder] Sending to ${toPhone} | Template: ${templateName} | Lang: ${referralLanguage} | Params: [${referralLink}]`);
+
       const result = await provider.sendMessage({
         toPhone,
         templateName,
+        language: referralLanguage,
         params: [
-          customerName,    // {{1}} Customer Name
-          referralCode,    // {{2}} Referral Code
-          referralLink,    // {{3}} Referral Share Link
+          referralLink,    // {{1}} Referral Share Link (only body variable in the approved template)
         ],
       });
 

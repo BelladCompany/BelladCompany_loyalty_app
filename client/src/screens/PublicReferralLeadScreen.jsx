@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react';
 import { Sparkles, Phone, ShieldCheck, CheckCircle2, Copy, Share2, AlertCircle, RefreshCw } from 'lucide-react';
 import ApiService from '../services/api';
 
 export const PublicReferralLeadScreen = () => {
-  const { referrerCode } = useParams();
+  // Extract referrer code from URL path (e.g. /refer/BAC-100008 => BAC-100008)
+  const referrerCode = window.location.pathname.split('/refer/')[1] || '';
   const [referrerInfo, setReferrerInfo] = useState(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
   const [infoError, setInfoError] = useState('');

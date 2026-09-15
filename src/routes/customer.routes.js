@@ -15,6 +15,9 @@ const {
 // All customer routes require authentication
 router.use(authenticateToken);
 
+// Request OTP for manual customer creation
+router.post('/request-creation-otp', requireRole(['cashier', 'admin']), CustomerController.requestCustomerCreationOtp);
+
 // Create customer (Cashier or Admin)
 router.post('/', requireRole(['cashier', 'admin']), validate(createCustomerSchema), CustomerController.createCustomer);
 

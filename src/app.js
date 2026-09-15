@@ -62,10 +62,10 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/appsheet', appsheetRoutes);
 app.use('/api/corrections', correctionRoutes);
 app.use('/api/admin/corrections', correctionRoutes);
-app.use('/api', kycRoutes);
 app.use('/api/public', publicBalanceRoutes);
 app.use('/api/public', publicReferralRoutes);
 app.use('/api', publicBalanceRoutes);
+app.use('/api', kycRoutes);
 
 // Catch-all 404 handler
 app.use((req, res) => {

@@ -127,6 +127,13 @@ export class ApiService {
   }
 
   // Create Customer
+  static async requestCustomerCreationOtp(phone) {
+    return this.request('/customers/request-creation-otp', {
+      method: 'POST',
+      body: { phone },
+    });
+  }
+
   static async createCustomer(payload) {
     return this.request('/customers', {
       method: 'POST',

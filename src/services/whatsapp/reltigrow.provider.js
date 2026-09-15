@@ -46,13 +46,13 @@ class ReltigrowWhatsAppProvider extends BaseWhatsAppProvider {
    * @param {string} [options.templateName] - Optional: Reltigrow template name
    * @returns {Promise<{ success: boolean, messageId: string, provider: string }>}
    */
-  async sendMessage({ toPhone, templateName, params = [] }) {
+  async sendMessage({ toPhone, templateName, params = [], language = 'en' }) {
     const normalizedPhone = normalizeToE164India(toPhone);
 
     if (!this.apiUrl || !this.apiKey) {
       console.warn('[ReltigrowProvider] RELTIGROW_API_URL or RELTIGROW_API_KEY not set. Falling back to mock log.');
       const msgId = `WA-MOCK-RTG-${Date.now()}`;
-      console.log(`📲 [Reltigrow Mock] To: ${normalizedPhone} | Template: ${templateName} | Params:`, params);
+      console.log(`📲 [Reltigrow Mock] To: ${normalizedPhone} | Template: ${templateName} | Language: ${language} | Params:`, params);
       return { success: true, messageId: msgId, provider: this.name, status: 'mock' };
     }
 
@@ -66,7 +66,7 @@ class ReltigrowWhatsAppProvider extends BaseWhatsAppProvider {
     const payload = JSON.stringify({
       phone: normalizedPhone,
       template_name: templateName,
-      language: 'en',
+      language,
       ...fieldParams,
     });
 
@@ -77,6 +77,8 @@ class ReltigrowWhatsAppProvider extends BaseWhatsAppProvider {
         const url = new URL(`${this.apiUrl}/messages/template`);
         const isHttps = url.protocol === 'https:';
         const transport = isHttps ? https : http;
+
+        console.log(`📤 [Reltigrow] Sending template "${templateName}" to ${normalizedPhone} | Params:`, params);
 
         const options = {
           hostname: url.hostname,
@@ -97,14 +99,17 @@ class ReltigrowWhatsAppProvider extends BaseWhatsAppProvider {
           res.on('end', () => {
             try {
               const body = JSON.parse(raw);
-              if (res.statusCode >= 200 && res.statusCode < 300) {
+              const hasApiError = (body?.code === 'NOT_FOUND' || body?.code === 'INVALID_PARAMETER' || body?.success === false)
+                && (body?.error || body?.message);
+
+              if (res.statusCode >= 200 && res.statusCode < 300 && !hasApiError) {
                 const messageId = body?.message_id || body?.id || `WA-RTG-${Date.now()}`;
                 console.log(`✅ [Reltigrow] Sent to ${normalizedPhone} | MsgID: ${messageId}`);
                 resolve({ success: true, messageId, provider: this.name, status: 'sent' });
               } else {
-                const errMsg = body?.message || body?.error || `HTTP ${res.statusCode}`;
-                console.error(`❌ [Reltigrow] API Error ${res.statusCode}: ${errMsg}`);
-                resolve({ success: false, error: errMsg, provider: this.name, status: 'failed' });
+                console.error(`❌ [Reltigrow] API Error ${res.statusCode} for template "${templateName}":`, raw.slice(0, 500));
+                const errMsg = body?.error?.message || body?.error?.details?.error || body?.message || body?.error || `HTTP ${res.statusCode}`;
+                resolve({ success: false, error: typeof errMsg === 'object' ? JSON.stringify(errMsg) : errMsg, provider: this.name, status: 'failed' });
               }
             } catch (parseErr) {
               console.error('[Reltigrow] Failed to parse API response:', raw);

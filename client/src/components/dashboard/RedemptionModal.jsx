@@ -535,7 +535,7 @@ export const RedemptionModal = ({
                   {[
                     { id: 'service', label: 'Service' },
                     { id: 'accessories', label: 'Accessories' },
-                    { id: 'bodyshop', label: 'Body Parts' },
+                    { id: 'bodyshop', label: 'BodyShop' },
                     { id: 'referral', label: 'Referral' },
                   ].map((tab) => (
                     <button
@@ -685,7 +685,7 @@ export const RedemptionModal = ({
                 </div>
               )}
 
-              {/* Live Arithmetic Computation Card (Service / Accessories / Body Parts) */}
+              {/* Live Arithmetic Computation Card (Service / Accessories / BodyShop) */}
               {category !== 'referral' && numBillAmount > 0 && (
                 <div className="p-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl border-2 border-slate-700 shadow-xl space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-700 pb-2">

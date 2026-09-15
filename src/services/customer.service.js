@@ -1,14 +1,74 @@
 const { pool } = require('../config/db');
 const { encrypt, decrypt, hashIdentifier, lastDigits } = require('../utils/crypto.util');
 const TransactionService = require('./transaction.service');
+const bcrypt = require('bcryptjs');
+const NotificationService = require('./notification.service');
 
 class CustomerService {
   /**
+   * Request OTP for manual customer creation
+   */
+  static async requestCustomerCreationOtp({ phone, tenant_id }) {
+    if (!phone || !String(phone).trim()) {
+      throw { statusCode: 400, message: 'Phone number is required.' };
+    }
+    const cleanPhone = String(phone).trim().replace(/[^\d]/g, '');
+    const phoneToUse = cleanPhone.length === 10 ? cleanPhone : (cleanPhone.length > 10 ? cleanPhone.slice(-10) : cleanPhone);
+
+    if (phoneToUse.length !== 10) {
+      throw { statusCode: 400, message: 'Phone number must be a valid 10-digit number.' };
+    }
+
+    // Check if phone number is already registered to an existing customer
+    const existingPhone = await pool.query(
+      `SELECT customer_id FROM customer_phones WHERE phone_number = $1 AND tenant_id = $2 LIMIT 1;`,
+      [phoneToUse, tenant_id]
+    );
+    if (existingPhone.rows.length > 0) {
+      throw { statusCode: 409, message: 'This phone number is already registered to an existing customer.' };
+    }
+
+    // Rate limiting: max 5 OTP requests per hour per phone
+    const rateCheck = await pool.query(
+      `SELECT COUNT(*) AS count
+       FROM otp_requests
+       WHERE phone_number = $1 AND tenant_id = $2
+         AND created_at > NOW() - INTERVAL '1 hour';`,
+      [phoneToUse, tenant_id]
+    );
+    if (parseInt(rateCheck.rows[0].count, 10) >= 5) {
+      throw { statusCode: 429, message: 'Too many OTP requests for this phone number. Please try again in an hour.' };
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = await bcrypt.hash(otp, 8);
+
+    await pool.query(
+      `INSERT INTO otp_requests (phone_number, otp_hash, purpose, expires_at, tenant_id)
+       VALUES ($1, $2, 'customer_creation', NOW() + INTERVAL '5 minutes', $3);`,
+      [phoneToUse, otpHash, tenant_id]
+    );
+
+    // Send WhatsApp OTP
+    const otpSendResult = await NotificationService.sendOtpNotification({
+      phone: phoneToUse,
+      otp,
+      tenant_id,
+    });
+
+    const isDebugEnabled = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEBUG_OTP === 'true';
+
+    return {
+      success: true,
+      message: `OTP sent via WhatsApp to ${phoneToUse}.`,
+      whatsapp_sent: otpSendResult.success,
+      ...(isDebugEnabled && { debug_otp: otp }),
+    };
+  }
+
+  /**
    * Creates a new customer with auto-generated BAC-100001 ID and links initial phone numbers
-   *
-   * DB NOTE: customers.name -> customers.customer_name, customers.email column no longer
-   * exists in the live schema. We keep accepting/returning `email` on the API for backward
-   * compatibility, but it is not persisted (always returned as null).
    */
   static async createCustomer({
     name,
@@ -26,7 +86,62 @@ class CustomerService {
     tenant_id,
     explicit_customer_id,
     award_auto_sales_points = false,
+    otp,
+    gst_number,
+    ledger_name,
+    ledger_code,
+    ledger_group,
+    party_type,
+    customer_type,
+    gst_registration_type,
+    state,
+    city,
+    pincode,
+    vat_no,
+    pan_no,
+    service_tax_no,
+    ecc_no,
   }) {
+    // 1. Mandatory OTP verification for customer creation (unless created via automated AppSheet pull)
+    const primaryPhone = Array.isArray(phone_numbers) && phone_numbers.length > 0 ? String(phone_numbers[0]).trim() : null;
+
+    if (!explicit_customer_id) {
+      if (!otp || !String(otp).trim()) {
+        throw { statusCode: 400, message: 'OTP verification is required to create a new customer.' };
+      }
+      if (!primaryPhone) {
+        throw { statusCode: 400, message: 'Customer primary phone number is required.' };
+      }
+
+      const cleanPhone = primaryPhone.replace(/[^\d]/g, '');
+      const phoneToUse = cleanPhone.length === 10 ? cleanPhone : (cleanPhone.length > 10 ? cleanPhone.slice(-10) : cleanPhone);
+
+      const otpRes = await pool.query(
+        `SELECT otp_id, otp_hash FROM otp_requests
+         WHERE phone_number = $1
+           AND purpose = 'customer_creation'
+           AND is_used = FALSE
+           AND expires_at > NOW()
+           AND tenant_id = $2
+         ORDER BY created_at DESC
+         LIMIT 1;`,
+        [phoneToUse, tenant_id]
+      );
+
+      if (otpRes.rows.length === 0) {
+        throw { statusCode: 400, message: 'Invalid or expired OTP. Please request a new OTP.' };
+      }
+
+      const otpRecord = otpRes.rows[0];
+      const isMatch = await bcrypt.compare(String(otp).trim(), otpRecord.otp_hash);
+      if (!isMatch) {
+        throw { statusCode: 400, message: 'Invalid OTP code. Please check and try again.' };
+      }
+
+      // Mark OTP as used
+      await pool.query(`UPDATE otp_requests SET used_at = NOW(), is_used = TRUE WHERE otp_id = $1;`, [otpRecord.otp_id]);
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -64,28 +179,55 @@ class CustomerService {
       }
 
       const cleanAadhaarStr = aadhaar_number && String(aadhaar_number).trim() ? String(aadhaar_number).trim() : null;
+      const cleanGst = gst_number && String(gst_number).trim() ? String(gst_number).trim() : null;
       const cleanAge = age ? parseInt(age, 10) : null;
       const cleanFirm = firm_name ? String(firm_name).trim() : null;
       const cleanAddress = address ? String(address).trim() : null;
       const cleanVisitType = visit_type ? String(visit_type).trim() : 'first_time';
       const cleanIsFirstTime = typeof is_first_time_visitor === 'boolean' ? is_first_time_visitor : cleanVisitType === 'first_time';
 
+      const cleanLedgerName = ledger_name ? String(ledger_name).trim() : null;
+      const cleanLedgerCode = ledger_code ? String(ledger_code).trim() : null;
+      const cleanLedgerGroup = ledger_group ? String(ledger_group).trim() : null;
+      const cleanPartyType = party_type ? String(party_type).trim() : null;
+      const cleanCustomerType = customer_type ? String(customer_type).trim() : null;
+      const cleanGstRegType = gst_registration_type ? String(gst_registration_type).trim() : null;
+      const cleanState = state ? String(state).trim() : null;
+      const cleanCity = city ? String(city).trim() : null;
+      const cleanPincode = pincode ? String(pincode).trim() : null;
+      const cleanVat = vat_no ? String(vat_no).trim() : null;
+      const cleanPan = pan_no ? String(pan_no).trim() : null;
+      const cleanServiceTax = service_tax_no ? String(service_tax_no).trim() : null;
+      const cleanEcc = ecc_no ? String(ecc_no).trim() : null;
+
       // 1. Insert customer (supporting explicit customer_id from AppSheet like BAC-E0122437)
       let customerRes;
       if (explicit_customer_id) {
         customerRes = await client.query(
-          `INSERT INTO customers (customer_id, customer_name, aadhaar_hash, aadhaar_last4_enc, aadhaar_number, age, firm_name, address, visit_type, is_first_time_visitor, tenant_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          `INSERT INTO customers (
+             customer_id, customer_name, aadhaar_hash, aadhaar_last4_enc, aadhaar_number, gst_number, age, firm_name, address, visit_type, is_first_time_visitor, tenant_id,
+             ledger_name, ledger_code, ledger_group, party_type, customer_type, gst_registration_type, state, city, pincode, vat_no, pan_no, service_tax_no, ecc_no
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
            ON CONFLICT (customer_id) DO UPDATE SET customer_name = EXCLUDED.customer_name
            RETURNING customer_id, customer_name AS name, NULL::text AS email, tenant_id, created_at, updated_at;`,
-          [explicit_customer_id, name, aadhaarHash, aadhaarLast4Enc, cleanAadhaarStr, cleanAge, cleanFirm, cleanAddress, cleanVisitType, cleanIsFirstTime, tenant_id]
+          [
+            explicit_customer_id, name, aadhaarHash, aadhaarLast4Enc, cleanAadhaarStr, cleanGst, cleanAge, cleanFirm, cleanAddress, cleanVisitType, cleanIsFirstTime, tenant_id,
+            cleanLedgerName, cleanLedgerCode, cleanLedgerGroup, cleanPartyType, cleanCustomerType, cleanGstRegType, cleanState, cleanCity, cleanPincode, cleanVat, cleanPan, cleanServiceTax, cleanEcc
+          ]
         );
       } else {
         customerRes = await client.query(
-          `INSERT INTO customers (customer_name, aadhaar_hash, aadhaar_last4_enc, aadhaar_number, age, firm_name, address, visit_type, is_first_time_visitor, tenant_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          `INSERT INTO customers (
+             customer_name, aadhaar_hash, aadhaar_last4_enc, aadhaar_number, gst_number, age, firm_name, address, visit_type, is_first_time_visitor, tenant_id,
+             ledger_name, ledger_code, ledger_group, party_type, customer_type, gst_registration_type, state, city, pincode, vat_no, pan_no, service_tax_no, ecc_no
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
            RETURNING customer_id, customer_name AS name, NULL::text AS email, tenant_id, created_at, updated_at;`,
-          [name, aadhaarHash, aadhaarLast4Enc, cleanAadhaarStr, cleanAge, cleanFirm, cleanAddress, cleanVisitType, cleanIsFirstTime, tenant_id]
+          [
+            name, aadhaarHash, aadhaarLast4Enc, cleanAadhaarStr, cleanGst, cleanAge, cleanFirm, cleanAddress, cleanVisitType, cleanIsFirstTime, tenant_id,
+            cleanLedgerName, cleanLedgerCode, cleanLedgerGroup, cleanPartyType, cleanCustomerType, cleanGstRegType, cleanState, cleanCity, cleanPincode, cleanVat, cleanPan, cleanServiceTax, cleanEcc
+          ]
         );
       }
 
