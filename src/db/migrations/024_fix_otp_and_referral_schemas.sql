@@ -14,8 +14,8 @@ ALTER TABLE referrals ADD COLUMN IF NOT EXISTS approval_reason TEXT;
 ALTER TABLE referrals ADD COLUMN IF NOT EXISTS approved_by_approver_id INTEGER;
 
 -- Keep values in sync
-UPDATE referrals SET points_awarded = COALESCE(points_credited, 0) WHERE points_awarded = 0 OR points_awarded IS NULL;
-UPDATE referrals SET points_credited = COALESCE(points_awarded, 0) WHERE points_credited = 0 OR points_credited IS NULL;
+
+
 UPDATE referrals SET approval_reason = reason WHERE approval_reason IS NULL AND reason IS NOT NULL;
 UPDATE referrals SET reason = approval_reason WHERE reason IS NULL AND approval_reason IS NOT NULL;
 

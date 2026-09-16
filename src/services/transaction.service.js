@@ -20,6 +20,7 @@ class TransactionService {
     source = 'manual',
     created_by,
     tenant_id,
+    otp,
   }) {
     const activeCategory = (category || 'service').toLowerCase();
     const isSale = activeCategory === 'sale';
@@ -85,6 +86,25 @@ class TransactionService {
 
       if (!resolvedCustomerId) {
         throw { statusCode: 404, message: 'Customer could not be resolved. Please provide valid customer_id or phone_number.' };
+      }
+
+      // 2b. Validate OTP if provided
+      if (otp && String(otp).trim()) {
+        const bcrypt = require('bcryptjs');
+        const otpRes = await client.query(
+          `SELECT otp_id AS id, otp_hash FROM otp_requests
+           WHERE customer_id = $1 AND tenant_id = $2 AND used_at IS NULL AND expires_at > NOW()
+           ORDER BY created_at DESC LIMIT 1 FOR UPDATE;`,
+          [resolvedCustomerId, tenant_id]
+        );
+        if (otpRes.rows.length === 0) {
+          throw { statusCode: 400, message: 'No valid active OTP found for this customer or OTP has expired.' };
+        }
+        const isOtpValid = await bcrypt.compare(String(otp).trim(), otpRes.rows[0].otp_hash);
+        if (!isOtpValid) {
+          throw { statusCode: 400, message: 'Invalid 6-digit OTP code provided.' };
+        }
+        await client.query(`UPDATE otp_requests SET used_at = NOW(), is_used = TRUE WHERE otp_id = $1;`, [otpRes.rows[0].id]);
       }
 
       // 3. Resolve Vehicle ID if not directly provided

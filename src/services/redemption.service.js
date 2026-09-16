@@ -243,6 +243,14 @@ class RedemptionService {
       );
       const currentPointBalance = parseInt(balRes.rows[0].total_balance, 10);
 
+      // Check if vehicle is locked for redemption (<12 months from purchase)
+      if (vehicle_id) {
+        const statusRes = await RedemptionEligibilityService.getVehicleRedemptionStatus(vehicle_id, tenant_id);
+        if (statusRes.status === 'locked' || statusRes.status === 'locked_pending_correction') {
+          throw { statusCode: 400, message: statusRes.message || 'Points redemption is locked for vehicles purchased less than 12 months ago.' };
+        }
+      }
+
       // 4. Calculate redemption & earning strictly using named constants
       let discount_applied = 0;
       let points_redeemed = 0;
@@ -251,15 +259,10 @@ class RedemptionService {
       const billAmt = bill_amount ? parseFloat(bill_amount) : 0;
 
       if (billAmt > 0) {
-        // a. redeemable_rupees = current_point_balance * POINTS_PER_RUPEE_REDEMPTION
         const redeemable_rupees = currentPointBalance * POINTS_PER_RUPEE_REDEMPTION;
-        // b. discount_applied = MIN(redeemable_rupees, bill_amount)
         discount_applied = Math.min(redeemable_rupees, billAmt);
-        // c. points_redeemed = discount_applied / POINTS_PER_RUPEE_REDEMPTION
         points_redeemed = Math.round(discount_applied / POINTS_PER_RUPEE_REDEMPTION);
-        // d. cash_paid = bill_amount - discount_applied
         cash_paid = billAmt - discount_applied;
-        // e. new_points_earned = (cash_paid / 100) * POINTS_PER_100_RUPEES_EARNED
         new_points_earned = Math.floor((cash_paid / 100) * POINTS_PER_100_RUPEES_EARNED);
       } else if (points && parseInt(points, 10) > 0) {
         points_redeemed = parseInt(points, 10);
@@ -406,6 +409,14 @@ class RedemptionService {
           pointsRedeemed: points_redeemed,
           discountRupees: discount_applied,
           remainingBalance: updated_total_balance,
+          tenant_id,
+        });
+      }
+      if (new_points_earned > 0) {
+        NotificationService.queuePointsEarnedNotification({
+          customer_id: customerId,
+          points: new_points_earned,
+          transaction_type: normCategory,
           tenant_id,
         });
       }

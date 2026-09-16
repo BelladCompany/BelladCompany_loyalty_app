@@ -110,7 +110,6 @@ export const Customer360View = ({
   if (!customer) return null;
 
   const currentBalance = tierInfo?.current_balance ?? customer.current_balance ?? customer.points_balance ?? 0;
-  const lifetimePoints = tierInfo?.lifetime_points ?? customer.lifetime_points ?? 0;
   const tierName = tierInfo?.tier_name || customer.tier_name || 'Silver';
   const rupeeValue = Math.floor(currentBalance / 4);
 
@@ -296,18 +295,12 @@ export const Customer360View = ({
       />
 
       {/* 2. Key Metrics Glanceable Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           label="Available Point Balance"
           value={`${Number(currentBalance).toLocaleString()} PTS`}
           subtext={`≈ ₹${Number(rupeeValue).toLocaleString()} in direct discount`}
           variant="primary"
-        />
-        <StatCard
-          label="Lifetime Points Earned"
-          value={`${Number(lifetimePoints).toLocaleString()} PTS`}
-          subtext="Determines permanent tier status"
-          variant="default"
         />
         <StatCard
           label="Current Membership Tier"

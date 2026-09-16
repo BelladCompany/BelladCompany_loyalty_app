@@ -77,6 +77,9 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
     } else if (!/^\d{12}$/.test(aadhaar.trim())) {
       errs.aadhaar = 'Aadhaar number must be exactly 12 numeric digits.';
     }
+    if (!gstNumber.trim()) {
+      errs.gstNumber = 'GST Number is required.';
+    }
     if (age.trim() && (isNaN(Number(age)) || Number(age) <= 0 || Number(age) > 120)) {
       errs.age = 'Please enter a valid age between 1 and 120.';
     }
@@ -372,13 +375,16 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
                       {errors.aadhaar && <p className="text-xs text-action-danger font-semibold mt-1">{errors.aadhaar}</p>}
                     </div>
 
-                    <div>
-                      <label className="text-sm font-bold text-ink-primary block mb-1.5">
-                        GST Number / GSTIN
+                    <div className="md:col-span-1 space-y-1">
+                      <label
+                        htmlFor="add-cust-gst"
+                        className="text-sm font-bold text-ink-primary block mb-1.5"
+                      >
+                        GST Number / GSTIN <span className="text-action-danger">*</span>
                       </label>
                       <input
-                        id="add-cust-gst"
                         type="text"
+                        id="add-cust-gst"
                         placeholder="e.g. 29ABCDE1234F1Z5"
                         value={gstNumber}
                         onChange={(e) => setGstNumber(e.target.value.toUpperCase())}

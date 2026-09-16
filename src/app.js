@@ -22,6 +22,7 @@ const reportRoutes = require('./routes/report.routes');
 const appsheetRoutes = require('./routes/appsheet.routes');
 const correctionRoutes = require('./routes/correction.routes');
 const publicReferralRoutes = require('./routes/public_referral.routes');
+const customerPortalRoutes = require('./routes/customerPortal.routes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -46,6 +47,7 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
+app.use('/api/v1', customerPortalRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/search', searchRoutes);

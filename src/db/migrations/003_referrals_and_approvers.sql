@@ -47,7 +47,7 @@ BEGIN
   ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'points_ledger' AND column_name = 'type') THEN
     ALTER TABLE points_ledger DROP CONSTRAINT IF EXISTS points_ledger_type_check;
     ALTER TABLE points_ledger ADD CONSTRAINT points_ledger_type_check
-      CHECK (type IN ('sale', 'service', 'referral', 'earn_referral', 'earn_sale', 'earn_service', 'redeem', 'redemption', 'adjustment', 'earn', 'spend', 'correction_applied', 'correction_reversal'));
+      CHECK (transaction_type IN ('sale', 'service', 'referral', 'earn_referral', 'earn_sale', 'earn_service', 'redeem', 'redemption', 'adjustment', 'earn', 'spend', 'correction_applied', 'correction_reversal'));
   END IF;
 END
 $$;

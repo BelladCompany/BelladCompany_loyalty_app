@@ -1,6 +1,6 @@
 const AppSheetPullService = require('../services/appsheetPull.service');
 
-const DEFAULT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function startAppSheetPullCron() {
   const intervalMs = parseInt(process.env.APPSHEET_PULL_INTERVAL_MS || String(DEFAULT_INTERVAL_MS), 10);

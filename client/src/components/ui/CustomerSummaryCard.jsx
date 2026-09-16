@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Phone, Car, Award, ShieldCheck, Share2, CheckCircle2 } from 'lucide-react';
+import { User, Phone, Car, Award, ShieldCheck, Share2, CheckCircle2, PlusCircle, Gift, Lock } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import api from '../../services/api';
 
@@ -24,6 +24,42 @@ export const CustomerSummaryCard = ({
 
   const [sendingReminder, setSendingReminder] = useState(false);
   const [reminderSent, setReminderSent] = useState(false);
+
+  // Calculate 12-month redemption eligibility status across linked vehicles or customer purchase date
+  let redemptionEligible = true;
+  let lockReason = '';
+  let eligibleDateStr = '';
+
+  if (vehicles.length > 0) {
+    for (const v of vehicles) {
+      const rawDate = v.purchase_date || v.dms_invoice_date || v.purchaseDate;
+      if (rawDate) {
+        const pDate = new Date(rawDate);
+        if (!isNaN(pDate.getTime())) {
+          const eligibleAt = new Date(pDate);
+          eligibleAt.setMonth(eligibleAt.getMonth() + 12);
+          if (new Date() < eligibleAt) {
+            redemptionEligible = false;
+            eligibleDateStr = eligibleAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            lockReason = `Redemption is locked until 12 months after vehicle purchase date (Eligible on ${eligibleDateStr}). Points can still be earned for service!`;
+            break;
+          }
+        }
+      }
+    }
+  } else if (customer.dms_invoice_date || customer.purchase_date) {
+    const rawDate = customer.dms_invoice_date || customer.purchase_date;
+    const pDate = new Date(rawDate);
+    if (!isNaN(pDate.getTime())) {
+      const eligibleAt = new Date(pDate);
+      eligibleAt.setMonth(eligibleAt.getMonth() + 12);
+      if (new Date() < eligibleAt) {
+        redemptionEligible = false;
+        eligibleDateStr = eligibleAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        lockReason = `Redemption is locked until 12 months after vehicle purchase date (Eligible on ${eligibleDateStr}). Points can still be earned for service!`;
+      }
+    }
+  }
 
   const handleSendReferralWhatsApp = async () => {
     try {
@@ -113,13 +149,13 @@ export const CustomerSummaryCard = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             {/* WhatsApp Referral Link Reminder Button */}
             <button
               type="button"
               onClick={handleSendReferralWhatsApp}
               disabled={sendingReminder}
-              className={`h-12 px-4 flex items-center gap-2 font-bold text-base rounded-xl border-2 transition-all shadow-sm ${
+              className={`h-12 px-4 flex items-center gap-2 font-bold text-sm rounded-xl border-2 transition-all shadow-sm ${
                 reminderSent
                   ? 'bg-emerald-50 border-emerald-600 text-emerald-700'
                   : 'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
@@ -134,11 +170,25 @@ export const CustomerSummaryCard = ({
               ) : (
                 <>
                   <Share2 className="w-5 h-5" />
-                  <span>{sendingReminder ? 'Sending...' : 'Send Referral Link (WhatsApp)'}</span>
+                  <span>{sendingReminder ? 'Sending...' : 'Send Referral Link'}</span>
                 </>
               )}
             </button>
 
+            {/* 1. GET / EARN SERVICE POINTS BUTTON (ALWAYS AVAILABLE FOR SERVICE VISITS) */}
+            {onRecordEarning && (
+              <button
+                type="button"
+                onClick={() => onRecordEarning(customer)}
+                className="h-12 px-5 font-extrabold text-sm rounded-xl shadow bg-blue-700 hover:bg-blue-800 text-white flex items-center gap-2 transition-colors cursor-pointer"
+                title="Record new service/sale transaction and award points to customer"
+              >
+                <PlusCircle className="w-5 h-5" />
+                <span>+ Get / Earn Points</span>
+              </button>
+            )}
+
+            {/* 2. REDEEM POINTS BUTTON (CONTROLLED BY 12-MONTH ELIGIBILITY & CORRECTION TICKET) */}
             {onRedeemPoints && (
               <button
                 type="button"
@@ -147,19 +197,36 @@ export const CustomerSummaryCard = ({
                     alert("Billing correction request is currently pending admin approval. Redemption and edits are blocked until approved.");
                     return;
                   }
+                  if (!redemptionEligible) {
+                    alert(`⚠️ CUSTOMER INELIGIBLE FOR REDEMPTION YET\n\n${lockReason}\n\n👉 Cashiers can still award points for today's service amount using the '+ Get / Earn Points' button!`);
+                    return;
+                  }
                   onRedeemPoints(customer);
                 }}
                 disabled={hasPendingCorrection}
-                className={`h-12 px-5 font-extrabold text-lg rounded-xl shadow transition-colors ${
+                className={`h-12 px-5 font-extrabold text-sm rounded-xl shadow transition-colors flex items-center gap-2 ${
                   hasPendingCorrection
                     ? 'bg-amber-600 text-white cursor-not-allowed opacity-90'
+                    : !redemptionEligible
+                    ? 'bg-amber-50 text-amber-900 border-2 border-amber-300 hover:bg-amber-100 cursor-pointer'
                     : 'bg-emerald-700 hover:bg-emerald-800 text-white'
                 }`}
-                title={hasPendingCorrection ? "Billing correction ticket pending admin approval. Account is locked." : ""}
+                title={
+                  hasPendingCorrection
+                    ? "Billing correction ticket pending admin approval. Account is locked."
+                    : !redemptionEligible
+                    ? lockReason
+                    : "Redeem accumulated loyalty points via WhatsApp OTP"
+                }
               >
-                {hasPendingCorrection
-                  ? 'Locked (Correction Pending)'
-                  : (customer?.vehicles?.[0]?.purchase_date || customer?.purchase_date ? 'Redeem (OTP)' : 'Get Points (OTP)')}
+                {!redemptionEligible ? <Lock className="w-4 h-4 text-amber-700" /> : <Gift className="w-5 h-5" />}
+                <span>
+                  {hasPendingCorrection
+                    ? 'Locked (Correction Pending)'
+                    : !redemptionEligible
+                    ? `Redeem Locked (<1 Yr)`
+                    : 'Redeem Points (OTP)'}
+                </span>
               </button>
             )}
           </div>

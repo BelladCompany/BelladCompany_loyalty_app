@@ -24,7 +24,7 @@ class CustomerController {
   static async createCustomer(req, res, next) {
     try {
       const {
-        name, email, phone_numbers, vehicle, opening_points, aadhaar_number, age, firm_name, address, visit_type, is_first_time_visitor, otp,
+        name, email, phone_numbers, vehicle, opening_points, aadhaar_number, age, firm_name, address, visit_type, is_first_time_visitor, otp, otp_verified,
         gst_number, ledger_name, ledger_code, ledger_group, party_type, customer_type, gst_registration_type, state, city, pincode, vat_no, pan_no, service_tax_no, ecc_no,
       } = req.body;
       const tenantId = req.tenantId;
@@ -45,6 +45,7 @@ class CustomerController {
         tenant_id: tenantId,
         award_auto_sales_points: false, // Explicitly false for cashier manual customer creation
         otp,
+        otp_verified,
         gst_number,
         ledger_name,
         ledger_code,
@@ -60,6 +61,18 @@ class CustomerController {
         service_tax_no,
         ecc_no,
       });
+
+      // Asynchronously sync newly enrolled customer to Google Sheet
+      const GoogleSheetsService = require('../services/googleSheets.service');
+      const primaryPhone = Array.isArray(phone_numbers) && phone_numbers.length > 0 ? String(phone_numbers[0]) : null;
+      GoogleSheetsService.syncCustomerToSheet({
+        customer_id: customer.customer_id,
+        name: customer.customer_name || name,
+        phone: primaryPhone,
+        aadhaar_number: aadhaar_number || null,
+        source: 'Admin Cashier Customer Creation',
+        tenant_id: tenantId,
+      }).catch((gsErr) => console.error('[Google Sheets Sync Error]', gsErr.message || gsErr));
 
       res.status(201).json({
         status: 'success',

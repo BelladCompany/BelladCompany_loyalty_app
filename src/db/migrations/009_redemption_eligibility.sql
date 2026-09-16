@@ -39,7 +39,7 @@ CREATE INDEX IF NOT EXISTS idx_vehicles_redemption_expires ON vehicles (redempti
 -- ─── 2. POINTS_LEDGER — Add vehicle_id FK ────────────────────────────────────
 
 ALTER TABLE points_ledger
-  ADD COLUMN IF NOT EXISTS vehicle_id INTEGER REFERENCES vehicles(vehicle_id) ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL;
 
 -- Extend the type CHECK constraint to allow 'expire' (forfeiture write-off entries)
 -- First drop the old constraint, then re-create with the new value included.
@@ -57,10 +57,13 @@ BEGIN
   ) THEN
     ALTER TABLE points_ledger
       ADD CONSTRAINT points_ledger_type_check
-      CHECK (type IN ('earn_sale', 'earn_service', 'earn_referral', 'redeem', 'adjust', 'expire', 'sale', 'service', 'referral', 'adjustment', 'earn', 'spend', 'correction_applied', 'correction_reversal'));
+      CHECK (transaction_type IN ('earn_sale', 'earn_service', 'earn_referral', 'redeem', 'adjust', 'expire', 'sale', 'service', 'referral', 'adjustment', 'earn', 'spend', 'correction_applied', 'correction_reversal'));
   END IF;
 END
 $$;
+
+ALTER TABLE points_ledger
+  ADD COLUMN IF NOT EXISTS vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_points_ledger_vehicle ON points_ledger (vehicle_id, created_at)
   WHERE vehicle_id IS NOT NULL;
@@ -68,7 +71,9 @@ CREATE INDEX IF NOT EXISTS idx_points_ledger_vehicle ON points_ledger (vehicle_i
 -- ─── 3. REDEMPTIONS — Add vehicle_id FK ──────────────────────────────────────
 
 ALTER TABLE redemptions
-  ADD COLUMN IF NOT EXISTS vehicle_id INTEGER REFERENCES vehicles(vehicle_id) ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_redemptions_vehicle ON redemptions (vehicle_id)
   WHERE vehicle_id IS NOT NULL;
+
+ALTER TABLE points_ledger ADD COLUMN IF NOT EXISTS vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL;

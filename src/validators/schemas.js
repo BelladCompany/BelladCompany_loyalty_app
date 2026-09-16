@@ -74,6 +74,7 @@ const createCustomerSchema = z.object({
   visit_type: z.string().trim().optional().nullable(),
   is_first_time_visitor: z.boolean().optional().nullable(),
   otp: z.string().trim().optional().nullable(),
+  otp_verified: z.boolean().optional().nullable(),
 
   // Tally / ERP Party & Ledger fields
   ledger_name: z.string().trim().optional().nullable(),

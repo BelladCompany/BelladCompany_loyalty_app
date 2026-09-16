@@ -238,6 +238,14 @@ class AppSheetPullService {
     const salesConsultant = (row['Sales Consultant'] || '').trim();
     const exShowroomPaise = Math.round(Number(row['Ex-Showroom Price'] || row['Net Ex-Showroom Price'] || row['Total Vehicle Billing Amount'] || 0) * 100);
 
+    let invoiceDateVal = null;
+    if (dmsInvoiceDate && String(dmsInvoiceDate).trim()) {
+      const parsed = new Date(dmsInvoiceDate);
+      if (!isNaN(parsed.getTime())) {
+        invoiceDateVal = parsed.toISOString().split('T')[0];
+      }
+    }
+
     const client = await pool.connect();
     try {
       const vehRes = await client.query(
@@ -256,13 +264,13 @@ class AppSheetPullService {
            branch_name, branch_address, dms_invoice_number, dms_invoice_date, sales_consultant, ex_showroom_price,
            purchase_date, redemption_eligible_at, redemption_expires_at, tenant_id
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-                 CASE WHEN $12::text IS NOT NULL AND $12::text != '' THEN $12::date ELSE NULL END,
-                 CASE WHEN $12::text IS NOT NULL AND $12::text != '' THEN ($12::date + INTERVAL '12 months')::TIMESTAMPTZ ELSE NULL END,
-                 CASE WHEN $12::text IS NOT NULL AND $12::text != '' THEN ($12::date + INTERVAL '24 months')::TIMESTAMPTZ ELSE NULL END,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::date, $13, $14,
+                 $12::date,
+                 CASE WHEN $12::date IS NOT NULL THEN ($12::date + INTERVAL '12 months')::TIMESTAMPTZ ELSE NULL END,
+                 CASE WHEN $12::date IS NOT NULL THEN ($12::date + INTERVAL '24 months')::TIMESTAMPTZ ELSE NULL END,
                  $15)
          RETURNING vehicle_id;`,
-        [customerId, chassis, vin || chassis, regNo, model, variant, brandName, firmName, branchName, branchAddress, dmsInvoiceNo, dmsInvoiceDate, salesConsultant, exShowroomPaise, tenantId]
+        [customerId, chassis, vin || chassis, regNo, model, variant, brandName, firmName, branchName, branchAddress, dmsInvoiceNo, invoiceDateVal, salesConsultant, exShowroomPaise, tenantId]
       );
 
       return insRes.rows[0].vehicle_id;
@@ -408,6 +416,13 @@ class AppSheetPullService {
               }
             }
 
+            // 4c. Process In-house Service Bonus Points (Finance, Insurance, Exchange)
+            try {
+              await AppSheetPullService.processInHouseServiceBonuses(row, customerId, vehicleId, branchId, refId, tenantId);
+            } catch (bonusErr) {
+              console.warn(`      ⚠️ [In-House Service Bonus Warning] Customer ${customerId}:`, bonusErr.message || bonusErr);
+            }
+
             // 5. Update SyncedToLoyalty = true in AppSheet
             await this.markRowAsSyncedInAppSheet(tableName, keyColumn, keyValue);
           } catch (rowErr) {
@@ -446,6 +461,130 @@ class AppSheetPullService {
     console.log(`   • Errored : ${summary.totalErrored}\n`);
 
     return summary;
+  }
+
+  /**
+   * Evaluates and awards in-house service bonus points (Finance, Insurance, Exchange)
+   */
+  static async processInHouseServiceBonuses(row, customerId, vehicleId, branchId, refId, tenantId) {
+    const PointsService = require('./points.service');
+
+    // 1. Determine vehicle type (2W or 4W)
+    const brandStr = (row['Brand'] || row['Make'] || row['Manufacturer'] || '').toString().toLowerCase();
+    const modelStr = (row['Model'] || row['Variant'] || row['Varient'] || '').toString().toLowerCase();
+    const explicitType = (row['Vehicle Type'] || row['Vehicle_Type'] || row['Type'] || '').toString().toUpperCase();
+
+    let vehicleType = '2W';
+    if (explicitType === '4W' || explicitType === 'FOUR_WHEELER' || explicitType === 'CAR' || explicitType === 'SUV') {
+      vehicleType = '4W';
+    } else if (brandStr.includes('hyundai') || brandStr.includes('maruti') || brandStr.includes('tata') || brandStr.includes('mahindra') || modelStr.includes('creta') || modelStr.includes('venue') || modelStr.includes('verna') || modelStr.includes('i20')) {
+      vehicleType = '4W';
+    } else if (explicitType === '2W' || explicitType === 'TWO_WHEELER' || brandStr.includes('hero') || brandStr.includes('tvs') || brandStr.includes('honda') || brandStr.includes('bajaj') || modelStr.includes('splendor') || modelStr.includes('hf deluxe')) {
+      vehicleType = '2W';
+    }
+
+    // 2. Fetch point rules for this tenant and vehicle_type (or 'all')
+    const ruleRes = await pool.query(
+      `SELECT * FROM point_rules WHERE tenant_id = $1 AND service_type IS NOT NULL AND (vehicle_type = $2 OR vehicle_type = 'all');`,
+      [tenantId, vehicleType]
+    );
+    const rules = ruleRes.rows;
+
+    const awardedBonuses = [];
+
+    // Helper to check idempotency in points_ledger
+    const isBonusAlreadyAwarded = async (bonusTag) => {
+      const existing = await pool.query(
+        `SELECT entry_id FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2 AND source_ref ILIKE $3 LIMIT 1;`,
+        [customerId, tenantId, `%${refId}%${bonusTag}%`]
+      );
+      return existing.rows.length > 0;
+    };
+
+    // --- A. FINANCE IN-HOUSE BONUS ---
+    const finVal = (row['Finance'] || row['Finance Status'] || row['Finance Type'] || row['Finance In-house'] || row['Finance In House'] || '').toString().toLowerCase().trim();
+    const isFinanceInHouse = finVal === 'in_house' || finVal === 'in-house' || finVal === 'inhouse' || finVal === 'internal' || finVal === 'yes' || finVal === 'true';
+
+    if (isFinanceInHouse) {
+      const finRule = rules.find((r) => r.service_type === 'finance') || { points: 100 };
+      const tag = 'In-house Finance Bonus';
+      if (!(await isBonusAlreadyAwarded(tag))) {
+        await PointsService.grantFixedBonus({
+          customer_id: customerId,
+          vehicle_id: vehicleId,
+          branch_id: branchId,
+          points: finRule.points || 100,
+          category: 'service',
+          type: 'earn_service',
+          reference_id: refId,
+          description: `${tag} (+${finRule.points || 100} pts)`,
+          tenant_id: tenantId,
+        });
+        awardedBonuses.push(`${tag}: +${finRule.points || 100} pts`);
+      }
+    }
+
+    // --- B. INSURANCE IN-HOUSE BONUS ---
+    const insVal = (row['Insurance'] || row['Insurance Brand'] || row['Insurance Company'] || row['Insurance Type'] || row['Insurance In-house'] || '').toString().toLowerCase().trim();
+    const insRule = rules.find((r) => r.service_type === 'insurance') || { points: 50 };
+    const ruleCondition = (insRule.condition_value || 'in_house,hero,hyundai').toLowerCase();
+    const allowedBrands = ruleCondition.split(',').map((s) => s.trim());
+
+    const isInsuranceInHouse =
+      insVal === 'in_house' ||
+      insVal === 'in-house' ||
+      insVal === 'inhouse' ||
+      insVal === 'internal' ||
+      insVal === 'yes' ||
+      insVal === 'true' ||
+      allowedBrands.some((b) => insVal.includes(b));
+
+    if (isInsuranceInHouse) {
+      const tag = 'In-house Insurance Bonus';
+      if (!(await isBonusAlreadyAwarded(tag))) {
+        await PointsService.grantFixedBonus({
+          customer_id: customerId,
+          vehicle_id: vehicleId,
+          branch_id: branchId,
+          points: insRule.points || 50,
+          category: 'service',
+          type: 'earn_service',
+          reference_id: refId,
+          description: `${tag} (+${insRule.points || 50} pts)`,
+          tenant_id: tenantId,
+        });
+        awardedBonuses.push(`${tag}: +${insRule.points || 50} pts`);
+      }
+    }
+
+    // --- C. EXCHANGE IN-HOUSE BONUS ---
+    const exchVal = (row['Exchange'] || row['Exchange Opted'] || row['Exchange Status'] || row['Exchange In-house'] || '').toString().toLowerCase().trim();
+    const isExchangeInHouse = exchVal === 'yes' || exchVal === 'true' || exchVal === 'in_house' || exchVal === 'in-house' || exchVal === 'inhouse';
+
+    if (isExchangeInHouse) {
+      const exchRule = rules.find((r) => r.service_type === 'exchange') || { points: 200 };
+      const tag = 'In-house Exchange Bonus';
+      if (!(await isBonusAlreadyAwarded(tag))) {
+        await PointsService.grantFixedBonus({
+          customer_id: customerId,
+          vehicle_id: vehicleId,
+          branch_id: branchId,
+          points: exchRule.points || 200,
+          category: 'service',
+          type: 'earn_service',
+          reference_id: refId,
+          description: `${tag} (+${exchRule.points || 200} pts)`,
+          tenant_id: tenantId,
+        });
+        awardedBonuses.push(`${tag}: +${exchRule.points || 200} pts`);
+      }
+    }
+
+    if (awardedBonuses.length > 0) {
+      console.log(`      🎁 In-house Bonuses Awarded for customer ${customerId}: ${awardedBonuses.join(', ')}`);
+    }
+
+    return awardedBonuses;
   }
 }
 

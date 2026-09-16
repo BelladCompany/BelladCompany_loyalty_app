@@ -5,14 +5,14 @@ CREATE TABLE IF NOT EXISTS correction_requests (
   id SERIAL PRIMARY KEY,
   customer_id VARCHAR(32) NOT NULL REFERENCES customers(customer_id),
   points_ledger_reference VARCHAR(100) NOT NULL,
-  cashier_user_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-  branch_id INTEGER REFERENCES branches(branch_id) ON DELETE SET NULL,
+  cashier_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  branch_id INTEGER REFERENCES branches(id) ON DELETE SET NULL,
   wrong_bill_amount NUMERIC(12, 2) NOT NULL,
   correct_bill_amount NUMERIC(12, 2) NOT NULL,
   explanation TEXT NOT NULL,
   screenshot_file_url TEXT NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-  reviewed_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+  reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMPTZ,
   review_notes TEXT,
   tenant_id VARCHAR(64) NOT NULL DEFAULT 'bellad_and_company',
@@ -29,4 +29,4 @@ CREATE INDEX IF NOT EXISTS idx_correction_requests_created_at ON correction_requ
 ALTER TABLE points_ledger DROP CONSTRAINT IF EXISTS points_ledger_type_check;
 
 ALTER TABLE points_ledger ADD CONSTRAINT points_ledger_type_check
-  CHECK (type IN ('earn', 'earn_sale', 'earn_service', 'earn_accessory', 'earn_bodyshop', 'earn_referral', 'redeem', 'adjust', 'expire', 'sale', 'service', 'referral', 'correction_reversal', 'correction_applied'));
+  CHECK (transaction_type IN ('earn', 'earn_sale', 'earn_service', 'earn_accessory', 'earn_bodyshop', 'earn_referral', 'redeem', 'adjust', 'expire', 'sale', 'service', 'referral', 'correction_reversal', 'correction_applied'));

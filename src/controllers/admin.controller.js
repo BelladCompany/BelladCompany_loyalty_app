@@ -172,6 +172,29 @@ class AdminController {
       next(error);
     }
   }
+
+  /**
+   * List Google Sheets auto-sync logs
+   */
+  static async getGoogleSheetsLogs(req, res, next) {
+    try {
+      const GoogleSheetsService = require('../services/googleSheets.service');
+      const tenantId = req.tenantId;
+      const limit = parseInt(req.query.limit || '50', 10);
+      const offset = parseInt(req.query.offset || '0', 10);
+
+      const logs = await GoogleSheetsService.getSyncLogs(tenantId, limit, offset);
+
+      res.status(200).json({
+        status: 'success',
+        results: logs.length,
+        data: logs,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = AdminController;
+

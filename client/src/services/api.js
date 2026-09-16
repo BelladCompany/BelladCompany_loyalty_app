@@ -81,6 +81,35 @@ export class ApiService {
     this.setUser(null);
   }
 
+  // Customer Portal /v1 Endpoints
+  static async portalRequestOtp({ name, phone, aadhaar_number }) {
+    return this.request('/v1/auth/request-otp', {
+      method: 'POST',
+      body: { name, phone, aadhaar_number },
+    });
+  }
+
+  static async portalOtpVerify({ name, phone, otp, aadhaar_number }) {
+    const res = await this.request('/v1/auth/otp-verify', {
+      method: 'POST',
+      body: { name, phone, otp, aadhaar_number },
+    });
+    if (res?.token) {
+      this.setToken(res.token);
+      this.setUser({ ...res.customer, is_new_enrollment: res.is_new_enrollment });
+    }
+    return res;
+  }
+
+  static async portalGetMe() {
+    return this.request('/v1/me');
+  }
+
+  static async portalGetLedger(cursor = null) {
+    const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+    return this.request(`/v1/me/ledger${query}`);
+  }
+
   // Search Endpoint
   static async search(query) {
     const encoded = encodeURIComponent(query.trim());

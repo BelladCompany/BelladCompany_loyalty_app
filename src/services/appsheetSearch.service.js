@@ -6,7 +6,7 @@ const TABLE_NAME = process.env.APPSHEET_TABLE_NAME || 'VIN order form';
 
 let cachedPrDoneRows = null;
 let lastCacheTime = 0;
-const CACHE_TTL_MS = 60 * 1000; // 60 seconds in-memory cache
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours in-memory cache
 
 class AppSheetSearchService {
   /**

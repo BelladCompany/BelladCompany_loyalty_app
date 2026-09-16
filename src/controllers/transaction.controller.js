@@ -19,6 +19,7 @@ class TransactionController {
         registration_number,
         branch_id,
         source,
+        otp,
       } = req.body;
 
       const tenantId = req.tenantId;
@@ -37,6 +38,7 @@ class TransactionController {
         source: source || 'manual',
         created_by: createdBy,
         tenant_id: tenantId,
+        otp,
       });
 
       const statusCode = result.status === 'already_processed' ? 200 : 201;

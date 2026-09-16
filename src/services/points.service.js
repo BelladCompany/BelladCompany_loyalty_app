@@ -364,6 +364,141 @@ class PointsService {
       ledger_entries: entriesRes.rows,
     };
   }
+
+  /**
+   * Grants fixed bonus points (e.g., for in-house finance, insurance, exchange service bonus)
+   */
+  static async grantFixedBonus({
+    customer_id,
+    vehicle_id,
+    branch_id = 1,
+    points,
+    category = 'service',
+    type = 'earn_service',
+    reference_id,
+    description,
+    created_by = null,
+    tenant_id,
+  }) {
+    if (!points || points <= 0) return null;
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Verify customer exists
+      const custRes = await client.query(
+        `SELECT customer_id FROM customers WHERE customer_id = $1 AND tenant_id = $2;`,
+        [customer_id, tenant_id]
+      );
+      if (custRes.rows.length === 0) {
+        throw { statusCode: 404, message: `Customer '${customer_id}' not found in tenant '${tenant_id}'` };
+      }
+
+      // 2. Fetch before balance snapshot
+      const beforeAggRes = await client.query(
+        `SELECT 
+           COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS lifetime_points,
+           COALESCE(SUM(points), 0) AS current_balance
+         FROM points_ledger
+         WHERE customer_id = $1 AND tenant_id = $2;`,
+        [customer_id, tenant_id]
+      );
+      const balanceBefore = parseInt(beforeAggRes.rows[0].current_balance, 10);
+      const lifetimeBefore = parseInt(beforeAggRes.rows[0].lifetime_points, 10);
+
+      // 3. Insert record into points_ledger
+      const sourceRef = [reference_id, description].filter(Boolean).join(' | ') || 'In-house service bonus points';
+
+      const hasCategoryColRes = await client.query(
+        `SELECT 1 FROM information_schema.columns WHERE table_name = 'points_ledger' AND column_name = 'transaction_category';`
+      );
+      const hasCategoryCol = hasCategoryColRes.rows.length > 0;
+
+      let ledgerRes;
+      if (hasCategoryCol) {
+        ledgerRes = await client.query(
+          `INSERT INTO points_ledger (
+            customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, cashier_id, tenant_id
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          RETURNING entry_id AS id, customer_id, vehicle_id, branch_id, type AS transaction_type, transaction_category, points,
+                    source_ref AS reference_id, cashier_id AS created_by, tenant_id, created_at;`,
+          [customer_id, vehicle_id || null, branch_id, type, category, points, sourceRef, created_by || null, tenant_id]
+        );
+      } else {
+        ledgerRes = await client.query(
+          `INSERT INTO points_ledger (
+            customer_id, vehicle_id, branch_id, type, points, source_ref, cashier_id, tenant_id
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING entry_id AS id, customer_id, vehicle_id, branch_id, type AS transaction_type, points,
+                    source_ref AS reference_id, cashier_id AS created_by, tenant_id, created_at;`,
+          [customer_id, vehicle_id || null, branch_id, type, points, sourceRef, created_by || null, tenant_id]
+        );
+      }
+      const ledgerEntry = ledgerRes.rows[0];
+
+      // 4. Calculate updated lifetime points & current balance
+      const aggRes = await client.query(
+        `SELECT 
+           COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS lifetime_points,
+           COALESCE(SUM(points), 0) AS current_balance
+         FROM points_ledger
+         WHERE customer_id = $1 AND tenant_id = $2;`,
+        [customer_id, tenant_id]
+      );
+      const lifetimePoints = parseInt(aggRes.rows[0].lifetime_points, 10);
+      const currentBalance = parseInt(aggRes.rows[0].current_balance, 10);
+
+      // 5. Recalculate customer tier
+      const tierRes = await client.query(
+        `SELECT tier_name FROM tier_rules WHERE tenant_id = $1 AND min_lifetime_points <= $2 ORDER BY min_lifetime_points DESC LIMIT 1;`,
+        [tenant_id, lifetimePoints]
+      );
+      const tierName = tierRes.rows[0]?.tier_name || 'Standard';
+
+      const snapshotRes = await client.query(
+        `INSERT INTO customer_tier_snapshot (customer_id, current_tier, lifetime_points, tenant_id, updated_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT (customer_id) DO UPDATE
+         SET current_tier = EXCLUDED.current_tier, lifetime_points = EXCLUDED.lifetime_points, updated_at = NOW()
+         RETURNING customer_id, current_tier AS tier_name, lifetime_points, updated_at;`,
+        [customer_id, tierName, lifetimePoints, tenant_id]
+      );
+      const tierSnapshot = { ...snapshotRes.rows[0], current_balance: currentBalance };
+
+      // 6. Log audit event
+      await AuditLogService.logEvent({
+        action: 'points_earn_bonus',
+        entity_type: 'customer',
+        entity_id: customer_id,
+        actor_user_id: created_by || null,
+        before_values: { current_balance: balanceBefore, lifetime_points: lifetimeBefore },
+        after_values: { current_balance: currentBalance, lifetime_points: lifetimePoints },
+        metadata: { earned_points: points, reference_id, branch_id, description },
+        tenant_id,
+        client,
+      });
+
+      await client.query('COMMIT');
+
+      // 7. Queue non-blocking notification
+      NotificationService.queuePointsEarnedNotification({
+        customer_id,
+        points,
+        transaction_type: 'service_bonus',
+        tenant_id,
+      });
+
+      return { ledger_entry: ledgerEntry, tier_snapshot: tierSnapshot };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 module.exports = PointsService;

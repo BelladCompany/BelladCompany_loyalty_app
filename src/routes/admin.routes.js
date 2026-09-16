@@ -31,4 +31,8 @@ router.get('/whatsapp-logs', AdminController.getWhatsAppLogs);
 // 7. View AppSheet webhook transaction log entries
 router.get('/appsheet-logs', AdminController.getAppSheetWebhookLogs);
 
+// 8. View Google Sheets customer auto-sync log entries
+router.get('/google-sheets-logs', AdminController.getGoogleSheetsLogs);
+
 module.exports = router;
+

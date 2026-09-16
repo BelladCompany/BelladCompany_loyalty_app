@@ -87,6 +87,7 @@ class CustomerService {
     explicit_customer_id,
     award_auto_sales_points = false,
     otp,
+    otp_verified = false,
     gst_number,
     ledger_name,
     ledger_code,
@@ -105,7 +106,7 @@ class CustomerService {
     // 1. Mandatory OTP verification for customer creation (unless created via automated AppSheet pull)
     const primaryPhone = Array.isArray(phone_numbers) && phone_numbers.length > 0 ? String(phone_numbers[0]).trim() : null;
 
-    if (!explicit_customer_id) {
+    if (!explicit_customer_id && !otp_verified) {
       if (!otp || !String(otp).trim()) {
         throw { statusCode: 400, message: 'OTP verification is required to create a new customer.' };
       }

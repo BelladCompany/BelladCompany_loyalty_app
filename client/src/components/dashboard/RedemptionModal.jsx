@@ -14,6 +14,7 @@ import {
   Sparkles,
   ArrowRight,
   Calculator,
+  Lock,
 } from 'lucide-react';
 import ApiService from '../../services/api';
 import Button from '../ui/Button';

@@ -9,6 +9,7 @@ import CorrectionsQueueScreen from './screens/CorrectionsQueueScreen';
 import PublicBalancePassScreen from './screens/PublicBalancePassScreen';
 import PublicReferralLeadScreen from './screens/PublicReferralLeadScreen';
 import ReportsScreen from './screens/ReportsScreen';
+import CustomerPortalScreen from './pages/CustomerPortalScreen';
 import ApiService from './services/api';
 
 export function App() {
@@ -16,12 +17,14 @@ export function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchResetNonce, setSearchResetNonce] = useState(0);
 
-  // Check if current path is a public page (/balance/:token or /refer/:referrerCode)
-  const isPublicBalancePass = window.location.pathname.startsWith('/balance/');
-  const isPublicReferralLead = window.location.pathname.startsWith('/refer/');
+  // Check public paths & portal path
+  const path = window.location.pathname;
+  const isPublicBalancePass = path.startsWith('/balance/');
+  const isPublicReferralLead = path.startsWith('/refer/');
+  const isCustomerPortal = path.startsWith('/portal') || path.startsWith('/customer-portal');
 
   useEffect(() => {
-    if (isPublicBalancePass || isPublicReferralLead) return;
+    if (isPublicBalancePass || isPublicReferralLead || isCustomerPortal) return;
 
     // Validate stored token on mount
     const token = ApiService.getToken();
@@ -38,7 +41,7 @@ export function App() {
           setUser(null);
         });
     }
-  }, [isPublicBalancePass, isPublicReferralLead]);
+  }, [isPublicBalancePass, isPublicReferralLead, isCustomerPortal]);
 
   // Public balance pass does not require user authentication
   if (isPublicBalancePass) {
@@ -48,6 +51,11 @@ export function App() {
   // Public referral lead form does not require user authentication
   if (isPublicReferralLead) {
     return <PublicReferralLeadScreen />;
+  }
+
+  // Customer Portal route or logged-in customer role
+  if (isCustomerPortal || user?.role === 'customer') {
+    return <CustomerPortalScreen />;
   }
 
   const handleLoginSuccess = (loggedInUser) => {
