@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
+    "build": "cd client && npm install && npm run build",
     "dev": "nodemon src/index.js",
     "migrate": "node src/db/migrate.js",
     "seed": "node src/db/seed.js",

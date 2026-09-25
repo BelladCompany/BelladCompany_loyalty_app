@@ -75,7 +75,24 @@ app.use('/api/public', publicReferralRoutes);
 app.use('/api', publicBalanceRoutes);
 app.use('/api', kycRoutes);
 
-// Catch-all 404 handler
+// Serve static client assets if client/dist exists (production fullstack deploy)
+const fs = require('fs');
+const clientDistPath = path.join(__dirname, '../client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  app.get('*', (req, res, next) => {
+    if (
+      req.originalUrl.startsWith('/api') ||
+      req.originalUrl.startsWith('/health') ||
+      req.originalUrl.startsWith('/uploads')
+    ) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
+// Catch-all 404 handler for unmatched API routes
 app.use((req, res) => {
   res.status(404).json({
     status: 'fail',
