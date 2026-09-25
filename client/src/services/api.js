@@ -1,4 +1,8 @@
-const API_BASE = '/api';
+const rawApiBase = import.meta.env.VITE_API_URL || '/api';
+const cleanBase = rawApiBase.endsWith('/') ? rawApiBase.slice(0, -1) : rawApiBase;
+const API_BASE = cleanBase.startsWith('http') && !cleanBase.endsWith('/api')
+  ? `${cleanBase}/api`
+  : cleanBase;
 
 export class ApiService {
   static getToken() {
