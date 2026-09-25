@@ -1,10 +1,19 @@
 -- 028_vehicle_sales_points_engine.sql
 -- Vehicle Sales Points Calculation Engine Schema Extensions
 
--- 1. Extend points_ledger with reason_type and reason_text for structured breakdown and corrections
+-- 1. Extend points_ledger with source_ref, reason_type, and reason_text for structured breakdown and corrections
 ALTER TABLE points_ledger
+  ADD COLUMN IF NOT EXISTS source_ref VARCHAR(255),
   ADD COLUMN IF NOT EXISTS reason_type VARCHAR(50) DEFAULT 'purchase',
   ADD COLUMN IF NOT EXISTS reason_text TEXT;
+
+-- Backfill source_ref from reference_id if reference_id exists and source_ref is NULL
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'points_ledger' AND column_name = 'reference_id') THEN
+    UPDATE points_ledger SET source_ref = reference_id WHERE source_ref IS NULL AND reference_id IS NOT NULL;
+  END IF;
+END $$;
 
 -- Expand points_ledger_type_check constraint if present to allow 'adjust' and 'adjustment'
 DO $$
