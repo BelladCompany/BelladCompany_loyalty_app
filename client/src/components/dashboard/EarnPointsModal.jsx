@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, PlusCircle, CheckCircle2, AlertCircle, Send, Car, RefreshCw, Database, KeyRound, ShieldCheck, Calculator, ArrowRight } from 'lucide-react';
+import { X, PlusCircle, CheckCircle2, AlertCircle, Send, Car, RefreshCw, Database, KeyRound, ShieldCheck, Calculator, ArrowRight, Sparkles } from 'lucide-react';
 import { Button, Input } from '../ui';
 import ApiService from '../../services/api';
 
