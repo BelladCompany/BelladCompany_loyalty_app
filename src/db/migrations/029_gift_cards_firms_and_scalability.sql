@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS gift_cards (
   status                VARCHAR(30) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'partially_redeemed', 'redeemed', 'expired', 'locked', 'cancelled')),
   expires_at            TIMESTAMPTZ NOT NULL,
   tenant_id             VARCHAR(64) NOT NULL,
-  created_by            INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+  created_by            INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS gift_card_redemptions (
   transaction_type      VARCHAR(40) NOT NULL DEFAULT 'wallet_claim' CHECK (transaction_type IN ('wallet_claim', 'pos_redemption', 'service_billing', 'points_conversion', 'manual_adjustment')),
   points_credited       INTEGER DEFAULT 0,
   reference_id          VARCHAR(100),
-  cashier_id            INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+  cashier_id            INTEGER REFERENCES users(id) ON DELETE SET NULL,
   notes                 TEXT,
   tenant_id             VARCHAR(64) NOT NULL,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()

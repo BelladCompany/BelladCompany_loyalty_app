@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS users (
 -- Customer ID is system-generated (format BAC-100001), immutable, and NEVER derived from phone or name.
 CREATE TABLE IF NOT EXISTS customers (
   customer_id VARCHAR(32) PRIMARY KEY DEFAULT ('BAC-' || nextval('customer_id_seq')::text),
-  name VARCHAR(255) NOT NULL,
+  customer_name VARCHAR(255) NOT NULL,
+  name VARCHAR(255),
   email VARCHAR(255),
   tenant_id VARCHAR(64) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -85,12 +86,12 @@ CREATE TABLE IF NOT EXISTS vehicles (
   customer_id VARCHAR(32) NOT NULL REFERENCES customers(customer_id) ON DELETE CASCADE,
   brand_id INTEGER REFERENCES brands(id) ON DELETE SET NULL,
   vin VARCHAR(64),
-  registration_number VARCHAR(32) NOT NULL,
+  chassis_no VARCHAR(64),
+  registration_number VARCHAR(32),
   model VARCHAR(100),
   tenant_id VARCHAR(64) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT uq_vehicles_tenant_reg UNIQUE (tenant_id, registration_number)
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_vehicles_customer_id ON vehicles (customer_id);
