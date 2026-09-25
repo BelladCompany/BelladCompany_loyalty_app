@@ -135,26 +135,45 @@ export const Customer360View = ({
       field: 'transaction_type',
       header: 'Transaction Type',
       sortable: true,
-      render: (val) => {
+      render: (val, row) => {
         let label = val;
         let colorClass = 'bg-slate-100 text-slate-800 border-slate-300';
-        if (val === 'sale' || val === 'earn_sale') {
-          label = 'Vehicle Sale';
-          colorClass = 'bg-blue-50 text-blue-900 border-blue-300 font-bold';
+        
+        const refStr = (row.reference_id || row.source_ref || '').toLowerCase();
+        const reasonStr = (row.reason_text || '').toLowerCase();
+
+        if (refStr.includes('gift card') || reasonStr.includes('gift card') || row.reason_type === 'gift_card_claim') {
+          label = '🎁 Gift Card Claim';
+          colorClass = 'bg-purple-50 text-purple-900 border-purple-300 font-extrabold';
+        } else if (refStr.includes('finance') || reasonStr.includes('finance')) {
+          label = '🏦 In-house Finance';
+          colorClass = 'bg-emerald-50 text-emerald-900 border-emerald-300 font-extrabold';
+        } else if (refStr.includes('insurance') || reasonStr.includes('insurance')) {
+          label = '🛡️ In-house Insurance';
+          colorClass = 'bg-blue-50 text-blue-900 border-blue-300 font-extrabold';
+        } else if (refStr.includes('exchange') || reasonStr.includes('exchange')) {
+          label = '🔄 In-house Exchange';
+          colorClass = 'bg-amber-50 text-amber-900 border-amber-300 font-extrabold';
+        } else if (refStr.includes('in-house') || reasonStr.includes('in-house')) {
+          label = '✨ In-house Bonus';
+          colorClass = 'bg-teal-50 text-teal-900 border-teal-300 font-extrabold';
+        } else if (val === 'sale' || val === 'earn_sale') {
+          label = '🚗 Vehicle Sale (After Disc)';
+          colorClass = 'bg-sky-50 text-sky-900 border-sky-300 font-bold';
         } else if (val === 'service' || val === 'earn_service') {
-          label = 'Workshop Service';
+          label = '🔧 Workshop Service';
           colorClass = 'bg-indigo-50 text-indigo-900 border-indigo-300 font-bold';
         } else if (val === 'earn_referral' || val === 'referral') {
-          label = 'Referral Reward';
-          colorClass = 'bg-purple-50 text-purple-900 border-purple-300 font-bold';
+          label = '👥 Referral Reward';
+          colorClass = 'bg-pink-50 text-pink-900 border-pink-300 font-bold';
         } else if (val === 'redemption' || val === 'redeem') {
-          label = 'Redemption (Discount)';
+          label = '🏷️ Redemption (Discount)';
           colorClass = 'bg-rose-50 text-rose-950 border-rose-300 font-bold';
         } else if (val === 'expire') {
           label = 'Expired (Forfeited)';
           colorClass = 'bg-gray-200 text-gray-600 border-gray-400 font-bold';
-        } else if (val === 'adjust') {
-          label = 'Adjustment';
+        } else if (val === 'adjust' || val === 'manual_adjustment') {
+          label = '⚖️ Points Correction';
           colorClass = 'bg-amber-50 text-amber-900 border-amber-300 font-bold';
         }
 
@@ -185,10 +204,20 @@ export const Customer360View = ({
     },
     {
       field: 'reference_id',
-      header: 'Reference Code',
+      header: 'Reference & Details',
       sortable: true,
-      cellClassName: 'font-mono text-xs font-semibold text-slate-800',
-      render: (val) => val || '—',
+      render: (val) => {
+        if (!val) return '—';
+        const parts = val.split(' | ');
+        const refCode = parts[0];
+        const desc = parts.slice(1).join(' | ');
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-mono text-xs font-semibold text-slate-800">{refCode}</span>
+            {desc && <span className="text-[11px] text-emerald-600 font-medium bg-emerald-50 px-1.5 py-0.5 rounded w-fit">{desc}</span>}
+          </div>
+        );
+      },
     },
     {
       field: 'branch_name',
@@ -396,11 +425,14 @@ export const Customer360View = ({
             {customer.vehicles.map((v, idx) => {
               const vid = v.id || v.vehicle_id;
               const vs = vehicleStatuses[vid];
-              const priceDisplay = v.ex_showroom_price
-                ? `₹${Number(v.ex_showroom_price).toLocaleString('en-IN')}`
-                : v.ex_showroom_price_paise
-                ? `₹${(v.ex_showroom_price_paise / 100).toLocaleString('en-IN')}`
-                : 'N/A';
+              const grossPrice = Number(v.gross_ex_showroom_price || (v.ex_showroom_price_paise ? v.ex_showroom_price_paise / 100 : v.ex_showroom_price) || 0);
+              const dealerDisc = Number(v.dealer_cash_discount || 0);
+              const empsDisc = Number(v.emps_discount || 0);
+              const oemOffers = Number(v.oem_offers_amount || 0);
+
+              const netPrice = v.net_ex_showroom_price != null 
+                ? Number(v.net_ex_showroom_price)
+                : Math.max(0, grossPrice - dealerDisc - empsDisc - oemOffers);
 
               return (
                 <div
@@ -438,8 +470,31 @@ export const Customer360View = ({
                     </div>
 
                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Ex-Showroom Price</span>
-                      <span className="font-extrabold text-emerald-700 text-lg">{priceDisplay}</span>
+                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Ex-Showroom Price (Gross)</span>
+                      <span className="font-extrabold text-slate-800 text-base">{grossPrice > 0 ? `₹${grossPrice.toLocaleString('en-IN')}` : 'N/A'}</span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-rose-200 bg-rose-50/40">
+                      <span className="text-rose-700 block text-xs uppercase font-extrabold">Offers &amp; Discounts Deducted</span>
+                      <span className="font-extrabold text-rose-700 text-base">
+                        {grossPrice - netPrice > 0 ? `−₹${(grossPrice - netPrice).toLocaleString('en-IN')}` : '₹0 (No Offers)'}
+                      </span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50/60 col-span-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-emerald-900 block text-xs uppercase font-extrabold">
+                            Net Ex-Showroom (After Discount)
+                          </span>
+                          <span className="font-black text-emerald-800 text-xl">
+                            {netPrice > 0 ? `₹${netPrice.toLocaleString('en-IN')}` : 'N/A'}
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">
+                          Points Base: +{Math.floor(netPrice / 100).toLocaleString('en-IN')} PTS
+                        </span>
+                      </div>
                     </div>
 
                     <div className="bg-white p-3 rounded-lg border border-slate-200">

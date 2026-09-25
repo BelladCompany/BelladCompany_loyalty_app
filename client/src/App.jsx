@@ -9,6 +9,8 @@ import CorrectionsQueueScreen from './screens/CorrectionsQueueScreen';
 import PublicBalancePassScreen from './screens/PublicBalancePassScreen';
 import PublicReferralLeadScreen from './screens/PublicReferralLeadScreen';
 import ReportsScreen from './screens/ReportsScreen';
+import GiftCardsScreen from './screens/GiftCardsScreen';
+import TenantManagementScreen from './screens/TenantManagementScreen';
 import CustomerPortalScreen from './pages/CustomerPortalScreen';
 import ApiService from './services/api';
 
@@ -92,6 +94,8 @@ export function App() {
           activeTab={activeTab}
           resetNonce={searchResetNonce}
         />
+      ) : activeTab === 'gift_cards' ? (
+        <GiftCardsScreen user={user} />
       ) : activeTab === 'referrals' ? (
         <ReferralsScreen user={user} />
       ) : activeTab === 'reports' ? (
@@ -100,6 +104,8 @@ export function App() {
         <KycApprovalsScreen />
       ) : activeTab === 'corrections_queue' ? (
         <CorrectionsQueueScreen />
+      ) : activeTab === 'tenants' ? (
+        <TenantManagementScreen user={user} />
       ) : activeTab === 'admin' ? (
         <AdminDuplicateScreen />
       ) : (

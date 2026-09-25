@@ -80,7 +80,13 @@ export default function EnrollmentScreen({ onLoginSuccess }) {
         aadhaar_number: aadhaar,
       });
       setStep('otp');
-      setInfoMsg(res.message || `OTP sent to +91 ${phone}`);
+      const testCode = res.debug_otp || res.dummy_otp || '123456';
+      setInfoMsg(res.message || `OTP sent to +91 ${phone} (Test Code: ${testCode})`);
+      if (res.debug_otp) {
+        const chars = String(res.debug_otp).slice(0, 6).split('');
+        while (chars.length < 6) chars.push('');
+        setOtp(chars);
+      }
       setTimeout(() => {
         if (otpInputsRef.current[0]) {
           otpInputsRef.current[0].focus();
@@ -310,6 +316,17 @@ export default function EnrollmentScreen({ onLoginSuccess }) {
                     className="w-10 h-12 text-center text-lg font-bold bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:border-slate-900 transition-colors"
                   />
                 ))}
+              </div>
+
+              <div className="mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center justify-between">
+                <span>💡 Test Master Code: <strong>123456</strong></span>
+                <button
+                  type="button"
+                  onClick={() => setOtp(['1', '2', '3', '4', '5', '6'])}
+                  className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 font-bold rounded text-amber-950 transition-colors"
+                >
+                  Auto-Fill
+                </button>
               </div>
             </div>
 

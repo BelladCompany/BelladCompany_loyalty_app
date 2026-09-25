@@ -32,6 +32,35 @@ class PointsController {
     }
   }
 
+  static async grantInhouseBonus(req, res, next) {
+    try {
+      const { customer_id, vehicle_id, branch_id, type, points, reference_id, description } = req.body;
+      const tenantId = req.tenantId;
+      const createdBy = req.user?.id || null;
+
+      const result = await PointsService.grantFixedBonus({
+        customer_id,
+        vehicle_id: vehicle_id ? parseInt(vehicle_id, 10) : null,
+        branch_id: branch_id || 1,
+        points: parseInt(points, 10),
+        category: 'service',
+        type: 'earn_service',
+        reference_id,
+        description,
+        created_by: createdBy,
+        tenant_id: tenantId,
+      });
+
+      res.status(201).json({
+        status: 'success',
+        message: `Successfully granted In-house bonus for customer ${customer_id}.`,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * Endpoint to fetch a customer's full ledger history and current tier snapshot
    */

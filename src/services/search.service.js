@@ -57,15 +57,21 @@ class SearchService {
               'brand', COALESCE(v.brand_name, 'Hero/Hyundai/Swaraj'),
               'branch', COALESCE(v.branch_name, c.branch_name, ''),
               'firm', COALESCE(v.firm_name, c.firm_name, ''),
-              'ex_showroom_price', FLOOR(COALESCE(v.ex_showroom_price, 0) / 100)
+              'ex_showroom_price', GREATEST(0, FLOOR((COALESCE(st.ex_showroom_price_paise, v.ex_showroom_price, 0) - COALESCE(st.dealer_cash_discount_paise, 0) - COALESCE(st.emps_discount_paise, 0) - COALESCE(st.oem_offers_amount_paise, 0)) / 100.0)),
+              'net_ex_showroom_price', GREATEST(0, FLOOR((COALESCE(st.ex_showroom_price_paise, v.ex_showroom_price, 0) - COALESCE(st.dealer_cash_discount_paise, 0) - COALESCE(st.emps_discount_paise, 0) - COALESCE(st.oem_offers_amount_paise, 0)) / 100.0)),
+              'gross_ex_showroom_price', CASE WHEN COALESCE(st.ex_showroom_price_paise, v.ex_showroom_price) IS NOT NULL THEN FLOOR(COALESCE(st.ex_showroom_price_paise, v.ex_showroom_price) / 100.0) ELSE NULL END,
+              'tcs_amount', FLOOR(COALESCE(st.tcs_amount_paise, 0) / 100.0),
+              'dealer_cash_discount', FLOOR(COALESCE(st.dealer_cash_discount_paise, 0) / 100.0),
+              'emps_discount', FLOOR(COALESCE(st.emps_discount_paise, 0) / 100.0),
+              'oem_offers_amount', FLOOR(COALESCE(st.oem_offers_amount_paise, 0) / 100.0)
             )
           ) FILTER (WHERE v.vehicle_id IS NOT NULL), '[]'
         ) AS vehicles,
-        COALESCE(SUM(pl.points), 0) AS points_balance
+        (SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl WHERE pl.customer_id = c.customer_id AND pl.tenant_id = c.tenant_id) AS points_balance
       FROM customers c
       LEFT JOIN customer_phones cp ON c.customer_id = cp.customer_id AND cp.tenant_id = c.tenant_id
       LEFT JOIN vehicles v ON c.customer_id = v.customer_id AND v.tenant_id = c.tenant_id
-      LEFT JOIN points_ledger pl ON c.customer_id = pl.customer_id AND pl.tenant_id = c.tenant_id
+      LEFT JOIN sale_transactions st ON v.vehicle_id = st.vehicle_id AND st.tenant_id = v.tenant_id
       WHERE c.tenant_id = $1
         AND (
           c.customer_name ILIKE $2
@@ -161,15 +167,21 @@ class SearchService {
               'brand', COALESCE(v.brand_name, 'Hero/Hyundai/Swaraj'),
               'branch', COALESCE(v.branch_name, c.branch_name, ''),
               'firm', COALESCE(v.firm_name, c.firm_name, ''),
-              'ex_showroom_price', FLOOR(COALESCE(v.ex_showroom_price, 0) / 100)
+              'ex_showroom_price', GREATEST(0, FLOOR((COALESCE(st.ex_showroom_price_paise, v.ex_showroom_price, 0) - COALESCE(st.dealer_cash_discount_paise, 0) - COALESCE(st.emps_discount_paise, 0) - COALESCE(st.oem_offers_amount_paise, 0)) / 100.0)),
+              'net_ex_showroom_price', GREATEST(0, FLOOR((COALESCE(st.ex_showroom_price_paise, v.ex_showroom_price, 0) - COALESCE(st.dealer_cash_discount_paise, 0) - COALESCE(st.emps_discount_paise, 0) - COALESCE(st.oem_offers_amount_paise, 0)) / 100.0)),
+              'gross_ex_showroom_price', CASE WHEN COALESCE(st.ex_showroom_price_paise, v.ex_showroom_price) IS NOT NULL THEN FLOOR(COALESCE(st.ex_showroom_price_paise, v.ex_showroom_price) / 100.0) ELSE NULL END,
+              'tcs_amount', FLOOR(COALESCE(st.tcs_amount_paise, 0) / 100.0),
+              'dealer_cash_discount', FLOOR(COALESCE(st.dealer_cash_discount_paise, 0) / 100.0),
+              'emps_discount', FLOOR(COALESCE(st.emps_discount_paise, 0) / 100.0),
+              'oem_offers_amount', FLOOR(COALESCE(st.oem_offers_amount_paise, 0) / 100.0)
             )
           ) FILTER (WHERE v.vehicle_id IS NOT NULL), '[]'
         ) AS vehicles,
-        COALESCE(SUM(pl.points), 0) AS points_balance
+        (SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl WHERE pl.customer_id = c.customer_id AND pl.tenant_id = c.tenant_id) AS points_balance
       FROM customers c
       LEFT JOIN customer_phones cp ON c.customer_id = cp.customer_id AND cp.tenant_id = c.tenant_id
       LEFT JOIN vehicles v ON c.customer_id = v.customer_id AND v.tenant_id = c.tenant_id
-      LEFT JOIN points_ledger pl ON c.customer_id = pl.customer_id AND pl.tenant_id = c.tenant_id
+      LEFT JOIN sale_transactions st ON v.vehicle_id = st.vehicle_id AND st.tenant_id = v.tenant_id
       WHERE c.tenant_id = $1
       GROUP BY c.customer_id
       ORDER BY c.created_at DESC

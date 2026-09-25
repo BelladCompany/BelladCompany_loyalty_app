@@ -84,9 +84,10 @@ class AppSheetSearchService {
       phones.push({ id: 2, phone_number: altPhone, is_primary: false });
     }
 
-    const amount = Number(row['Total Vehicle Billing Amount'] || row['Net Ex-Showroom Price'] || row['Ex-Showroom Price'] || 0);
-    // Calculated sample points (1 point per ₹100 ex-showroom)
-    const pointsBalance = Math.floor(amount / 100);
+    const rawExShowroom = row['Ex-Showroom Price'] || row['Ex Showroom Price'];
+    const exShowroomPrice = rawExShowroom != null && String(rawExShowroom).trim() !== '' && !isNaN(Number(rawExShowroom)) ? Number(rawExShowroom) : null;
+
+    const pointsBalance = exShowroomPrice ? Math.floor(exShowroomPrice / 100) : 0;
 
     const vehicleId = row['VIN Number'] || row['Reg Number'] || row['Order Unique ID'] || 'V-1';
     const vehicles = [
@@ -98,7 +99,7 @@ class AppSheetSearchService {
         model: row['Model'] || row['Variant'] || 'Vehicle',
         brand: row['Brand'] || 'Hero/Hyundai/Swaraj',
         branch: row['Branch'] || '',
-        ex_showroom_price: amount,
+        ex_showroom_price: exShowroomPrice,
       },
     ];
 

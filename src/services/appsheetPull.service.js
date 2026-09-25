@@ -2,6 +2,7 @@ require('dotenv').config();
 const { pool } = require('../config/db');
 const TransactionService = require('./transaction.service');
 const CustomerService = require('./customer.service');
+const VehiclePointsEngine = require('./vehiclePointsEngine.service');
 const { hashIdentifier } = require('../utils/crypto.util');
 
 const APPSHEET_APP_ID = process.env.APPSHEET_APP_ID || '85112c57-b39f-4afc-b060-e02d6f0c62de';
@@ -235,8 +236,24 @@ class AppSheetPullService {
     const branchAddress = (row['Branch Address'] || row['Branch Adress'] || '').trim();
     const dmsInvoiceNo = (row['DMS Invoice Number'] || '').trim();
     const dmsInvoiceDate = (row['DMS Invoice Date'] || '').trim();
-    const salesConsultant = (row['Sales Consultant'] || '').trim();
-    const exShowroomPaise = Math.round(Number(row['Ex-Showroom Price'] || row['Net Ex-Showroom Price'] || row['Total Vehicle Billing Amount'] || 0) * 100);
+    // Sourced strictly from per-transaction invoice field 'Ex-Showroom Price'
+    const rawExShowroomStr = row['Ex-Showroom Price'] || row['Ex Showroom Price'] || row['Invoice Ex-Showroom Price'];
+    let exShowroomNum = null;
+    if (rawExShowroomStr != null && String(rawExShowroomStr).trim() !== '' && !isNaN(Number(rawExShowroomStr))) {
+      exShowroomNum = Number(rawExShowroomStr);
+    }
+
+    // Validation Check: After fetching ex_showroom_price, validate against invoice / total billing
+    if (exShowroomNum === null || exShowroomNum <= 0) {
+      console.warn(`⚠️ [Sync Validation Alert] Vehicle '${chassis}' (VIN: ${vin || chassis}) has missing/invalid ex_showroom_price ("${rawExShowroomStr}"). Flagged for audit; not inserting substituted fallback price.`);
+    } else {
+      const billingTotal = Number(row['Total Vehicle Billing Amount'] || 0);
+      if (billingTotal > 0 && exShowroomNum > billingTotal) {
+        console.warn(`⚠️ [Sync Validation Alert] Vehicle '${chassis}' ex_showroom_price (₹${exShowroomNum}) exceeds Total Billing Amount (₹${billingTotal}). Flagged for audit.`);
+      }
+    }
+
+    const exShowroomPaise = exShowroomNum !== null ? Math.round(exShowroomNum * 100) : null;
 
     let invoiceDateVal = null;
     if (dmsInvoiceDate && String(dmsInvoiceDate).trim()) {
@@ -249,12 +266,25 @@ class AppSheetPullService {
     const client = await pool.connect();
     try {
       const vehRes = await client.query(
-        `SELECT vehicle_id FROM vehicles WHERE tenant_id = $1 AND (chassis_no = $2 OR registration_number = $2) LIMIT 1;`,
+        `SELECT vehicle_id, ex_showroom_price FROM vehicles WHERE tenant_id = $1 AND (chassis_no = $2 OR registration_number = $2) LIMIT 1;`,
         [tenantId, chassis]
       );
 
       if (vehRes.rows.length > 0) {
-        return vehRes.rows[0].vehicle_id;
+        const existingVid = vehRes.rows[0].vehicle_id;
+        // Update vehicle record with validated ex_showroom_price from transaction invoice if missing or updated
+        if (exShowroomPaise !== null) {
+          await client.query(
+            `UPDATE vehicles
+             SET ex_showroom_price = $1,
+                 dms_invoice_number = COALESCE(dms_invoice_number, $2),
+                 dms_invoice_date = COALESCE(dms_invoice_date, $3::date),
+                 updated_at = NOW()
+             WHERE vehicle_id = $4 AND tenant_id = $5;`,
+            [exShowroomPaise, dmsInvoiceNo || null, invoiceDateVal, existingVid, tenantId]
+          );
+        }
+        return existingVid;
       }
 
       // Insert vehicle record with purchase_date set from dms_invoice_date
@@ -328,9 +358,10 @@ class AppSheetPullService {
           const keyValue = row[keyColumn] || row['Order Unique ID'] || row['DMS Booking ID'];
 
           try {
-            const billAmount = Number(row['Total Vehicle Billing Amount'] || row['Net Ex-Showroom Price'] || row['Ex-Showroom Price'] || 0);
+            const exShowroomVal = Number(row['Ex-Showroom Price'] || row['Ex Showroom Price'] || row['Ex-Showroom'] || 0);
+            const billAmount = Number(row['Total Vehicle Billing Amount'] || exShowroomVal || row['Net Ex-Showroom Price'] || 0);
 
-            if (!billAmount || billAmount <= 0) {
+            if (!billAmount && !exShowroomVal) {
               skippedCount++;
               continue;
             }
@@ -348,12 +379,49 @@ class AppSheetPullService {
             const jobCard = row['Order Unique ID'] || row['DMS Booking ID'];
             const category = (row['Department'] || '').toLowerCase() === 'service' ? 'service' : 'sale';
 
+            // Extract raw discount fields for vehicle sales points engine
+            const tcsAmount = VehiclePointsEngine.cleanNumber(row['TCS % Amount'] || row['TCS Amount'] || row['TCS'] || 0);
+            const dealerDiscount = VehiclePointsEngine.cleanNumber(row['Dealer Cash Discount'] || row['Dealer Discount'] || row['Discount/FAIM'] || row['Cash Discount'] || 0);
+            const empsDiscount = VehiclePointsEngine.cleanNumber(row['EMPS Discount'] || row['EMPS'] || row['Other Discount Amount'] || row['Other Discount'] || row['Other Discounts'] || 0);
+            const oemOffers = VehiclePointsEngine.cleanNumber(row['OEM Offers Amount'] || row['OEM Offers Total Amount'] || row['OEM Offers'] || row['OEM Offer'] || row['Offers Amount'] || 0);
+
+            console.log(`📡 [AppSheetPull] Key: ${keyValue}, VIN: ${row['VIN Number'] || row['Chassis Number']}, Raw Discounts -> ExShowroom: ${exShowroomVal}, TCS: ${tcsAmount}, Dealer: ${dealerDiscount}, EMPS: ${empsDiscount}, OEM: ${oemOffers}`);
+
+            // Parse generic additional discounts sub-table or flexible AppSheet columns
+            const additionalDiscounts = [];
+            if (row['Additional Discounts'] && Array.isArray(row['Additional Discounts'])) {
+              additionalDiscounts.push(...row['Additional Discounts']);
+            } else {
+              // Extract any arbitrary key like "Corporate Discount", "Festive Offer"
+              for (const [key, val] of Object.entries(row)) {
+                const kLower = key.toLowerCase();
+                if (
+                  kLower.includes('discount') &&
+                  !['dealer cash discount', 'dealer discount', 'emps discount', 'emps', 'other discount amount', 'other discount', 'total discount amount'].includes(kLower) &&
+                  VehiclePointsEngine.cleanNumber(val) > 0
+                ) {
+                  additionalDiscounts.push({ discount_type: key, discount_name: key, amount: VehiclePointsEngine.cleanNumber(val) });
+                }
+              }
+            }
+
+            const invoiceStageStr = String(row['Invoice Stage'] || row['Status'] || row['Stage'] || 'finalized').toLowerCase();
+            const isFinalized = !invoiceStageStr.includes('booking') && !invoiceStageStr.includes('draft');
+
             // 4. Sync transaction idempotently via TransactionService
             const syncResult = await TransactionService.syncTransaction({
               category,
               job_card_number: jobCard,
               reference_id: refId,
               bill_amount: billAmount,
+              ex_showroom_price: exShowroomVal || billAmount,
+              tcs_amount: tcsAmount,
+              dealer_cash_discount: dealerDiscount,
+              emps_discount: empsDiscount,
+              oem_offers_amount: oemOffers,
+              additional_discounts: additionalDiscounts,
+              is_invoice_finalized: isFinalized,
+              stage: invoiceStageStr,
               customer_id: customerId,
               vehicle_id: vehicleId,
               registration_number: row['Reg Number'] || row['VIN Number'],

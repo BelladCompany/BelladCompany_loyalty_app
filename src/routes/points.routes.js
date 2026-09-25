@@ -16,6 +16,13 @@ router.post(
   PointsController.earnPoints
 );
 
+// Manually grant in-house points (Finance, Insurance, Exchange)
+router.post(
+  '/inhouse-bonus',
+  requireRole(['cashier', 'admin']),
+  PointsController.grantInhouseBonus
+);
+
 // Get customer full ledger history and current tier
 router.get(
   '/customers/:customerId/ledger',

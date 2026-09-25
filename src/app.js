@@ -23,6 +23,8 @@ const appsheetRoutes = require('./routes/appsheet.routes');
 const correctionRoutes = require('./routes/correction.routes');
 const publicReferralRoutes = require('./routes/public_referral.routes');
 const customerPortalRoutes = require('./routes/customerPortal.routes');
+const giftCardRoutes = require('./routes/giftCard.routes');
+const tenantRoutes = require('./routes/tenant.routes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -48,6 +50,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/v1', customerPortalRoutes);
+app.use('/api/v1/gift-cards', giftCardRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/search', searchRoutes);
@@ -59,7 +62,10 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/redemptions', redemptionRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/gift-cards', giftCardRoutes);
+app.use('/api/tenants', tenantRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/tenants', tenantRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/appsheet', appsheetRoutes);
 app.use('/api/corrections', correctionRoutes);

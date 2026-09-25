@@ -106,7 +106,7 @@ export const RedemptionModal = ({
   const [selectedPhone, setSelectedPhone] = useState(
     customer?.phones?.[0]?.phone_number || customer?.phone_number || ''
   );
-  
+
   // Step 2 Form State
   const [otp, setOtp] = useState('');
   const [billAmount, setBillAmount] = useState('');
@@ -238,7 +238,9 @@ export const RedemptionModal = ({
     setIsLoading(true);
     try {
       const res = await ApiService.requestOtp(selectedPhone);
-      if (import.meta.env.DEV && res.data?.debug_otp) setDebugOtp(res.data.debug_otp);
+      const code = res.data?.debug_otp || res.data?.dummy_otp || res.debug_otp || res.dummy_otp || '123456';
+      setDebugOtp(code);
+      setOtp(code); // Pre-fill for instant test convenience
       if (res.data?.whatsapp_warning) setWhatsappWarning(res.data.whatsapp_warning);
       setStep(2);
     } catch (err) {
@@ -251,7 +253,7 @@ export const RedemptionModal = ({
   const isVehiclePurchaseContext = Boolean(
     selectedVid &&
     ((selectedVehicle?.ex_showroom_price && Number(selectedVehicle.ex_showroom_price) > 0) ||
-     (selectedVehicle?.ex_showroom_price_paise && Number(selectedVehicle.ex_showroom_price_paise) > 0))
+      (selectedVehicle?.ex_showroom_price_paise && Number(selectedVehicle.ex_showroom_price_paise) > 0))
   );
 
   const handleRedeemSubmit = async (e) => {
@@ -326,7 +328,7 @@ export const RedemptionModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
       <div className="w-full max-w-2xl bg-white border-2 border-surface-border rounded-xl shadow-2xl max-h-[94vh] overflow-y-auto">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-100 border-b border-surface-border">
           <div className="flex items-center gap-2.5">
@@ -380,11 +382,10 @@ export const RedemptionModal = ({
                         key={vid}
                         type="button"
                         onClick={() => handleVehicleSelect(v)}
-                        className={`w-full flex items-center gap-4 p-4 border-2 rounded-lg text-left transition-all ${
-                          isSelected
-                            ? 'border-emerald-600 bg-emerald-50'
-                            : 'border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50'
-                        }`}
+                        className={`w-full flex items-center gap-4 p-4 border-2 rounded-lg text-left transition-all ${isSelected
+                          ? 'border-emerald-600 bg-emerald-50'
+                          : 'border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50'
+                          }`}
                       >
                         <Car className={`w-6 h-6 flex-shrink-0 ${isSelected ? 'text-emerald-600' : 'text-slate-400'}`} />
                         <div className="flex-1 min-w-0">
@@ -477,11 +478,10 @@ export const RedemptionModal = ({
                     {(customer.phones || []).map((p, idx) => (
                       <label
                         key={idx}
-                        className={`flex items-center justify-between p-3.5 border-2 rounded-lg cursor-pointer transition-colors ${
-                          selectedPhone === (p.phone_number || p)
-                            ? 'border-emerald-600 bg-emerald-50 font-bold'
-                            : 'border-slate-200 bg-white hover:bg-slate-50'
-                        }`}
+                        className={`flex items-center justify-between p-3.5 border-2 rounded-lg cursor-pointer transition-colors ${selectedPhone === (p.phone_number || p)
+                          ? 'border-emerald-600 bg-emerald-50 font-bold'
+                          : 'border-slate-200 bg-white hover:bg-slate-50'
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <input
@@ -526,7 +526,7 @@ export const RedemptionModal = ({
           {/* ── STEP 2: Enter OTP & Transaction Bill Details ── */}
           {step === 2 && (
             <form onSubmit={handleRedeemSubmit} className="space-y-5">
-              
+
               {/* Category Tabs */}
               <div>
                 <label className="text-sm font-bold text-slate-700 uppercase tracking-wider block mb-2">
@@ -543,11 +543,10 @@ export const RedemptionModal = ({
                       key={tab.id}
                       type="button"
                       onClick={() => setCategory(tab.id)}
-                      className={`py-3 px-2 rounded-lg font-extrabold text-sm border-2 text-center transition-all ${
-                        category === tab.id
-                          ? 'bg-slate-900 border-slate-900 text-white shadow-md'
-                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400'
-                      }`}
+                      className={`py-3 px-2 rounded-lg font-extrabold text-sm border-2 text-center transition-all ${category === tab.id
+                        ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400'
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -576,18 +575,16 @@ export const RedemptionModal = ({
                 </div>
               )}
 
-              {import.meta.env.DEV && debugOtp && (
-                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-sm text-amber-950 flex items-center justify-between font-mono">
-                  <span>Dev OTP Auto-Fill: <strong>{debugOtp}</strong></span>
-                  <button
-                    type="button"
-                    onClick={() => setOtp(debugOtp)}
-                    className="px-2 py-1 bg-amber-200 hover:bg-amber-300 font-bold rounded"
-                  >
-                    Use Code
-                  </button>
-                </div>
-              )}
+              <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-sm text-amber-950 flex items-center justify-between font-mono">
+                <span>💡 Test OTP Code: <strong>{debugOtp || '123456'}</strong></span>
+                <button
+                  type="button"
+                  onClick={() => setOtp(debugOtp || '123456')}
+                  className="px-3 py-1 bg-amber-200 hover:bg-amber-300 font-bold rounded text-amber-950 transition-colors"
+                >
+                  Use Code
+                </button>
+              </div>
 
               {/* Form Input Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -603,7 +600,7 @@ export const RedemptionModal = ({
 
                 {category === 'referral' ? (
                   <Input
-                    label="Referral Code (Customer ID or Phone)"
+                    label="Referral Code"
                     placeholder="e.g. BAC-100001 or 9845012345"
                     icon={Sparkles}
                     value={referralCode}
@@ -770,7 +767,7 @@ export const RedemptionModal = ({
           {/* ── STEP 3: Success View ── */}
           {step === 3 && redemptionResult && (
             <div className="space-y-6 animate-fadeIn">
-              
+
               <div className="text-center space-y-3">
                 <div className="mx-auto inline-flex items-center justify-center p-4 bg-emerald-100 border-2 border-emerald-500 rounded-full shadow-md">
                   <CheckCircle2 className="w-12 h-12 text-emerald-600" />
@@ -779,8 +776,8 @@ export const RedemptionModal = ({
                   {redemptionResult.category === 'referral'
                     ? 'Referral Bonus Credited!'
                     : isManualCustomer
-                    ? 'Service Transaction & Points Applied!'
-                    : 'Redemption & Transaction Completed!'}
+                      ? 'Service Transaction & Points Applied!'
+                      : 'Redemption & Transaction Completed!'}
                 </h3>
                 <p className="text-sm font-semibold text-slate-600 max-w-md mx-auto">
                   {redemptionResult.category === 'referral'

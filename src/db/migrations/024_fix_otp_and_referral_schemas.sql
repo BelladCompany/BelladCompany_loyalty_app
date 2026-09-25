@@ -16,12 +16,12 @@ ALTER TABLE referrals ADD COLUMN IF NOT EXISTS approved_by_approver_id INTEGER;
 -- Keep values in sync
 
 
-UPDATE referrals SET approval_reason = reason WHERE approval_reason IS NULL AND reason IS NOT NULL;
-UPDATE referrals SET reason = approval_reason WHERE reason IS NULL AND approval_reason IS NOT NULL;
+
+
 
 -- 3. REFERRAL_APPROVERS Table
 -- Add user_id and is_active columns if missing
 ALTER TABLE referral_approvers ADD COLUMN IF NOT EXISTS user_id INTEGER;
 ALTER TABLE referral_approvers ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 
-UPDATE referral_approvers SET is_active = active WHERE is_active IS NULL AND active IS NOT NULL;
+

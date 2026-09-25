@@ -2,11 +2,10 @@
 -- In-house Service Bonus Points Rules Schema & Seed Data
 
 ALTER TABLE point_rules DROP CONSTRAINT IF EXISTS point_rules_rate_type_check;
+ALTER TABLE point_rules DROP CONSTRAINT IF EXISTS point_rules_rule_type_check;
 
-ALTER TABLE point_rules ALTER COLUMN rate_type DROP NOT NULL;
-ALTER TABLE point_rules ALTER COLUMN points_per_100 DROP NOT NULL;
-ALTER TABLE point_rules ALTER COLUMN effective_from SET DEFAULT CURRENT_DATE;
-ALTER TABLE point_rules ALTER COLUMN effective_from DROP NOT NULL;
+ALTER TABLE point_rules ADD CONSTRAINT point_rules_rule_type_check 
+  CHECK (rule_type IN ('sale', 'service', 'accessory', 'bodyshop', 'finance', 'insurance', 'exchange'));
 
 ALTER TABLE point_rules
   ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(16) DEFAULT 'all',
@@ -27,22 +26,22 @@ EXCEPTION
 END $$;
 
 -- Seed default in-house service bonus rules for default tenants (2W and 4W separate entries)
-INSERT INTO point_rules (tenant_id, vehicle_type, service_type, condition_value, points)
+INSERT INTO point_rules (tenant_id, rule_type, vehicle_type, service_type, condition_value, points, multiplier_numerator, multiplier_denominator, description)
 VALUES
   -- bellad_and_company (2W)
-  ('bellad_and_company', '2W', 'finance', 'in_house', 100),
-  ('bellad_and_company', '2W', 'insurance', 'in_house', 50),
-  ('bellad_and_company', '2W', 'exchange', 'yes', 200),
+  ('bellad_and_company', 'finance', '2W', 'finance', 'in_house', 100, 100, 1, 'In-house finance bonus - 2W'),
+  ('bellad_and_company', 'insurance', '2W', 'insurance', 'in_house', 50, 50, 1, 'In-house insurance bonus - 2W'),
+  ('bellad_and_company', 'exchange', '2W', 'exchange', 'yes', 200, 200, 1, 'Exchange bonus - 2W'),
   -- bellad_and_company (4W)
-  ('bellad_and_company', '4W', 'finance', 'in_house', 100),
-  ('bellad_and_company', '4W', 'insurance', 'in_house', 50),
-  ('bellad_and_company', '4W', 'exchange', 'yes', 200),
+  ('bellad_and_company', 'finance', '4W', 'finance', 'in_house', 100, 100, 1, 'In-house finance bonus - 4W'),
+  ('bellad_and_company', 'insurance', '4W', 'insurance', 'in_house', 50, 50, 1, 'In-house insurance bonus - 4W'),
+  ('bellad_and_company', 'exchange', '4W', 'exchange', 'yes', 200, 200, 1, 'Exchange bonus - 4W'),
   -- BAC-MAIN (2W)
-  ('BAC-MAIN', '2W', 'finance', 'in_house', 100),
-  ('BAC-MAIN', '2W', 'insurance', 'in_house', 50),
-  ('BAC-MAIN', '2W', 'exchange', 'yes', 200),
+  ('BAC-MAIN', 'finance', '2W', 'finance', 'in_house', 100, 100, 1, 'In-house finance bonus - 2W'),
+  ('BAC-MAIN', 'insurance', '2W', 'insurance', 'in_house', 50, 50, 1, 'In-house insurance bonus - 2W'),
+  ('BAC-MAIN', 'exchange', '2W', 'exchange', 'yes', 200, 200, 1, 'Exchange bonus - 2W'),
   -- BAC-MAIN (4W)
-  ('BAC-MAIN', '4W', 'finance', 'in_house', 100),
-  ('BAC-MAIN', '4W', 'insurance', 'in_house', 50),
-  ('BAC-MAIN', '4W', 'exchange', 'yes', 200)
+  ('BAC-MAIN', 'finance', '4W', 'finance', 'in_house', 100, 100, 1, 'In-house finance bonus - 4W'),
+  ('BAC-MAIN', 'insurance', '4W', 'insurance', 'in_house', 50, 50, 1, 'In-house insurance bonus - 4W'),
+  ('BAC-MAIN', 'exchange', '4W', 'exchange', 'yes', 200, 200, 1, 'Exchange bonus - 4W')
 ON CONFLICT DO NOTHING;

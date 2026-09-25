@@ -1,4 +1,12 @@
 node_modules
-npm-debug.log
-.env
+client/node_modules
+client/dist
 .git
+.env
+.env.local
+npm-debug.log*
+*.log
+scratch/
+*.zip
+dist/
+build/

@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   FileText,
+  Building2,
 } from 'lucide-react';
 
 /**
@@ -20,9 +21,9 @@ import {
  * Desktop: fixed sidebar column. Mobile: off-canvas drawer toggled from the header.
  *
  * ROLE RULES:
- * - cashier          → Search Customer only (actions embedded in Customer360View)
- * - branch_manager / regional_admin → Search + Reports + KYC Approvals + Referrals
- * - admin / super_admin             → All of the above + Admin Tools
+ * - cashier          → Search Customer + Gift Cards
+ * - branch_manager / regional_admin → Search + Reports + KYC Approvals + Referrals + Gift Cards
+ * - admin / super_admin             → All of the above + Admin Tools + Dealership Firms
  */
 export const SidebarLayout = ({
   activeTab = 'search',
@@ -36,18 +37,21 @@ export const SidebarLayout = ({
   const isManagerOrAdmin = ['admin', 'super_admin', 'regional_admin', 'branch_manager'].includes(user?.role);
   const isAdmin = ['admin', 'super_admin'].includes(user?.role);
 
-  // ── Cashier: minimal nav — search is the only entry point ──────────────────
+  // ── Cashier: minimal nav — search + gift cards ───────────────────────────
   const cashierNav = [
     { id: 'dashboard', label: 'Search Customer', icon: Search },
+    { id: 'gift_cards', label: 'Gift Cards', icon: Gift },
   ];
 
   // ── Manager / Admin: full nav ───────────────────────────────────────────────
   const managerNav = [
     { id: 'dashboard', label: 'Search Customer', icon: LayoutDashboard },
+    { id: 'gift_cards', label: 'Gift Cards Hub', icon: Gift },
     { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
     { id: 'kyc_approvals', label: 'KYC Approvals', icon: ShieldCheck },
     { id: 'corrections_queue', label: 'Corrections Queue', icon: FileText },
     { id: 'referrals', label: 'Referrals', icon: Users },
+    ...(isAdmin ? [{ id: 'tenants', label: 'Dealership Firms', icon: Building2 }] : []),
     ...(isAdmin ? [{ id: 'admin', label: 'Admin Tools', icon: Settings, adminOnly: true }] : []),
   ];
 

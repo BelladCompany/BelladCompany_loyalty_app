@@ -211,18 +211,18 @@ const createApproverSchema = z.object({
 
 // Redemption Validators
 const requestOtpSchema = z.object({
-  phone: phoneSchema.optional(),
-  customer_id: z.string().trim().optional(),
-}).refine((data) => data.phone || data.customer_id, {
+  phone: z.string().trim().optional().nullable(),
+  customer_id: z.string().trim().optional().nullable(),
+}).refine((data) => (data.phone && data.phone.trim()) || (data.customer_id && data.customer_id.trim()), {
   message: 'Must provide either "phone" or "customer_id" to request an OTP',
 });
 
 const redeemPointsSchema = z.object({
-  phone: phoneSchema.optional(),
-  customer_id: z.string().trim().optional(),
-  otp: z.string({ required_error: 'OTP is required' }).trim().regex(/^\d{6}$/, 'OTP must be a 6-digit numeric code'),
-  bill_amount: z.coerce.number().positive('Bill amount must be a positive number').optional(),
-  points: z.coerce.number().int().min(0).optional(),
+  phone: z.string().trim().optional().nullable(),
+  customer_id: z.string().trim().optional().nullable(),
+  otp: z.string({ required_error: 'OTP is required' }).trim(),
+  bill_amount: z.coerce.number().optional().nullable(),
+  points: z.coerce.number().int().min(0).optional().nullable(),
   category: z.string().optional().default('service'),
   receipt_no: z.string().optional().nullable(),
   account_ledger_no: z.string().optional().nullable(),

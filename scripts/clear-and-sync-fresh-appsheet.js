@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { pool } = require('../src/config/db');
 const { hashIdentifier, encrypt, lastDigits } = require('../src/utils/crypto.util');
+const VehiclePointsEngine = require('../src/services/vehiclePointsEngine.service');
 
 const APPSHEET_APP_ID = process.env.APPSHEET_APP_ID || '85112c57-b39f-4afc-b060-e02d6f0c62de';
 const APPSHEET_ACCESS_KEY = process.env.APPSHEET_ACCESS_KEY || 'V2-bBqbC-E7Azn-N1ZiX-0rP1U-VWziM-7N84O-F9LCE-1eYrY';
@@ -305,8 +306,24 @@ async function wipeAndSync() {
       const modelName = row['Model'] || 'Vehicle';
       const variantName = row['Variant'] || row['Varient'] || null;
       const fuelType = row['Fuel Type'] || row['Fuel'] || row['Engine Type'] || null;
-      const exShowroomAmount = Number(row['Ex-Showroom Price'] || row['Net Ex-Showroom Price'] || row['Total Vehicle Billing Amount'] || 0);
+      const exShowroomAmount = VehiclePointsEngine.cleanNumber(row['Ex-Showroom Price'] || row['Net Ex-Showroom Price'] || row['Total Vehicle Billing Amount'] || 0);
       const exShowroomPaise = Math.round(exShowroomAmount * 100);
+
+      const tcsAmount = VehiclePointsEngine.cleanNumber(row['TCS % Amount'] || row['TCS Amount'] || row['TCS'] || 0);
+      const dealerDiscount = VehiclePointsEngine.cleanNumber(row['Dealer Cash Discount'] || row['Dealer Discount'] || row['Discount/FAIM'] || 0);
+      const empsDiscount = VehiclePointsEngine.cleanNumber(row['EMPS Discount'] || row['EMPS'] || row['Other Discount Amount'] || row['Other Discount'] || 0);
+      const oemOffers = VehiclePointsEngine.cleanNumber(row['OEM Offers Amount'] || row['OEM Offers Total Amount'] || row['OEM Offers'] || row['Offers Amount'] || 0);
+
+      const calcResult = VehiclePointsEngine.calculatePoints(
+        {
+          ex_showroom_price: exShowroomAmount,
+          tcs_amount: tcsAmount,
+          dealer_cash_discount: dealerDiscount,
+          emps_discount: empsDiscount,
+          oem_offers_amount: oemOffers,
+        },
+        0.01
+      );
 
       // Parse purchase date from DMS invoice date
       const parsedPurchaseDate = parseDmsDate(dmsInvoiceDate);
@@ -331,8 +348,8 @@ async function wipeAndSync() {
       );
       const vehicleId = vRes.rows[0].vehicle_id;
 
-      // 4. Calculate & insert initial sales points (1 point per ₹100 ex-showroom)
-      const salesPoints = exShowroomAmount > 0 ? Math.floor(exShowroomAmount / 100) : 1000;
+      // 4. Calculate & insert initial sales points based on net points_base
+      const salesPoints = calcResult.points;
       if (salesPoints > 0) {
         await client.query(`
           DO $$
@@ -345,10 +362,10 @@ async function wipeAndSync() {
 
         await client.query(
           `INSERT INTO points_ledger (
-             customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, tenant_id
+             customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, tenant_id, reason_type, reason_text
            )
-           VALUES ($1, $2, 1, 'earn_sale', 'sale', $3, $4, $5);`,
-          [customerId, vehicleId, salesPoints, `PR Done Sales Sync: ${orderId}`, DEFAULT_TENANT_ID]
+           VALUES ($1, $2, 1, 'earn_sale', 'sale', $3, $4, $5, 'purchase', $6);`,
+          [customerId, vehicleId, salesPoints, `PR Done Sales Sync: ${orderId}`, DEFAULT_TENANT_ID, calcResult.reason_text]
         );
 
         await client.query(`

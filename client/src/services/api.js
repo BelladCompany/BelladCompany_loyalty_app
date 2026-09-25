@@ -138,6 +138,13 @@ export class ApiService {
     });
   }
 
+  static async grantInhouseBonus(payload) {
+    return this.request('/points/inhouse-bonus', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
   // Transactions Sync & Idempotency Lookup
   static async syncTransaction(payload) {
     return this.request('/transactions/sync', {
@@ -170,11 +177,28 @@ export class ApiService {
     });
   }
 
-  // Redemptions
-  static async requestOtp(phone) {
+  // Redemptions & Earning OTP Request
+  static async requestOtp(param) {
+    let body = {};
+    if (typeof param === 'object' && param !== null) {
+      if (param.phone_number) {
+        body = { phone: String(param.phone_number).replace(/[^\d+]/g, '') };
+      } else {
+        body = { ...param };
+        if (body.phone) body.phone = String(body.phone).replace(/[^\d+]/g, '');
+      }
+    } else {
+      const clean = String(param || '').trim();
+      const digitsOnly = clean.replace(/[^\d]/g, '');
+      if (digitsOnly.length >= 10) {
+        body = { phone: digitsOnly.length === 10 ? digitsOnly : (digitsOnly.length > 10 ? digitsOnly.slice(-10) : digitsOnly) };
+      } else if (clean) {
+        body = { customer_id: clean };
+      }
+    }
     return this.request('/redemptions/otp/request', {
       method: 'POST',
-      body: { phone },
+      body,
     });
   }
 
@@ -431,6 +455,82 @@ export class ApiService {
     a.remove();
     window.URL.revokeObjectURL(url);
   }
+
+  // ─── Gift Cards (Amazon Style) ─────────────────────────────────────────────
+  static async getGiftCards(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/gift-cards${query ? `?${query}` : ''}`);
+  }
+
+  static async issueGiftCard(payload) {
+    return this.request('/gift-cards/issue', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async lookupGiftCard(cardNumber, pinCode) {
+    return this.request('/gift-cards/lookup', {
+      method: 'POST',
+      body: { card_number: cardNumber, pin_code: pinCode },
+    });
+  }
+
+  static async claimGiftCard(payload) {
+    return this.request('/gift-cards/claim', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async redeemGiftCardAtPos(payload) {
+    return this.request('/gift-cards/redeem', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async portalGetMyGiftCards() {
+    return this.request('/v1/me/gift-cards');
+  }
+
+  static async portalClaimGiftCard(cardNumber, pinCode) {
+    return this.request('/v1/me/gift-cards/claim', {
+      method: 'POST',
+      body: { card_number: cardNumber, pin_code: pinCode },
+    });
+  }
+
+  static async portalGetReferrals() {
+    return this.request('/v1/me/referrals');
+  }
+
+  static async portalSubmitReferral(payload) {
+    return this.request('/v1/me/referrals/submit', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  // ─── Multi-Tenant Firms Management ─────────────────────────────────────────
+  static async getFirms() {
+    return this.request('/tenants/firms');
+  }
+
+  static async createFirm(payload) {
+    return this.request('/tenants/firms', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async updateFirm(tenantId, payload) {
+    return this.request(`/tenants/firms/${encodeURIComponent(tenantId)}`, {
+      method: 'PATCH',
+      body: payload,
+    });
+  }
 }
 
 export default ApiService;
+
