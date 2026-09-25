@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS branches (
 -- 3. USERS (Roles: cashier, admin)
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
+  user_id INT,
   username VARCHAR(100) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(20) NOT NULL CHECK (role IN ('cashier', 'admin')),
@@ -39,6 +40,8 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT uq_users_tenant_username UNIQUE (tenant_id, username)
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS user_id INT;
 
 -- 4. CUSTOMERS
 -- Customer ID is system-generated (format BAC-100001), immutable, and NEVER derived from phone or name.
@@ -67,14 +70,21 @@ CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers (tenant_id);
 -- Multiple phone numbers can be linked to a single customer_id
 CREATE TABLE IF NOT EXISTS customer_phones (
   id SERIAL PRIMARY KEY,
+  phone_id INT,
   customer_id VARCHAR(32) NOT NULL REFERENCES customers(customer_id) ON DELETE CASCADE,
   phone_number VARCHAR(20) NOT NULL,
+  is_verified BOOLEAN NOT NULL DEFAULT TRUE,
   is_primary BOOLEAN NOT NULL DEFAULT FALSE,
   tenant_id VARCHAR(64) NOT NULL,
+  added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT uq_customer_phones_tenant_phone UNIQUE (tenant_id, phone_number)
 );
+
+ALTER TABLE customer_phones ADD COLUMN IF NOT EXISTS phone_id INT;
+ALTER TABLE customer_phones ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT TRUE;
+ALTER TABLE customer_phones ADD COLUMN IF NOT EXISTS added_at TIMESTAMPTZ DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_customer_phones_lookup ON customer_phones (tenant_id, phone_number);
 CREATE INDEX IF NOT EXISTS idx_customer_phones_customer_id ON customer_phones (customer_id);
@@ -83,6 +93,7 @@ CREATE INDEX IF NOT EXISTS idx_customer_phones_customer_id ON customer_phones (c
 -- Multiple vehicles across multiple brands/branches linked to customer_id
 CREATE TABLE IF NOT EXISTS vehicles (
   id SERIAL PRIMARY KEY,
+  vehicle_id INT,
   customer_id VARCHAR(32) NOT NULL REFERENCES customers(customer_id) ON DELETE CASCADE,
   brand_id INTEGER REFERENCES brands(id) ON DELETE SET NULL,
   vin VARCHAR(64),
@@ -93,6 +104,8 @@ CREATE TABLE IF NOT EXISTS vehicles (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vehicle_id INT;
 
 CREATE INDEX IF NOT EXISTS idx_vehicles_customer_id ON vehicles (customer_id);
 DO $$

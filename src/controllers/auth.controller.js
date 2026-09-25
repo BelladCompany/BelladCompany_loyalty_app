@@ -10,7 +10,7 @@ class AuthController {
       const tenantId = req.headers['x-tenant-id'] || env.defaultTenantId;
 
       const userRes = await pool.query(
-        `SELECT user_id, username, password_hash, role, branch_id, tenant_id
+        `SELECT id, COALESCE(user_id, id) AS user_id, username, password_hash, role, branch_id, tenant_id
          FROM users
          WHERE username = $1 AND tenant_id = $2;`,
         [username, tenantId]
@@ -24,6 +24,7 @@ class AuthController {
       }
 
       const user = userRes.rows[0];
+      const userId = user.user_id || user.id;
       let isMatch = false;
 
       // Safe password verification: handle standard bcrypt hash or plain-text fallback
@@ -34,7 +35,7 @@ class AuthController {
         isMatch = true;
         // Auto-upgrade password hash in DB to proper bcrypt hash
         const newHash = await bcrypt.hash(password, 10);
-        await pool.query('UPDATE users SET password_hash = $1 WHERE user_id = $2;', [newHash, user.user_id]);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2 OR user_id = $2;', [newHash, userId]);
       }
 
       if (!isMatch) {
@@ -45,7 +46,7 @@ class AuthController {
       }
 
       const tokenPayload = {
-        id: user.user_id,
+        id: userId,
         username: user.username,
         role: user.role,
         branch_id: user.branch_id,
@@ -61,7 +62,7 @@ class AuthController {
         data: {
           token,
           user: {
-            id: user.user_id,
+            id: userId,
             username: user.username,
             role: user.role,
             branch_id: user.branch_id,
@@ -84,7 +85,7 @@ class AuthController {
       const userRes = await pool.query(
         `INSERT INTO users (username, password_hash, role, branch_id, tenant_id)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING user_id, username, role, branch_id, tenant_id, created_at;`,
+         RETURNING id, COALESCE(user_id, id) AS user_id, username, role, branch_id, tenant_id, created_at;`,
         [username, passwordHash, role, branch_id || null, tenantId]
       );
 
