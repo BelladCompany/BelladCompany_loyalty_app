@@ -1,5 +1,5 @@
-const rawApiBase = import.meta.env.VITE_API_URL || '/api';
-const cleanBase = rawApiBase.endsWith('/') ? rawApiBase.slice(0, -1) : rawApiBase;
+const rawApiBase = (import.meta.env.VITE_API_URL || '/api').trim();
+const cleanBase = rawApiBase.replace(/\/+$/, '');
 const API_BASE = cleanBase.startsWith('http') && !cleanBase.endsWith('/api')
   ? `${cleanBase}/api`
   : cleanBase;
@@ -49,7 +49,8 @@ export class ApiService {
       ...(options.body ? { body: isFormData ? options.body : JSON.stringify(options.body) } : {}),
     };
 
-    const res = await fetch(`${API_BASE}${endpoint}`, config);
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const res = await fetch(`${API_BASE}${cleanEndpoint}`, config);
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {

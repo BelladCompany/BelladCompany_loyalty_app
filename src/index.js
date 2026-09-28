@@ -9,7 +9,7 @@ const { startAppSheetPullCron } = require('./cron/appsheet_pull_cron');
 pool.query('SELECT NOW()')
   .then((res) => {
     console.log('📦 PostgreSQL Connected successfully at:', res.rows[0].now);
-    const server = app.listen(env.port, () => {
+    const server = app.listen(env.port, '0.0.0.0', () => {
       console.log(`🚀 Loyalty Backend Server running on port ${env.port} [${env.nodeEnv}]`);
       
       // Start redemption status & expiry cron job
@@ -38,7 +38,7 @@ pool.query('SELECT NOW()')
     console.error('❌ Failed to connect to PostgreSQL database:', err.message);
     console.log('⚠️ Please ensure PostgreSQL is running and your .env configuration is correct.');
     console.log(`Starting server anyway on port ${env.port}...`);
-    const server = app.listen(env.port, () => {
+    const server = app.listen(env.port, '0.0.0.0', () => {
       console.log(`🚀 Loyalty Backend Server running on port ${env.port} [${env.nodeEnv}] (DB Offline)`);
     });
 

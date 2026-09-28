@@ -29,9 +29,51 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
+// Allowed origins configuration (CORS_ORIGINS comma-separated, FRONTEND_URL, or defaults)
+const defaultOrigins = [
+  'https://bellad-company-loyalty-app.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+const envCorsOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const envFrontendUrl = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const allowedOrigins = Array.from(
+  new Set([...defaultOrigins, ...envCorsOrigins, ...envFrontendUrl])
+).map((o) => o.replace(/\/+$/, ''));
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g., mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    const cleanOrigin = origin.replace(/\/+$/, '');
+    if (allowedOrigins.includes(cleanOrigin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS policy violation: Origin '${origin}' is not allowed.`));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'X-Requested-With', 'Accept'],
+  credentials: false,
+  optionsSuccessStatus: 200,
+};
+
+// CORS middleware MUST be registered BEFORE express.json() and before all routes
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 // Security and utility middleware
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -39,13 +81,9 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// Health check endpoint
+// Health check endpoint (lightweight check without DB contact)
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  });
+  res.status(200).json({ ok: true });
 });
 
 // API Routes
