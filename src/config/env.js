@@ -29,7 +29,7 @@ const env = {
   nodeEnv,
   jwtSecret,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
-  defaultTenantId: process.env.DEFAULT_TENANT_ID || 'BAC-MAIN',
+  defaultTenantId: process.env.DEFAULT_TENANT_ID || 'bellad_and_company',
   realbooksApiUrl: process.env.REALBOOKS_API_URL || 'https://api.realbooks.in/v1/redemptions',
   realbooksApiKey,
   db: {

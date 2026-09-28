@@ -63,7 +63,7 @@ const corsOptions = {
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'X-Tenant-ID', 'X-Requested-With', 'Accept'],
   credentials: false,
   optionsSuccessStatus: 200,
 };

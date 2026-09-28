@@ -28,7 +28,7 @@ import {
 export const SidebarLayout = ({
   activeTab = 'search',
   onTabChange,
-  user = { username: 'cashier', role: 'cashier', branch_code: 'BLR-01', tenant_id: 'BAC-MAIN' },
+  user = { username: 'cashier', role: 'cashier', branch_code: 'BLR-01', tenant_id: 'bellad_and_company' },
   onLogout,
   children,
 }) => {

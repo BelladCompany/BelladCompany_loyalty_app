@@ -22,7 +22,7 @@ class AuditLogService {
     before_values = null,
     after_values = null,
     metadata = null,
-    tenant_id = 'BAC-MAIN',
+    tenant_id = 'bellad_and_company',
     client = null,
   }) {
     const dbClient = client || pool;
@@ -44,7 +44,7 @@ class AuditLogService {
         actor_user_id || null,
         before_values ? JSON.stringify(before_values) : null,
         combinedAfter ? JSON.stringify(combinedAfter) : null,
-        tenant_id || 'BAC-MAIN',
+        tenant_id || 'bellad_and_company',
       ]
     );
 

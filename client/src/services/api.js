@@ -37,8 +37,10 @@ export class ApiService {
   static async request(endpoint, options = {}) {
     const token = this.getToken();
     const isFormData = options.body instanceof FormData;
+    const tenantId = (import.meta.env.VITE_TENANT_ID || 'bellad_and_company').trim();
     const headers = {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      'x-tenant-id': tenantId,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     };

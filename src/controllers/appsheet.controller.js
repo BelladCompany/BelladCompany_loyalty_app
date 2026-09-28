@@ -20,7 +20,7 @@ class AppSheetController {
       appsheet_row_id,
     } = payload;
 
-    const tenantId = req.headers['x-tenant-id'] || process.env.DEFAULT_TENANT_ID || 'BAC-MAIN';
+    const tenantId = req.headers['x-tenant-id'] || process.env.DEFAULT_TENANT_ID || 'bellad_and_company';
     const rowId = appsheet_row_id || reference_id || job_card_number || null;
 
     try {
@@ -175,7 +175,7 @@ class AppSheetController {
       await pool.query(
         `INSERT INTO appsheet_webhook_log (appsheet_row_id, payload, result, error_message, tenant_id)
          VALUES ($1, $2, $3, $4, $5);`,
-        [appsheet_row_id || null, payload || {}, result, error_message || null, tenant_id || 'BAC-MAIN']
+        [appsheet_row_id || null, payload || {}, result, error_message || null, tenant_id || 'bellad_and_company']
       );
     } catch (logErr) {
       console.error('[AppSheet Webhook Logging Failed]', logErr.message || logErr);
