@@ -8,6 +8,11 @@ class AuthController {
     try {
       const { username, password } = req.body;
       const tenantId = req.headers['x-tenant-id'] || env.defaultTenantId;
+      const isDebug = process.env.DEBUG_LOGIN === '1' || process.env.DEBUG_LOGIN === 'true';
+
+      if (isDebug) {
+        console.log(`[DEBUG_LOGIN] Login attempt received for username="${username}", tenantId="${tenantId}"`);
+      }
 
       const userRes = await pool.query(
         `SELECT user_id, username, password_hash, role, branch_id, tenant_id
@@ -17,6 +22,9 @@ class AuthController {
       );
 
       if (userRes.rows.length === 0) {
+        if (isDebug) {
+          console.log(`[DEBUG_LOGIN] FAIL: No user row found matching username="${username}" and tenant_id="${tenantId}"`);
+        }
         return res.status(401).json({
           status: 'fail',
           error: 'Invalid username or password.',
@@ -39,10 +47,17 @@ class AuthController {
       }
 
       if (!isMatch) {
+        if (isDebug) {
+          console.log(`[DEBUG_LOGIN] FAIL: Password mismatch for username="${username}" (user_id=${userId})`);
+        }
         return res.status(401).json({
           status: 'fail',
           error: 'Invalid username or password.',
         });
+      }
+
+      if (isDebug) {
+        console.log(`[DEBUG_LOGIN] SUCCESS: Authenticated user_id=${userId}, username="${username}", role="${user.role}"`);
       }
 
       const tokenPayload = {
