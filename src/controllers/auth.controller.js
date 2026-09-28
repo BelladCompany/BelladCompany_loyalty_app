@@ -10,8 +10,16 @@ class AuthController {
       const tenantId = req.headers['x-tenant-id'] || env.defaultTenantId;
       const isDebug = process.env.DEBUG_LOGIN === '1' || process.env.DEBUG_LOGIN === 'true';
 
+      let dbHost = 'unknown';
+      try {
+        const connStr = env.db.connectionString;
+        dbHost = connStr ? new URL(connStr).hostname : env.db.host;
+      } catch (e) {
+        dbHost = env.db.host || 'unknown';
+      }
+
       if (isDebug) {
-        console.log(`[DEBUG_LOGIN] Login attempt received for username="${username}", tenantId="${tenantId}"`);
+        console.log(`[DEBUG_LOGIN] Login attempt on DB host="${dbHost}" for username="${username}", tenantId="${tenantId}"`);
       }
 
       const userRes = await pool.query(
@@ -23,7 +31,7 @@ class AuthController {
 
       if (userRes.rows.length === 0) {
         if (isDebug) {
-          console.log(`[DEBUG_LOGIN] FAIL: No user row found matching username="${username}" and tenant_id="${tenantId}"`);
+          console.log(`[DEBUG_LOGIN] FAIL: No user row found on DB host="${dbHost}" matching username="${username}" and tenant_id="${tenantId}"`);
         }
         return res.status(401).json({
           status: 'fail',
@@ -48,7 +56,7 @@ class AuthController {
 
       if (!isMatch) {
         if (isDebug) {
-          console.log(`[DEBUG_LOGIN] FAIL: Password mismatch for username="${username}" (user_id=${userId})`);
+          console.log(`[DEBUG_LOGIN] FAIL: Password mismatch for username="${username}" (user_id=${userId}) on DB host="${dbHost}"`);
         }
         return res.status(401).json({
           status: 'fail',
@@ -57,7 +65,7 @@ class AuthController {
       }
 
       if (isDebug) {
-        console.log(`[DEBUG_LOGIN] SUCCESS: Authenticated user_id=${userId}, username="${username}", role="${user.role}"`);
+        console.log(`[DEBUG_LOGIN] SUCCESS: Authenticated user_id=${userId}, username="${username}", role="${user.role}" on DB host="${dbHost}"`);
       }
 
       const tokenPayload = {
