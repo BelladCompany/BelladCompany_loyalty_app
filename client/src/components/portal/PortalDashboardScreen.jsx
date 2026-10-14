@@ -27,6 +27,11 @@ import {
   EyeOff,
   AlertCircle,
   Fuel,
+  Wrench,
+  Award,
+  QrCode,
+  Tag,
+  ExternalLink,
 } from 'lucide-react';
 import ApiService from '../../services/api';
 
@@ -35,45 +40,47 @@ const CategoryIcon = ({ type }) => {
   switch (type) {
     case 'finance':
     case 'inhouse_finance':
-      return <DollarSign className="w-4 h-4 text-emerald-600" />;
+      return <DollarSign className="w-4 h-4 text-emerald-400" />;
     case 'insurance':
     case 'inhouse_insurance':
-      return <ShieldCheck className="w-4 h-4 text-blue-600" />;
+      return <ShieldCheck className="w-4 h-4 text-blue-400" />;
     case 'exchange':
     case 'inhouse_exchange':
-      return <Repeat className="w-4 h-4 text-amber-600" />;
+      return <Repeat className="w-4 h-4 text-amber-400" />;
     case 'purchase':
-      return <Car className="w-4 h-4 text-indigo-600" />;
+      return <Car className="w-4 h-4 text-indigo-400" />;
     case 'gift_card':
-      return <Gift className="w-4 h-4 text-purple-600" />;
+      return <Gift className="w-4 h-4 text-purple-400" />;
     case 'referral':
-      return <Users className="w-4 h-4 text-pink-600" />;
+      return <Users className="w-4 h-4 text-pink-400" />;
     case 'redeem':
-      return <Sparkles className="w-4 h-4 text-rose-600" />;
+      return <Sparkles className="w-4 h-4 text-rose-400" />;
     default:
-      return <Car className="w-4 h-4 text-slate-600" />;
+      return <Wrench className="w-4 h-4 text-slate-400" />;
   }
 };
 
 // Memoized Activity Row
 const LedgerRow = memo(({ item }) => {
   const isPositive = item.points >= 0;
-  const formattedPoints = isPositive ? `+${item.points.toLocaleString('en-IN')}` : `${item.points.toLocaleString('en-IN')}`;
+  const formattedPoints = isPositive
+    ? `+${item.points.toLocaleString('en-IN')}`
+    : `${item.points.toLocaleString('en-IN')}`;
 
   return (
-    <div className="flex items-center justify-between py-3.5 px-4 bg-white border border-slate-200/80 rounded-2xl hover:border-slate-300 hover:shadow-xs transition-all">
+    <div className="flex items-center justify-between py-3.5 px-4 bg-slate-900/60 border border-slate-800/80 rounded-2xl hover:border-slate-700 hover:bg-slate-900 transition-all">
       <div className="flex items-center space-x-3.5 min-w-0 pr-2">
-        <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center shrink-0 shadow-inner">
           <CategoryIcon type={item.type} />
         </div>
         <div className="min-w-0">
-          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">{item.text}</p>
-          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 font-medium">
+          <p className="text-xs sm:text-sm font-bold text-white truncate">{item.text}</p>
+          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400 font-medium">
             <span>{item.date}</span>
             {item.amount && (
               <>
                 <span>•</span>
-                <span>Bill: ₹{item.amount.toLocaleString('en-IN')}</span>
+                <span className="font-mono text-slate-300">Bill: ₹{item.amount.toLocaleString('en-IN')}</span>
               </>
             )}
           </div>
@@ -81,10 +88,10 @@ const LedgerRow = memo(({ item }) => {
       </div>
       <div className="shrink-0 text-right">
         <span
-          className={`text-xs sm:text-sm font-black font-mono px-2.5 py-1 rounded-lg ${
+          className={`text-xs sm:text-sm font-black font-mono px-3 py-1 rounded-xl shadow-xs ${
             isPositive
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              : 'bg-rose-50 text-rose-700 border border-rose-200'
+              ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/80'
+              : 'bg-rose-950/80 text-rose-400 border border-rose-800/80'
           }`}
         >
           {formattedPoints} PTS
@@ -100,7 +107,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   const [profile, setProfile] = useState(null);
   const [ledgerItems, setLedgerItems] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // overview, ledger, gift_cards, referrals, garage, profile
+  const [activeTab, setActiveTab] = useState('overview'); // overview, gift_cards, referrals, garage, profile
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingLedger, setLoadingLedger] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -241,7 +248,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   const handleReferFriendSubmit = async (e) => {
     e.preventDefault();
     if (!refereeName.trim() || !refereePhone.trim()) {
-      setError('Please enter your friend\'s name and mobile number.');
+      setError("Please enter your friend's name and mobile number.");
       return;
     }
 
@@ -266,211 +273,326 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
     }
   };
 
+  // Calculate user initials for avatar
+  const initials = profile?.name
+    ? profile.name
+        .split(' ')
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+    : 'BC';
+
   return (
-    <div className="min-h-screen bg-slate-50/50 text-slate-900 flex flex-col antialiased">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-400 selection:text-slate-950 antialiased">
+      {/* Dynamic Background Ambient Gradients */}
+      <div className="fixed top-0 left-1/3 -translate-x-1/2 w-[700px] h-[500px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed bottom-0 right-10 w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
       {/* ─── 1. Header ──────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <img
-              src="/bellad-logo.png"
-              alt="Dealership Logo"
-              className="w-8 h-8 object-contain rounded-lg shadow-2xs"
-            />
+      <header className="bg-slate-900/90 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-30 shadow-xl">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+          <div className="flex items-center space-x-3.5">
+            <div className="w-9 h-9 rounded-xl bg-white p-1 shadow-md flex items-center justify-center shrink-0">
+              <img
+                src="/bellad-logo.png"
+                alt="Bellad Logo"
+                className="w-full h-full object-contain rounded-lg"
+              />
+            </div>
             <div>
-              <span className="text-base font-black text-slate-900 tracking-tight block">
-                {profile?.firm_name || 'Bellad & Company'}
+              <span className="text-sm sm:text-base font-black text-white tracking-tight block">
+                {profile?.firm_name || 'Bellad Automobile Corporation'}
               </span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block -mt-0.5">
-                Customer Loyalty Portal
-              </span>
+              <div className="flex items-center gap-1.5 -mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">
+                  Member Loyalty Pass
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {profile?.aadhaar && (
-              <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-mono font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden md:inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-300 bg-slate-800/80 px-3 py-1 rounded-xl border border-slate-700">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 Aadhaar: {profile.aadhaar}
               </span>
             )}
-            <button
-              onClick={onSignOut}
-              className="inline-flex items-center text-xs font-bold text-slate-700 hover:text-slate-900 py-1.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-100 transition shadow-2xs"
-            >
-              <LogOut className="w-3.5 h-3.5 mr-1.5" />
-              Sign out
-            </button>
+
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shadow-md">
+                {initials}
+              </div>
+              <span className="hidden sm:inline text-xs font-bold text-slate-200">
+                {firstName}
+              </span>
+              <button
+                onClick={onSignOut}
+                title="Sign out of customer portal"
+                className="inline-flex items-center text-xs font-bold text-slate-400 hover:text-white py-1.5 px-2.5 rounded-xl border border-slate-700/80 hover:bg-slate-800 transition shadow-xs ml-1"
+              >
+                <LogOut className="w-3.5 h-3.5 mr-1" />
+                <span className="hidden sm:inline">Exit</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* ─── Main Content ─────────────────────────────────────────────────── */}
-      <main className="max-w-4xl mx-auto px-4 pt-6 pb-12 space-y-6 flex-1 w-full">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-16 space-y-6 flex-1 w-full relative z-10">
         {/* Alerts */}
         {error && (
-          <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl flex items-center justify-between animate-in fade-in">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="p-4 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-bold rounded-2xl flex items-center justify-between animate-in fade-in">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
               <span>{error}</span>
             </div>
-            <button onClick={() => setError('')} className="text-rose-500 hover:text-rose-700">✕</button>
+            <button onClick={() => setError('')} className="text-rose-400 hover:text-white">✕</button>
           </div>
         )}
 
         {successMsg && (
-          <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center justify-between animate-in fade-in">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold rounded-2xl flex items-center justify-between animate-in fade-in">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
               <span>{successMsg}</span>
             </div>
-            <button onClick={() => setSuccessMsg('')} className="text-emerald-500 hover:text-emerald-700">✕</button>
+            <button onClick={() => setSuccessMsg('')} className="text-emerald-400 hover:text-white">✕</button>
           </div>
         )}
 
-        {/* ─── 2. Hero Loyalty Member Card ─────────────────────────────────── */}
-        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden border border-slate-800">
-          <div className="absolute -right-16 -top-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        {/* ─── 2. Luxury Digital Loyalty Pass Card ─────────────────────────── */}
+        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/80 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden border border-slate-800">
+          {/* Card Ambient Glow Accents */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-12 -left-12 w-40 h-40 bg-white/5 rounded-full blur-xl pointer-events-none" />
 
           <div className="relative z-10 space-y-6">
+            {/* Top Pass Strip */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-full shadow-sm flex items-center gap-1.5">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-3 py-1 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-full shadow-md flex items-center gap-1.5">
                     <Star className="w-3.5 h-3.5 fill-slate-950" />
-                    {profile?.tier?.current || 'Silver'} Tier Member
+                    {profile?.tier?.current || 'Silver'} VIP Pass
                   </span>
-                  {profile?.aadhaar && (
-                    <span className="text-xs text-slate-400 font-mono">
-                      ID: {profile.customer_id}
-                    </span>
-                  )}
+                  <span className="text-xs text-slate-400 font-mono tracking-wider bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700">
+                    ID: {profile?.customer_id ? `BELLAD-${profile.customer_id}` : 'BELLAD-MEMBER'}
+                  </span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight mt-2 text-white">
+
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1">
                   {profile?.name || firstName}
                 </h1>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {profile?.phone} • {profile?.branch_name || 'Main Showroom'} • Member since {profile?.memberSince || '2024'}
+                <p className="text-xs text-slate-400 flex flex-wrap items-center gap-2">
+                  <span>{profile?.phone}</span>
+                  <span>&bull;</span>
+                  <span>{profile?.branch_name || 'Main Dealership'}</span>
+                  <span>&bull;</span>
+                  <span>Member since {profile?.memberSince || '2024'}</span>
                 </p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-right sm:text-right flex sm:flex-col justify-between items-center sm:items-end">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Total Loyalty Points
+              {/* Total Balance Big Number */}
+              <div className="bg-slate-900/80 backdrop-blur-xl p-5 rounded-2xl border border-slate-700/80 flex flex-col justify-between items-start sm:items-end shadow-xl">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest font-mono">
+                  Available Loyalty Balance
                 </span>
-                <div className="flex items-baseline gap-1.5 mt-0.5">
-                  <span className="text-3xl sm:text-4xl font-black tracking-tight text-white">
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-3xl sm:text-4xl font-black tracking-tight text-white font-mono">
                     {(profile?.balance || 0).toLocaleString('en-IN')}
                   </span>
-                  <span className="text-xs font-bold text-amber-400">PTS</span>
+                  <span className="text-xs font-black text-amber-400">PTS</span>
                 </div>
-                <span className="text-xs font-bold text-emerald-400 mt-1 block">
-                  ≈ ₹{(profile?.redeemableValue || 0).toLocaleString('en-IN')} Discount Value
-                </span>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-lg">
+                    ≈ ₹{(profile?.redeemableValue || 0).toLocaleString('en-IN')} Cash Value
+                  </span>
+                  <button
+                    onClick={() => setShowRedeemModal(true)}
+                    className="text-[11px] font-bold text-slate-300 hover:text-white underline"
+                  >
+                    Redeem →
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Tier Progress Bar */}
-            <div className="space-y-2 pt-2 border-t border-slate-800/80">
-              <div className="flex items-center justify-between text-xs font-bold">
+            {/* Tier Progress Bar & Action */}
+            <div className="space-y-2 pt-3 border-t border-slate-800/80">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-bold gap-1">
                 <span className="text-slate-400">
-                  Tier Progress: <span className="text-white">{profile?.tier?.current || 'Silver'}</span> → {profile?.tier?.next || 'Gold'}
+                  Tier Progress: <span className="text-white font-black">{profile?.tier?.current || 'Silver'}</span> →{' '}
+                  <span className="text-amber-400">{profile?.tier?.next || 'Gold'}</span>
                 </span>
-                <span className="text-amber-400 font-mono">
-                  {profile?.lifetime_points?.toLocaleString('en-IN') || 0} / {profile?.tier?.next_points?.toLocaleString('en-IN') || 5000} Lifetime PTS
+                <span className="text-slate-300 font-mono text-[11px]">
+                  {profile?.lifetime_points?.toLocaleString('en-IN') || 0} /{' '}
+                  {profile?.tier?.next_points?.toLocaleString('en-IN') || 5000} Lifetime PTS
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+              <div className="w-full h-2.5 bg-slate-800/90 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
                 <div
-                  className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-500"
-                  style={{ width: `${profile?.tier?.progress_percentage || 10}%` }}
+                  className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-700 shadow-sm"
+                  style={{ width: `${profile?.tier?.progress_percentage || 15}%` }}
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* ─── 3. In-House Benefits Highlight Strip ────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className={`p-4 rounded-2xl border transition-all ${
-            profile?.inhouse_benefits?.finance_opted
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950'
-              : 'bg-white border-slate-200 text-slate-800'
-          }`}>
+        {/* ─── 3. Modern Metric Cards Grid (Hostigrow SaaS Style) ────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 space-y-2 hover:border-slate-700 transition">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                Cashback Value
+              </span>
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                <DollarSign className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl sm:text-2xl font-black text-white font-mono">
+              ₹{(profile?.redeemableValue || 0).toLocaleString('en-IN')}
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">Direct deduction on next service bill</p>
+          </div>
+
+          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 space-y-2 hover:border-slate-700 transition">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                My Vehicles
+              </span>
+              <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20">
+                <Car className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl sm:text-2xl font-black text-white font-mono">
+              {profile?.vehicles?.length || 0}
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">Registered in Bellad Garage</p>
+          </div>
+
+          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 space-y-2 hover:border-slate-700 transition">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                Gift Cards
+              </span>
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+                <Gift className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl sm:text-2xl font-black text-white font-mono">
+              {myGiftCards.length}
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">Digital vouchers available</p>
+          </div>
+
+          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 space-y-2 hover:border-slate-700 transition">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                Referrals
+              </span>
+              <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20">
+                <Users className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl sm:text-2xl font-black text-white font-mono">
+              {referralsList.length}
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">Referred friends earning bonuses</p>
+          </div>
+        </div>
+
+        {/* ─── 4. In-House Dealer Perks (Interactive Strip) ────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div
+            className={`p-4 rounded-2xl border transition-all ${
+              profile?.inhouse_benefits?.finance_opted
+                ? 'bg-emerald-950/40 border-emerald-800/80 text-emerald-100'
+                : 'bg-slate-900/60 border-slate-800 text-slate-200'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-emerald-600" />
+                <DollarSign className="w-4 h-4 text-emerald-400" />
                 <span className="font-bold text-xs sm:text-sm">In-house Finance</span>
               </div>
               {profile?.inhouse_benefits?.finance_opted ? (
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-900 text-emerald-300 border border-emerald-700">
                   +100 PTS Unlocked
                 </span>
               ) : (
                 <span className="text-[10px] font-bold text-slate-400 uppercase">Available</span>
               )}
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 leading-tight">
-              Exclusive tie-up finance bonus on HDFC, Kotak &amp; Sundaram.
+            <p className="text-[11px] text-slate-400 mt-1 leading-snug">
+              Exclusive tie-up loan bonus on HDFC, Kotak &amp; Sundaram Finance.
             </p>
           </div>
 
-          <div className={`p-4 rounded-2xl border transition-all ${
-            profile?.inhouse_benefits?.insurance_opted
-              ? 'bg-blue-500/10 border-blue-500/30 text-blue-950'
-              : 'bg-white border-slate-200 text-slate-800'
-          }`}>
+          <div
+            className={`p-4 rounded-2xl border transition-all ${
+              profile?.inhouse_benefits?.insurance_opted
+                ? 'bg-blue-950/40 border-blue-800/80 text-blue-100'
+                : 'bg-slate-900/60 border-slate-800 text-slate-200'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-blue-600" />
+                <ShieldCheck className="w-4 h-4 text-blue-400" />
                 <span className="font-bold text-xs sm:text-sm">In-house Insurance</span>
               </div>
               {profile?.inhouse_benefits?.insurance_opted ? (
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-blue-900 text-blue-300 border border-blue-700">
                   +50 PTS Unlocked
                 </span>
               ) : (
                 <span className="text-[10px] font-bold text-slate-400 uppercase">Available</span>
               )}
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 leading-tight">
-              OEM assured cashless policy renewal &amp; claims support.
+            <p className="text-[11px] text-slate-400 mt-1 leading-snug">
+              OEM assured cashless policy renewal &amp; expedited claims assistance.
             </p>
           </div>
 
-          <div className={`p-4 rounded-2xl border transition-all ${
-            profile?.inhouse_benefits?.exchange_opted
-              ? 'bg-amber-500/10 border-amber-500/30 text-amber-950'
-              : 'bg-white border-slate-200 text-slate-800'
-          }`}>
+          <div
+            className={`p-4 rounded-2xl border transition-all ${
+              profile?.inhouse_benefits?.exchange_opted
+                ? 'bg-amber-950/40 border-amber-800/80 text-amber-100'
+                : 'bg-slate-900/60 border-slate-800 text-slate-200'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Repeat className="w-5 h-5 text-amber-600" />
+                <Repeat className="w-4 h-4 text-amber-400" />
                 <span className="font-bold text-xs sm:text-sm">In-house Exchange</span>
               </div>
               {profile?.inhouse_benefits?.exchange_opted ? (
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-100 text-amber-800">
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-900 text-amber-300 border border-amber-700">
                   +200 PTS Unlocked
                 </span>
               ) : (
                 <span className="text-[10px] font-bold text-slate-400 uppercase">Available</span>
               )}
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 leading-tight">
-              Best resale valuation &amp; upgrade bonus on 2W/4W trade-in.
+            <p className="text-[11px] text-slate-400 mt-1 leading-snug">
+              Guaranteed top resale valuation &amp; upgrade bonus on 2W/4W trade-in.
             </p>
           </div>
         </div>
 
-        {/* ─── 4. Navigation Tabs ───────────────────────────────────────────── */}
-        <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1 text-xs font-bold">
+        {/* ─── 5. Modern Segmented Tab Navigation ─────────────────────────── */}
+        <div className="flex items-center gap-2 border-b border-slate-800 overflow-x-auto pb-1.5 text-xs font-bold scrollbar-none">
           {[
-            { id: 'overview', label: 'Activity & Ledger', icon: Sparkles },
-            { id: 'gift_cards', label: `Gift Cards (${myGiftCards.length})`, icon: Gift },
-            { id: 'referrals', label: `Refer & Earn (${referralsList.length})`, icon: Users },
-            { id: 'garage', label: `My Vehicles (${profile?.vehicles?.length || 0})`, icon: Car },
-            { id: 'profile', label: 'Profile & KYC', icon: User },
+            { id: 'overview', label: 'Activity & Ledger', icon: Sparkles, count: ledgerItems.length },
+            { id: 'gift_cards', label: 'Gift Cards', icon: Gift, count: myGiftCards.length },
+            { id: 'referrals', label: 'Refer & Earn', icon: Users, count: referralsList.length },
+            { id: 'garage', label: 'My Vehicles', icon: Car, count: profile?.vehicles?.length || 0 },
+            { id: 'profile', label: 'Profile & KYC', icon: User, count: null },
           ].map((t) => {
             const Icon = t.icon;
             const isActive = activeTab === t.id;
@@ -480,12 +602,21 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                 onClick={() => setActiveTab(t.id)}
                 className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl transition whitespace-nowrap ${
                   isActive
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
                 }`}
               >
                 <Icon className="w-4 h-4" />
                 <span>{t.label}</span>
+                {t.count !== null && (
+                  <span
+                    className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                      isActive ? 'bg-slate-950 text-amber-300' : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {t.count}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -495,29 +626,35 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         {activeTab === 'overview' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                Transaction Activity Log
-              </h2>
+              <div>
+                <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
+                  Transaction Activity Log
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Real-time history of points earned, spent, and credited across all dealership branches.
+                </p>
+              </div>
+
               <button
                 onClick={() => setShowRedeemModal(true)}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-xs flex items-center gap-1.5"
+                className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-bold rounded-xl transition shadow-md flex items-center gap-1.5"
               >
                 <Gift className="w-3.5 h-3.5" />
-                How to Redeem
+                <span>How to Redeem</span>
               </button>
             </div>
 
             {loadingLedger ? (
-              <div className="py-12 text-center text-slate-400">
-                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400" />
-                <p className="text-xs">Loading activity ledger...</p>
+              <div className="py-14 text-center text-slate-400">
+                <Loader2 className="w-7 h-7 animate-spin mx-auto mb-2 text-amber-400" />
+                <p className="text-xs font-mono">Retrieving your activity ledger...</p>
               </div>
             ) : ledgerItems.length === 0 ? (
-              <div className="text-center py-12 bg-white border border-slate-200 rounded-3xl p-6">
-                <Car className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                <h4 className="text-sm font-bold text-slate-800">No Transactions Recorded Yet</h4>
-                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                  Your points from vehicle purchases, service visits, in-house bonuses, and gift cards will appear here.
+              <div className="text-center py-14 bg-slate-900/60 border border-slate-800 rounded-3xl p-6">
+                <Wrench className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                <h4 className="text-sm font-bold text-white">No Transactions Recorded Yet</h4>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  Your points from vehicle purchases, service visits, in-house bonuses, and gift cards will appear here automatically.
                 </p>
               </div>
             ) : (
@@ -533,7 +670,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                 <button
                   onClick={() => loadLedger(nextCursor)}
                   disabled={loadingMore}
-                  className="inline-flex items-center text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 py-2.5 px-4 rounded-xl transition disabled:opacity-50"
+                  className="inline-flex items-center text-xs font-bold text-slate-200 bg-slate-900 border border-slate-700 hover:bg-slate-800 py-2.5 px-5 rounded-xl transition disabled:opacity-50"
                 >
                   {loadingMore ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
@@ -551,15 +688,15 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         {activeTab === 'gift_cards' && (
           <div className="space-y-6">
             {/* Claim Card Input Banner */}
-            <div className="bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-amber-500/10 border-2 border-amber-500/30 rounded-3xl p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold">
+            <div className="bg-gradient-to-r from-amber-500/10 via-slate-900 to-amber-500/10 border border-amber-500/30 rounded-3xl p-6 space-y-4 shadow-xl">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold shadow-md">
                   <Gift className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900">Claim Digital Gift Card</h3>
-                  <p className="text-xs text-slate-600">
-                    Have an Amazon-style gift card? Enter the 16-character code and 4-digit PIN to credit points instantly!
+                  <h3 className="text-base font-black text-white">Claim Digital Gift Card</h3>
+                  <p className="text-xs text-slate-300">
+                    Have an Amazon-style Bellad gift voucher? Enter the 16-character code and 4-digit PIN to credit points instantly!
                   </p>
                 </div>
               </div>
@@ -568,10 +705,10 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                 <input
                   type="text"
                   required
-                  placeholder="Card Number (GIFT-BELL-XXXX-XXXX)"
+                  placeholder="GIFT-BELL-XXXX-XXXX"
                   value={claimCardCode}
                   onChange={(e) => setClaimCardCode(e.target.value.toUpperCase())}
-                  className="sm:col-span-1.5 px-4 py-2.5 bg-white border border-slate-300 rounded-xl font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  className="sm:col-span-1.5 px-4 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl font-mono font-bold uppercase text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
                 />
                 <input
                   type="password"
@@ -580,35 +717,39 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                   placeholder="4-Digit PIN"
                   value={claimPin}
                   onChange={(e) => setClaimPin(e.target.value)}
-                  className="px-4 py-2.5 bg-white border border-slate-300 rounded-xl font-mono font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  className="px-4 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl font-mono font-bold tracking-widest text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
                 />
                 <button
                   type="submit"
                   disabled={isClaimingGiftCard}
-                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl transition shadow-md disabled:opacity-50"
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black rounded-xl transition shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  {isClaimingGiftCard ? 'Claiming...' : 'Claim to Points'}
+                  {isClaimingGiftCard ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                  ) : (
+                    <span>Claim to Points →</span>
+                  )}
                 </button>
               </form>
             </div>
 
             {/* My Active Gift Cards */}
             <div className="space-y-4">
-              <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+              <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
                 My Digital Gift Cards ({myGiftCards.length})
               </h3>
 
               {loadingGiftCards ? (
                 <div className="py-12 text-center text-slate-400">
-                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400" />
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-amber-400" />
                   <p className="text-xs">Loading gift cards...</p>
                 </div>
               ) : myGiftCards.length === 0 ? (
-                <div className="p-8 text-center bg-white border border-slate-200 rounded-3xl space-y-2">
-                  <Gift className="w-10 h-10 text-slate-300 mx-auto" />
-                  <p className="text-sm font-bold text-slate-700">No Gift Cards Linked</p>
+                <div className="p-8 text-center bg-slate-900/60 border border-slate-800 rounded-3xl space-y-2">
+                  <Gift className="w-10 h-10 text-slate-600 mx-auto" />
+                  <p className="text-sm font-bold text-slate-300">No Gift Cards Linked</p>
                   <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                    Claim a gift card code above or ask your sales executive at any showroom.
+                    Claim a gift card code above or ask your sales executive at any showroom counter.
                   </p>
                 </div>
               ) : (
@@ -620,21 +761,21 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                     return (
                       <div
                         key={card.card_id}
-                        className={`rounded-3xl p-5 text-white shadow-lg relative overflow-hidden flex flex-col justify-between border ${
+                        className={`rounded-3xl p-5 text-white shadow-xl relative overflow-hidden flex flex-col justify-between border ${
                           isRedeemed
-                            ? 'bg-slate-800 border-slate-700 opacity-60'
-                            : 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border-indigo-500/30'
+                            ? 'bg-slate-900 border-slate-800 opacity-60'
+                            : 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border-indigo-500/40'
                         }`}
                       >
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1">
-                              <Sparkles className="w-3 h-3" /> Dealership Gift Card
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1 font-mono">
+                              <Sparkles className="w-3 h-3" /> Bellad Gift Card
                             </span>
                             <span
-                              className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                              className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
                                 isRedeemed
-                                  ? 'bg-slate-700 text-slate-300'
+                                  ? 'bg-slate-800 text-slate-400'
                                   : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                               }`}
                             >
@@ -645,7 +786,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                           <div>
                             <span className="text-[11px] text-slate-400 font-bold block">Available Card Balance</span>
                             <div className="flex items-baseline gap-1 mt-0.5">
-                              <span className="text-2xl font-black text-white">
+                              <span className="text-2xl font-black text-white font-mono">
                                 ₹{Number(card.balance_amount || 0).toLocaleString('en-IN')}
                               </span>
                               <span className="text-[11px] text-slate-400">
@@ -655,8 +796,8 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                           </div>
 
                           {/* Card Code Strip */}
-                          <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 flex items-center justify-between font-mono text-xs">
-                            <span className="font-bold tracking-wider">{card.card_number}</span>
+                          <div className="bg-black/40 p-2.5 rounded-xl border border-white/10 flex items-center justify-between font-mono text-xs">
+                            <span className="font-bold tracking-wider text-amber-300">{card.card_number}</span>
                             <button
                               onClick={() => handleCopyCard(card.card_number)}
                               className="p-1 text-slate-400 hover:text-white"
@@ -672,18 +813,26 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
 
                           {/* PIN */}
                           <div className="flex items-center justify-between text-xs text-slate-300 font-mono">
-                            <span>PIN: <strong className="text-white">{isPinVisible ? card.pin_code : '••••'}</strong></span>
+                            <span>
+                              PIN:{' '}
+                              <strong className="text-white">
+                                {isPinVisible ? card.pin_code : '••••'}
+                              </strong>
+                            </span>
                             <button
                               onClick={() => togglePinReveal(card.card_id)}
-                              className="text-[11px] text-indigo-300 underline font-sans"
+                              className="text-[11px] text-indigo-300 hover:text-indigo-200 underline font-sans"
                             >
-                              {isPinVisible ? 'Hide' : 'Reveal'}
+                              {isPinVisible ? 'Hide PIN' : 'Reveal PIN'}
                             </button>
                           </div>
                         </div>
 
                         <div className="pt-3 border-t border-white/10 mt-3 flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Expires: {card.expires_at ? new Date(card.expires_at).toLocaleDateString('en-IN') : '1 Year'}</span>
+                          <span>
+                            Expires:{' '}
+                            {card.expires_at ? new Date(card.expires_at).toLocaleDateString('en-IN') : '1 Year'}
+                          </span>
                           <span>For: {card.recipient_name || 'You'}</span>
                         </div>
                       </div>
@@ -699,87 +848,87 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         {activeTab === 'referrals' && (
           <div className="space-y-6">
             {/* Share Referral Link Card */}
-            <div className="bg-white border-2 border-slate-200 rounded-3xl p-6 space-y-4 shadow-xs">
+            <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-base font-black text-slate-900">Your Unique Referral Link</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Share with friends &amp; family. Earn bonus loyalty points when they buy a 2W or 4W vehicle!
+                  <h3 className="text-base font-black text-white">Your Unique Referral Link</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Share with friends &amp; family. Earn bonus loyalty points when they buy a 2W, 4W, or EV vehicle!
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(
-                      `Hey! I love my vehicle experience at ${profile?.firm_name || 'Bellad Automobiles'}. Use my referral code ${profile?.customer_id} to get exclusive bonus rewards: ${referralLink}`
+                      `Hey! I love my vehicle experience at ${profile?.firm_name || 'Bellad Automobiles'}. Use my referral link to get exclusive bonus rewards: ${referralLink}`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition flex items-center gap-2 shadow-xs"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition flex items-center gap-2 shadow-md"
                   >
                     <Share2 className="w-3.5 h-3.5" />
                     Share on WhatsApp
                   </a>
                   <button
                     onClick={handleCopyReferral}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-slate-700"
                   >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copied ? 'Copied' : 'Copy Link'}</span>
                   </button>
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 font-mono text-xs font-bold text-slate-800 break-all">
+              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 font-mono text-xs font-bold text-amber-300 break-all select-all">
                 {referralLink}
               </div>
             </div>
 
             {/* Refer a Friend Form */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-xs">
+            <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
               <div className="flex items-center gap-2.5">
-                <Users className="w-5 h-5 text-indigo-600" />
-                <h3 className="text-base font-bold text-slate-900">Refer a Friend Directly</h3>
+                <Users className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-base font-bold text-white">Refer a Friend Directly</h3>
               </div>
 
               <form onSubmit={handleReferFriendSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Friend's Full Name *</label>
+                  <label className="block font-bold text-slate-300 mb-1">Friend&apos;s Full Name *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Ramesh Patil"
                     value={refereeName}
                     onChange={(e) => setRefereeName(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="w-full px-3.5 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Friend's Mobile Number *</label>
+                  <label className="block font-bold text-slate-300 mb-1">Friend&apos;s Mobile Number *</label>
                   <input
                     type="tel"
                     required
                     placeholder="e.g. 9876543210"
                     value={refereePhone}
                     onChange={(e) => setRefereePhone(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="w-full px-3.5 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Interested Vehicle Model</label>
+                  <label className="block font-bold text-slate-300 mb-1">Interested Vehicle Model</label>
                   <input
                     type="text"
-                    placeholder="e.g. Creta / Splendor"
+                    placeholder="e.g. EV / 4W Sedan"
                     value={refereeModel}
                     onChange={(e) => setRefereeModel(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="w-full px-3.5 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                   />
                 </div>
 
-                <div className="sm:col-span-3 flex justify-end">
+                <div className="sm:col-span-3 flex justify-end pt-1">
                   <button
                     type="submit"
                     disabled={isSubmittingReferral}
-                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition disabled:opacity-50"
+                    className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black rounded-xl transition shadow-md disabled:opacity-50"
                   >
                     {isSubmittingReferral ? 'Submitting...' : 'Submit Referral Lead'}
                   </button>
@@ -788,36 +937,36 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
             </div>
 
             {/* Referrals Tracking Table */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 space-y-3 shadow-xs">
-              <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+            <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-xl">
+              <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
                 My Referrals Tracking ({referralsList.length})
               </h3>
 
               {loadingReferrals ? (
                 <div className="py-8 text-center text-slate-400">
-                  <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1 text-slate-400" />
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1 text-amber-400" />
                   <p className="text-xs">Loading referrals...</p>
                 </div>
               ) : referralsList.length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-6">
-                  No friends referred yet. Share your referral link above to earn points!
+                  No friends referred yet. Share your referral link above to earn bonus loyalty points!
                 </p>
               ) : (
                 <div className="space-y-2">
                   {referralsList.map((ref, idx) => (
                     <div
                       key={ref.id || idx}
-                      className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between text-xs"
+                      className="p-3 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between text-xs"
                     >
                       <div>
-                        <span className="font-bold text-slate-900">{ref.referee_name || 'Friend'}</span>
-                        <span className="text-[11px] text-slate-500 block font-mono">{ref.referee_phone}</span>
+                        <span className="font-bold text-white">{ref.referee_name || 'Friend'}</span>
+                        <span className="text-[11px] text-slate-400 block font-mono">{ref.referee_phone}</span>
                       </div>
                       <div className="text-right">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-indigo-950 text-indigo-300 border border-indigo-800">
                           {ref.status || 'Pending'}
                         </span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                        <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">
                           {ref.created_at ? new Date(ref.created_at).toLocaleDateString('en-IN') : ''}
                         </span>
                       </div>
@@ -832,14 +981,14 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         {/* ─── TAB 4: My Garage / Vehicles ──────────────────────────────────── */}
         {activeTab === 'garage' && (
           <div className="space-y-4">
-            <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
               My Registered Vehicles ({profile?.vehicles?.length || 0})
             </h3>
 
             {(profile?.vehicles || []).length === 0 ? (
-              <div className="p-8 text-center bg-white border border-slate-200 rounded-3xl space-y-2">
-                <Car className="w-10 h-10 text-slate-300 mx-auto" />
-                <p className="text-sm font-bold text-slate-700">No Vehicles Linked</p>
+              <div className="p-8 text-center bg-slate-900/60 border border-slate-800 rounded-3xl space-y-2">
+                <Car className="w-10 h-10 text-slate-600 mx-auto" />
+                <p className="text-sm font-bold text-slate-300">No Vehicles Linked</p>
                 <p className="text-xs text-slate-400">
                   Your vehicles purchased at {profile?.firm_name || 'our showroom'} will appear here automatically.
                 </p>
@@ -849,37 +998,37 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                 {profile.vehicles.map((v, idx) => (
                   <div
                     key={v.vehicle_id || idx}
-                    className="bg-white border-2 border-slate-200 rounded-3xl p-5 space-y-3 hover:border-indigo-400 transition shadow-xs"
+                    className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 space-y-3 hover:border-slate-700 transition shadow-xl"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-extrabold text-slate-900 text-sm">
+                      <span className="font-extrabold text-white text-sm">
                         {v.brand_name} {v.model} {v.variant}
                       </span>
-                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                      <span className="font-mono text-xs font-bold text-amber-300 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
                         {v.registration_number || v.vin || 'Pending Reg'}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                    <div className="grid grid-cols-2 gap-2 text-xs bg-slate-950 p-3 rounded-2xl border border-slate-800/80 font-mono">
                       <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold block">Gross Price</span>
-                        <span className="font-bold text-slate-800">
+                        <span className="text-slate-400 text-[10px] uppercase font-bold block font-sans">Gross Price</span>
+                        <span className="font-bold text-slate-200">
                           {v.gross_ex_showroom_price ? `₹${Number(v.gross_ex_showroom_price).toLocaleString('en-IN')}` : '—'}
                         </span>
                       </div>
                       <div>
-                        <span className="text-emerald-700 text-[10px] uppercase font-bold block">After Discount Price</span>
-                        <span className="font-bold text-emerald-700">
+                        <span className="text-emerald-400 text-[10px] uppercase font-bold block font-sans">Net Price</span>
+                        <span className="font-bold text-emerald-400">
                           {v.net_ex_showroom_price ? `₹${Number(v.net_ex_showroom_price).toLocaleString('en-IN')}` : '—'}
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold block">Fuel Type</span>
-                        <span className="font-bold text-slate-800 uppercase">{v.fuel_type || 'Petrol'}</span>
+                        <span className="text-slate-400 text-[10px] uppercase font-bold block font-sans">Fuel Type</span>
+                        <span className="font-bold text-slate-200 uppercase">{v.fuel_type || 'Petrol'}</span>
                       </div>
                       <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold block">Delivery Date</span>
-                        <span className="font-bold text-slate-800">{v.purchase_date || '—'}</span>
+                        <span className="text-slate-400 text-[10px] uppercase font-bold block font-sans">Delivery Date</span>
+                        <span className="font-bold text-slate-200">{v.purchase_date || '—'}</span>
                       </div>
                     </div>
                   </div>
@@ -891,84 +1040,93 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
 
         {/* ─── TAB 5: Profile & KYC ─────────────────────────────────────────── */}
         {activeTab === 'profile' && (
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-base font-bold text-slate-900">KYC &amp; Profile Details</h3>
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-base font-bold text-white">KYC &amp; Profile Details</h3>
               </div>
-              <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">
                 Aadhaar Verified
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                <span className="text-slate-400 text-[10px] uppercase font-bold block">Primary Unique Identifier</span>
-                <span className="font-mono font-extrabold text-slate-900 text-sm mt-0.5 block">
-                  Aadhaar No: {profile?.aadhaar || 'Verified on Registration'}
+              <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block">Unique Identifier</span>
+                <span className="font-mono font-extrabold text-white text-sm mt-0.5 block">
+                  Aadhaar: {profile?.aadhaar || 'Verified on Registration'}
                 </span>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800">
                 <span className="text-slate-400 text-[10px] uppercase font-bold block">Registered WhatsApp Mobile</span>
-                <span className="font-mono font-extrabold text-slate-900 text-sm mt-0.5 block">
-                  {profile?.phone || '—'}
+                <span className="font-mono font-extrabold text-white text-sm mt-0.5 block">
+                  +91 {profile?.phone || '—'}
                 </span>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800">
                 <span className="text-slate-400 text-[10px] uppercase font-bold block">Dealership Group</span>
-                <span className="font-bold text-slate-900 text-sm mt-0.5 block">
+                <span className="font-bold text-white text-sm mt-0.5 block">
                   {profile?.firm_name || 'Bellad & Company'}
                 </span>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                <span className="text-slate-400 text-[10px] uppercase font-bold block">Home Branch</span>
-                <span className="font-bold text-slate-900 text-sm mt-0.5 block">
+              <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block">Home Dealership Branch</span>
+                <span className="font-bold text-white text-sm mt-0.5 block">
                   {profile?.branch_name || 'Main Showroom'}
                 </span>
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100">
-              To update your registered mobile number or nominee details, visit your nearest showroom cashier desk with your Aadhaar card for OTP verification.
+            <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+              To update your registered mobile number or nomination details, please visit your nearest showroom cashier desk with your Aadhaar card for instant WhatsApp verification.
             </p>
           </div>
         )}
       </main>
 
       {/* ─── Footer ────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-slate-200 bg-white py-4 mt-auto">
-        <div className="max-w-4xl mx-auto px-4 text-center text-xs text-slate-400 space-y-1">
-          <p>© {new Date().getFullYear()} {profile?.firm_name || 'Bellad Automobiles'}. All rights reserved.</p>
+      <footer className="border-t border-slate-800 bg-slate-900/60 py-5 mt-auto relative z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center text-xs text-slate-400 space-y-1">
+          <p>&copy; {new Date().getFullYear()} {profile?.firm_name || 'Bellad Automobile Corporation'}. All rights reserved.</p>
+          <p className="text-[11px] text-slate-400 font-mono">
+            Encrypted Dealership Cloud &bull; Belagavi &bull; Hubballi &bull; Vijayapura
+          </p>
         </div>
       </footer>
 
       {/* ─── How to Redeem Modal ───────────────────────────────────────────── */}
       {showRedeemModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center space-x-2 text-slate-900">
-              <Info className="w-5 h-5 text-indigo-600" />
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="flex items-center space-x-2.5 text-white">
+              <Info className="w-5 h-5 text-amber-400" />
               <h3 className="text-base font-bold">How to Redeem Points</h3>
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Loyalty points can be redeemed directly at any authorized showroom or service center cashier desk during billing.
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Loyalty points can be redeemed directly at any authorized showroom or service center cashier desk during invoice generation.
             </p>
-            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs text-slate-700 space-y-1 font-medium">
-              <p><strong className="font-bold text-slate-900">Current Balance:</strong> {profile?.balance || 0} PTS</p>
-              <p><strong className="font-bold text-slate-900">Discount Value:</strong> ₹{profile?.redeemableValue || 0}</p>
-              <p className="text-[11px] text-slate-500 pt-1">
-                Cashier will verify OTP sent to your WhatsApp number before applying discount.
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs text-slate-300 space-y-1.5 font-medium">
+              <p>
+                <strong className="font-bold text-white">Current Balance:</strong>{' '}
+                <span className="font-mono text-amber-400">{(profile?.balance || 0).toLocaleString('en-IN')} PTS</span>
+              </p>
+              <p>
+                <strong className="font-bold text-white">Discount Value:</strong>{' '}
+                <span className="font-mono text-emerald-400">₹{(profile?.redeemableValue || 0).toLocaleString('en-IN')}</span>
+              </p>
+              <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-800">
+                The cashier will verify a secure 4-digit OTP sent to your WhatsApp number before applying the discount to your bill.
               </p>
             </div>
             <button
               onClick={() => setShowRedeemModal(false)}
-              className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition"
+              className="w-full py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black rounded-xl text-xs transition shadow-md"
             >
-              Got it
+              Understood
             </button>
           </div>
         </div>

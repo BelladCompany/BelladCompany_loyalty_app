@@ -109,9 +109,9 @@ export const Customer360View = ({
 
   if (!customer) return null;
 
-  const currentBalance = tierInfo?.current_balance ?? customer.current_balance ?? customer.points_balance ?? 0;
+  const currentBalance = Math.max(0, tierInfo?.current_balance ?? customer.current_balance ?? customer.points_balance ?? 0);
   const tierName = tierInfo?.tier_name || customer.tier_name || 'Silver';
-  const rupeeValue = Math.floor(currentBalance / 4);
+  const rupeeValue = Math.max(0, Math.floor(currentBalance / 4));
 
   const hasPendingCorrection =
     pendingCorrections.length > 0 ||
@@ -346,13 +346,15 @@ export const Customer360View = ({
       </div>
 
       {/* 3. Detailed Customer Master Profile Card */}
-      <section className="bg-white border-2 border-slate-300 rounded-xl p-6 space-y-4 shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-          <div className="flex items-center gap-2.5">
-            <UserCheck className="w-6 h-6 text-blue-900" />
-            <h3 className="text-xl font-extrabold text-slate-900">Customer Details</h3>
+      <section className="bg-white border border-slate-200/90 rounded-3xl p-7 space-y-5 shadow-card">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+              <UserCheck className="w-5 h-5" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 tracking-tight">Customer Master Details</h3>
           </div>
-          <span className="text-sm font-extrabold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 uppercase">
+          <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 uppercase tracking-wider">
             PR Status: {customer.pr_status || customer.billing_status || 'PR Done'}
           </span>
         </div>
@@ -405,13 +407,15 @@ export const Customer360View = ({
       </section>
 
       {/* 4. Prominent Vehicle Details Block */}
-      <section className="bg-white border-2 border-slate-300 rounded-xl p-6 space-y-4 shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-          <div className="flex items-center gap-2.5">
-            <Car className="w-6 h-6 text-amber-600" />
-            <h3 className="text-xl font-extrabold text-slate-900">Vehicle Specifications & Pricing</h3>
+      <section className="bg-white border border-slate-200/90 rounded-3xl p-7 space-y-5 shadow-card">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+              <Car className="w-5 h-5" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 tracking-tight">Vehicle Specifications & Pricing</h3>
           </div>
-          <span className="text-sm font-extrabold text-slate-800 bg-slate-100 px-3 py-1 rounded-full border border-slate-300">
+          <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
             {(customer.vehicles || []).length} Vehicle(s)
           </span>
         </div>
@@ -517,11 +521,19 @@ export const Customer360View = ({
                           vs.status === 'eligible'
                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse'
                             : vs.status === 'locked'
-                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : vs.status === 'locked_pending_correction'
+                            ? 'bg-amber-200 text-amber-950 border border-amber-400'
                             : 'bg-rose-100 text-rose-800 border border-rose-300'
                         }`}
                       >
-                        {vs.status}
+                        {vs.status === 'eligible'
+                          ? 'Eligible'
+                          : vs.status === 'locked'
+                          ? '12M Lock (Accessories Unlocked)'
+                          : vs.status === 'locked_pending_correction'
+                          ? 'Correction Locked'
+                          : 'Expired'}
                       </span>
                     </div>
                   )}
@@ -532,13 +544,13 @@ export const Customer360View = ({
         )}
       </section>
 
-      {/* 4. Tabbed Customer Profile History (Ledger / Referrals / Redemptions / KYC / Nominee) */}
-      <section className="bg-white border border-surface-border rounded-xl p-5 space-y-4 shadow-sm">
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1">
+      {/* 5. Tabbed Customer Profile History (Ledger / Referrals / Redemptions / KYC / Nominee) */}
+      <section className="bg-white border border-slate-200/90 rounded-3xl p-7 space-y-6 shadow-card">
+        {/* Navigation Tabs (Smart CRM pill style) */}
+        <div className="flex items-center gap-2 border-b border-slate-100 overflow-x-auto pb-3">
           {[
             { id: 'ledger', label: 'Points Ledger', icon: History },
-            { id: 'referrals', label: 'Referrals', icon: Users },
+            { id: 'referrals', label: 'Gift Cards', icon: Gift },
             { id: 'redemptions', label: 'Redemptions', icon: Receipt },
             { id: 'kyc', label: 'KYC Requests', icon: FileCheck2 },
             { id: 'nominee', label: 'Nominee Details', icon: UserCheck },
@@ -549,10 +561,10 @@ export const Customer360View = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveProfileTab(tab.id)}
-                className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-t-lg transition border-b-2 whitespace-nowrap ${
+                className={`inline-flex items-center gap-2 px-5 py-2.5 text-xs font-black rounded-2xl transition whitespace-nowrap ${
                   isActive
-                    ? 'border-brand-navy text-brand-navy bg-slate-100'
-                    : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                    : 'bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -598,22 +610,22 @@ export const Customer360View = ({
           </div>
         )}
 
-        {/* Tab 2: Referrals */}
+        {/* Tab 2: Gift Cards */}
         {activeProfileTab === 'referrals' && (
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Customer Referral History</h4>
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Customer Gift Cards & Reward History</h4>
             {loadingTabData ? (
-              <div className="p-6 text-center text-xs text-slate-400">Loading referral records...</div>
+              <div className="p-6 text-center text-xs text-slate-400">Loading gift card records...</div>
             ) : referralHistory.length === 0 ? (
               <div className="p-6 bg-slate-50 rounded-lg border border-slate-200 text-center text-xs text-slate-500">
-                No referral activity logged for this customer.
+                No gift card activity logged for this customer.
               </div>
             ) : (
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                     <tr>
-                      <th className="p-3">Referral ID</th>
+                      <th className="p-3">Gift Card ID</th>
                       <th className="p-3">Role</th>
                       <th className="p-3">Status</th>
                       <th className="p-3 text-right">Suggested Points</th>
@@ -627,9 +639,9 @@ export const Customer360View = ({
                         <td className="p-3 font-mono font-bold text-slate-900">#{ref.id || ref.referral_id}</td>
                         <td className="p-3">
                           {ref.referrer_customer_id === customer.customer_id ? (
-                            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold rounded">Referrer</span>
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold rounded">Gift Card Giver</span>
                           ) : (
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 font-bold rounded">Referred Customer</span>
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 font-bold rounded">Gift Card Recipient</span>
                           )}
                         </td>
                         <td className="p-3 uppercase font-bold text-slate-700">{ref.status}</td>

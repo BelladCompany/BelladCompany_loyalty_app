@@ -1,3 +1,4 @@
+const path = require('path');
 const KycService = require('../services/kyc.service');
 
 class KycController {
@@ -104,6 +105,25 @@ class KycController {
         status: 'success',
         ...result,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Authenticated endpoint to serve KYC proof file (GET /api/kyc/proof/:filename)
+   */
+  static async getProofFile(req, res, next) {
+    try {
+      const filename = path.basename(req.params.filename);
+      const filePath = path.join(__dirname, '../../uploads/kyc_proofs', filename);
+      const fs = require('fs');
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ status: 'fail', error: 'Requested KYC proof document not found.' });
+      }
+
+      res.sendFile(filePath);
     } catch (error) {
       next(error);
     }

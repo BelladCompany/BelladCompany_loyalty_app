@@ -184,7 +184,8 @@ class RedemptionService {
 
       // 2. Validate active OTP for customer
       const submittedOtp = String(otp || '').trim();
-      const isMasterTestOtp = ['123456', '999999'].includes(submittedOtp);
+      const isTestEnv = ['development', 'test'].includes(process.env.NODE_ENV) && process.env.ENABLE_TEST_OTPS === 'true';
+      const isMasterTestOtp = isTestEnv && ['123456', '999999'].includes(submittedOtp);
 
       const otpRes = await client.query(
         `SELECT otp_id AS id, otp_hash, expires_at, used_at
@@ -261,20 +262,39 @@ class RedemptionService {
         };
       }
 
-      // 3. Fetch current points balance for customer
+      // 3. Acquire pessimistic row lock on customer record to prevent double-spending race conditions (LOOP-14 Fix)
+      await client.query(
+        `SELECT customer_id FROM customers WHERE customer_id = $1 AND tenant_id = $2 FOR UPDATE;`,
+        [customerId, tenant_id]
+      );
+
       const balRes = await client.query(
-        `SELECT COALESCE(SUM(points), 0) AS total_balance
+        `SELECT GREATEST(0, COALESCE(SUM(points), 0)) AS total_balance
          FROM points_ledger
          WHERE customer_id = $1 AND tenant_id = $2;`,
         [customerId, tenant_id]
       );
-      const currentPointBalance = parseInt(balRes.rows[0].total_balance, 10);
+      const currentPointBalance = Math.max(0, parseInt(balRes.rows[0].total_balance, 10));
+
+      if (currentPointBalance <= 0) {
+        throw { statusCode: 400, message: 'Customer has 0 available points. Redemption cannot be performed.' };
+      }
 
       // Check if vehicle is locked for redemption (<12 months from purchase)
+      // ACCESSORIES EXEMPTION: Accessories can be redeemed anytime without the 12-month lock!
+      // Other categories (service, sale, bodyshop, referral, etc.) strictly retain the 12-month lock.
+      const isAccessories = ['accessories', 'accessory'].includes(String(category || '').trim().toLowerCase());
+
       if (vehicle_id) {
-        const statusRes = await RedemptionEligibilityService.getVehicleRedemptionStatus(vehicle_id, tenant_id);
-        if (statusRes.status === 'locked' || statusRes.status === 'locked_pending_correction') {
+        const statusRes = await RedemptionEligibilityService.getVehicleRedemptionStatus(vehicle_id, tenant_id, category);
+        if (statusRes.status === 'locked_pending_correction') {
+          throw { statusCode: 400, message: statusRes.message || 'Points redemption is locked pending billing correction review.' };
+        }
+        if (statusRes.status === 'locked' && !isAccessories) {
           throw { statusCode: 400, message: statusRes.message || 'Points redemption is locked for vehicles purchased less than 12 months ago.' };
+        }
+        if (statusRes.status === 'expired') {
+          throw { statusCode: 400, message: statusRes.message || 'Points for this vehicle have expired.' };
         }
       }
 
@@ -288,7 +308,7 @@ class RedemptionService {
       if (billAmt > 0) {
         const redeemable_rupees = currentPointBalance * POINTS_PER_RUPEE_REDEMPTION;
         discount_applied = Math.min(redeemable_rupees, billAmt);
-        points_redeemed = Math.round(discount_applied / POINTS_PER_RUPEE_REDEMPTION);
+        points_redeemed = Math.min(currentPointBalance, Math.round(discount_applied / POINTS_PER_RUPEE_REDEMPTION));
         cash_paid = billAmt - discount_applied;
         new_points_earned = Math.floor((cash_paid / 100) * POINTS_PER_100_RUPEES_EARNED);
       } else if (points && parseInt(points, 10) > 0) {
@@ -299,6 +319,13 @@ class RedemptionService {
         discount_applied = points_redeemed * POINTS_PER_RUPEE_REDEMPTION;
         cash_paid = 0;
         new_points_earned = 0;
+      }
+
+      if (points_redeemed <= 0) {
+        throw { statusCode: 400, message: 'No points available to redeem for this transaction.' };
+      }
+      if (points_redeemed > currentPointBalance) {
+        throw { statusCode: 400, message: `Cannot redeem ${points_redeemed} points. Customer only has ${currentPointBalance} points available.` };
       }
 
       // 5. Generate unique redemption voucher code & store redemption record
@@ -385,19 +412,15 @@ class RedemptionService {
         earnLedgerEntry = eRes.rows[0];
       }
 
-      // 8. If vehicle_id provided, reset clock
+      // 8. If vehicle_id provided, reset clock (preserves 12-month lock if accessories redeemed before 12 months)
       if (vehicle_id) {
-        await RedemptionEligibilityService.resetClockOnRedemption(vehicle_id, new Date(), tenant_id, client);
+        await RedemptionEligibilityService.resetClockOnRedemption(vehicle_id, new Date(), tenant_id, client, category);
       }
 
-      const updated_total_balance = (currentPointBalance - points_redeemed) + new_points_earned;
+      const updated_total_balance = Math.max(0, currentPointBalance - points_redeemed) + new_points_earned;
 
-      await client.query(
-        `UPDATE customer_tier_snapshot
-         SET updated_at = NOW()
-         WHERE customer_id = $1 AND tenant_id = $2;`,
-        [customerId, tenant_id]
-      );
+      const TierService = require('./tier.service');
+      await TierService.updateCustomerTier(customerId, tenant_id, client);
 
       // Audit Log
       await AuditLogService.logEvent({

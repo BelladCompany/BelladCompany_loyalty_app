@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 /**
- * High-contrast, sortable DataTable component for operational counters
+ * Clean Light Modern DataTable Component (Image 1 & 2 Reference)
+ * Features 15-16px legible typography, smooth zebra striping, soft borders, and clear sort headers.
  */
 export const DataTable = ({
   columns = [],
@@ -44,17 +45,17 @@ export const DataTable = ({
   }, [data, sortField, sortDirection]);
 
   return (
-    <div className={`w-full overflow-x-auto border border-surface-border rounded bg-white ${className}`}>
+    <div className={`w-full overflow-x-auto border border-slate-200/90 rounded-2xl bg-white shadow-xs ${className}`}>
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-slate-100 border-b-2 border-surface-border">
+          <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600">
             {columns.map((col, idx) => (
               <th
                 key={idx}
                 onClick={() => col.sortable && handleSort(col.field)}
                 className={`
-                  h-12 px-4 text-base font-bold text-ink-primary select-none
-                  ${col.sortable ? 'cursor-pointer hover:bg-slate-200' : ''}
+                  h-12 px-5 text-xs font-black uppercase tracking-wider text-slate-500 select-none
+                  ${col.sortable ? 'cursor-pointer hover:bg-slate-100 hover:text-slate-800' : ''}
                   ${col.align === 'right' ? 'text-right' : 'text-left'}
                   ${col.headerClassName || ''}
                 `}
@@ -62,15 +63,15 @@ export const DataTable = ({
                 <div className={`inline-flex items-center gap-1.5 ${col.align === 'right' ? 'justify-end w-full' : ''}`}>
                   <span>{col.header}</span>
                   {col.sortable && (
-                    <span className="text-ink-secondary">
+                    <span className="text-slate-400">
                       {sortField === col.field ? (
                         sortDirection === 'asc' ? (
-                          <ArrowUp className="w-4 h-4 text-action-primary" />
+                          <ArrowUp className="w-4 h-4 text-indigo-600 font-bold" />
                         ) : (
-                          <ArrowDown className="w-4 h-4 text-action-primary" />
+                          <ArrowDown className="w-4 h-4 text-indigo-600 font-bold" />
                         )
                       ) : (
-                        <ArrowUpDown className="w-4 h-4 opacity-40" />
+                        <ArrowUpDown className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
                       )}
                     </span>
                   )}
@@ -79,10 +80,10 @@ export const DataTable = ({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-surface-divider">
+        <tbody className="divide-y divide-slate-100">
           {sortedData.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="h-24 text-center text-ink-secondary text-base font-medium">
+              <td colSpan={columns.length} className="h-28 text-center text-slate-400 text-sm font-semibold">
                 {emptyMessage}
               </td>
             </tr>
@@ -92,23 +93,23 @@ export const DataTable = ({
                 key={row[keyField] || rowIdx}
                 onClick={() => onRowClick && onRowClick(row)}
                 className={`
-                  min-h-[48px] h-12 transition-colors
-                  ${onRowClick ? 'cursor-pointer hover:bg-slate-50 active:bg-slate-100' : 'hover:bg-slate-50/50'}
+                  h-14 transition-colors text-slate-800 text-sm font-medium
+                  ${onRowClick ? 'cursor-pointer hover:bg-indigo-50/40 active:bg-indigo-50' : 'hover:bg-slate-50/70'}
                   ${rowIdx % 2 === 1 ? 'bg-slate-50/30' : 'bg-white'}
                 `}
               >
                 {columns.map((col, colIdx) => {
-                  const cellValue = col.render ? col.render(row[col.field], row) : row[col.field];
+                  const val = row[col.field];
                   return (
                     <td
                       key={colIdx}
                       className={`
-                        px-4 py-3 text-base text-ink-primary font-medium
-                        ${col.align === 'right' ? 'text-right font-mono' : 'text-left'}
+                        px-5 py-3.5 text-sm
+                        ${col.align === 'right' ? 'text-right' : 'text-left'}
                         ${col.cellClassName || ''}
                       `}
                     >
-                      {cellValue}
+                      {col.render ? col.render(val, row) : (val ?? '—')}
                     </td>
                   );
                 })}

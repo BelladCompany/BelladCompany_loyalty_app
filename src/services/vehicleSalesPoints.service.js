@@ -34,32 +34,8 @@ class VehicleSalesPointsService {
    * Recalculates tier snapshot and lifetime points for a customer
    */
   static async updateCustomerTierSnapshot(customerId, tenantId, client = pool) {
-    const aggRes = await client.query(
-      `SELECT 
-         COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS lifetime_points,
-         COALESCE(SUM(points), 0) AS current_balance
-       FROM points_ledger
-       WHERE customer_id = $1 AND tenant_id = $2;`,
-      [customerId, tenantId]
-    );
-
-    const lifetimePoints = parseInt(aggRes.rows[0].lifetime_points, 10);
-
-    const tierRes = await client.query(
-      `SELECT tier_name FROM tier_rules WHERE tenant_id = $1 AND min_lifetime_points <= $2 ORDER BY min_lifetime_points DESC LIMIT 1;`,
-      [tenantId, lifetimePoints]
-    );
-    const tierName = tierRes.rows[0]?.tier_name || 'Silver';
-
-    await client.query(
-      `INSERT INTO customer_tier_snapshot (customer_id, current_tier, lifetime_points, tenant_id, updated_at)
-       VALUES ($1, $2, $3, $4, NOW())
-       ON CONFLICT (customer_id) DO UPDATE
-       SET current_tier = EXCLUDED.current_tier,
-           lifetime_points = EXCLUDED.lifetime_points,
-           updated_at = NOW();`,
-      [customerId, tierName, lifetimePoints, tenantId]
-    );
+    const TierService = require('./tier.service');
+    return TierService.updateCustomerTier(customerId, tenantId, client);
   }
 
   /**
@@ -125,6 +101,50 @@ class VehicleSalesPointsService {
         rateConfig
       );
 
+      // Check Master Policy Engine for model-specific sales rules
+      let vehicleType = 'ALL';
+      let brandName = 'ALL';
+      let modelName = 'ALL';
+
+      if (vehicle_id) {
+        const vInfo = await client.query(
+          `SELECT v.vehicle_type, v.model, b.name AS brand_name
+           FROM vehicles v LEFT JOIN brands b ON b.id = v.brand_id
+           WHERE v.vehicle_id = $1 AND v.tenant_id = $2;`,
+          [vehicle_id, tenantId]
+        );
+        if (vInfo.rows.length > 0) {
+          vehicleType = vInfo.rows[0].vehicle_type || 'ALL';
+          brandName = vInfo.rows[0].brand_name || 'ALL';
+          modelName = vInfo.rows[0].model || 'ALL';
+        }
+      }
+
+      const MasterRuleEngineService = require('./masterRuleEngine.service');
+      const matchedMasterRule = await MasterRuleEngineService.resolveRule({
+        tenant_id: tenantId,
+        scheme_type: null,
+        spend_type: 'sale',
+        vehicle_type: vehicleType,
+        brand_name: brandName,
+        model_name: modelName,
+        spend_amount: ex_showroom_price,
+        transaction_date: new Date(),
+        client,
+      });
+
+      let finalPoints = calcResult.points;
+      let ruleReason = calcResult.reason_text;
+
+      if (matchedMasterRule) {
+        const outcome = MasterRuleEngineService.calculateOutcome({
+          invoice_amount: ex_showroom_price,
+          rule: matchedMasterRule,
+        });
+        finalPoints = outcome.total_points;
+        ruleReason = `Master Rule: ${matchedMasterRule.rule_name} (${matchedMasterRule.rule_code}) - ${outcome.reason}`;
+      }
+
       // Check existing ledger records for this source_ref (including legacy prefixes like 'PR Done Sales Sync: ')
       const existingLedgerRes = await client.query(
         `SELECT entry_id, points, reason_type FROM points_ledger WHERE tenant_id = $1 AND (source_ref = $2 OR source_ref LIKE '%' || $2) ORDER BY entry_id ASC;`,
@@ -142,7 +162,7 @@ class VehicleSalesPointsService {
         const colList = hasCols.rows.map((r) => r.column_name);
 
         const fields = ['customer_id', 'vehicle_id', 'branch_id', 'type', 'transaction_category', 'points', 'source_ref', 'tenant_id'];
-        const vals = [customer_id, vehicle_id || null, branch_id, 'earn_sale', 'sale', calcResult.points, txRef, tenantId];
+        const vals = [customer_id, vehicle_id || null, branch_id, 'earn_sale', 'sale', finalPoints, txRef, tenantId];
 
         if (colList.includes('reason_type')) {
           fields.push('reason_type');
@@ -150,11 +170,11 @@ class VehicleSalesPointsService {
         }
         if (colList.includes('reason_text')) {
           fields.push('reason_text');
-          vals.push(calcResult.reason_text);
+          vals.push(ruleReason);
         }
         if (colList.includes('reason')) {
           fields.push('reason');
-          vals.push(calcResult.reason_text);
+          vals.push(ruleReason);
         }
         if (colList.includes('amount_paise')) {
           fields.push('amount_paise');
@@ -200,50 +220,43 @@ class VehicleSalesPointsService {
           ledger_entry: ledgerIns.rows[0],
         };
       } else {
-        // --- IN-PLACE OVERWRITE FOR EXISTING ROW (NO EXTRA ADJUSTMENT ROWS) ---
-        await client.query("SET LOCAL loyalty.allow_ledger_update = 'on';");
-
-        // Pick primary entry (prefer purchase/earn_sale or smallest entry_id)
+        // --- APPEND-ONLY ADJUSTMENT FOR EXISTING SALE TRANSACTION (LOOP-05 FIX) ---
         const primaryEntry = existingEntries.find((r) => r.reason_type === 'purchase') || existingEntries[0];
-        const primaryEntryId = primaryEntry.entry_id;
+        const existingPoints = parseInt(primaryEntry.points || 0, 10);
+        const pointDelta = calcResult.points - existingPoints;
+        let ledgerResultRow = primaryEntry;
 
-        // Clean up any extra/duplicate adjustment rows for this same vehicle sale transaction
-        const extraEntryIds = existingEntries.map((r) => r.entry_id).filter((id) => id !== primaryEntryId);
-        if (extraEntryIds.length > 0) {
-          await client.query(`DELETE FROM points_ledger WHERE entry_id = ANY($1::bigint[]);`, [extraEntryIds]);
+        if (pointDelta !== 0) {
+          let effectiveDelta = pointDelta;
+          if (pointDelta < 0) {
+            const balRes = await client.query(
+              `SELECT GREATEST(0, COALESCE(SUM(points), 0)) AS current_balance FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
+              [customer_id, tenantId]
+            );
+            const currentBal = parseInt(balRes.rows[0].current_balance, 10);
+            effectiveDelta = Math.max(-currentBal, pointDelta);
+          }
+
+          if (effectiveDelta !== 0) {
+            const adjIns = await client.query(
+              `INSERT INTO points_ledger (
+                 customer_id, branch_id, transaction_type, points, amount_paise, reason, reference_id, created_by, tenant_id
+               ) VALUES ($1, $2, 'adjustment', $3, $4, $5, $6, $7, $8)
+               RETURNING *;`,
+              [
+                customer_id,
+                branch_id,
+                effectiveDelta,
+                0,
+                `Adjustment for sale transaction #${reference_id}: ${calcResult.reason_text}`,
+                `ADJ-${reference_id}`,
+                created_by || null,
+                tenant_id,
+              ]
+            );
+            ledgerResultRow = adjIns.rows[0];
+          }
         }
-
-        // Update the primary row directly in place
-        const hasCols = await client.query(
-          `SELECT column_name FROM information_schema.columns WHERE table_name = 'points_ledger';`
-        );
-        const colList = hasCols.rows.map((r) => r.column_name);
-
-        let updateSql = `UPDATE points_ledger SET points = $1`;
-        const params = [calcResult.points];
-        let pIdx = 2;
-
-        if (colList.includes('reason_text')) {
-          updateSql += `, reason_text = $${pIdx++}`;
-          params.push(calcResult.reason_text);
-        }
-        if (colList.includes('reason')) {
-          updateSql += `, reason = $${pIdx++}`;
-          params.push(calcResult.reason_text);
-        }
-        if (colList.includes('vehicle_id') && vehicle_id) {
-          updateSql += `, vehicle_id = $${pIdx++}`;
-          params.push(vehicle_id);
-        }
-        if (colList.includes('customer_id') && customer_id) {
-          updateSql += `, customer_id = $${pIdx++}`;
-          params.push(customer_id);
-        }
-
-        updateSql += ` WHERE entry_id = $${pIdx} RETURNING *;`;
-        params.push(primaryEntryId);
-
-        const updatedRes = await client.query(updateSql, params);
 
         await client.query(
           `UPDATE sale_transactions
@@ -257,10 +270,10 @@ class VehicleSalesPointsService {
         if (isOwnClient) await client.query('COMMIT');
 
         return {
-          status: 'updated_in_place',
+          status: 'adjusted',
           points: calcResult.points,
           reason_text: calcResult.reason_text,
-          ledger_entry: updatedRes.rows[0],
+          ledger_entry: ledgerResultRow,
         };
       }
     } catch (err) {

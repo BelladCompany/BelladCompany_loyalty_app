@@ -375,7 +375,7 @@ class ReferralService {
         `INSERT INTO points_ledger (
            customer_id, type, transaction_category, points, source_ref, cashier_id, tenant_id
          )
-         VALUES ($1, 'earn_referral', 'sale', $2, $3, $4, $5)
+         VALUES ($1, 'earn_referral', 'referral', $2, $3, $4, $5)
          RETURNING entry_id AS id, customer_id, type AS transaction_type,
                    points, source_ref AS reference_id, created_at;`,
         [
@@ -402,29 +402,9 @@ class ReferralService {
       const lifetimePoints = parseInt(aggRes.rows[0].lifetime_points, 10);
       const currentBalance = parseInt(aggRes.rows[0].current_balance, 10);
 
-      const tierRes = await client.query(
-        `SELECT tier_rule_id AS id, tier_name
-         FROM tier_rules
-         WHERE tenant_id = $1 AND min_lifetime_points <= $2
-         ORDER BY min_lifetime_points DESC, tier_rule_id DESC
-         LIMIT 1;`,
-        [tenant_id, lifetimePoints]
-      );
-
-      const tier = tierRes.rows.length > 0 ? tierRes.rows[0] : { id: null, tier_name: 'Standard' };
-
-      const snapshotRes = await client.query(
-        `INSERT INTO customer_tier_snapshot (
-     customer_id, current_tier, lifetime_points, tenant_id, updated_at
-   )
-   VALUES ($1, $2, $3, $4, NOW())
-   ON CONFLICT (customer_id) DO UPDATE
-   SET current_tier = EXCLUDED.current_tier,
-       lifetime_points = EXCLUDED.lifetime_points,
-       updated_at = NOW()
-   RETURNING customer_id, current_tier AS tier_name, lifetime_points, updated_at;`,
-        [referral.referrer_customer_id, tier.tier_name, lifetimePoints, tenant_id]
-      );
+      const TierService = require('./tier.service');
+      const snapshotRow = await TierService.updateCustomerTier(referral.referrer_customer_id, tenant_id, client);
+      const snapshotRes = { rows: [{ ...snapshotRow, tier_name: snapshotRow.current_tier }] };
 
       // Audit Log event for manual referral points approval (logging suggested vs final awarded value)
       const suggestedVal = parseInt(referral.suggested_points || 0, 10);

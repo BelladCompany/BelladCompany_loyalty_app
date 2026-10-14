@@ -34,5 +34,8 @@ router.get('/appsheet-logs', AdminController.getAppSheetWebhookLogs);
 // 8. View Google Sheets customer auto-sync log entries
 router.get('/google-sheets-logs', AdminController.getGoogleSheetsLogs);
 
+// 9. Generate tokenized cashier invitation link (48h validity)
+router.post('/cashiers/invite', AdminController.createCashierInvite);
+
 module.exports = router;
 

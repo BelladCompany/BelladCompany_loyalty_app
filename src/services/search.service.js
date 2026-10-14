@@ -177,7 +177,8 @@ class SearchService {
             )
           ) FILTER (WHERE v.vehicle_id IS NOT NULL), '[]'
         ) AS vehicles,
-        (SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl WHERE pl.customer_id = c.customer_id AND pl.tenant_id = c.tenant_id) AS points_balance
+        (SELECT cts.current_tier FROM customer_tier_snapshot cts WHERE cts.customer_id = c.customer_id AND cts.tenant_id = c.tenant_id LIMIT 1) AS current_tier,
+        (SELECT GREATEST(0, COALESCE(SUM(pl.points), 0)) FROM points_ledger pl WHERE pl.customer_id = c.customer_id AND pl.tenant_id = c.tenant_id) AS points_balance
       FROM customers c
       LEFT JOIN customer_phones cp ON c.customer_id = cp.customer_id AND cp.tenant_id = c.tenant_id
       LEFT JOIN vehicles v ON c.customer_id = v.customer_id AND v.tenant_id = c.tenant_id
@@ -228,7 +229,8 @@ class SearchService {
       phones: row.phones || [],
       vehicles: row.vehicles || [],
       points_balance: points,
-      current_tier: points >= 10000 ? 'Gold' : points >= 5000 ? 'Silver' : 'Bronze',
+      current_tier: row.current_tier || 'Silver',
+      tier_name: row.current_tier || 'Silver',
       billing_status: 'PR Done',
       pr_status: 'PR Done',
       tenant_id: row.tenant_id,

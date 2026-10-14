@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { X, PlusCircle, CheckCircle2, AlertCircle, Send, Car, RefreshCw, Database, KeyRound, ShieldCheck, Calculator, ArrowRight, Sparkles } from 'lucide-react';
-import { Button, Input } from '../ui';
+import {
+  X,
+  PlusCircle,
+  CheckCircle2,
+  AlertCircle,
+  Send,
+  Car,
+  RefreshCw,
+  Database,
+  KeyRound,
+  ShieldCheck,
+  Calculator,
+  ArrowRight,
+  Sparkles,
+  Phone,
+  Coins
+} from 'lucide-react';
+import { Button } from '../ui';
 import ApiService from '../../services/api';
 
 export const EarnPointsModal = ({
@@ -16,7 +32,7 @@ export const EarnPointsModal = ({
   const [otpDebug, setOtpDebug] = useState('');
   const [otpFeedback, setOtpFeedback] = useState('');
 
-  const [category, setCategory] = useState('service'); // 'service' | 'sale' | 'accessory' | 'bodyshop'
+  const [category, setCategory] = useState('service'); // 'service' | 'sale' | 'accessories' | 'bodyshop'
   const [amount, setAmount] = useState('');
   const [jobCardNumber, setJobCardNumber] = useState('');
   const [branchId, setBranchId] = useState(branches[0]?.id || 1);
@@ -66,10 +82,12 @@ export const EarnPointsModal = ({
   const numAmount = parseFloat(amount || '0');
   const numDiscount = parseFloat(discountAmount || '0');
   const netAmount = category === 'sale' ? Math.max(0, numAmount - numDiscount) : numAmount;
-  const currentPoints = customer?.total_points ?? customer?.points_balance ?? 0;
-  
-  // Dynamic preview earning calculation (1 pt per ₹100 net ex-showroom / bill)
-  const previewEarnedPoints = netAmount > 0 ? Math.floor(netAmount / 100) : 0;
+  const currentPoints = Math.max(0, customer?.total_points ?? customer?.points_balance ?? 0);
+
+  // Dynamic preview earning calculation based on category (Service 4%, Accessory 2%, Bodyshop 3%, Sale 1%)
+  const rateMultiplier =
+    category === 'service' ? 4 : category === 'accessories' ? 2 : category === 'bodyshop' ? 3 : 1;
+  const previewEarnedPoints = netAmount > 0 ? Math.floor((netAmount / 100) * rateMultiplier) : 0;
   const previewNewBalance = currentPoints + previewEarnedPoints;
 
   // Step 1: Request OTP from backend
@@ -86,7 +104,7 @@ export const EarnPointsModal = ({
       const code = res.data?.debug_otp || res.data?.dummy_otp || res.debug_otp || res.dummy_otp || '123456';
       setOtpFeedback(`OTP generated (Test Mode Code: ${code})`);
       setOtpDebug(code);
-      setOtp(code); // Auto-fill in test mode for convenience
+      setOtp(code);
       setStep(2);
     } catch (err) {
       setOtpFeedback('Proceeding in Test Mode with code 123456.');
@@ -185,12 +203,19 @@ export const EarnPointsModal = ({
       if (isInhouse) {
         let pts = 0;
         let desc = '';
-        if (category === 'inhouse_finance') { pts = 100; desc = 'In-house Finance Bonus'; }
-        if (category === 'inhouse_insurance') { pts = 50; desc = 'In-house Insurance Bonus'; }
-        if (category === 'inhouse_exchange') { pts = 200; desc = 'In-house Exchange Bonus'; }
+        if (category === 'inhouse_finance') {
+          pts = 100;
+          desc = 'In-house Finance Bonus';
+        }
+        if (category === 'inhouse_insurance') {
+          pts = 50;
+          desc = 'In-house Insurance Bonus';
+        }
+        if (category === 'inhouse_exchange') {
+          pts = 200;
+          desc = 'In-house Exchange Bonus';
+        }
 
-        // Optionally, verify OTP here if needed for inhouse points, or we can just pass it if the backend requires it.
-        // Actually, the new endpoint doesn't check OTP, but we verified it in UI.
         const payload = {
           customer_id: customer.customer_id,
           vehicle_id: selectedVehicleId ? parseInt(selectedVehicleId, 10) : undefined,
@@ -218,7 +243,7 @@ export const EarnPointsModal = ({
         };
         res = await ApiService.syncTransaction(payload);
       }
-      
+
       setSuccess(res);
       setStep(3);
       if (onSuccess) onSuccess(res);
@@ -252,41 +277,46 @@ export const EarnPointsModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-      <div className="w-full max-w-xl bg-white border-2 border-surface-border rounded-xl shadow-2xl max-h-[92vh] overflow-y-auto">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <PlusCircle className="w-6 h-6 text-emerald-400" />
-            <h3 className="text-xl font-bold tracking-tight">Record Service & Get Points</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fadeIn">
+      <div className="w-full max-w-xl bg-white border border-slate-200 rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
+
+        {/* Clean Light Header */}
+        <div className="flex items-center justify-between px-7 py-5 bg-white border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200/80 flex items-center justify-center text-indigo-600">
+              <PlusCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight">Record Service & Earn Points</h3>
+              <p className="text-xs font-semibold text-slate-500">Transaction Points Verification</p>
+            </div>
           </div>
           <button
             type="button"
             onClick={handleClose}
             disabled={isLoading || sending}
-            className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Customer Context Summary */}
-        <div className="px-6 py-3.5 bg-slate-50 border-b border-surface-border flex items-center justify-between">
+        {/* Customer Context Summary Banner */}
+        <div className="px-7 py-4 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <div className="text-xs font-bold text-ink-secondary uppercase tracking-wider">Customer Profile</div>
-            <div className="text-base font-extrabold text-ink-primary flex items-center gap-2">
+            <div className="text-xs font-black text-slate-400 uppercase tracking-wider">Customer Profile</div>
+            <div className="text-base font-black text-slate-900 flex items-center gap-2 mt-0.5">
               <span>{customer.name || customer.customer_name}</span>
               {customerPhone && (
-                <span className="text-xs font-mono font-medium text-slate-500 bg-white px-2 py-0.5 border border-slate-200 rounded">
+                <span className="text-xs font-mono font-bold text-slate-600 bg-white px-2.5 py-0.5 border border-slate-200 rounded-lg">
                   +91 {customerPhone}
                 </span>
               )}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-xs font-bold text-ink-secondary uppercase tracking-wider">Current Points</div>
-            <div className="text-lg font-black text-emerald-600 font-mono">
+            <div className="text-xs font-black text-slate-400 uppercase tracking-wider">Current Balance</div>
+            <div className="text-lg font-black text-indigo-600 font-mono mt-0.5">
               {currentPoints.toLocaleString()} PTS
             </div>
           </div>
@@ -294,45 +324,45 @@ export const EarnPointsModal = ({
 
         {/* Step 1: Request OTP Screen */}
         {step === 1 && (
-          <div className="p-6 space-y-6">
-            <div className="p-5 bg-blue-50 border-2 border-blue-200 rounded-xl text-blue-900 space-y-3">
-              <div className="flex items-center gap-2 font-bold text-base text-blue-900">
-                <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                <span>Step 1: Send OTP to Customer</span>
+          <div className="p-7 space-y-6">
+            <div className="p-6 bg-indigo-50/60 border border-indigo-200/80 rounded-2xl text-indigo-950 space-y-4">
+              <div className="flex items-center gap-2.5 font-bold text-base text-indigo-900">
+                <ShieldCheck className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                <span>Step 1: Security WhatsApp OTP</span>
               </div>
-              <p className="text-sm text-blue-800 leading-relaxed">
-                Before crediting service points, a 6-digit WhatsApp OTP must be sent to the customer’s phone for verification.
+              <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                Before crediting transaction points, a 6-digit WhatsApp OTP is sent to the customer’s verified mobile number.
               </p>
               {customerPhone ? (
-                <div className="p-3 bg-white border border-blue-200 rounded-lg font-mono font-bold text-base text-slate-900 flex items-center justify-between">
-                  <span>Registered Mobile:</span>
-                  <span className="text-blue-700">+91 {customerPhone}</span>
+                <div className="p-4 bg-white border border-indigo-200 rounded-xl font-mono font-bold text-base text-slate-900 flex items-center justify-between shadow-2xs">
+                  <span className="text-slate-500 text-xs font-bold uppercase">Registered Mobile:</span>
+                  <span className="text-indigo-600 text-base font-black">+91 {customerPhone}</span>
                 </div>
               ) : (
-                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-sm text-amber-900 font-semibold">
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-sm text-amber-900 font-semibold">
                   No mobile number on file. OTP will be sent to primary account contact.
                 </div>
               )}
             </div>
 
             {error && (
-              <div className="p-4 bg-action-danger-light border border-red-300 rounded-lg flex items-start gap-2.5 text-action-danger font-bold text-base">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-700 font-bold text-sm">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-rose-600" />
                 <span>{error}</span>
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-3 pt-2 border-t border-surface-border">
-              <Button variant="outline" size="lg" onClick={onClose}>
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <Button variant="outline" size="md" onClick={onClose}>
                 Cancel
               </Button>
               <Button
-                variant="primary"
-                size="lg"
+                variant="dark"
+                size="md"
                 onClick={handleRequestOtp}
                 disabled={isRequestingOtp}
                 icon={isRequestingOtp ? RefreshCw : Send}
-                className="whitespace-nowrap font-bold"
+                className="whitespace-nowrap font-black rounded-full px-6"
               >
                 {isRequestingOtp ? 'Sending OTP...' : 'Send WhatsApp OTP to Customer'}
               </Button>
@@ -340,130 +370,76 @@ export const EarnPointsModal = ({
           </div>
         )}
 
-        {/* Step 2: Form & Live Point Auto-Calculations */}
+        {/* Step 2: Form & Live Calculation Preview */}
         {step === 2 && (
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="p-7 space-y-6">
             {error && (
-              <div className="p-4 bg-action-danger-light border border-red-300 rounded-lg flex items-start gap-2.5 text-action-danger font-bold text-base">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-700 font-bold text-sm">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-rose-600" />
                 <span>{error}</span>
               </div>
             )}
 
-            {/* OTP Entry Section */}
-            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3 text-white">
+            {/* OTP Verification Box */}
+            <div className="p-5 bg-indigo-50/50 border border-indigo-200 rounded-2xl space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-bold flex items-center gap-2 text-slate-200">
-                  <KeyRound className="w-4 h-4 text-emerald-400" />
-                  Enter 6-Digit WhatsApp OTP <span className="text-red-400">*</span>
+                <label className="text-sm font-bold flex items-center gap-2 text-indigo-950">
+                  <KeyRound className="w-4 h-4 text-indigo-600" />
+                  Enter 6-Digit WhatsApp OTP <span className="text-rose-500">*</span>
                 </label>
                 <button
                   type="button"
                   onClick={handleResendOtp}
                   disabled={isRequestingOtp}
-                  className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 underline"
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline"
                 >
                   {isRequestingOtp ? 'Sending...' : 'Resend OTP'}
                 </button>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Input
-                  placeholder="e.g. 849201"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  maxLength={6}
-                  required
-                  disabled={isLoading}
-                  className="bg-white text-slate-900 font-mono font-bold text-lg tracking-widest text-center h-12"
-                />
-              </div>
+              <input
+                id="earn-otp"
+                type="text"
+                maxLength={6}
+                placeholder="123456"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="w-full h-13 text-center text-2xl font-mono font-black tracking-widest border border-indigo-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+              />
 
-              {otpFeedback && (
-                <div className="text-xs text-emerald-300 font-medium flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400" />
-                  <span>{otpFeedback}</span>
-                </div>
-              )}
-
-              <div className="text-xs font-mono font-bold bg-amber-500/20 border border-amber-400/40 text-amber-300 p-2 rounded flex items-center justify-between">
-                <span>💡 Test OTP: <strong className="text-amber-200 tracking-widest">{otpDebug || '123456'}</strong></span>
+              <div className="flex items-center justify-between text-xs font-bold text-indigo-900 pt-1">
+                <span>💡 Test OTP: <strong>{otpDebug || '123456'}</strong></span>
                 <button
                   type="button"
                   onClick={() => setOtp(otpDebug || '123456')}
-                  className="px-2.5 py-0.5 bg-amber-400 text-slate-900 rounded font-bold hover:bg-amber-300 transition-colors"
+                  className="px-2.5 py-1 bg-indigo-100 hover:bg-indigo-200 rounded-lg text-indigo-900 transition-colors"
                 >
-                  Use Code
+                  Auto-Fill
                 </button>
               </div>
             </div>
 
-            {/* Vehicle Selector */}
+            {/* Spend Category Selection */}
             <div>
-              <label className="text-base font-bold text-ink-primary block mb-2">
-                Vehicle <span className="text-action-danger">*</span>
-              </label>
-              {hasVehicles ? (
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {vehicles.map((v) => {
-                    const isSelected = String(selectedVehicleId || '') === String(v.id);
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => setSelectedVehicleId(v.id)}
-                        disabled={isLoading}
-                        className={`w-full flex items-center gap-3 p-3 border-2 rounded-lg text-left transition-colors ${
-                          isSelected
-                            ? 'border-action-primary bg-action-primary-light/40'
-                            : 'border-surface-border bg-white hover:border-slate-400 hover:bg-slate-50'
-                        }`}
-                      >
-                        <Car className={`w-5 h-5 flex-shrink-0 ${isSelected ? 'text-action-primary' : 'text-ink-muted'}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-mono font-bold text-ink-primary text-base">
-                            {v.registration_number || v.chassis_no || v.vin}
-                          </div>
-                          <div className="text-sm font-medium text-ink-secondary">
-                            {v.brand_name || 'Vehicle'}{v.model ? ` · ${v.model}` : ''}
-                          </div>
-                        </div>
-                        {isSelected && <CheckCircle2 className="w-5 h-5 text-action-primary flex-shrink-0" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-3 bg-amber-50 border border-amber-300 rounded text-xs font-semibold text-amber-900">
-                  No vehicle registered for this customer. Points will be recorded directly to customer profile.
-                </div>
-              )}
-            </div>
-
-            {/* Category Dropdown */}
-            <div>
-              <label className="text-base font-bold text-ink-primary block mb-2">
-                Transaction Category <span className="text-action-danger">*</span>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">
+                Spend Category <span className="text-rose-500">*</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { id: 'service', label: 'Service' },
-                  { id: 'sale', label: 'Sale' },
-                  { id: 'accessory', label: 'Accessory' },
-                  { id: 'bodyshop', label: 'Bodyshop' },
-                  { id: 'inhouse_finance', label: 'In-house Finance' },
-                  { id: 'inhouse_insurance', label: 'In-house Insur.' },
-                  { id: 'inhouse_exchange', label: 'In-house Exch.' },
+                  { id: 'service', label: 'Service (4%)' },
+                  { id: 'sale', label: 'Sale (1%)' },
+                  { id: 'accessories', label: 'Accessories (2%)' },
+                  { id: 'bodyshop', label: 'Bodyshop (3%)' },
                 ].map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => setCategory(cat.id)}
-                    disabled={isLoading}
-                    className={`
-                      h-11 px-3 rounded border font-bold text-sm flex items-center justify-center transition-colors
-                      ${category === cat.id ? 'bg-action-primary text-white border-action-primary shadow-sm' : 'bg-white text-ink-primary border-surface-border hover:bg-slate-50'}
-                    `}
+                    className={`h-11 px-3 rounded-xl text-xs font-bold transition-all border ${
+                      category === cat.id
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
                   >
                     {cat.label}
                   </button>
@@ -471,257 +447,197 @@ export const EarnPointsModal = ({
               </div>
             </div>
 
-            {/* Job Card / Reference ID & Auto-Fetch DMS Button */}
-            <div className="space-y-2">
-              <label className="text-base font-bold text-ink-primary block">
-                Job Card Number / Invoice Ref <span className="text-action-danger">*</span>
+            {/* In-House Bonus Pills */}
+            <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2">
+                Special In-House Schemes
               </label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="e.g. JC-2026-8801"
-                  value={jobCardNumber}
-                  onChange={(e) => setJobCardNumber(e.target.value)}
-                  disabled={isLoading}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleAutoFetchDms}
-                  disabled={isFetchingDms || !jobCardNumber.trim()}
-                  icon={isFetchingDms ? RefreshCw : Database}
-                  className="h-12 whitespace-nowrap px-4 font-bold"
-                >
-                  {isFetchingDms ? 'Fetching...' : 'Auto-Fetch DMS'}
-                </Button>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'inhouse_exchange', label: 'Exchange (+200)' },
+                  { id: 'inhouse_insurance', label: 'Insurance (+50)' },
+                  { id: 'inhouse_finance', label: 'Finance (+100)' },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setCategory(cat.id)}
+                    className={`h-10 px-2 rounded-xl text-xs font-bold transition-all border ${
+                      category === cat.id
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
               </div>
-              {dmsStatus && (
-                <div className={`p-3 rounded text-sm font-semibold border ${
-                  dmsStatus.type === 'found' ? 'bg-action-success-light border-green-300 text-green-900' : 'bg-slate-100 border-slate-300 text-ink-secondary'
-                }`}>
-                  {dmsStatus.text}
-                </div>
-              )}
             </div>
 
-            {/* Bill Amount / Ex-Showroom & Discounts Inputs */}
-            {!category.startsWith('inhouse_') && (
-              <div className="space-y-3">
-                <Input
-                  label={category === 'sale' ? 'Gross Ex-Showroom Price (₹)' : 'Total Bill Amount (₹)'}
-                  type="number"
-                  placeholder="e.g. 500000"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-
-                {category === 'sale' && (
-                  <Input
-                    label="Dealer Cash Discount / OEM Offers / EMPS Deductions (₹)"
-                    type="number"
-                    placeholder="e.g. 25000"
-                    value={discountAmount}
-                    onChange={(e) => setDiscountAmount(e.target.value)}
-                    disabled={isLoading}
-                  />
-                )}
+            {/* Vehicle Selection */}
+            {hasVehicles && (
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                  Linked Vehicle <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={selectedVehicleId}
+                  onChange={(e) => setSelectedVehicleId(e.target.value)}
+                  className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white text-base font-semibold text-slate-800 focus:outline-none focus:border-indigo-600"
+                >
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.registration_number || v.vin} — {v.brand_name || 'Vehicle'} {v.model ? `(${v.model})` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 
-            {/* Branch Selector */}
+            {/* Reference ID / Job Card Input */}
             <div>
-              <label className="text-base font-bold text-ink-primary block mb-1.5">Branch Location</label>
-              <select
-                value={branchId}
-                onChange={(e) => setBranchId(e.target.value)}
-                disabled={isLoading}
-                className="w-full h-12 px-4 bg-white border border-surface-border rounded text-base font-medium focus:border-action-primary focus:outline-none disabled:bg-slate-100 disabled:text-ink-muted"
-              >
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* LIVE AUTO-CALCULATED DETAILS CARD */}
-            <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-xl space-y-3">
-              <div className="flex items-center gap-2 text-emerald-900 font-extrabold text-base border-b border-emerald-200 pb-2">
-                <Calculator className="w-5 h-5 text-emerald-700" />
-                <span>Live Auto-Calculated Details</span>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                  Job Card / Invoice No <span className="text-rose-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAutoFetchDms}
+                  disabled={isFetchingDms}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                >
+                  <Database className="w-3.5 h-3.5" />
+                  {isFetchingDms ? 'Fetching DMS...' : 'Auto-Fetch DMS'}
+                </button>
               </div>
-
-              {!category.startsWith('inhouse_') ? (
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  {category === 'sale' ? (
-                    <>
-                      <div className="bg-white p-3 rounded-lg border border-emerald-200">
-                        <div className="text-xs font-semibold text-emerald-800">Gross Ex-Showroom</div>
-                        <div className="text-base font-bold text-slate-800 font-mono">
-                          ₹{numAmount > 0 ? numAmount.toLocaleString('en-IN') : '0'}
-                        </div>
-                      </div>
-
-                      <div className="bg-white p-3 rounded-lg border border-rose-200 bg-rose-50/40">
-                        <div className="text-xs font-semibold text-rose-800">Offers &amp; Discounts</div>
-                        <div className="text-base font-bold text-rose-700 font-mono">
-                          −₹{numDiscount > 0 ? numDiscount.toLocaleString('en-IN') : '0'}
-                        </div>
-                      </div>
-
-                      <div className="bg-white p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50/60 col-span-2">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-xs font-extrabold text-emerald-900 uppercase">
-                              Net Ex-Showroom (After Discount)
-                            </div>
-                            <div className="text-lg font-black text-emerald-800 font-mono">
-                              ₹{netAmount > 0 ? netAmount.toLocaleString('en-IN') : '0'}
-                            </div>
-                          </div>
-                          <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
-                            Rate: 1 PT per ₹100
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="bg-white p-3 rounded-lg border border-emerald-200">
-                        <div className="text-xs font-semibold text-emerald-800">Bill Amount</div>
-                        <div className="text-lg font-black text-slate-900 font-mono">
-                          ₹{numAmount > 0 ? numAmount.toLocaleString('en-IN') : '0'}
-                        </div>
-                      </div>
-
-                      <div className="bg-white p-3 rounded-lg border border-emerald-200">
-                        <div className="text-xs font-semibold text-emerald-800">Earning Rate</div>
-                        <div className="text-sm font-bold text-slate-700">
-                          1 PT per ₹100 (1%)
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  <div className="bg-white p-3 rounded-lg border border-emerald-200">
-                    <div className="text-xs font-semibold text-emerald-800">Points to Award</div>
-                    <div className="text-lg font-black text-emerald-700 font-mono">
-                      +{previewEarnedPoints.toLocaleString('en-IN')} PTS
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-3 rounded-lg border border-emerald-200">
-                    <div className="text-xs font-semibold text-emerald-800">Updated Balance</div>
-                    <div className="text-lg font-black text-emerald-700 font-mono flex items-center gap-1">
-                      {previewNewBalance.toLocaleString('en-IN')} <Sparkles className="w-4 h-4" />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-white p-3 rounded-lg border border-emerald-200">
-                    <div className="text-xs font-semibold text-emerald-800">Bonus Rate</div>
-                    <div className="text-sm font-bold text-slate-700">
-                      Fixed Points Award
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-3 rounded-lg border border-emerald-200">
-                    <div className="text-xs font-semibold text-emerald-800">New Bonus Points Earned</div>
-                    <div className="text-lg font-black text-emerald-700 font-mono">
-                      +{category === 'inhouse_finance' ? '100' : category === 'inhouse_insurance' ? '50' : '200'} PTS
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-3 rounded-lg border border-emerald-200 col-span-2">
-                    <div className="text-xs font-semibold text-emerald-800">Updated Balance</div>
-                    <div className="text-lg font-black text-emerald-700 font-mono flex items-center gap-1">
-                      {(currentPoints + (category === 'inhouse_finance' ? 100 : category === 'inhouse_insurance' ? 50 : 200)).toLocaleString()} <Sparkles className="w-4 h-4" />
-                    </div>
-                  </div>
-                </div>
+              <input
+                type="text"
+                placeholder="e.g. JC-2024-99881"
+                value={jobCardNumber}
+                onChange={(e) => setJobCardNumber(e.target.value)}
+                className="w-full h-12 px-4 font-mono font-bold text-base rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-indigo-600"
+              />
+              {dmsStatus && (
+                <p
+                  className={`text-xs font-bold mt-1.5 ${
+                    dmsStatus.type === 'found' ? 'text-emerald-600' : 'text-slate-500'
+                  }`}
+                >
+                  {dmsStatus.text}
+                </p>
               )}
             </div>
 
+            {/* Bill Amount Input */}
+            {!category.startsWith('inhouse_') && (
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                  Bill Amount (₹) <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 5400"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="w-full h-13 pl-9 pr-4 font-mono font-black text-xl rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-indigo-600"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Live Calculation Hero Card (Image 1 Frosted Style) */}
+            {numAmount > 0 && !category.startsWith('inhouse_') && (
+              <div className="hero-card-purple p-5 space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold uppercase text-purple-200">
+                  <span>Live Points Earning Calculation</span>
+                  <span className="bg-white/20 px-2 py-0.5 rounded-full">{rateMultiplier}% Multiplier</span>
+                </div>
+                <div className="flex items-baseline justify-between pt-1">
+                  <div>
+                    <div className="text-2xl font-black text-white">
+                      +{previewEarnedPoints.toLocaleString()} <span className="text-sm font-bold text-purple-200">PTS</span>
+                    </div>
+                    <div className="text-xs text-purple-200 font-medium">New Total: {previewNewBalance.toLocaleString()} PTS</div>
+                  </div>
+                  <div className="text-right text-xs font-bold text-purple-100">
+                    ≈ ₹{Math.floor(previewEarnedPoints / 4)} Cashback
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">
-              <Button variant="outline" size="lg" onClick={() => setStep(1)} disabled={isLoading}>
+            <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+              <Button variant="outline" size="md" onClick={() => setStep(1)}>
                 Back
               </Button>
               <Button
-                type="submit"
                 variant="primary"
                 size="lg"
-                disabled={isLoading || !otp.trim() || !jobCardNumber.trim() || !numAmount}
-                className="font-bold whitespace-nowrap"
+                type="submit"
+                disabled={isLoading}
+                icon={isLoading ? RefreshCw : Sparkles}
+                className="whitespace-nowrap font-black px-8"
               >
-                {isLoading ? 'Verifying OTP & Syncing...' : 'Verify OTP & Credit Points'}
+                {isLoading ? 'Verifying & Crediting...' : 'Confirm & Credit Points'}
               </Button>
             </div>
           </form>
         )}
 
-        {/* Step 3: Success Confirmation View */}
+        {/* Step 3: Success Screen */}
         {step === 3 && (
-          <div className="p-6 space-y-6">
-            <div className="p-5 bg-emerald-50 border-2 border-emerald-400 rounded-xl space-y-3 text-emerald-950">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600 flex-shrink-0" />
-                <div>
-                  <div className="font-black text-xl text-emerald-900">
-                    +{success?.ledger_entry?.points?.toLocaleString() || previewEarnedPoints.toLocaleString()} Points Credited Successfully!
-                  </div>
-                  <div className="text-sm font-semibold text-emerald-800">
-                    OTP Verified · Transaction Sync Completed
-                  </div>
-                </div>
+          <div className="p-8 text-center space-y-6">
+            <div className="w-16 h-16 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+
+            <div>
+              <h4 className="text-2xl font-black text-slate-900 tracking-tight">Points Credited Successfully!</h4>
+              <p className="text-sm text-slate-500 mt-1">Transaction recorded with verified customer OTP.</p>
+            </div>
+
+            <div className="card-white-glow p-5 max-w-sm mx-auto space-y-2 bg-slate-50/70 border border-slate-200">
+              <div className="text-xs font-black uppercase text-slate-400">Total Points Awarded</div>
+              <div className="text-3xl font-black text-emerald-600 font-mono">
+                +{success?.ledger_entry?.points || previewEarnedPoints} PTS
+              </div>
+              <div className="text-xs font-bold text-slate-600">
+                New Available Balance: {previewNewBalance.toLocaleString()} PTS
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Transaction Summary</div>
-              <div className="flex items-center justify-between text-base font-semibold text-slate-800">
-                <span>Job Card / Ref ID:</span>
-                <span className="font-mono font-bold text-slate-900">{jobCardNumber}</span>
-              </div>
-              <div className="flex items-center justify-between text-base font-semibold text-slate-800">
-                <span>Bill Amount Paid:</span>
-                <span className="font-mono font-bold text-slate-900">₹{numAmount.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between text-base font-bold text-slate-900 pt-2 border-t border-slate-200">
-                <span>Updated Final Customer Balance:</span>
-                <span className="font-mono text-xl text-emerald-600">
-                  {(currentPoints + (success?.ledger_entry?.points || previewEarnedPoints)).toLocaleString()} PTS
-                </span>
-              </div>
-            </div>
-
-            {sendFeedback.type && (
-              <div className={`
-                p-3 rounded-lg flex items-start gap-2.5 font-bold text-sm border
-                ${sendFeedback.type === 'success' ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-red-50 border-red-300 text-red-900'}
-              `}>
-                {sendFeedback.type === 'success'
-                  ? <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5 text-emerald-600" />
-                  : <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-600" />}
-                <span>{sendFeedback.text}</span>
+            {sendFeedback.text && (
+              <div
+                className={`p-3 rounded-xl text-xs font-bold ${
+                  sendFeedback.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                }`}
+              >
+                {sendFeedback.text}
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-surface-border">
-              <Button variant="outline" size="lg" onClick={handleClose} disabled={sending}>
-                Done
-              </Button>
-              <Button variant="primary" size="lg" icon={Send} onClick={handleSendNow} disabled={sending} className="whitespace-nowrap font-bold">
+            <div className="flex items-center justify-center gap-3 pt-4">
+              <Button
+                variant="outline"
+                size="md"
+                onClick={handleSendNow}
+                disabled={sending}
+                icon={Send}
+              >
                 {sending ? 'Sending...' : 'Send WhatsApp Confirmation'}
+              </Button>
+              <Button variant="dark" size="md" onClick={handleClose}>
+                Done & Return
               </Button>
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

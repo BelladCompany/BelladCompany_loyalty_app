@@ -6,10 +6,36 @@ class PointsService {
   /**
    * Calculates points using exact integer arithmetic and configurable rates from point_rules table
    */
-  static async calculatePoints(type, amount, tenantId, client = pool) {
+  static async calculatePoints(type, amount, tenantId, client = pool, options = {}) {
     const category = (type || 'sale').toLowerCase();
     
-    // Dynamically check whether point_rules table has rate_type or rule_type column
+    // Check if dynamic rule_versions table exists
+    const hasRuleVersionsRes = await client.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_name = 'rule_versions';`
+    );
+    
+    if (hasRuleVersionsRes.rows.length > 0) {
+      try {
+        const RuleEngineService = require('./ruleEngine.service');
+        const calcRes = await RuleEngineService.calculatePoints({
+          tenant_id: tenantId,
+          category,
+          amount,
+          brand_id: options.brand_id,
+          branch_id: options.branch_id,
+          vehicle_type: options.vehicle_type,
+          model_id: options.model_id,
+          transaction_type: options.transaction_type,
+          invoice_data: options.invoice_data,
+          client,
+        });
+        return calcRes.points;
+      } catch (err) {
+        console.warn(`[PointsService] Dynamic rule resolution fallback triggered: ${err.message}`);
+      }
+    }
+
+    // Standard legacy fallback
     const colRes = await client.query(
       `SELECT column_name FROM information_schema.columns WHERE table_name = 'point_rules';`
     );
@@ -24,7 +50,6 @@ class PointsService {
     let num = 1n;
     let den = 100n;
 
-    // Standard fallback defaults if rule not in DB yet
     const defaultRatios = {
       sale: { num: 1n, den: 100n },
       service: { num: 4n, den: 100n },
@@ -53,7 +78,6 @@ class PointsService {
     }
 
     const amt = BigInt(amount);
-    // Exact integer math (never floating point)
     const points = (amt * num) / den;
 
     return Number(points);
@@ -74,6 +98,7 @@ class PointsService {
     description,
     created_by,
     tenant_id,
+    idempotency_key,
   }) {
     const activeCategory = (category || type || 'sale').toLowerCase();
     const activeType = type || (activeCategory === 'sale' ? 'sale' : 'service');
@@ -81,6 +106,31 @@ class PointsService {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+
+      // 0. Idempotency & Deduplication Check (LOOP-09 Fix)
+      if (idempotency_key || reference_id) {
+        const checkRes = await client.query(
+          `SELECT entry_id AS id, customer_id, points, created_at
+           FROM points_ledger
+           WHERE tenant_id = $1 AND (
+             (idempotency_key IS NOT NULL AND idempotency_key = $2)
+             OR (reference_id IS NOT NULL AND reference_id = $3 AND transaction_type = $4)
+           )
+           LIMIT 1;`,
+          [tenant_id, idempotency_key || null, reference_id || null, activeType]
+        );
+
+        if (checkRes.rows.length > 0) {
+          await client.query('ROLLBACK');
+          console.log(`[Points Earning Deduplicated] Reference '${reference_id}' already processed.`);
+          return {
+            status: 'deduplicated',
+            message: `Transaction '${reference_id}' was previously processed.`,
+            ledger_entry: checkRes.rows[0],
+            tier_snapshot: null,
+          };
+        }
+      }
 
       // 1. Verify customer exists and get before-balance snapshot
       const custRes = await client.query(
@@ -93,30 +143,80 @@ class PointsService {
         throw { statusCode: 404, message: `Customer '${customer_id}' not found in tenant '${tenant_id}'` };
       }
 
-      // current_balance/lifetime_points are no longer cached on customer_tier_snapshot -
-      // compute the "before" snapshot live from points_ledger instead.
+      // current_balance/lifetime_points are computed live from points_ledger
       const beforeAggRes = await client.query(
         `SELECT 
      COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS lifetime_points,
-     COALESCE(SUM(points), 0) AS current_balance
+     GREATEST(0, COALESCE(SUM(points), 0)) AS current_balance
    FROM points_ledger
    WHERE customer_id = $1 AND tenant_id = $2;`,
         [customer_id, tenant_id]
       );
-      const balanceBefore = parseInt(beforeAggRes.rows[0].current_balance, 10);
-      const lifetimeBefore = parseInt(beforeAggRes.rows[0].lifetime_points, 10);
+      const balanceBefore = Math.max(0, parseInt(beforeAggRes.rows[0].current_balance, 10));
+      const lifetimeBefore = Math.max(0, parseInt(beforeAggRes.rows[0].lifetime_points, 10));
 
       // 2. Verify branch exists
       const branchRes = await client.query(
-        `SELECT branch_id AS id, branch_name AS name FROM branches WHERE branch_id = $1 AND tenant_id = $2;`,
+        `SELECT id, name FROM branches WHERE (id::text = $1::text OR code = $1::text) AND tenant_id = $2;`,
         [branch_id, tenant_id]
       );
       if (branchRes.rows.length === 0) {
         throw { statusCode: 404, message: `Branch ID '${branch_id}' not found in tenant '${tenant_id}'` };
       }
 
-      // 3. Calculate points using configurable point_rules with exact integer math
-      const earnedPoints = await this.calculatePoints(activeCategory, amount, tenant_id, client);
+      // 3. Resolve Vehicle, Brand & Model details for master rule matching
+      let vehicleType = 'ALL';
+      let brandName = 'ALL';
+      let modelName = 'ALL';
+      let variantName = 'ALL';
+
+      if (vehicle_id) {
+        const vInfoRes = await client.query(
+          `SELECT v.vehicle_type, v.model, v.variant, b.name AS brand_name
+           FROM vehicles v
+           LEFT JOIN brands b ON b.id = v.brand_id
+           WHERE v.vehicle_id = $1 AND v.tenant_id = $2;`,
+          [vehicle_id, tenant_id]
+        );
+        if (vInfoRes.rows.length > 0) {
+          const vRow = vInfoRes.rows[0];
+          vehicleType = vRow.vehicle_type || 'ALL';
+          brandName = vRow.brand_name || 'ALL';
+          modelName = vRow.model || 'ALL';
+          variantName = vRow.variant || 'ALL';
+        }
+      }
+
+      // Check Master Policy Engine (AppSheet Brain) for dynamic Director rules
+      const MasterRuleEngineService = require('./masterRuleEngine.service');
+      const matchedMasterRule = await MasterRuleEngineService.resolveRule({
+        tenant_id,
+        scheme_type: null,
+        spend_type: activeCategory === 'sale' ? 'sale' : 'service',
+        vehicle_type: vehicleType,
+        brand_name: brandName,
+        model_name: modelName,
+        variant_name: variantName,
+        branch_name: branchRes.rows[0]?.name || 'ALL',
+        priority_tier: 'ALL',
+        spend_amount: amount,
+        transaction_date: new Date(),
+        client,
+      });
+
+      let earnedPoints;
+      let appliedRuleNotice = null;
+
+      if (matchedMasterRule) {
+        const outcome = MasterRuleEngineService.calculateOutcome({
+          invoice_amount: amount,
+          rule: matchedMasterRule,
+        });
+        earnedPoints = outcome.total_points;
+        appliedRuleNotice = `Master Rule: ${matchedMasterRule.rule_name} (${matchedMasterRule.rule_code})`;
+      } else {
+        earnedPoints = await this.calculatePoints(activeCategory, amount, tenant_id, client);
+      }
 
       // 4. Insert immutable record into points_ledger
       const ledgerTypeMap = {
@@ -127,56 +227,41 @@ class PointsService {
         referral: 'earn_referral',
       };
       const ledgerType = ledgerTypeMap[activeCategory] || ledgerTypeMap[activeType] || 'earn_sale';
-
-      const sourceRef = [reference_id, description].filter(Boolean).join(' | ') || `${activeCategory.toUpperCase()} transaction earning`;
+      const sourceRef = [reference_id, description, appliedRuleNotice].filter(Boolean).join(' | ') || `${activeCategory.toUpperCase()} transaction earning`;
       
-      // Check if transaction_category column exists in points_ledger
-      const hasCategoryColRes = await client.query(
-        `SELECT 1 FROM information_schema.columns WHERE table_name = 'points_ledger' AND column_name = 'transaction_category';`
+      const colsRes = await client.query(
+        `SELECT column_name FROM information_schema.columns WHERE table_name = 'points_ledger';`
       );
-      const hasCategoryCol = hasCategoryColRes.rows.length > 0;
+      const cols = new Set(colsRes.rows.map(r => r.column_name));
 
-      let ledgerRes;
+      const typeCol = cols.has('type') ? 'type' : 'transaction_type';
+      const refCol = cols.has('source_ref') ? 'source_ref' : 'reference_id';
+      const actorCol = cols.has('cashier_id') ? 'cashier_id' : 'created_by';
+      const hasCategoryCol = cols.has('transaction_category');
+      const hasIdempotencyCol = cols.has('idempotency_key');
+      const hasRateSnapshotCol = cols.has('redemption_rate_snapshot');
+
+      let insertCols = ['customer_id', 'vehicle_id', 'branch_id', typeCol, 'points', refCol, actorCol, 'tenant_id'];
+      let insertVals = [customer_id, vehicle_id || null, branch_id, ledgerType, earnedPoints, sourceRef, created_by || null, tenant_id];
+
       if (hasCategoryCol) {
-        ledgerRes = await client.query(
-          `INSERT INTO points_ledger (
-            customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, cashier_id, tenant_id
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          RETURNING entry_id AS id, customer_id, vehicle_id, branch_id, type AS transaction_type, transaction_category, points,
-                    source_ref AS reference_id, cashier_id AS created_by, tenant_id, created_at;`,
-          [
-            customer_id,
-            vehicle_id || null,
-            branch_id,
-            ledgerType,
-            activeCategory,
-            earnedPoints,
-            sourceRef,
-            created_by || null,
-            tenant_id,
-          ]
-        );
-      } else {
-        ledgerRes = await client.query(
-          `INSERT INTO points_ledger (
-            customer_id, vehicle_id, branch_id, type, points, source_ref, cashier_id, tenant_id
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          RETURNING entry_id AS id, customer_id, vehicle_id, branch_id, type AS transaction_type, points,
-                    source_ref AS reference_id, cashier_id AS created_by, tenant_id, created_at;`,
-          [
-            customer_id,
-            vehicle_id || null,
-            branch_id,
-            ledgerType,
-            earnedPoints,
-            sourceRef,
-            created_by || null,
-            tenant_id,
-          ]
-        );
+        insertCols.push('transaction_category');
+        insertVals.push(activeCategory);
       }
+      if (hasIdempotencyCol) {
+        insertCols.push('idempotency_key');
+        insertVals.push(idempotency_key || null);
+      }
+      if (hasRateSnapshotCol) {
+        insertCols.push('redemption_rate_snapshot');
+        insertVals.push(0.2500);
+      }
+
+      const placeholders = insertVals.map((_, i) => `$${i + 1}`).join(', ');
+      const ledgerRes = await client.query(
+        `INSERT INTO points_ledger (${insertCols.join(', ')}) VALUES (${placeholders}) RETURNING *;`,
+        insertVals
+      );
 
       const ledgerEntry = ledgerRes.rows[0];
 
@@ -184,47 +269,26 @@ class PointsService {
       const aggRes = await client.query(
         `SELECT 
            COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS lifetime_points,
-           COALESCE(SUM(points), 0) AS current_balance
+           GREATEST(0, COALESCE(SUM(points), 0)) AS current_balance
          FROM points_ledger
          WHERE customer_id = $1 AND tenant_id = $2;`,
         [customer_id, tenant_id]
       );
 
-      const lifetimePoints = parseInt(aggRes.rows[0].lifetime_points, 10);
-      const currentBalance = parseInt(aggRes.rows[0].current_balance, 10);
+      const lifetimePoints = Math.max(0, parseInt(aggRes.rows[0].lifetime_points, 10));
+      const currentBalance = Math.max(0, parseInt(aggRes.rows[0].current_balance, 10));
 
-      // 6. Recalculate customer tier from tier_rules (lifetime points threshold)
-      // NEW
-      const tierRes = await client.query(
-        `SELECT tier_name
-   FROM tier_rules
-   WHERE tenant_id = $1 AND min_lifetime_points <= $2
-   ORDER BY min_lifetime_points DESC
-   LIMIT 1;`,
-        [tenant_id, lifetimePoints]
-      );
-
-      const tier = tierRes.rows.length > 0
-        ? tierRes.rows[0]
-        : { tier_name: 'Standard' };
-
-      // 7. Store / upsert customer tier snapshot
-      // NEW
-      const snapshotRes = await client.query(
-        `INSERT INTO customer_tier_snapshot (
-     customer_id, current_tier, lifetime_points, tenant_id, updated_at
-   )
-   VALUES ($1, $2, $3, $4, NOW())
-   ON CONFLICT (customer_id) DO UPDATE
-   SET current_tier = EXCLUDED.current_tier,
-       lifetime_points = EXCLUDED.lifetime_points,
-       updated_at = NOW()
-   RETURNING customer_id, current_tier AS tier_name, lifetime_points, updated_at;`,
-        [customer_id, tier.tier_name, lifetimePoints, tenant_id]
-      );
-
-      // current_balance is no longer stored - attach the live-computed value for the API response
-      const tierSnapshot = { ...snapshotRes.rows[0], current_balance: currentBalance };
+      // 6. Recalculate customer tier from TierService (expense & redemption based)
+      const TierService = require('./tier.service');
+      const snapRow = await TierService.updateCustomerTier(customer_id, tenant_id, client);
+      const tierSnapshot = {
+        customer_id: snapRow.customer_id,
+        tier_name: snapRow.current_tier,
+        lifetime_points: snapRow.lifetime_points,
+        total_expense_amount: snapRow.total_expense_amount,
+        updated_at: snapRow.updated_at,
+        current_balance: currentBalance,
+      };
 
       // 8. Log system audit event for points earning
       const actionName = type === 'sale' ? 'points_earn_sale' : (type === 'service' ? 'points_earn_service' : 'points_adjustment');
@@ -308,10 +372,10 @@ class PointsService {
 
     // current_balance is no longer cached - compute it live from points_ledger
     const liveBalanceRes = await pool.query(
-      `SELECT COALESCE(SUM(points), 0) AS current_balance FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
+      `SELECT GREATEST(0, COALESCE(SUM(points), 0)) AS current_balance FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
       [customerId, tenantId]
     );
-    tierSnapshot.current_balance = parseInt(liveBalanceRes.rows[0].current_balance, 10);
+    tierSnapshot.current_balance = Math.max(0, parseInt(liveBalanceRes.rows[0].current_balance, 10));
 
     // tier_multiplier used to come from the tier_rules join - look up benefits_json instead
     const tierInfoRes = await pool.query(
@@ -399,13 +463,13 @@ class PointsService {
       const beforeAggRes = await client.query(
         `SELECT 
            COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS lifetime_points,
-           COALESCE(SUM(points), 0) AS current_balance
+           GREATEST(0, COALESCE(SUM(points), 0)) AS current_balance
          FROM points_ledger
          WHERE customer_id = $1 AND tenant_id = $2;`,
         [customer_id, tenant_id]
       );
-      const balanceBefore = parseInt(beforeAggRes.rows[0].current_balance, 10);
-      const lifetimeBefore = parseInt(beforeAggRes.rows[0].lifetime_points, 10);
+      const balanceBefore = Math.max(0, parseInt(beforeAggRes.rows[0].current_balance, 10));
+      const lifetimeBefore = Math.max(0, parseInt(beforeAggRes.rows[0].lifetime_points, 10));
 
       // 3. Insert record into points_ledger
       const sourceRef = [reference_id, description].filter(Boolean).join(' | ') || 'In-house service bonus points';
@@ -443,30 +507,25 @@ class PointsService {
       const aggRes = await client.query(
         `SELECT 
            COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS lifetime_points,
-           COALESCE(SUM(points), 0) AS current_balance
+           GREATEST(0, COALESCE(SUM(points), 0)) AS current_balance
          FROM points_ledger
          WHERE customer_id = $1 AND tenant_id = $2;`,
         [customer_id, tenant_id]
       );
-      const lifetimePoints = parseInt(aggRes.rows[0].lifetime_points, 10);
-      const currentBalance = parseInt(aggRes.rows[0].current_balance, 10);
+      const lifetimePoints = Math.max(0, parseInt(aggRes.rows[0].lifetime_points, 10));
+      const currentBalance = Math.max(0, parseInt(aggRes.rows[0].current_balance, 10));
 
       // 5. Recalculate customer tier
-      const tierRes = await client.query(
-        `SELECT tier_name FROM tier_rules WHERE tenant_id = $1 AND min_lifetime_points <= $2 ORDER BY min_lifetime_points DESC LIMIT 1;`,
-        [tenant_id, lifetimePoints]
-      );
-      const tierName = tierRes.rows[0]?.tier_name || 'Standard';
-
-      const snapshotRes = await client.query(
-        `INSERT INTO customer_tier_snapshot (customer_id, current_tier, lifetime_points, tenant_id, updated_at)
-         VALUES ($1, $2, $3, $4, NOW())
-         ON CONFLICT (customer_id) DO UPDATE
-         SET current_tier = EXCLUDED.current_tier, lifetime_points = EXCLUDED.lifetime_points, updated_at = NOW()
-         RETURNING customer_id, current_tier AS tier_name, lifetime_points, updated_at;`,
-        [customer_id, tierName, lifetimePoints, tenant_id]
-      );
-      const tierSnapshot = { ...snapshotRes.rows[0], current_balance: currentBalance };
+      const TierService = require('./tier.service');
+      const snapRow = await TierService.updateCustomerTier(customer_id, tenant_id, client);
+      const tierSnapshot = {
+        customer_id: snapRow.customer_id,
+        tier_name: snapRow.current_tier,
+        lifetime_points: snapRow.lifetime_points,
+        total_expense_amount: snapRow.total_expense_amount,
+        updated_at: snapRow.updated_at,
+        current_balance: currentBalance,
+      };
 
       // 6. Log audit event
       await AuditLogService.logEvent({

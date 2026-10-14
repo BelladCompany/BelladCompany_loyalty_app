@@ -6,14 +6,24 @@ const crypto = require('crypto');
  */
 function appsheetAuth(req, res, next) {
   const apiKey = req.headers['x-appsheet-key'];
-  const expectedKey = process.env.APPSHEET_WEBHOOK_KEY || 'appsheet_secret_key_default_2026';
+  const expectedKey = process.env.APPSHEET_WEBHOOK_KEY;
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+
+  if (!expectedKey && process.env.NODE_ENV === 'production') {
+    console.error(`[AppSheet Webhook Auth Error] APPSHEET_WEBHOOK_KEY is not configured in production environment.`);
+    return res.status(500).json({
+      status: 'error',
+      error: 'Webhook authentication unconfigured on server.',
+    });
+  }
+
+  const effectiveExpectedKey = expectedKey || 'appsheet_secret_key_default_2026';
 
   let isValid = false;
 
   if (apiKey && typeof apiKey === 'string') {
     const keyBuffer = Buffer.from(apiKey);
-    const expectedBuffer = Buffer.from(expectedKey);
+    const expectedBuffer = Buffer.from(effectiveExpectedKey);
 
     if (keyBuffer.length === expectedBuffer.length) {
       isValid = crypto.timingSafeEqual(keyBuffer, expectedBuffer);

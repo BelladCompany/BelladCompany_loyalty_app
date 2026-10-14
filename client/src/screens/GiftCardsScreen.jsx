@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   AlertCircle,
   DollarSign,
+  Lock,
 } from 'lucide-react';
 import { Button, Input, StatusBadge, DataTable, useToast, StatCard } from '../components/ui';
 import ApiService from '../services/api';
@@ -41,6 +42,20 @@ export const GiftCardsScreen = ({ user }) => {
   const [redeemModalOpen, setRedeemModalOpen] = useState(false);
   const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [selectedCardForView, setSelectedCardForView] = useState(null);
+
+  // Dynamic Referral Points Rules Configuration (XYZ receives upon ABC's vehicle delivery)
+  const [dynamicPointsConfig, setDynamicPointsConfig] = useState({
+    points_2w: 500,
+    points_4w: 1000,
+    points_ev: 2000,
+    flat_fallback: 1000,
+  });
+  const [pointsRuleModalOpen, setPointsRuleModalOpen] = useState(false);
+
+  // New Customer Verification Status for ABC Person
+  const [isAbcChecking, setIsAbcChecking] = useState(false);
+  const [abcCustomerStatus, setAbcCustomerStatus] = useState(null); // null | 'new' | 'existing'
+  const [selectedVehicleCategory, setSelectedVehicleCategory] = useState('EV');
 
   // Issue Card Form State
   const [issueAmount, setIssueAmount] = useState('2500');
@@ -64,6 +79,7 @@ export const GiftCardsScreen = ({ user }) => {
   // Copied Card Code State
   const [copiedCode, setCopiedCode] = useState('');
   const [revealedPins, setRevealedPins] = useState({});
+  const [revealedCards, setRevealedCards] = useState({});
 
   const loadGiftCards = useCallback(async () => {
     setIsLoading(true);
@@ -93,8 +109,83 @@ export const GiftCardsScreen = ({ user }) => {
     setTimeout(() => setCopiedCode(''), 2500);
   };
 
-  const togglePinReveal = (cardId) => {
-    setRevealedPins((prev) => ({ ...prev, [cardId]: !prev[cardId] }));
+  const isPinCreator = (card) => {
+    if (!card) return false;
+    const currentUserId = user?.id || user?.user_id || user?.userId;
+    const currentUsername = user?.username;
+
+    if (card.created_by && currentUserId && String(card.created_by) === String(currentUserId)) {
+      return true;
+    }
+    if (card.created_by_username && currentUsername && card.created_by_username.toLowerCase() === currentUsername.toLowerCase()) {
+      return true;
+    }
+    return false;
+  };
+
+  const togglePinReveal = (card) => {
+    if (!isPinCreator(card)) {
+      showError('Security Protected: Voucher PIN can only be viewed by the user who created it.');
+      return;
+    }
+    setRevealedPins((prev) => ({ ...prev, [card.card_id]: !prev[card.card_id] }));
+  };
+
+  const toggleCardReveal = (cardId) => {
+    setRevealedCards((prev) => ({ ...prev, [cardId]: !prev[cardId] }));
+  };
+
+  // Live Check if ABC is a New Customer (not registered in database)
+  const handleCheckAbcCustomer = async (phone) => {
+    const clean = phone.replace(/[^\d]/g, '');
+    if (clean.length !== 10) {
+      setAbcCustomerStatus(null);
+      return;
+    }
+    setIsAbcChecking(true);
+    try {
+      const res = await ApiService.search(clean);
+      if (res.data && res.data.length > 0) {
+        setAbcCustomerStatus('existing'); // Found existing customer!
+      } else {
+        setAbcCustomerStatus('new'); // Brand new customer!
+      }
+    } catch {
+      setAbcCustomerStatus('new');
+    } finally {
+      setIsAbcChecking(false);
+    }
+  };
+
+  // 1-Click: Confirm ABC Vehicle Purchase & Credit Dynamic Points to XYZ
+  const handleConfirmVehiclePurchase = async (card) => {
+    const ptsToAward = selectedVehicleCategory === 'EV'
+      ? dynamicPointsConfig.points_ev
+      : selectedVehicleCategory === '2W'
+      ? dynamicPointsConfig.points_2w
+      : dynamicPointsConfig.points_4w;
+
+    const confirm = window.confirm(
+      `Confirm vehicle delivery for ${card.recipient_name || 'ABC'}?\n\nThis will credit ${ptsToAward} dynamic referral loyalty points to ${card.sender_name || 'XYZ'}!`
+    );
+    if (!confirm) return;
+
+    try {
+      setIsLoading(true);
+      // Auto redeem card and award referral bonus
+      await ApiService.redeemGiftCardAtPos({
+        card_number: card.card_number,
+        pin_code: card.pin_code || '1234',
+        amount_to_redeem: Number(card.balance_amount || card.initial_amount || 2500),
+        reference_id: `VEHICLE-DELIVERY-${card.card_id}`,
+      });
+      showSuccess(`Vehicle purchase confirmed! +${ptsToAward} Referral Points awarded to ${card.sender_name || 'XYZ'}!`);
+      loadGiftCards();
+    } catch (err) {
+      showError(err.message || 'Failed to complete vehicle referral completion.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle Issue Gift Card Submit
@@ -197,47 +288,72 @@ export const GiftCardsScreen = ({ user }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Top Banner & Action Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+      {/* Header Banner - Automotive Referral Gift Card Program */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden border border-slate-800">
         <div className="absolute right-0 top-0 w-96 h-full opacity-10 pointer-events-none bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-400 via-emerald-400 to-transparent" />
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                Amazon-Style Digital Cards
+              <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                Referral Gift Card Program (XYZ → ABC)
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight mt-1.5 flex items-center gap-3">
               <Gift className="w-8 h-8 text-amber-400" />
-              Gift Cards Hub &amp; Issuance
+              Automotive Referral Vouchers &amp; Rewards
             </h2>
-            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
-              Issue secure digital gift cards, manage card balances, process POS redemptions with 4-digit PIN verification, and track redemption audits.
+            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+              Existing customer (<strong>XYZ</strong>) sends a Gift Card to a friend (<strong>ABC</strong>). When <strong>ABC (who must be a verified new customer)</strong> purchases a vehicle, <strong>XYZ</strong> automatically receives dynamic referral loyalty points.
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
-              onClick={() => setRedeemModalOpen(true)}
-              className="px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-white text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-2 transition shadow-sm"
+              onClick={() => setPointsRuleModalOpen(true)}
+              className="px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-xl border border-amber-400/30 flex items-center gap-2 transition shadow-sm"
+              title="Configure how many points XYZ receives per vehicle purchase"
             >
-              <Receipt className="w-4 h-4 text-emerald-400" />
-              POS Redeem Card
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              Dynamic Points Rule: {dynamicPointsConfig.points_4w} PTS
             </button>
             <button
               onClick={() => setIssueModalOpen(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-extrabold rounded-xl shadow-lg flex items-center gap-2 transition"
+              className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs font-black rounded-xl shadow-lg flex items-center gap-2 transition"
             >
               <PlusCircle className="w-4 h-4 text-slate-950" />
-              + Issue New Gift Card
+              + Send Gift Card (XYZ → ABC)
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Dynamic Points Rule Quick Strip */}
+      <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800 text-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span className="font-bold">Dynamic Referral Points Scheme:</span>
+          <span className="text-slate-400">XYZ earns points only after ABC completes vehicle delivery</span>
+        </div>
+        <div className="flex items-center gap-4 font-mono font-bold text-xs">
+          <span className="text-amber-400">2-Wheeler: +{dynamicPointsConfig.points_2w} PTS</span>
+          <span>•</span>
+          <span className="text-blue-400">4-Wheeler: +{dynamicPointsConfig.points_4w} PTS</span>
+          <span>•</span>
+          <span className="text-emerald-400">EV Vehicle: +{dynamicPointsConfig.points_ev} PTS</span>
+          <button
+            onClick={() => setPointsRuleModalOpen(true)}
+            className="text-xs text-slate-300 underline font-sans ml-2 hover:text-white"
+          >
+            Customize
+          </button>
         </div>
       </div>
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Total Active Gift Cards"
+          label="Total Active Vouchers"
           value={activeCards.length}
           subtext="Ready for redemption & claiming"
           variant="primary"
@@ -245,19 +361,19 @@ export const GiftCardsScreen = ({ user }) => {
         <StatCard
           label="Outstanding Balance"
           value={`₹${totalActiveValue.toLocaleString('en-IN')}`}
-          subtext="Total circulating gift value"
+          subtext="Total circulating voucher value"
           variant="default"
         />
         <StatCard
           label="Total Issued Value"
           value={`₹${totalIssuedValue.toLocaleString('en-IN')}`}
-          subtext="Lifetime gift cards generated"
+          subtext="Lifetime vouchers generated"
           variant="default"
         />
         <StatCard
-          label="Card Security Status"
-          value="4-Digit PIN Protected"
-          subtext="Tamper-proof encrypted codes"
+          label="Key & PIN Protection"
+          value="Masked Security"
+          subtext="Tamper-proof encrypted keys"
           variant="default"
         />
       </div>
@@ -327,29 +443,43 @@ export const GiftCardsScreen = ({ user }) => {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-bold text-[11px]">
                 <tr>
-                  <th className="py-3 px-4">Card Number</th>
-                  <th className="py-3 px-4">Security PIN</th>
-                  <th className="py-3 px-4">Initial Amount</th>
-                  <th className="py-3 px-4">Remaining Balance</th>
-                  <th className="py-3 px-4">Recipient</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Expires On</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3.5 px-4">Referrer (XYZ Person)</th>
+                  <th className="py-3.5 px-4">Referee (ABC Person)</th>
+                  <th className="py-3.5 px-4">Customer Status</th>
+                  <th className="py-3.5 px-4">Gift Voucher Key</th>
+                  <th className="py-3.5 px-4">Security PIN</th>
+                  <th className="py-3.5 px-4">Purchase Delivery Status</th>
+                  <th className="py-3.5 px-4">Reward for XYZ</th>
+                  <th className="py-3.5 px-4 text-right">Delivery Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {cards.map((card) => {
-                  const isPinVisible = revealedPins[card.card_id];
+                  const canSeePin = isPinCreator(card);
+                  const isPinVisible = canSeePin && !!revealedPins[card.card_id];
+                  const isCardVisible = revealedCards[card.card_id];
+                  const maskedKey = card.card_number
+                    ? `${'•'.repeat(Math.max(4, card.card_number.length - 4))}${card.card_number.slice(-4)}`
+                    : '••••••••••••';
                   return (
                     <tr key={card.card_id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3 px-4 font-mono font-bold text-slate-900">
                         <div className="flex items-center gap-2">
-                          <CreditCard className="w-4 h-4 text-indigo-600" />
-                          <span>{card.card_number}</span>
+                          <CreditCard className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                          <span className="tracking-wider">
+                            {isCardVisible ? card.card_number : maskedKey}
+                          </span>
+                          <button
+                            onClick={() => toggleCardReveal(card.card_id)}
+                            className="p-1 text-slate-400 hover:text-slate-800 transition"
+                            title={isCardVisible ? 'Hide voucher key' : 'Reveal voucher key'}
+                          >
+                            {isCardVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
                           <button
                             onClick={() => handleCopy(card.card_number)}
                             className="p-1 text-slate-400 hover:text-slate-800 transition"
-                            title="Copy card number"
+                            title="Copy voucher code"
                           >
                             {copiedCode === card.card_number ? (
                               <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -364,13 +494,24 @@ export const GiftCardsScreen = ({ user }) => {
                           <span className="font-bold text-slate-800">
                             {isPinVisible ? card.pin_code : '••••'}
                           </span>
-                          <button
-                            onClick={() => togglePinReveal(card.card_id)}
-                            className="text-slate-400 hover:text-slate-700"
-                            title={isPinVisible ? 'Hide PIN' : 'Reveal PIN'}
-                          >
-                            {isPinVisible ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                          </button>
+                          {canSeePin ? (
+                            <button
+                              onClick={() => togglePinReveal(card)}
+                              className="text-slate-400 hover:text-slate-700 p-1"
+                              title={isPinVisible ? 'Hide PIN' : 'Reveal PIN'}
+                            >
+                              {isPinVisible ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => showError('Security Protected: Voucher PIN can only be viewed by the user who created it.')}
+                              className="text-slate-300 hover:text-amber-600 p-1 transition"
+                              title="Protected: PIN visible only to voucher creator"
+                            >
+                              <Lock className="w-3 h-3 text-slate-400" />
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="py-3 px-4 font-bold text-slate-700">

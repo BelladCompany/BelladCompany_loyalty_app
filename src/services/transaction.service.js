@@ -236,8 +236,6 @@ class TransactionService {
         savedTx = insServiceRes.rows[0];
       }
 
-      await client.query('COMMIT');
-
       // If this is a vehicle sale transaction, auto-calculate suggested referral points for any pending referral
       if (isSale) {
         try {
@@ -288,6 +286,9 @@ class TransactionService {
           tenant_id,
         });
       }
+
+      // Commit transaction atomically only after both transaction record AND points earning succeed
+      await client.query('COMMIT');
 
       return {
         status: 'success',

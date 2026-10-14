@@ -36,9 +36,9 @@ router.put('/:customerId', requireRole(['cashier', 'admin']), validate(updateCus
 // Delete customer (Admin only)
 router.delete('/:customerId', requireRole(['admin']), CustomerController.deleteCustomer);
 
-// Customer Phones sub-resource
-router.post('/:customerId/phones', requireRole(['cashier', 'admin']), validate(addPhoneSchema), CustomerController.addPhone);
-router.delete('/:customerId/phones/:phoneId', requireRole(['cashier', 'admin']), CustomerController.removePhone);
+// Customer Phones sub-resource (Admin only - Cashiers MUST submit via /api/customers/:id/kyc-change)
+router.post('/:customerId/phones', requireRole(['admin']), validate(addPhoneSchema), CustomerController.addPhone);
+router.delete('/:customerId/phones/:phoneId', requireRole(['admin']), CustomerController.removePhone);
 
 // Customer full points ledger and current tier history
 router.get(

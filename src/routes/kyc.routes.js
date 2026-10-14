@@ -36,4 +36,11 @@ router.post(
   KycController.rejectRequest
 );
 
+// Authenticated route to view KYC proof files securely (LOOP-01 fix)
+router.get(
+  '/kyc/proof/:filename',
+  requireRole(['admin', 'branch_manager']),
+  KycController.getProofFile
+);
+
 module.exports = router;

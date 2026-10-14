@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Gift,
   AlertCircle,
@@ -26,7 +26,7 @@ const POINTS_PER_100_RUPEES_EARNED = 4;     // 4 points per ₹100 cash paid
 
 // ─── Eligibility Status Badge Component ───────────────────────────────────────
 
-function EligibilityBanner({ status, eligible_at, expires_at, points_balance, message, loading, isManualCustomer }) {
+function EligibilityBanner({ status, base_status, category, eligible_at, expires_at, points_balance, message, loading, isManualCustomer }) {
   if (loading) {
     return (
       <div className="p-4 bg-slate-100 border border-slate-300 rounded-lg animate-pulse text-slate-600 font-semibold text-sm">
@@ -35,7 +35,15 @@ function EligibilityBanner({ status, eligible_at, expires_at, points_balance, me
     );
   }
 
-  if (!status) return null;
+  if (!status && !base_status) return null;
+
+  const isAccessories = ['accessories', 'accessory'].includes(String(category || '').toLowerCase());
+  const isVehicleUnder12Months = (base_status === 'locked') || (!isAccessories && status === 'locked');
+
+  let displayStatus = status || 'eligible';
+  if (isAccessories && isVehicleUnder12Months) {
+    displayStatus = 'eligible_accessories';
+  }
 
   const config = {
     eligible: {
@@ -44,10 +52,16 @@ function EligibilityBanner({ status, eligible_at, expires_at, points_balance, me
       badgeText: isManualCustomer ? 'ACTIVE FOR GET POINTS' : 'ELIGIBLE TO REDEEM',
       icon: CheckCircle2,
     },
+    eligible_accessories: {
+      bg: 'bg-emerald-50 border-2 border-emerald-400 text-emerald-950',
+      badge: 'bg-emerald-700 text-white',
+      badgeText: 'ACCESSORIES UNLOCKED (ANYTIME)',
+      icon: CheckCircle2,
+    },
     locked: {
       bg: 'bg-amber-50 border-amber-300 text-amber-900',
       badge: 'bg-amber-500 text-white',
-      badgeText: 'WINDOW LOCKED',
+      badgeText: 'WINDOW LOCKED (<12 MONTHS)',
       icon: AlertCircle,
     },
     locked_pending_correction: {
@@ -64,7 +78,7 @@ function EligibilityBanner({ status, eligible_at, expires_at, points_balance, me
     },
   };
 
-  const cfg = config[status] || config.eligible;
+  const cfg = config[displayStatus] || config.eligible;
   const IconComponent = cfg.icon;
 
   return (
@@ -157,21 +171,30 @@ export const RedemptionModal = ({
     return () => clearTimeout(timer);
   }, [referralCode, category]);
 
-  // Fetch vehicle eligibility status whenever selected vehicle changes
+  const hasAutoSwitchedRef = useRef(false);
+
+  // Fetch vehicle eligibility status whenever selected vehicle or category changes
   useEffect(() => {
     if (!selectedVid) return;
-    setVehicleStatus(null);
     setStatusLoading(true);
     setError('');
-    ApiService.getVehicleRedemptionStatus(selectedVid)
-      .then((res) => setVehicleStatus(res.data))
+    ApiService.getVehicleRedemptionStatus(selectedVid, category)
+      .then((res) => {
+        setVehicleStatus(res.data);
+        // If vehicle is locked for service, auto-switch to accessories so user can redeem immediately
+        if (!hasAutoSwitchedRef.current && res.data?.base_status === 'locked' && category === 'service') {
+          hasAutoSwitchedRef.current = true;
+          setCategory('accessories');
+        }
+      })
       .catch((err) => setError(err.message || 'Failed to load vehicle redemption status.'))
       .finally(() => setStatusLoading(false));
-  }, [selectedVid]);
+  }, [selectedVid, category]);
 
   // Reset modal state on open
   useEffect(() => {
     if (isOpen) {
+      hasAutoSwitchedRef.current = false;
       setError('');
       setOtp('');
       setBillAmount('');
@@ -203,11 +226,13 @@ export const RedemptionModal = ({
 
   if (!isOpen || !customer) return null;
 
-  const currentBalance = vehicleStatus?.points_balance ?? customer?.points_balance ?? customer?.current_balance ?? 0;
-  const isPendingCorrection = vehicleStatus?.status === 'locked_pending_correction';
-  const isLocked = vehicleStatus?.status === 'locked' || isPendingCorrection;
-  const isExpired = vehicleStatus?.status === 'expired';
-  const isEligible = vehicleStatus?.status === 'eligible';
+  const currentBalance = Math.max(0, vehicleStatus?.points_balance ?? customer?.points_balance ?? customer?.current_balance ?? 0);
+  const isAccessories = ['accessories', 'accessory'].includes(String(category || '').toLowerCase());
+  const isPendingCorrection = vehicleStatus?.status === 'locked_pending_correction' || vehicleStatus?.base_status === 'locked_pending_correction';
+  const isExpired = vehicleStatus?.status === 'expired' || vehicleStatus?.base_status === 'expired';
+  const isVehicleUnder12Months = vehicleStatus?.base_status === 'locked' || (!isAccessories && vehicleStatus?.status === 'locked');
+  const isLocked = isPendingCorrection || (isVehicleUnder12Months && !isAccessories);
+  const isEligible = !isPendingCorrection && !isExpired && (isAccessories || !isVehicleUnder12Months) && (currentBalance > 0);
 
   // Live Arithmetic Preview Calculations
   const numBillAmount = parseFloat(billAmount || '0');
@@ -326,33 +351,38 @@ export const RedemptionModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-      <div className="w-full max-w-2xl bg-white border-2 border-surface-border rounded-xl shadow-2xl max-h-[94vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fadeIn">
+      <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-100 border-b border-surface-border">
-          <div className="flex items-center gap-2.5">
-            <Gift className="w-6 h-6 text-emerald-600" />
-            <h3 className="text-xl font-bold text-slate-900">
-              {isManualCustomer ? 'Get Points / Service Discount Calculation' : 'Points Redemption & Real Rates Calculation'}
-            </h3>
+        {/* Clean Light Header */}
+        <div className="flex items-center justify-between px-7 py-5 bg-white border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600">
+              <Gift className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                {isManualCustomer ? 'Get Points / Service Discount' : 'Points Redemption & Discount Calculation'}
+              </h3>
+              <p className="text-xs font-semibold text-slate-500">Live Rate Calculation & OTP Verification</p>
+            </div>
           </div>
           {step !== 3 && (
             <button
               type="button"
               onClick={handleClose}
               disabled={isLoading}
-              className="p-1 text-slate-500 hover:text-slate-900 rounded hover:bg-slate-200"
+              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
           )}
         </div>
 
-        <div className="p-6">
+        <div className="p-7">
           {/* Error Banner */}
           {error && (
-            <div className="mb-5 p-4 bg-rose-50 border-2 border-rose-300 rounded-lg flex items-start gap-2.5 text-rose-800 font-bold text-base">
+            <div className="mb-5 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-800 font-bold text-sm">
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-rose-600" />
               <span>{error}</span>
             </div>
@@ -406,6 +436,8 @@ export const RedemptionModal = ({
               {selectedVehicle && (
                 <EligibilityBanner
                   status={vehicleStatus?.status}
+                  base_status={vehicleStatus?.base_status}
+                  category={category}
                   eligible_at={vehicleStatus?.eligible_at}
                   expires_at={vehicleStatus?.expires_at}
                   points_balance={vehicleStatus?.points_balance}
@@ -421,7 +453,7 @@ export const RedemptionModal = ({
                   variant="primary"
                   size="lg"
                   onClick={handleProceedToOtp}
-                  disabled={!selectedVehicle || statusLoading || isExpired || isLocked || !vehicleStatus}
+                  disabled={!selectedVehicle || statusLoading || isExpired || isPendingCorrection || currentBalance <= 0}
                 >
                   {statusLoading ? 'Checking status…' : 'Proceed to OTP →'}
                 </Button>
@@ -459,8 +491,73 @@ export const RedemptionModal = ({
                 )}
               </div>
 
+              {/* Category Selection Tabs in Step 1 */}
+              <div>
+                <label className="text-sm font-bold text-slate-700 uppercase tracking-wider block mb-2">
+                  Select Redemption Category:
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: 'service', label: 'Service', locked: isVehicleUnder12Months },
+                    { id: 'accessories', label: 'Accessories', badge: 'Anytime' },
+                    { id: 'bodyshop', label: 'BodyShop', locked: isVehicleUnder12Months },
+                    { id: 'referral', label: 'Referral', locked: isVehicleUnder12Months },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setCategory(tab.id);
+                        setError('');
+                      }}
+                      className={`relative py-3 px-2 rounded-lg font-extrabold text-sm border-2 text-center transition-all ${
+                        category === tab.id
+                          ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                          : tab.locked
+                          ? 'bg-slate-100 border-slate-200 text-slate-500 hover:border-slate-300'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400'
+                      }`}
+                    >
+                      <div>{tab.label}</div>
+                      {tab.badge && (
+                        <span className={`text-[10px] uppercase font-black px-1.5 py-0.5 rounded mt-1 inline-block ${
+                          category === tab.id ? 'bg-emerald-400 text-slate-900' : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {tab.badge}
+                        </span>
+                      )}
+                      {tab.locked && (
+                        <span className="text-[10px] text-amber-700 font-bold block mt-1">
+                          🔒 12M Lock
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {category !== 'accessories' && isVehicleUnder12Months && (
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-center justify-between">
+                  <div className="text-sm text-amber-900 font-semibold">
+                    💡 <strong>Accessories Unlocked:</strong> Points can be redeemed anytime for accessories without the 12-month lock!
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCategory('accessories');
+                      setError('');
+                    }}
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow transition-colors flex-shrink-0"
+                  >
+                    Switch to Accessories →
+                  </button>
+                </div>
+              )}
+
               <EligibilityBanner
                 status={vehicleStatus?.status}
+                base_status={vehicleStatus?.base_status}
+                category={category}
                 eligible_at={vehicleStatus?.eligible_at}
                 expires_at={vehicleStatus?.expires_at}
                 points_balance={vehicleStatus?.points_balance}
@@ -517,7 +614,15 @@ export const RedemptionModal = ({
                   disabled={isLoading || !selectedPhone || !isEligible}
                   className="font-bold"
                 >
-                  {isLoading ? 'Sending OTP…' : isExpired ? 'Points Expired' : isPendingCorrection ? 'Locked: Correction Pending Admin Approval' : isLocked ? 'Not Yet Eligible' : 'Send OTP to Customer Phone'}
+                  {isLoading
+                    ? 'Sending OTP…'
+                    : isExpired
+                    ? 'Points Expired'
+                    : isPendingCorrection
+                    ? 'Locked: Correction Pending Admin Approval'
+                    : isLocked
+                    ? 'Service Locked (<12M) — Switch to Accessories'
+                    : 'Send OTP to Customer Phone'}
                 </Button>
               </div>
             </div>
@@ -534,21 +639,43 @@ export const RedemptionModal = ({
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {[
-                    { id: 'service', label: 'Service' },
-                    { id: 'accessories', label: 'Accessories' },
-                    { id: 'bodyshop', label: 'BodyShop' },
-                    { id: 'referral', label: 'Referral' },
+                    { id: 'service', label: 'Service', locked: isVehicleUnder12Months },
+                    { id: 'accessories', label: 'Accessories', badge: 'Anytime' },
+                    { id: 'bodyshop', label: 'BodyShop', locked: isVehicleUnder12Months },
+                    { id: 'referral', label: 'Referral', locked: isVehicleUnder12Months },
                   ].map((tab) => (
                     <button
                       key={tab.id}
                       type="button"
-                      onClick={() => setCategory(tab.id)}
-                      className={`py-3 px-2 rounded-lg font-extrabold text-sm border-2 text-center transition-all ${category === tab.id
-                        ? 'bg-slate-900 border-slate-900 text-white shadow-md'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400'
-                        }`}
+                      onClick={() => {
+                        if (tab.locked) {
+                          setError(`Points redemption for ${tab.label} is locked until 12 months from purchase. Only Accessories redemption is permitted for this vehicle.`);
+                          return;
+                        }
+                        setCategory(tab.id);
+                        setError('');
+                      }}
+                      className={`relative py-3 px-2 rounded-lg font-extrabold text-sm border-2 text-center transition-all ${
+                        category === tab.id
+                          ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                          : tab.locked
+                          ? 'bg-slate-100 border-slate-200 text-slate-500 hover:border-slate-300'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400'
+                      }`}
                     >
-                      {tab.label}
+                      <div>{tab.label}</div>
+                      {tab.badge && (
+                        <span className={`text-[10px] uppercase font-black px-1.5 py-0.5 rounded mt-1 inline-block ${
+                          category === tab.id ? 'bg-emerald-400 text-slate-900' : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {tab.badge}
+                        </span>
+                      )}
+                      {tab.locked && (
+                        <span className="text-[10px] text-amber-700 font-bold block mt-1">
+                          🔒 12M Lock
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -743,6 +870,7 @@ export const RedemptionModal = ({
                   disabled={
                     isLoading ||
                     !otp ||
+                    (isVehicleUnder12Months && !isAccessories) ||
                     (category === 'referral'
                       ? !referralCode || !isVehiclePurchaseContext || !referrerDetails
                       : numBillAmount <= 0)
@@ -754,6 +882,8 @@ export const RedemptionModal = ({
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       <span>Processing Transaction…</span>
                     </>
+                  ) : isVehicleUnder12Months && !isAccessories ? (
+                    'Locked (<12M) — Switch to Accessories'
                   ) : isManualCustomer ? (
                     'Submit Service Bill & Apply Points'
                   ) : (

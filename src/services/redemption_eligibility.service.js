@@ -63,7 +63,7 @@ class RedemptionEligibilityService {
    *   message: string,
    * }}
    */
-  static async getVehicleRedemptionStatus(vehicleId, tenantId) {
+  static async getVehicleRedemptionStatus(vehicleId, tenantId, category = null) {
     // 1. Fetch vehicle record
     const vehicleRes = await pool.query(
       `SELECT vehicle_id, customer_id, chassis_no AS registration_number,
@@ -101,18 +101,18 @@ class RedemptionEligibilityService {
     }
 
     const now = new Date();
-    let status = 'locked';
+    let baseStatus = 'locked';
 
     if (!purchaseDateObj && !vehicle.redemption_eligible_at) {
-      status = 'eligible';
+      baseStatus = 'eligible';
     } else if (expires_at && now >= expires_at) {
-      status = 'expired';
+      baseStatus = 'expired';
     } else if (eligible_at && now >= eligible_at) {
-      status = 'eligible';
+      baseStatus = 'eligible';
     } else if (vehicle.redemption_status === 'eligible') {
-      status = 'eligible';
+      baseStatus = 'eligible';
     } else {
-      status = 'locked';
+      baseStatus = 'locked';
     }
 
     // 3. Check if there is a pending billing correction request for this customer
@@ -125,7 +125,7 @@ class RedemptionEligibilityService {
 
     const pendingTicket = pendingRes.rows[0];
     if (pendingTicket) {
-      status = 'locked_pending_correction';
+      baseStatus = 'locked_pending_correction';
     }
 
     // 4. Compute live non-expired points balance for this vehicle
@@ -148,17 +148,29 @@ class RedemptionEligibilityService {
     const points_balance = Math.max(0, nonExpiredEarned - totalDeductions);
     const expired_points = expiredEarned;
 
+    // ACCESSORIES EXEMPTION: Accessories redemption is allowed ANYTIME without the 12-month lock!
+    const isAccessories = ['accessories', 'accessory'].includes(String(category || '').trim().toLowerCase());
+    let status = baseStatus;
+
+    if (isAccessories) {
+      if (baseStatus === 'locked') {
+        status = 'eligible';
+      }
+    }
+
     // 5. Build human-readable message
     let message;
     if (status === 'locked_pending_correction') {
       message = `Billing Correction Ticket #${pendingTicket.id} is pending Admin review. Point transactions & redemptions are locked until Admin approves or rejects the request.`;
     } else if (!vehicle.purchase_date && !vehicle.redemption_eligible_at) {
       message = 'Active for point calculation and redemption.';
+    } else if (isAccessories && baseStatus === 'locked') {
+      message = `Eligible to redeem anytime for Accessories! (${points_balance.toLocaleString()} pts available).`;
     } else if (status === 'locked') {
       const eligibleStr = eligible_at
         ? eligible_at.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
         : '—';
-      message = `Points are locked. Eligible to redeem from ${eligibleStr}.`;
+      message = `Points are locked for Service / Sales until ${eligibleStr}. (Accessories redemption is unlocked anytime).`;
     } else if (status === 'eligible') {
       const expiresStr = expires_at
         ? expires_at.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -177,6 +189,8 @@ class RedemptionEligibilityService {
       registration_number: vehicle.registration_number,
       purchase_date: vehicle.purchase_date,
       status,
+      base_status: baseStatus,
+      accessories_eligible: baseStatus !== 'locked_pending_correction' && baseStatus !== 'expired' && points_balance > 0,
       eligible_at: eligible_at?.toISOString() ?? null,
       expires_at: expires_at?.toISOString() ?? null,
       points_balance,
@@ -197,23 +211,57 @@ class RedemptionEligibilityService {
    * @param {Date}   redemptionDate
    * @param {string} tenantId
    * @param {object} client  — pg PoolClient (transaction-safe)
+   * @param {string} [category] - category of the redemption ('accessories', 'service', etc.)
    */
-  static async resetClockOnRedemption(vehicleId, redemptionDate, tenantId, client) {
+  static async resetClockOnRedemption(vehicleId, redemptionDate, tenantId, client, category = null) {
     const anchor = new Date(redemptionDate);
 
     const newExpiresAt = new Date(anchor);
     newExpiresAt.setMonth(newExpiresAt.getMonth() + 24);
 
+    const isAccessories = ['accessories', 'accessory'].includes(String(category || '').trim().toLowerCase());
+
+    // Fetch existing vehicle record to check if it is still within its initial 12-month lock period
+    const vRes = await client.query(
+      `SELECT purchase_date, dms_invoice_date, redemption_status, redemption_eligible_at
+       FROM vehicles WHERE vehicle_id = $1 AND tenant_id = $2;`,
+      [vehicleId, tenantId]
+    );
+
+    const vRow = vRes.rows[0];
+    let purchaseDateObj = null;
+    if (vRow) {
+      const rawDate = vRow.purchase_date || vRow.dms_invoice_date;
+      if (rawDate) {
+        const d = new Date(rawDate);
+        if (!isNaN(d.getTime())) purchaseDateObj = d;
+      }
+    }
+
+    let eligible_at = vRow?.redemption_eligible_at ? new Date(vRow.redemption_eligible_at) : null;
+    if (!eligible_at && purchaseDateObj) {
+      eligible_at = new Date(purchaseDateObj);
+      eligible_at.setMonth(eligible_at.getMonth() + 12);
+    }
+
+    const now = new Date();
+    const stillWithinLockPeriod = eligible_at && now < eligible_at;
+
+    // If an accessories redemption occurs while the vehicle is still within the 12-month lock period,
+    // do NOT prematurely mark redemption_status = 'eligible' for general (service/sales) redemptions.
+    // It remains locked for general redemptions until eligible_at is reached.
+    const newStatus = (isAccessories && stillWithinLockPeriod) ? 'locked' : 'eligible';
+
     await client.query(
       `UPDATE vehicles
-       SET redemption_status        = 'eligible',
-           redemption_eligible_at   = COALESCE(redemption_eligible_at, $1),
-           redemption_expires_at    = $2,
+       SET redemption_status        = $1,
+           redemption_eligible_at   = COALESCE(redemption_eligible_at, $2),
+           redemption_expires_at    = $3,
            redemption_notified_3m   = FALSE,
            redemption_notified_1m   = FALSE,
            updated_at               = NOW()
-       WHERE vehicle_id = $3 AND tenant_id = $4;`,
-      [anchor.toISOString(), newExpiresAt.toISOString(), vehicleId, tenantId]
+       WHERE vehicle_id = $4 AND tenant_id = $5;`,
+      [newStatus, (eligible_at ? eligible_at.toISOString() : anchor.toISOString()), newExpiresAt.toISOString(), vehicleId, tenantId]
     );
   }
 

@@ -59,15 +59,16 @@ const createCustomerSchema = z.object({
   }).optional().nullable(),
   // Optional opening points (admin-only meaningful; cashier always gets 0 enforced server-side)
   opening_points: z.coerce.number().int().min(0, 'Opening points cannot be negative').default(0).optional(),
-  // Mandatory Aadhaar & GST Number
+  // Aadhaar & Optional GST Number
   aadhaar_number: z
     .string({ required_error: 'Aadhaar number is required' })
     .trim()
     .regex(/^\d{12}$/, 'Aadhaar number must be exactly 12 numeric digits.'),
   gst_number: z
-    .string({ required_error: 'GST number is required' })
+    .string()
     .trim()
-    .min(1, 'GST number is required'),
+    .optional()
+    .nullable(),
   age: z.coerce.number().int().positive().optional().nullable(),
   firm_name: z.string().trim().optional().nullable(),
   address: z.string().trim().optional().nullable(),
@@ -257,6 +258,14 @@ const mergeCustomersSchema = z.object({
   path: ['merged_customer_id'],
 });
 
+const inhouseBonusSchema = z.object({
+  customer_id: z.string({ required_error: 'Customer ID is required' }).trim().min(1, 'Customer ID cannot be empty'),
+  bonus_type: z.string().trim().optional().nullable(),
+  points: z.coerce.number().int().min(1, 'Points must be at least 1').max(10000, 'Manual bonus cannot exceed 10,000 points without manager approval'),
+  reference_id: z.string().trim().optional().nullable(),
+  description: z.string().trim().optional().nullable(),
+});
+
 module.exports = {
   phoneSchema,
   nonNegativeInteger,
@@ -274,6 +283,7 @@ module.exports = {
   updateBrandSchema,
   searchSchema,
   earnPointsSchema,
+  inhouseBonusSchema,
   ledgerQuerySchema,
   registerReferralSchema,
   approveReferralSchema,

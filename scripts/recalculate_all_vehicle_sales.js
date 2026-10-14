@@ -155,6 +155,11 @@ async function recalculateAllVehicleSales() {
         oemOffers = Number(pl.oem_offers_amount_paise) / 100;
       }
 
+      // Skip overwriting with 0 if exShowroom is missing/0 but row already had legitimate points
+      if (exShowroom <= 0 && Number(pl.points) > 0) {
+        continue;
+      }
+
       // Calculate via pure calculation engine
       const calcResult = VehiclePointsEngine.calculatePoints(
         {
@@ -167,13 +172,28 @@ async function recalculateAllVehicleSales() {
         rateConfig
       );
 
+      // Check current customer balance to prevent downward revision from causing negative balance
+      let newPoints = calcResult.points;
+      const pointDelta = newPoints - Number(pl.points);
+      if (pointDelta < 0) {
+        const balRes = await client.query(
+          `SELECT GREATEST(0, COALESCE(SUM(points), 0)) AS current_balance FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
+          [pl.customer_id, tenantId]
+        );
+        const currentBal = parseInt(balRes.rows[0].current_balance, 10);
+        if (currentBal + pointDelta < 0) {
+          // Cap the reduction to available balance so customer balance never drops below 0
+          newPoints = Math.max(0, Number(pl.points) - currentBal);
+        }
+      }
+
       // Overwrite points_ledger row directly in place
       await client.query(
         `UPDATE points_ledger
          SET points = $1,
              reason_text = $2
          WHERE entry_id = $3;`,
-        [calcResult.points, calcResult.reason_text, pl.entry_id]
+        [newPoints, calcResult.reason_text, pl.entry_id]
       );
 
       // Also update linked sale_transactions if exists

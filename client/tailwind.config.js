@@ -11,94 +11,57 @@ export default {
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       colors: {
-        // ── Bellad Brand Colors (extracted from logo: pure #FF6600 orange) ──
+        // Bellad Brand & Automotive Accents
         brand: {
-          // Primary brand orange — exact color from Bellad gear logo
           orange: '#FF6600',
           'orange-dark': '#CC5200',
-          'orange-darker': '#993D00',
           'orange-light': '#FF8533',
-          'orange-lighter': '#FFAA80',
-          'orange-muted': '#FFF0E6',
-          'orange-surface': '#FFF7F0',
-          // Legacy alias — kept so existing brand-gold classes don't break
-          gold: '#FF6600',
-          'gold-light': '#FF8533',
-          'gold-dark': '#CC5200',
-          'gold-amber': '#FFAA80',
-          // Dark navy for sidebar / high-contrast backgrounds
-          navy: '#0A1128',
-          'navy-light': '#1E293B',
-          'navy-dark': '#030712',
-          slate: '#64748B',
-          surface: '#F8FAFC',
-          border: '#E2E8F0',
-          // Convenience primary alias used in some components
-          primary: '#FF6600',
+          navy: '#0F172A',
+          primary: '#4F46E5', // Clean Smart CRM indigo/blue
         },
-        // ── Action / Semantic Colors ──
         action: {
-          // Primary CTA uses Bellad orange
-          primary: '#FF6600',
-          'primary-hover': '#CC5200',
-          'primary-active': '#993D00',
-          'primary-light': '#FFF0E6',
+          primary: '#4F46E5',
+          'primary-hover': '#4338CA',
           danger: '#DC2626',
-          'danger-hover': '#B91C1C',
-          'danger-light': '#FEF2F2',
           success: '#16A34A',
-          'success-hover': '#15803D',
-          'success-light': '#F0FDF4',
           warning: '#D97706',
-          'warning-light': '#FFFBEB',
         },
-        // ── Surface / Layer Colors ──
+        // Clean Light Dashboard Palette (from Image 1 & 2 References)
         surface: {
-          screen: '#F8FAFC',
+          screen: '#EBF0F5',
           card: '#FFFFFF',
-          border: '#CBD5E1',
-          divider: '#E2E8F0',
+          cardHover: '#F8FAFC',
+          border: '#E2E8F0',
+          divider: '#F1F5F9',
         },
-        // ── Ink / Text Colors ──
         ink: {
           primary: '#0F172A',
-          secondary: '#334155',
+          secondary: '#475569',
           muted: '#64748B',
         },
       },
       boxShadow: {
-        'glass': '0 8px 32px 0 rgba(15, 23, 42, 0.08)',
-        'orange': '0 4px 20px -2px rgba(255, 102, 0, 0.30)',
-        'orange-sm': '0 2px 8px -1px rgba(255, 102, 0, 0.20)',
-        // Legacy alias
-        'gold': '0 4px 20px -2px rgba(255, 102, 0, 0.30)',
-      },
-      minHeight: {
-        'touch': '44px',
-        'touch-lg': '48px',
+        'island': '0 25px 60px -15px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(226, 232, 240, 0.8)',
+        'card': '0 10px 30px -5px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02)',
+        'purple': '0 20px 45px -10px rgba(124, 58, 237, 0.45)',
+        'blue': '0 20px 45px -10px rgba(37, 99, 235, 0.4)',
+        'orange': '0 16px 35px -8px rgba(234, 88, 12, 0.35)',
       },
       fontSize: {
-        'xs': ['12px', '16px'],
-        'sm': ['14px', '20px'],
-        'base': ['16px', '24px'],
-        'lg': ['18px', '26px'],
-        'xl': ['20px', '28px'],
-        '2xl': ['24px', '32px'],
-        '3xl': ['30px', '36px'],
+        'xs': ['13px', '18px'],
+        'sm': ['15px', '22px'],
+        'base': ['17px', '26px'], // Upgraded to 16-18px range per user request
+        'lg': ['20px', '28px'],
+        'xl': ['24px', '32px'],
+        '2xl': ['28px', '36px'],
+        '3xl': ['36px', '44px'],
       },
-      keyframes: {
-        shimmer: {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
-      },
-      animation: {
-        shimmer: 'shimmer 1.6s ease-in-out infinite',
-      },
-      backgroundSize: {
-        '300%': '300%',
+      borderRadius: {
+        '3xl': '24px',
+        '4xl': '32px',
+        '5xl': '40px',
       },
     },
   },
   plugins: [],
-}
+};

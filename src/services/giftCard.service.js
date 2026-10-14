@@ -443,6 +443,7 @@ class GiftCardService {
         gc.status,
         gc.expires_at,
         gc.created_at,
+        gc.created_by,
         u.username AS created_by_username
       FROM gift_cards gc
       LEFT JOIN customers c ON gc.assigned_customer_id = c.customer_id AND gc.tenant_id = c.tenant_id

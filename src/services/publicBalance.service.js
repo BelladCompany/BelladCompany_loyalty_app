@@ -96,16 +96,16 @@ class PublicBalanceService {
     // 4. Compute live balance and lifetime points from points_ledger
     const pointsRes = await pool.query(
       `SELECT
-         COALESCE(SUM(points), 0) AS current_balance,
+         GREATEST(0, COALESCE(SUM(points), 0)) AS current_balance,
          COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS lifetime_points
        FROM points_ledger
        WHERE customer_id = $1 AND tenant_id = $2;`,
       [customer_id, tenant_id]
     );
 
-    const currentBalance = parseInt(pointsRes.rows[0].current_balance, 10);
-    const lifetimePoints = parseInt(pointsRes.rows[0].lifetime_points, 10);
-    const discountValueRupees = Math.floor(currentBalance / 4);
+    const currentBalance = Math.max(0, parseInt(pointsRes.rows[0].current_balance, 10));
+    const lifetimePoints = Math.max(0, parseInt(pointsRes.rows[0].lifetime_points, 10));
+    const discountValueRupees = Math.max(0, Math.floor(currentBalance / 4));
 
     // 5. Fetch vehicle redemption eligibility details per vehicle
     const vehicleRes = await pool.query(

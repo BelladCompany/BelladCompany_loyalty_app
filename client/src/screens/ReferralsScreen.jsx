@@ -619,7 +619,7 @@ export const ReferralsScreen = ({ user }) => {
           }`}
         >
           <Sparkles className="w-5 h-5 text-indigo-600" />
-          Referral Leads Pipeline (RC Deferred Crediting)
+          Gift Card Rewards Pipeline (RC Deferred Crediting)
         </button>
 
         <button
@@ -632,7 +632,7 @@ export const ReferralsScreen = ({ user }) => {
           }`}
         >
           <Users className="w-5 h-5 text-slate-600" />
-          Manual Referrals & Approvals
+          Manual Gift Card Rewards & Approvals
         </button>
       </div>
 
@@ -642,10 +642,10 @@ export const ReferralsScreen = ({ user }) => {
             <div>
               <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-indigo-600" />
-                Referral Leads Pipeline
+                Gift Card Rewards Pipeline
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Tracks leads generated via public links. Crediting triggers strictly upon RC Completion confirmation.
+                Tracks gift card reward leads generated via public links. Crediting triggers strictly upon RC Completion confirmation.
               </p>
             </div>
 
@@ -713,14 +713,14 @@ export const ReferralsScreen = ({ user }) => {
             data={leadsPipeline}
             isLoading={leadsLoading}
             keyField="id"
-            emptyMessage="No referral leads found in pipeline matching filter criteria."
+            emptyMessage="No gift card reward leads found in pipeline matching filter criteria."
           />
         </div>
       )}
 
       {activeTab === 'manual' && (
         <>
-          {/* ── 1. DEALERSHIP REFERRAL LOGIC EXPLANATION ── */}
+          {/* ── 1. DEALERSHIP GIFT CARD REWARDS LOGIC EXPLANATION ── */}
           <div className="bg-white border-2 border-surface-border rounded-xl p-6 shadow-sm relative overflow-hidden animate-in fade-in duration-200">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-surface-border">
               <div className="flex items-center gap-3">
@@ -728,7 +728,7 @@ export const ReferralsScreen = ({ user }) => {
                   <Users className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-ink-primary tracking-tight">Manual Referral Entry & Approvals</h2>
+                  <h2 className="text-2xl font-bold text-ink-primary tracking-tight">Manual Gift Card Reward Entry & Approvals</h2>
                   <p className="text-sm text-ink-secondary font-medium">
                     Auto-calculated slab rewards with mandatory approver sign-off and audit logging.
                   </p>
@@ -746,7 +746,7 @@ export const ReferralsScreen = ({ user }) => {
                 }}
                 className="shadow-sm whitespace-nowrap"
               >
-                + Register Referral
+                + Register Gift Card Reward
               </Button>
             </div>
 
@@ -757,9 +757,9 @@ export const ReferralsScreen = ({ user }) => {
                   <span className="text-xs font-bold font-mono px-2 py-0.5 bg-blue-100 text-blue-800 rounded">STEP 1</span>
                   <UserPlus className="w-4 h-4 text-action-primary" />
                 </div>
-                <h4 className="text-sm font-bold text-ink-primary">Link Referrer & Friend</h4>
+                <h4 className="text-sm font-bold text-ink-primary">Link Customer & Friend</h4>
                 <p className="text-xs text-ink-secondary leading-relaxed">
-                  When an existing loyal customer introduces a friend, register their linkage.
+                  When an existing loyal customer introduces a friend, register their linkage for gift card rewards.
                 </p>
               </div>
 
@@ -770,7 +770,7 @@ export const ReferralsScreen = ({ user }) => {
                 </div>
                 <h4 className="text-sm font-bold text-ink-primary">Auto Slab Pre-Fill</h4>
                 <p className="text-xs text-ink-secondary leading-relaxed">
-                  Upon vehicle purchase, system auto-matches 2W/4W slab price range & pre-fills suggested points.
+                  Upon vehicle purchase, system auto-matches 2W/4W slab price range & pre-fills suggested gift card reward points.
                 </p>
               </div>
 
@@ -792,17 +792,17 @@ export const ReferralsScreen = ({ user }) => {
                 </div>
                 <h4 className="text-sm font-bold text-ink-primary">Instant Credit & Audit</h4>
                 <p className="text-xs text-ink-secondary leading-relaxed">
-                  Points posted to referrer's ledger, logged in audit trail (suggested vs final), and WhatsApp sent!
+                  Points posted to customer's ledger, logged in audit trail (suggested vs final), and WhatsApp sent!
                 </p>
               </div>
             </div>
           </div>
 
-          {/* ── 2. REFERRAL LIST TABLE & FILTERS ── */}
+          {/* ── 2. GIFT CARD REWARDS LIST TABLE & FILTERS ── */}
           <div className="bg-white border border-surface-border rounded-xl p-6 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-ink-primary">Manual Referral Records</h3>
+                <h3 className="text-lg font-bold text-ink-primary">Manual Gift Card Reward Records</h3>
                 <span className="text-xs font-semibold px-2.5 py-0.5 bg-slate-100 border border-slate-300 rounded-full text-ink-secondary">
                   {referrals.length} Total
                 </span>
@@ -844,20 +844,20 @@ export const ReferralsScreen = ({ user }) => {
               data={referrals}
               isLoading={isLoading}
               keyField="id"
-              emptyMessage="No referrals found matching your filter criteria. Register a new referral to get started."
+              emptyMessage="No gift card rewards found matching your filter criteria. Register a new gift card reward to get started."
             />
           </div>
         </>
       )}
 
-      {/* ── 3. MODAL: REGISTER NEW REFERRAL ── */}
+      {/* ── 3. MODAL: REGISTER NEW GIFT CARD REWARD ── */}
       {registerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white border border-surface-border rounded-xl shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-surface-border">
               <div className="flex items-center gap-2.5">
                 <UserPlus className="w-5 h-5 text-action-primary" />
-                <h3 className="text-lg font-bold text-ink-primary">Register New Customer Referral</h3>
+                <h3 className="text-lg font-bold text-ink-primary">Register New Customer Gift Card Reward</h3>
               </div>
               <button
                 type="button"
@@ -884,7 +884,7 @@ export const ReferralsScreen = ({ user }) => {
               )}
 
               <CustomerNameSelect
-                label="Referrer Customer Name (Existing Customer)"
+                label="Customer Name (Reward Beneficiary)"
                 helpText="Search by customer name, then select the row to verify the Customer ID before registering."
                 placeholder="Type customer name… e.g. Rahul Sharma"
                 value={referrerName}
@@ -897,7 +897,7 @@ export const ReferralsScreen = ({ user }) => {
               />
 
               <CustomerNameSelect
-                label="Referred Customer Name (New Customer)"
+                label="Referred Friend / Customer Name (New Buyer)"
                 helpText="Search by customer name, then select the row to verify the Customer ID before registering."
                 placeholder="Type customer name… e.g. Ananya Rao"
                 value={referredName}
@@ -910,7 +910,7 @@ export const ReferralsScreen = ({ user }) => {
               />
 
               <div className="p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 leading-relaxed space-y-1">
-                <p>ℹ️ The referral will be registered in <strong>Pending status with 0 points</strong>. Points will be automatically suggested when the friend completes a vehicle purchase based on slab rates.</p>
+                <p>ℹ️ The gift card reward will be registered in <strong>Pending status with 0 points</strong>. Points will be automatically suggested when the customer completes a vehicle purchase based on slab rates.</p>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-divider">
@@ -918,7 +918,7 @@ export const ReferralsScreen = ({ user }) => {
                   Cancel
                 </Button>
                 <Button type="submit" variant="primary" size="md" disabled={registerLoading}>
-                  {registerLoading ? 'Registering…' : 'Register Referral'}
+                  {registerLoading ? 'Registering…' : 'Register Gift Card Reward'}
                 </Button>
               </div>
             </form>
@@ -926,14 +926,14 @@ export const ReferralsScreen = ({ user }) => {
         </div>
       )}
 
-      {/* ── 4. MODAL: APPROVE REFERRAL (ADMIN ONLY) ── */}
+      {/* ── 4. MODAL: APPROVE GIFT CARD REWARD (ADMIN ONLY) ── */}
       {approveModalOpen && selectedReferral && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white border border-surface-border rounded-xl shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-surface-border">
               <div className="flex items-center gap-2.5">
                 <Award className="w-5 h-5 text-action-primary" />
-                <h3 className="text-lg font-bold text-ink-primary">Approve Referral & Award Points</h3>
+                <h3 className="text-lg font-bold text-ink-primary">Approve Gift Card Reward & Award Points</h3>
               </div>
               <button
                 type="button"
@@ -959,14 +959,14 @@ export const ReferralsScreen = ({ user }) => {
                 </div>
               )}
 
-              {/* Referral Context Summary */}
+              {/* Gift Card Reward Context Summary */}
               <div className="p-3 bg-slate-50 border border-surface-border rounded-lg text-xs space-y-1.5">
                 <div className="flex justify-between">
-                  <span className="text-ink-muted">Referrer (to receive points):</span>
+                  <span className="text-ink-muted">Customer (to receive reward points):</span>
                   <strong className="text-ink-primary font-semibold">{selectedReferral.referrer_name} ({selectedReferral.referrer_customer_id})</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-ink-muted">Referred Customer:</span>
+                  <span className="text-ink-muted">Referred Buyer:</span>
                   <strong className="text-ink-primary font-semibold">{selectedReferral.referred_name} ({selectedReferral.referred_customer_id})</strong>
                 </div>
               </div>
@@ -987,7 +987,7 @@ export const ReferralsScreen = ({ user }) => {
               {/* Points to Award */}
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-ink-primary block">
-                  Points to Award to Referrer <span className="text-action-danger">*</span>
+                  Points to Award to Customer <span className="text-action-danger">*</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -1024,7 +1024,7 @@ export const ReferralsScreen = ({ user }) => {
                 </label>
                 <textarea
                   rows="2"
-                  placeholder="e.g. Auto-calculated from referral slab: 5-10L"
+                  placeholder="e.g. Auto-calculated from gift card reward slab: 5-10L"
                   value={approvalReason}
                   onChange={(e) => setApprovalReason(e.target.value)}
                   required

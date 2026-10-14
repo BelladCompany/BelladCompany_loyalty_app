@@ -207,37 +207,42 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-      <div className="w-full max-w-2xl bg-white border-2 border-surface-border rounded-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fadeIn">
+      <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-100 border-b border-surface-border flex-shrink-0">
-          <div className="flex items-center gap-2.5">
-            <UserPlus className="w-6 h-6 text-action-primary" />
-            <h3 className="text-xl font-bold text-ink-primary">Add First-Time Customer</h3>
+        <div className="flex items-center justify-between px-7 py-5 bg-white border-b border-slate-100 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-600">
+              <UserPlus className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight">Add First-Time Customer</h3>
+              <p className="text-xs font-semibold text-slate-500">Identity Details & WhatsApp OTP Verification</p>
+            </div>
           </div>
           <button
             type="button"
             onClick={handleClose}
             disabled={isLoading}
-            className="p-1 text-ink-secondary hover:text-ink-primary rounded hover:bg-slate-200"
+            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
         <form onSubmit={step === 'form' ? handleRequestOtp : handleVerifyAndCreate} className="overflow-y-auto flex-1">
-          <div className="p-6 space-y-6">
+          <div className="p-7 space-y-6">
             {submitError && (
-              <div className="p-4 bg-action-danger-light border border-red-300 rounded flex items-start gap-2.5 text-action-danger font-bold text-base">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-700 font-bold text-sm">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-rose-600" />
                 <span>{submitError}</span>
               </div>
             )}
 
             {success && (
-              <div className="p-4 bg-action-success-light border border-green-300 rounded flex items-center gap-3 text-action-success font-bold text-base">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-800 font-bold text-sm">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-600" />
                 <span>
                   Customer <span className="font-mono">{success.customer_id}</span> created & verified! Loading profile…
                 </span>
@@ -245,8 +250,8 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
             )}
 
             {/* Banner */}
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-sm text-brand-navy font-semibold">
-              <UserCheck className="w-5 h-5 text-action-primary flex-shrink-0" />
+            <div className="p-4 bg-indigo-50/60 border border-indigo-200/80 rounded-2xl flex items-center gap-3 text-sm text-indigo-950 font-semibold">
+              <UserCheck className="w-5 h-5 text-indigo-600 flex-shrink-0" />
               <span>Registering First-Time Visiting Customer. Mandatory WhatsApp OTP verification required.</span>
             </div>
 

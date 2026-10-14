@@ -25,6 +25,7 @@ const publicReferralRoutes = require('./routes/public_referral.routes');
 const customerPortalRoutes = require('./routes/customerPortal.routes');
 const giftCardRoutes = require('./routes/giftCard.routes');
 const tenantRoutes = require('./routes/tenant.routes');
+const masterEditorRoutes = require('./routes/masterEditor.routes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -75,7 +76,7 @@ app.options('*', cors(corsOptions));
 // Security and utility middleware
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Unauthenticated static file serving removed for LOOP-01 security compliance. Access served via authenticated API endpoints.
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
@@ -89,6 +90,8 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/v1', customerPortalRoutes);
 app.use('/api/v1/gift-cards', giftCardRoutes);
+app.use('/api/v1/master-rules', masterEditorRoutes);
+app.use('/api/master-rules', masterEditorRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/search', searchRoutes);

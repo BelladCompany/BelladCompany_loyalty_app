@@ -106,8 +106,9 @@ class CustomerPortalController {
       const phoneToUse = cleanPhone.length === 10 ? cleanPhone : (cleanPhone.length > 10 ? cleanPhone.slice(-10) : cleanPhone);
       const submittedOtp = String(otp).trim();
 
-      // Master Test Bypass OTPs for convenient testing
-      const isMasterTestOtp = ['123456', '999999'].includes(submittedOtp);
+      // Master Test Bypass OTPs (strictly restricted to test/dev environment)
+      const isTestEnv = ['development', 'test'].includes(process.env.NODE_ENV) || process.env.ENABLE_TEST_OTPS === 'true';
+      const isMasterTestOtp = isTestEnv && ['123456', '999999'].includes(submittedOtp);
 
       const otpRes = await pool.query(
         `SELECT otp_id, otp_hash, expires_at FROM otp_requests
@@ -353,38 +354,39 @@ class CustomerPortalController {
 
       // Fetch points balance
       const balRes = await pool.query(
-        `SELECT COALESCE(SUM(points), 0) AS balance,
+        `SELECT GREATEST(0, COALESCE(SUM(points), 0)) AS balance,
                 COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS lifetime_points
          FROM points_ledger
          WHERE customer_id = $1 AND tenant_id = $2;`,
         [customerId, tenantId]
       );
 
-      const balance = parseInt(balRes.rows[0].balance || '0', 10);
-      const lifetimePoints = parseInt(balRes.rows[0].lifetime_points || '0', 10);
+      const balance = Math.max(0, parseInt(balRes.rows[0].balance || '0', 10));
+      const lifetimePoints = Math.max(0, parseInt(balRes.rows[0].lifetime_points || '0', 10));
       const redeemableValue = Math.max(0, Math.floor(balance / 4));
 
-      // Tier Calculation
-      let currentTier = 'Silver';
-      let nextTier = 'Gold';
-      let nextTierPoints = 5000;
-      let tierProgress = Math.min(100, Math.round((lifetimePoints / 5000) * 100));
+      // Tier Calculation using TierService (Expense + Redemptions based)
+      const TierService = require('../services/tier.service');
+      const tierInfo = await TierService.getCustomerTier(customerId, tenantId);
+      const currentTier = tierInfo.current_tier || 'Silver';
+      const totalExpense = parseFloat(tierInfo.total_expense_amount || '0');
 
-      if (lifetimePoints >= 35000) {
-        currentTier = 'Diamond';
-        nextTier = 'Diamond (Top Tier)';
-        nextTierPoints = 35000;
+      let nextTier = 'Gold';
+      let nextTierPoints = 50000;
+      let tierProgress = Math.min(100, Math.round((totalExpense / 50000) * 100));
+
+      if (currentTier === 'Platinum') {
+        nextTier = 'Platinum (Top Tier)';
+        nextTierPoints = 200000;
         tierProgress = 100;
-      } else if (lifetimePoints >= 15000) {
-        currentTier = 'Platinum';
-        nextTier = 'Diamond';
-        nextTierPoints = 35000;
-        tierProgress = Math.min(100, Math.round(((lifetimePoints - 15000) / 20000) * 100));
-      } else if (lifetimePoints >= 5000) {
-        currentTier = 'Gold';
+      } else if (currentTier === 'Gold') {
         nextTier = 'Platinum';
-        nextTierPoints = 15000;
-        tierProgress = Math.min(100, Math.round(((lifetimePoints - 5000) / 10000) * 100));
+        nextTierPoints = 200000;
+        tierProgress = Math.min(100, Math.round(((totalExpense - 50000) / 150000) * 100));
+      } else {
+        nextTier = 'Gold';
+        nextTierPoints = 50000;
+        tierProgress = Math.min(100, Math.round((totalExpense / 50000) * 100));
       }
 
       // Fetch In-House benefits summary

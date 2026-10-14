@@ -2,8 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const { pool } = require('../config/db');
 
-async function runMigrations() {
-  console.log('🔄 Running database migrations...');
+async function runMigrations(options = {}) {
+  const isDryRun = options.dryRun || process.argv.includes('--dry-run');
+  console.log(`🔄 Running database migrations ${isDryRun ? '[DRY RUN MODE]' : ''}...`);
+
   const client = await pool.connect();
   try {
     // 1. Ensure schema_migrations table exists
@@ -29,29 +31,41 @@ async function runMigrations() {
         continue;
       }
 
-      console.log(`- Executing migration: ${file}`);
+      console.log(`- ${isDryRun ? '[DRY RUN] Would execute' : 'Executing'} migration: ${file}`);
       const filePath = path.join(migrationsDir, file);
       const sql = fs.readFileSync(filePath, 'utf8');
 
-      await client.query('BEGIN');
-      await client.query(sql);
-      await client.query('INSERT INTO schema_migrations (filename) VALUES ($1);', [file]);
-      await client.query('COMMIT');
+      if (isDryRun) {
+        // Validate SQL syntax inside a transaction that is ALWAYS rolled back
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query('ROLLBACK');
+        console.log(`  ✓ Syntax check passed for: ${file}`);
+      } else {
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query('INSERT INTO schema_migrations (filename) VALUES ($1);', [file]);
+        await client.query('COMMIT');
+      }
       newCount++;
     }
 
     if (newCount === 0) {
       console.log('✅ Database schema is up to date (no new migrations needed).');
     } else {
-      console.log(`✅ ${newCount} new migration(s) applied successfully!`);
+      console.log(`✅ ${newCount} migration(s) ${isDryRun ? 'validated in dry-run mode' : 'applied successfully'}!`);
     }
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (!isDryRun) {
+      await client.query('ROLLBACK');
+    }
     console.error('❌ Migration failed:', error);
     process.exit(1);
   } finally {
     client.release();
-    await pool.end();
+    if (require.main === module) {
+      await pool.end();
+    }
   }
 }
 

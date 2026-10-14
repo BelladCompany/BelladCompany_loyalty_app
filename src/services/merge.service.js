@@ -142,9 +142,6 @@ class MergeService {
     try {
       await client.query('BEGIN');
 
-      // Enable trigger bypass for merge reassociation
-      await client.query("SET LOCAL loyalty.allow_merge = 'on';");
-
       // 1. Verify surviving customer
       const survRes = await client.query(
         `SELECT customer_id, customer_name AS name, aadhaar_hash, is_merged FROM customers WHERE customer_id = $1 AND tenant_id = $2 FOR UPDATE;`,
@@ -198,13 +195,41 @@ class MergeService {
       const transferredPhones = parseInt(phonesCountRes.rows[0].count, 10);
       const transferredVehicles = parseInt(vehCountRes.rows[0].count, 10);
 
-      // 4. Reassociate points_ledger records to surviving_customer_id
-      await client.query(
-        `UPDATE points_ledger
-         SET customer_id = $1, updated_at = NOW()
-         WHERE customer_id = $2 AND tenant_id = $3;`,
-        [surviving_customer_id, merged_customer_id, tenant_id]
-      );
+      // 4. Write append-only transfer debit and credit entries to points_ledger (C2 / Step 3 Fix)
+      if (transferredPoints !== 0) {
+        const { v4: uuidv4 } = require('uuid');
+        const mergeUuid = uuidv4 ? uuidv4() : `MERGE-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
+        // Debit entry on merged customer
+        await client.query(
+          `INSERT INTO points_ledger (
+             customer_id, type, points, amount_paise, reason, reference_id, merge_id, tenant_id
+           ) VALUES ($1, 'adjustment', $2, 0, $3, $4, $5, $6);`,
+          [
+            merged_customer_id,
+            -transferredPoints,
+            `Customer Merge Debit to ${surviving_customer_id}`,
+            `MERGE-OUT-${merged_customer_id}`,
+            mergeUuid,
+            tenant_id,
+          ]
+        );
+
+        // Credit entry on surviving customer
+        await client.query(
+          `INSERT INTO points_ledger (
+             customer_id, type, points, amount_paise, reason, reference_id, merge_id, tenant_id
+           ) VALUES ($1, 'adjustment', $2, 0, $3, $4, $5, $6);`,
+          [
+            surviving_customer_id,
+            transferredPoints,
+            `Customer Merge Credit from ${merged_customer_id}`,
+            `MERGE-IN-${merged_customer_id}`,
+            mergeUuid,
+            tenant_id,
+          ]
+        );
+      }
 
       // 5. Reassociate vehicles to surviving_customer_id
       await client.query(
@@ -285,24 +310,8 @@ class MergeService {
       const lifetimePoints = parseInt(aggRes.rows[0].lifetime_points, 10);
       const currentBalance = parseInt(aggRes.rows[0].current_balance, 10);
 
-      // NEW
-      const tierRes = await client.query(
-        `SELECT tier_name FROM tier_rules WHERE tenant_id = $1 AND min_lifetime_points <= $2 ORDER BY min_lifetime_points DESC LIMIT 1;`,
-        [tenant_id, lifetimePoints]
-      );
-      const tier = tierRes.rows.length > 0 ? tierRes.rows[0] : { tier_name: 'Standard' };
-
-      await client.query(
-        `INSERT INTO customer_tier_snapshot (
-     customer_id, current_tier, lifetime_points, tenant_id, updated_at
-   )
-   VALUES ($1, $2, $3, $4, NOW())
-   ON CONFLICT (customer_id) DO UPDATE
-   SET current_tier = EXCLUDED.current_tier,
-       lifetime_points = EXCLUDED.lifetime_points,
-       updated_at = NOW();`,
-        [surviving_customer_id, tier.tier_name, lifetimePoints, tenant_id]
-      );
+      const TierService = require('./tier.service');
+      await TierService.updateCustomerTier(surviving_customer_id, tenant_id, client);
 
       // System audit log entry for customer merge
       await AuditLogService.logEvent({

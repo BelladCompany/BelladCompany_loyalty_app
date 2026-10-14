@@ -219,9 +219,11 @@ export class ApiService {
   /**
    * Returns locked/eligible/expired status for a vehicle before the cashier initiates OTP.
    * @param {number} vehicleId
+   * @param {string} [category] - optional redemption category (e.g. 'accessories')
    */
-  static async getVehicleRedemptionStatus(vehicleId) {
-    return this.request(`/redemptions/vehicle/${vehicleId}/status`);
+  static async getVehicleRedemptionStatus(vehicleId, category = null) {
+    const query = category ? `?category=${encodeURIComponent(category)}` : '';
+    return this.request(`/redemptions/vehicle/${vehicleId}/status${query}`);
   }
 
   // Admin & Duplicates Merge
@@ -534,6 +536,89 @@ export class ApiService {
   static async updateFirm(tenantId, payload) {
     return this.request(`/tenants/firms/${encodeURIComponent(tenantId)}`, {
       method: 'PATCH',
+      body: payload,
+    });
+  }
+
+  // ─── Master Rule Editor ("App Brain") ─────────────────────────────────────
+  static async getMasterRules(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/master-rules${qs ? `?${qs}` : ''}`);
+  }
+
+  static async getMasterRuleLookups() {
+    return this.request('/master-rules/lookups');
+  }
+
+  static async createMasterRule(payload) {
+    return this.request('/master-rules', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async updateMasterRule(id, payload) {
+    return this.request(`/master-rules/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: payload,
+    });
+  }
+
+  static async deleteMasterRule(id) {
+    return this.request(`/master-rules/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  static async approveMasterRule(id, approval_notes = 'Approved by Executive Director') {
+    return this.request(`/master-rules/${encodeURIComponent(id)}/approve`, {
+      method: 'POST',
+      body: { approval_notes },
+    });
+  }
+
+  static async rejectMasterRule(id, rejection_reason = 'Rejected by management') {
+    return this.request(`/master-rules/${encodeURIComponent(id)}/reject`, {
+      method: 'POST',
+      body: { rejection_reason },
+    });
+  }
+
+  static async toggleActiveMasterRule(id) {
+    return this.request(`/master-rules/${encodeURIComponent(id)}/toggle-active`, {
+      method: 'POST',
+    });
+  }
+
+  static async simulateMasterRule(payload) {
+    return this.request('/master-rules/simulate', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  // ─── Master Rule User Control & Custom Schemes ─────────────────────────
+  static async getMasterUsers() {
+    return this.request('/master-rules/users/list');
+  }
+
+  static async updateMasterUserRole(id, role) {
+    return this.request(`/master-rules/users/${encodeURIComponent(id)}/role`, {
+      method: 'PATCH',
+      body: { role },
+    });
+  }
+
+  static async createMasterUser(payload) {
+    return this.request('/master-rules/users', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async registerCustomScheme(payload) {
+    return this.request('/master-rules/schemes/register', {
+      method: 'POST',
       body: payload,
     });
   }

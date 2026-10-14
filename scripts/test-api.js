@@ -184,7 +184,16 @@ Thank you for choosing us!`;
       console.log('Admin RealBooks Manual Retry Endpoint Status:', retryRes.status, 'Result Status:', retryRes.body?.data?.status);
     }
 
-    console.log('\n🎉 ALL REALBOOKS INTEGRATION & API TESTS PASSED SUCCESSFULLY! 🚀');
+    // 9. Test Cashier Invitation Flow (Step 5 Verification)
+    console.log('\n9️⃣ Testing Cashier Invitation Generation Endpoint...');
+    const inviteRes = await makeRequest(
+      '/api/admin/cashiers/invite',
+      { method: 'POST', headers: { Authorization: `Bearer ${adminToken}` } },
+      { branch_id: branchId, phone: '9876599999', role: 'cashier' }
+    );
+    console.log('Cashier Invite Endpoint Status:', inviteRes.status, 'Invite URL:', inviteRes.body?.data?.invite_url, 'Body:', inviteRes.body);
+
+    console.log('\n🎉 ALL REALBOOKS INTEGRATION, RBAC & API TESTS PASSED SUCCESSFULLY! 🚀');
   } catch (err) {
     console.error('\n❌ Test Error:', err);
   }

@@ -8,8 +8,11 @@
     "build": "cd client && npm install && npm run build",
     "dev": "nodemon src/index.js",
     "migrate": "node src/db/migrate.js",
+    "migrate:dry-run": "node src/db/migrate.js --dry-run",
+    "db:backup": "node scripts/db-backup.js",
     "seed": "node src/db/seed.js",
-    "test": "node scripts/test-api.js"
+    "test": "node scripts/test-api.js",
+    "test:regression": "node scripts/test-regression.js"
   },
   "keywords": [
     "loyalty",

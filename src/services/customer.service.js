@@ -117,7 +117,8 @@ class CustomerService {
       const phoneToUse = cleanPhone.length === 10 ? cleanPhone : (cleanPhone.length > 10 ? cleanPhone.slice(-10) : cleanPhone);
       const submittedOtp = String(otp).trim();
 
-      const isMasterTestOtp = ['123456', '999999'].includes(submittedOtp);
+      const isTestEnv = ['development', 'test'].includes(process.env.NODE_ENV) && process.env.ENABLE_TEST_OTPS === 'true';
+      const isMasterTestOtp = isTestEnv && ['123456', '999999'].includes(submittedOtp);
 
       const otpRes = await pool.query(
         `SELECT otp_id, otp_hash FROM otp_requests
@@ -519,12 +520,15 @@ class CustomerService {
             }
 
             const pointsRes = await pool.query(
-              `SELECT COALESCE(SUM(points), 0) AS total_points FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
+              `SELECT GREATEST(0, COALESCE(SUM(points), 0)) AS total_points FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
               [customerId, tenantId]
             );
-            const livePoints = parseInt(pointsRes.rows[0]?.total_points || '0', 10) || matchedAppCust.points_balance || 0;
+            const livePoints = Math.max(0, parseInt(pointsRes.rows[0]?.total_points || '0', 10) || matchedAppCust.points_balance || 0);
 
             const finalVehicles = vehiclesRes.rows.length > 0 ? vehiclesRes.rows : matchedAppCust.vehicles;
+
+            const TierService = require('./tier.service');
+            const tierInfo = await TierService.getCustomerTier(customerId, tenantId);
 
             return {
               customer_id: row.customer_id,
@@ -537,8 +541,10 @@ class CustomerService {
               phones: phonesRes.rows.length > 0 ? phonesRes.rows : matchedAppCust.phones,
               vehicles: finalVehicles,
               points_balance: livePoints,
-              lifetime_points: livePoints,
-              current_tier: livePoints >= 10000 ? 'Gold' : livePoints >= 5000 ? 'Silver' : 'Bronze',
+              lifetime_points: tierInfo.lifetime_points,
+              current_tier: tierInfo.current_tier,
+              tier_name: tierInfo.current_tier,
+              total_expense_amount: tierInfo.total_expense_amount,
               billing_status: matchedAppCust.billing_status || 'PR Done',
             };
           }
@@ -671,18 +677,24 @@ class CustomerService {
 
     // Check points ledger balance
     const pointsRes = await pool.query(
-      `SELECT COALESCE(SUM(points), 0) AS total_points FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
+      `SELECT GREATEST(0, COALESCE(SUM(points), 0)) AS total_points FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
       [customerId, tenantId]
     );
-    const livePoints = parseInt(pointsRes.rows[0]?.total_points || '0', 10);
+    const livePoints = Math.max(0, parseInt(pointsRes.rows[0]?.total_points || '0', 10));
+
+    // Fetch tier snapshot
+    const TierService = require('./tier.service');
+    const tierInfo = await TierService.getCustomerTier(customerId, tenantId);
 
     return {
       ...customer,
       phones: phonesRes.rows,
       vehicles: finalVehicles,
       points_balance: livePoints,
-      lifetime_points: livePoints,
-      current_tier: livePoints >= 10000 ? 'Gold' : livePoints >= 5000 ? 'Silver' : 'Bronze',
+      lifetime_points: tierInfo.lifetime_points,
+      current_tier: tierInfo.current_tier,
+      tier_name: tierInfo.current_tier,
+      total_expense_amount: tierInfo.total_expense_amount,
       billing_status: 'PR Done',
       pr_status: 'PR Done',
     };
@@ -806,7 +818,7 @@ class CustomerService {
    */
   static async deleteCustomer(customerId, tenantId) {
     const res = await pool.query(
-      `DELETE FROM customers WHERE customer_id = $1 AND tenant_id = $2 RETURNING customer_id;`,
+      `UPDATE customers SET status = 'archived', updated_at = NOW() WHERE customer_id = $1 AND tenant_id = $2 RETURNING customer_id;`,
       [customerId, tenantId]
     );
     return res.rowCount > 0;

@@ -24,8 +24,18 @@ const authenticateToken = (req, res, next) => {
     }
 
     req.user = user;
-    // Allow header override for multitenancy if admin, otherwise use user's tenant_id
-    req.tenantId = req.headers['x-tenant-id'] || user.tenant_id || env.defaultTenantId;
+    // LOOP-06 & LOOP-20 Fix: Allow X-Tenant-ID header override ONLY for admin/super_admin roles.
+    const isAdmin = ['admin', 'super_admin', 'regional_admin'].includes(user.role);
+    const tenantId = (isAdmin && req.headers['x-tenant-id']) ? req.headers['x-tenant-id'] : (user.tenant_id || req.headers['x-tenant-id']);
+
+    if (!tenantId) {
+      return res.status(400).json({
+        status: 'fail',
+        error: 'Missing required tenant context.',
+      });
+    }
+
+    req.tenantId = tenantId;
     next();
   });
 };

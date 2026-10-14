@@ -138,20 +138,23 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white max-w-2xl w-full rounded-2xl shadow-2xl border border-surface-border overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fadeIn">
+      <div className="bg-white max-w-2xl w-full rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-950 text-white flex items-center justify-between">
+        <div className="px-7 py-5 bg-white border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200/80 flex items-center justify-center text-indigo-600">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold">Bulk Customer CSV Import</h2>
-              <p className="text-xs text-slate-400">Validate and onboard customer records in bulk</p>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">Bulk Customer CSV Import</h2>
+              <p className="text-xs font-semibold text-slate-500">Validate and onboard customer records in bulk</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition p-1 rounded-md">
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>

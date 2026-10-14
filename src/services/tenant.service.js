@@ -145,13 +145,13 @@ class TenantService {
 
       // 5. Provision Standard Tiers
       await client.query(
-        `INSERT INTO tier_rules (tenant_id, tier_name, min_lifetime_points)
+        `INSERT INTO tier_rules (tenant_id, tier_name, min_lifetime_points, min_expense_amount, benefits_json)
          VALUES
-           ($1, 'Silver', 0),
-           ($1, 'Gold', 5000),
-           ($1, 'Platinum', 15000),
-           ($1, 'Diamond', 35000)
-         ON CONFLICT DO NOTHING;`,
+           ($1, 'Silver', 0, 0, '{"description": "Silver tier: Expense + Redemptions up to ₹49,999"}'),
+           ($1, 'Gold', 5000, 50000, '{"description": "Gold tier: Expense + Redemptions ₹50,000 - ₹1,99,999"}'),
+           ($1, 'Platinum', 15000, 200000, '{"description": "Platinum tier: Expense + Redemptions ₹200,000+"}')
+         ON CONFLICT (tenant_id, tier_name) DO UPDATE
+         SET min_expense_amount = EXCLUDED.min_expense_amount;`,
         [cleanTenantId]
       );
 

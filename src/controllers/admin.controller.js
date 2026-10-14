@@ -194,6 +194,34 @@ class AdminController {
       next(error);
     }
   }
+
+  /**
+   * Create tokenized invitation link for cashier (valid 48h)
+   */
+  static async createCashierInvite(req, res, next) {
+    try {
+      const CashierInviteService = require('../services/cashierInvite.service');
+      const { branch_id, phone, role } = req.body;
+      const tenantId = req.tenantId;
+      const adminUserId = req.user.id || req.user.user_id || null;
+
+      const result = await CashierInviteService.createInvite({
+        tenant_id: tenantId,
+        branch_id: branch_id || 1,
+        phone,
+        role: role || 'cashier',
+        created_by: adminUserId,
+      });
+
+      res.status(201).json({
+        status: 'success',
+        message: 'Cashier invitation created successfully (valid for 48 hours).',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = AdminController;

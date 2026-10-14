@@ -103,6 +103,9 @@ class AppSheetSearchService {
       },
     ];
 
+    const billingAmt = parseFloat(String(row['Total Vehicle Billing Amount'] || row['Ex-Showroom Price'] || row['Ex Showroom Price'] || '0').replace(/[^0-9.]/g, '')) || 0;
+    const tier = billingAmt >= 200000 ? 'Platinum' : (billingAmt >= 50000 ? 'Gold' : 'Silver');
+
     return {
       customer_id: row['Order Unique ID'] ? `BAC-${row['Order Unique ID']}` : `BAC-APP-${row['_RowNumber']}`,
       name: custName,
@@ -111,7 +114,8 @@ class AppSheetSearchService {
       phones,
       vehicles,
       points_balance: pointsBalance,
-      current_tier: pointsBalance >= 10000 ? 'Gold' : pointsBalance >= 5000 ? 'Silver' : 'Bronze',
+      current_tier: tier,
+      tier_name: tier,
       billing_status: row['Billing Status'] || 'PR Done',
       pr_status: 'PR Done',
       dms_invoice_number: row['DMS Invoice Number'] || '',

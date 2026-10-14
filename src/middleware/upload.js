@@ -20,10 +20,13 @@ const storage = multer.diskStorage({
 
 const fileFilter = (req, file, cb) => {
   const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-  if (allowedMimeTypes.includes(file.mimetype)) {
+  const allowedExts = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  
+  if (allowedMimeTypes.includes(file.mimetype) && allowedExts.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Only JPEG, PNG, WEBP, and PDF files are allowed for ID proof upload.'), false);
+    cb(new Error('Only valid JPEG, PNG, WEBP, and PDF files are allowed for ID proof upload.'), false);
   }
 };
 

@@ -1,24 +1,24 @@
 import React from 'react';
 
 /**
- * High-contrast Status and Tier Badge
+ * Clean Light Mode Status and Tier Badge (Image 1 & 2 Reference)
  */
 export const StatusBadge = ({ value, type = 'status', className = '' }) => {
   const normVal = String(value || '').toLowerCase();
 
-  let styles = 'bg-slate-100 text-slate-800 border-slate-300';
+  let styles = 'bg-slate-100 text-slate-700 border-slate-200';
 
   if (type === 'tier') {
     switch (normVal) {
       case 'platinum':
-        styles = 'bg-indigo-100 text-indigo-950 border-indigo-400 font-bold';
+        styles = 'bg-purple-50 text-purple-700 border-purple-200 font-bold';
         break;
       case 'gold':
-        styles = 'bg-amber-100 text-amber-950 border-amber-400 font-bold';
+        styles = 'bg-amber-50 text-amber-800 border-amber-300 font-bold';
         break;
       case 'silver':
       default:
-        styles = 'bg-slate-200 text-slate-900 border-slate-400 font-semibold';
+        styles = 'bg-slate-100 text-slate-700 border-slate-300 font-bold';
         break;
     }
   } else {
@@ -27,26 +27,30 @@ export const StatusBadge = ({ value, type = 'status', className = '' }) => {
       case 'approved':
       case 'completed':
       case 'success':
-        styles = 'bg-action-success-light text-green-900 border-green-400 font-bold';
+      case 'active':
+        styles = 'bg-emerald-50 text-emerald-800 border-emerald-200 font-bold';
         break;
       case 'pending':
-        styles = 'bg-amber-100 text-amber-950 border-amber-400 font-bold';
+      case 'upcoming':
+        styles = 'bg-amber-50 text-amber-800 border-amber-200 font-bold';
         break;
       case 'rejected':
       case 'failed':
+      case 'expired':
       case 'danger':
-        styles = 'bg-action-danger-light text-red-950 border-red-400 font-bold';
+        styles = 'bg-rose-50 text-rose-800 border-rose-200 font-bold';
         break;
       default:
-        styles = 'bg-slate-100 text-slate-900 border-slate-300 font-medium';
+        styles = 'bg-slate-100 text-slate-700 border-slate-200 font-medium';
         break;
     }
   }
 
   return (
     <span
-      className={`inline-flex items-center px-3 py-1 rounded-full text-sm uppercase tracking-wider border ${styles} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs uppercase tracking-wider border shadow-2xs ${styles} ${className}`}
     >
+      <span className="w-2 h-2 rounded-full bg-current inline-block" />
       {value}
     </span>
   );

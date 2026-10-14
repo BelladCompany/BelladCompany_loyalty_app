@@ -32,11 +32,13 @@ class RedemptionController {
   static async getVehicleRedemptionStatus(req, res, next) {
     try {
       const { vehicle_id } = req.params;
+      const { category } = req.query;
       const tenantId = req.tenantId;
 
       const status = await RedemptionEligibilityService.getVehicleRedemptionStatus(
         parseInt(vehicle_id, 10),
-        tenantId
+        tenantId,
+        category
       );
 
       res.status(200).json({
