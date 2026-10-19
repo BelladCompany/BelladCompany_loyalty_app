@@ -9,20 +9,24 @@ const {
   redeemPointsSchema,
 } = require('../validators/schemas');
 
+const { otpRequestRateLimiter, otpVerifyRateLimiter } = require('../middleware/rateLimiter');
+
 router.use(authenticateToken);
 
-// 1. Request OTP for customer redemption (Cashier or Admin)
+// 1. Request OTP for customer redemption (Cashier or Admin, rate limited against SMS pumping)
 router.post(
   '/otp/request',
   requireRole(['cashier', 'admin']),
+  otpRequestRateLimiter,
   validate(requestOtpSchema),
   RedemptionController.requestOtp
 );
 
-// 2. Submit OTP and points to redeem (Cashier or Admin)
+// 2. Submit OTP and points to redeem (Cashier or Admin, rate limited against brute force)
 router.post(
   '/redeem',
   requireRole(['cashier', 'admin']),
+  otpVerifyRateLimiter,
   validate(redeemPointsSchema),
   RedemptionController.redeemPoints
 );

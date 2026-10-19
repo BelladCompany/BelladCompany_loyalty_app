@@ -35,6 +35,7 @@ export const SidebarLayout = ({
   user = { username: 'cashier', role: 'cashier', branch_code: 'BLR-01', tenant_id: 'bellad_and_company' },
   onLogout,
   onOpenStudio,
+  onOpenBuilder,
   children,
 }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -98,9 +99,10 @@ export const SidebarLayout = ({
           ],
         },
         {
-          group: 'Master Brain Editor',
+          group: 'Loyalty App Studio',
           items: [
-            { id: 'master_editor', label: 'Master Policy Studio', icon: SlidersHorizontal, isStudio: true },
+            { id: 'app_builder', label: 'App Builder (WordPress Mode)', icon: Sparkles, isBuilder: true },
+            { id: 'master_editor', label: 'Rules & Logic Studio', icon: SlidersHorizontal, isStudio: true },
           ],
         },
         {
@@ -152,7 +154,9 @@ export const SidebarLayout = ({
                       key={item.id}
                       type="button"
                       onClick={() => {
-                        if (item.isStudio && onOpenStudio) {
+                        if (item.isBuilder && onOpenBuilder) {
+                          onOpenBuilder();
+                        } else if (item.isStudio && onOpenStudio) {
                           onOpenStudio();
                         } else {
                           handleNavigate(item.id);
@@ -168,7 +172,12 @@ export const SidebarLayout = ({
                     >
                       <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                       <span className="truncate">{item.label}</span>
-                      {item.isStudio && (
+                      {item.isBuilder && (
+                        <span className="ml-auto text-[10px] uppercase font-mono px-2 py-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full font-black shadow-xs">
+                          No-Code
+                        </span>
+                      )}
+                      {item.isStudio && !item.isBuilder && (
                         <span className="ml-auto text-[10px] uppercase font-mono px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded font-bold">
                           AppSheet
                         </span>

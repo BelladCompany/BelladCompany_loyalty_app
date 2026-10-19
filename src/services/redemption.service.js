@@ -104,6 +104,8 @@ class RedemptionService {
       tenant_id,
     });
 
+    const isDebugOtpEnabled = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEBUG_OTP === 'true';
+
     return {
       otp_request_id: otpRecord.id,
       customer_id: otpRecord.customer_id,
@@ -111,9 +113,10 @@ class RedemptionService {
       expires_at: otpRecord.expires_at,
       expires_in_seconds: 300,
       whatsapp_sent: Boolean(otpSendResult?.success),
-      debug_otp: otp,
-      dummy_otp: '123456',
-      message: `OTP generated successfully. (Test Code: 123456 or ${otp})`,
+      message: isDebugOtpEnabled
+        ? `OTP generated successfully. (Debug Mode: ${otp})`
+        : 'Redemption OTP generated and sent to customer phone.',
+      ...(isDebugOtpEnabled && { debug_otp: otp }),
     };
   }
 
@@ -184,7 +187,7 @@ class RedemptionService {
 
       // 2. Validate active OTP for customer
       const submittedOtp = String(otp || '').trim();
-      const isTestEnv = ['development', 'test'].includes(process.env.NODE_ENV) && process.env.ENABLE_TEST_OTPS === 'true';
+      const isTestEnv = process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_OTPS === 'true';
       const isMasterTestOtp = isTestEnv && ['123456', '999999'].includes(submittedOtp);
 
       const otpRes = await client.query(
@@ -205,13 +208,13 @@ class RedemptionService {
         }
       } else {
         if (otpRes.rows.length === 0) {
-          throw { statusCode: 400, message: 'No valid active OTP found for this customer or OTP has expired. Use test code 123456.' };
+          throw { statusCode: 400, message: 'No valid active OTP found for this customer or OTP has expired.' };
         }
 
         const activeOtp = otpRes.rows[0];
         const isOtpValid = await bcrypt.compare(submittedOtp, activeOtp.otp_hash);
         if (!isOtpValid) {
-          throw { statusCode: 400, message: 'Invalid OTP code provided (or use test code 123456).' };
+          throw { statusCode: 400, message: 'Invalid OTP code provided. Please verify and try again.' };
         }
         matchedOtpId = activeOtp.id;
       }

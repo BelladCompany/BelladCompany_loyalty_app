@@ -26,6 +26,7 @@ const customerPortalRoutes = require('./routes/customerPortal.routes');
 const giftCardRoutes = require('./routes/giftCard.routes');
 const tenantRoutes = require('./routes/tenant.routes');
 const masterEditorRoutes = require('./routes/masterEditor.routes');
+const platformRulesRoutes = require('../platform/api/rules.routes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -35,6 +36,9 @@ const defaultOrigins = [
   'https://bellad-company-loyalty-app.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://localhost:3003',
 ];
 
 const envCorsOrigins = (process.env.CORS_ORIGINS || '')
@@ -57,7 +61,9 @@ const corsOptions = {
     if (!origin) return callback(null, true);
 
     const cleanOrigin = origin.replace(/\/+$/, '');
-    if (allowedOrigins.includes(cleanOrigin)) {
+    const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin);
+
+    if (allowedOrigins.includes(cleanOrigin) || isLocalhost) {
       callback(null, true);
     } else {
       callback(new Error(`CORS policy violation: Origin '${origin}' is not allowed.`));
@@ -73,10 +79,17 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
+// Import security rate limiter
+const { globalApiRateLimiter } = require('./middleware/rateLimiter');
+
 // Security and utility middleware
-app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(express.json());
-// Unauthenticated static file serving removed for LOOP-01 security compliance. Access served via authenticated API endpoints.
+app.disable('x-powered-by');
+app.use(helmet({ crossOriginResourcePolicy: false, contentSecurityPolicy: false }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// Global rate limiting across all API endpoints (protects against high-concurrency DDoS / brute-force)
+app.use('/api', globalApiRateLimiter);
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
@@ -92,6 +105,8 @@ app.use('/api/v1', customerPortalRoutes);
 app.use('/api/v1/gift-cards', giftCardRoutes);
 app.use('/api/v1/master-rules', masterEditorRoutes);
 app.use('/api/master-rules', masterEditorRoutes);
+app.use('/api/v1/platform/rules', platformRulesRoutes);
+app.use('/api/platform/rules', platformRulesRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/search', searchRoutes);

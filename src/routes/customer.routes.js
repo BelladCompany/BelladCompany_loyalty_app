@@ -12,14 +12,16 @@ const {
   ledgerQuerySchema,
 } = require('../validators/schemas');
 
+const { otpRequestRateLimiter, otpVerifyRateLimiter } = require('../middleware/rateLimiter');
+
 // All customer routes require authentication
 router.use(authenticateToken);
 
-// Request OTP for manual customer creation
-router.post('/request-creation-otp', requireRole(['cashier', 'admin']), CustomerController.requestCustomerCreationOtp);
+// Request OTP for manual customer creation (rate limited against SMS pumping)
+router.post('/request-creation-otp', requireRole(['cashier', 'admin']), otpRequestRateLimiter, CustomerController.requestCustomerCreationOtp);
 
-// Create customer (Cashier or Admin)
-router.post('/', requireRole(['cashier', 'admin']), validate(createCustomerSchema), CustomerController.createCustomer);
+// Create customer (Cashier or Admin, rate limited against OTP guessing)
+router.post('/', requireRole(['cashier', 'admin']), otpVerifyRateLimiter, validate(createCustomerSchema), CustomerController.createCustomer);
 
 // List customers
 router.get('/', requireRole(['cashier', 'admin']), CustomerController.listCustomers);

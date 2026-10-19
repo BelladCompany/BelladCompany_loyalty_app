@@ -21,7 +21,7 @@ class CashierInviteService {
 
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
-    const createdByInt = (created_by != null && !isNaN(parseInt(created_by, 10))) ? parseInt(created_by, 10) : null;
+    const createdByStr = created_by != null ? String(created_by) : null;
 
     const res = await client.query(
       `INSERT INTO user_invites (
@@ -29,7 +29,7 @@ class CashierInviteService {
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING invite_id, tenant_id, branch_id, phone, role, expires_at, created_at;`,
-      [tenant_id, String(branch_id), phone, role, tokenHash, expiresAt, createdByInt]
+      [tenant_id, String(branch_id), phone, role, tokenHash, expiresAt, createdByStr]
     );
 
     const invite = res.rows[0];

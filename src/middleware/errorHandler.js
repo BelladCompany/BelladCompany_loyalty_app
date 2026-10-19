@@ -4,12 +4,14 @@
 const errorHandler = (err, req, res, next) => {
   console.error('Unhandled Error:', err);
 
+  const isDev = process.env.NODE_ENV === 'development';
+
   // PostgreSQL unique constraint violation error code
   if (err.code === '23505') {
     return res.status(409).json({
       status: 'fail',
       error: 'Conflict: A record with the provided unique identifier already exists.',
-      detail: err.detail,
+      ...(isDev && { detail: err.detail }),
     });
   }
 
@@ -18,7 +20,7 @@ const errorHandler = (err, req, res, next) => {
     return res.status(400).json({
       status: 'fail',
       error: 'Foreign key constraint violated. Referenced entity does not exist.',
-      detail: err.detail,
+      ...(isDev && { detail: err.detail }),
     });
   }
 
@@ -28,11 +30,15 @@ const errorHandler = (err, req, res, next) => {
     res.set('Retry-After', String(err.retryAfter));
   }
 
+  const clientErrorMessage = statusCode === 500 && !isDev
+    ? 'An unexpected internal error occurred. Please try again or contact support.'
+    : (err.message || 'Internal Server Error');
+
   res.status(statusCode).json({
-    status: 'error',
-    error: err.message || 'Internal Server Error',
+    status: statusCode >= 500 ? 'error' : 'fail',
+    error: clientErrorMessage,
     ...(statusCode === 429 && { retry_after_seconds: err.retryAfter }),
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    ...(isDev && { stack: err.stack }),
   });
 };
 

@@ -6,12 +6,14 @@ const env = require('../config/env');
  */
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  const token = (authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null) || req.query.token;
+  // Strictly require Authorization: Bearer header. Only permit query parameter token for proof streaming routes (for <img> tags)
+  const isProofStream = req.path.includes('/proof');
+  const token = (authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null) || (isProofStream ? req.query.token : null);
 
   if (!token) {
     return res.status(401).json({
       status: 'fail',
-      error: 'Authentication required. No token provided.',
+      error: 'Authentication required. No valid bearer token provided.',
     });
   }
 

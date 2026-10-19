@@ -76,14 +76,17 @@ class CustomerPortalController {
       const expiresAt = new Date(insertRes.rows[0].expires_at);
       const expiresInSeconds = Math.max(1, Math.round((expiresAt.getTime() - Date.now()) / 1000));
 
+      const isDebugOtpEnabled = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEBUG_OTP === 'true';
+
       res.status(200).json({
         status: 'success',
-        message: `OTP sent successfully. (Testing Mode Code: 123456 or ${otp})`,
+        message: isDebugOtpEnabled
+          ? `OTP sent successfully. (Debug Mode: ${otp})`
+          : 'OTP has been sent to your registered mobile number.',
         whatsapp_sent: Boolean(otpSendResult?.success),
         expires_in_seconds: expiresInSeconds,
         expires_at: expiresAt.toISOString(),
-        debug_otp: otp,
-        dummy_otp: '123456',
+        ...(isDebugOtpEnabled && { debug_otp: otp }),
       });
     } catch (error) {
       next(error);
@@ -106,8 +109,8 @@ class CustomerPortalController {
       const phoneToUse = cleanPhone.length === 10 ? cleanPhone : (cleanPhone.length > 10 ? cleanPhone.slice(-10) : cleanPhone);
       const submittedOtp = String(otp).trim();
 
-      // Master Test Bypass OTPs (strictly restricted to test/dev environment)
-      const isTestEnv = ['development', 'test'].includes(process.env.NODE_ENV) || process.env.ENABLE_TEST_OTPS === 'true';
+      // Test OTPs strictly restricted to non-production dev environments with explicit flag
+      const isTestEnv = process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_OTPS === 'true';
       const isMasterTestOtp = isTestEnv && ['123456', '999999'].includes(submittedOtp);
 
       const otpRes = await pool.query(
@@ -129,17 +132,17 @@ class CustomerPortalController {
         }
       } else {
         if (otpRes.rows.length === 0) {
-          return res.status(400).json({ status: 'fail', error: 'No active OTP code found for this number. Please request a new one or use test code 123456.' });
+          return res.status(400).json({ status: 'fail', error: 'No active OTP code found for this number. Please request a new code.' });
         }
 
         const otpRecord = otpRes.rows[0];
         if (new Date(otpRecord.expires_at).getTime() <= Date.now()) {
-          return res.status(400).json({ status: 'fail', error: 'This OTP code has expired. Please resend a new code or use test code 123456.' });
+          return res.status(400).json({ status: 'fail', error: 'This OTP code has expired. Please request a new code.' });
         }
 
         const isMatch = await bcrypt.compare(submittedOtp, otpRecord.otp_hash);
         if (!isMatch) {
-          return res.status(400).json({ status: 'fail', error: 'Invalid OTP code. Please check and try again (or use test code 123456).' });
+          return res.status(400).json({ status: 'fail', error: 'Invalid OTP code. Please check and try again.' });
         }
         matchedOtpId = otpRecord.otp_id;
       }

@@ -6,7 +6,23 @@ async function runMigrations(options = {}) {
   const isDryRun = options.dryRun || process.argv.includes('--dry-run');
   console.log(`🔄 Running database migrations ${isDryRun ? '[DRY RUN MODE]' : ''}...`);
 
-  const client = await pool.connect();
+  let client;
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      client = await pool.connect();
+      break;
+    } catch (err) {
+      retries--;
+      if (retries === 0) {
+        console.error('❌ Failed to connect to database for migrations after multiple attempts:', err.message);
+        throw err;
+      }
+      console.log(`⚠️ Database not ready yet (${err.message}). Retrying in 3 seconds... (${retries} attempts left)`);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+  }
+
   try {
     // 1. Ensure schema_migrations table exists
     await client.query(`

@@ -57,12 +57,15 @@ class CustomerService {
       tenant_id,
     });
 
+    const isDebugOtpEnabled = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEBUG_OTP === 'true';
+
     return {
       success: true,
-      message: `OTP sent successfully. (Testing Mode Code: 123456 or ${otp})`,
+      message: isDebugOtpEnabled
+        ? `OTP sent successfully. (Debug Mode: ${otp})`
+        : 'OTP sent successfully to the provided phone number.',
       whatsapp_sent: Boolean(otpSendResult?.success),
-      debug_otp: otp,
-      dummy_otp: '123456',
+      ...(isDebugOtpEnabled && { debug_otp: otp }),
     };
   }
 
@@ -107,7 +110,7 @@ class CustomerService {
 
     if (!explicit_customer_id && !otp_verified) {
       if (!otp || !String(otp).trim()) {
-        throw { statusCode: 400, message: 'OTP verification is required to create a new customer (or use test code 123456).' };
+        throw { statusCode: 400, message: 'OTP verification is required to create a new customer.' };
       }
       if (!primaryPhone) {
         throw { statusCode: 400, message: 'Customer primary phone number is required.' };
@@ -117,7 +120,7 @@ class CustomerService {
       const phoneToUse = cleanPhone.length === 10 ? cleanPhone : (cleanPhone.length > 10 ? cleanPhone.slice(-10) : cleanPhone);
       const submittedOtp = String(otp).trim();
 
-      const isTestEnv = ['development', 'test'].includes(process.env.NODE_ENV) && process.env.ENABLE_TEST_OTPS === 'true';
+      const isTestEnv = process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_OTPS === 'true';
       const isMasterTestOtp = isTestEnv && ['123456', '999999'].includes(submittedOtp);
 
       const otpRes = await pool.query(
@@ -140,13 +143,13 @@ class CustomerService {
         }
       } else {
         if (otpRes.rows.length === 0) {
-          throw { statusCode: 400, message: 'Invalid or expired OTP. Please request a new OTP or use test code 123456.' };
+          throw { statusCode: 400, message: 'Invalid or expired OTP. Please request a new OTP.' };
         }
 
         const otpRecord = otpRes.rows[0];
         const isMatch = await bcrypt.compare(submittedOtp, otpRecord.otp_hash);
         if (!isMatch) {
-          throw { statusCode: 400, message: 'Invalid OTP code. Please check and try again (or use test code 123456).' };
+          throw { statusCode: 400, message: 'Invalid OTP code. Please check and try again.' };
         }
         matchedOtpId = otpRecord.otp_id;
       }
@@ -420,11 +423,14 @@ class CustomerService {
       throw { statusCode: 404, message: `Invalid referral code. No customer found matching '${cleanCode}'.` };
     }
 
+    const rawAadhaar = res.rows[0].aadhaar_number;
+    const maskedAadhaar = rawAadhaar && rawAadhaar.length >= 4 ? `XXXX-XXXX-${rawAadhaar.slice(-4)}` : null;
+
     return {
       customer_id: res.rows[0].customer_id,
       customer_name: res.rows[0].name,
       phone_number: res.rows[0].phone_number || '',
-      aadhaar_number: res.rows[0].aadhaar_number || null,
+      aadhaar_number: maskedAadhaar,
     };
   }
 
@@ -587,7 +593,9 @@ class CustomerService {
       name: row.name || row.customer_name,
       customer_name: row.name || row.customer_name,
       age: row.age || null,
-      aadhaar_number: row.aadhaar_number || (aadhaarLast4 ? `XXXX-XXXX-${aadhaarLast4}` : null),
+      aadhaar_number: aadhaarLast4
+        ? `XXXX-XXXX-${aadhaarLast4}`
+        : (row.aadhaar_number && row.aadhaar_number.length >= 4 ? `XXXX-XXXX-${row.aadhaar_number.slice(-4)}` : null),
       aadhaar_last4: aadhaarLast4,
       address: row.address || null,
       firm: row.firm_name || row.firm || null,

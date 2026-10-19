@@ -428,7 +428,7 @@ class GiftCardService {
       SELECT 
         gc.card_id,
         gc.card_number,
-        gc.pin_code,
+        '****' AS pin_code,
         gc.initial_amount_paise / 100.0 AS initial_amount,
         gc.balance_amount_paise / 100.0 AS balance_amount,
         gc.currency,

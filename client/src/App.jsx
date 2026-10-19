@@ -13,8 +13,63 @@ import GiftCardsScreen from './screens/GiftCardsScreen';
 import TenantManagementScreen from './screens/TenantManagementScreen';
 import MasterRuleEditorScreen from './screens/MasterRuleEditorScreen';
 import StandaloneMasterEditorPortal from './screens/StandaloneMasterEditorPortal';
+import LoyaltyAppBuilder from './screens/LoyaltyAppBuilder';
 import CustomerPortalScreen from './pages/CustomerPortalScreen';
 import ApiService from './services/api';
+
+class BuilderErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('LoyaltyAppBuilder sandbox error caught safely:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-slate-800">
+          <div className="max-w-md w-full bg-white rounded-3xl p-6 border border-slate-200 shadow-xl text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-base font-bold text-slate-900">App Builder Recovered</h3>
+            <p className="text-xs text-slate-500">
+              Local builder session has been refreshed. Your main loyalty POS counter and editor are 100% active and unaffected.
+            </p>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.removeItem('bac_app_builder_features_v2');
+                    localStorage.removeItem('bac_app_builder_config');
+                    localStorage.removeItem('bac_app_builder_clean_settings_v3');
+                  } catch (e) {}
+                  window.location.reload();
+                }}
+                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition"
+              >
+                Reload Builder
+              </button>
+              <button
+                onClick={this.props.onExit}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+              >
+                Return to POS Counter
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function App() {
   const [user, setUser] = useState(ApiService.getUser());
@@ -27,8 +82,10 @@ export function App() {
   const isPublicReferralLead = path.startsWith('/refer/');
   const isCustomerPortal = path.startsWith('/portal') || path.startsWith('/customer-portal');
   const isEditorPath = path.startsWith('/editor') || path.startsWith('/studio');
+  const isBuilderPath = path.startsWith('/builder') || path.startsWith('/app-builder') || path.startsWith('/create-app');
 
   const [isStudioMode, setIsStudioMode] = useState(isEditorPath);
+  const [isBuilderMode, setIsBuilderMode] = useState(isBuilderPath);
 
   useEffect(() => {
     if (isPublicBalancePass || isPublicReferralLead || isCustomerPortal) return;
@@ -50,10 +107,11 @@ export function App() {
     }
   }, [isPublicBalancePass, isPublicReferralLead, isCustomerPortal]);
 
-  // Handle browser back/forward buttons for /editor navigation
+  // Handle browser back/forward buttons for /editor & /builder navigation
   useEffect(() => {
     const handlePopState = () => {
       setIsStudioMode(window.location.pathname.startsWith('/editor') || window.location.pathname.startsWith('/studio'));
+      setIsBuilderMode(window.location.pathname.startsWith('/builder') || window.location.pathname.startsWith('/app-builder') || window.location.pathname.startsWith('/create-app'));
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -94,6 +152,25 @@ export function App() {
 
   if (!user) {
     return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  if (isBuilderMode) {
+    return (
+      <BuilderErrorBoundary
+        onExit={() => {
+          window.history.pushState({}, '', '/');
+          setIsBuilderMode(false);
+        }}
+      >
+        <LoyaltyAppBuilder
+          user={user}
+          onExitToCounterApp={() => {
+            window.history.pushState({}, '', '/');
+            setIsBuilderMode(false);
+          }}
+        />
+      </BuilderErrorBoundary>
+    );
   }
 
   // Standalone Master Studio Editor Portal (/editor) - Strictly restricted to Admin/Director
@@ -152,6 +229,10 @@ export function App() {
       onOpenStudio={() => {
         window.history.pushState({}, '', '/editor');
         setIsStudioMode(true);
+      }}
+      onOpenBuilder={() => {
+        window.history.pushState({}, '', '/builder');
+        setIsBuilderMode(true);
       }}
     >
       {activeTab === 'dashboard' || activeTab === 'search' || activeTab === 'redemptions' ? (

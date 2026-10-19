@@ -107,28 +107,62 @@ class PointsService {
     try {
       await client.query('BEGIN');
 
+      const ledgerTypeMap = {
+        sale: 'earn_sale',
+        service: 'earn_service',
+        accessory: 'earn_service',
+        bodyshop: 'earn_service',
+        referral: 'earn_referral',
+      };
+      const ledgerType = ledgerTypeMap[activeCategory] || ledgerTypeMap[activeType] || 'earn_sale';
+
+      const colsRes = await client.query(
+        `SELECT column_name FROM information_schema.columns WHERE table_name = 'points_ledger';`
+      );
+      const cols = new Set(colsRes.rows.map(r => r.column_name));
+      const typeCol = cols.has('type') ? 'type' : 'transaction_type';
+      const refCol = cols.has('source_ref') ? 'source_ref' : 'reference_id';
+      const actorCol = cols.has('cashier_id') ? 'cashier_id' : 'created_by';
+      const hasCategoryCol = cols.has('transaction_category');
+      const hasIdempotencyCol = cols.has('idempotency_key');
+      const hasRateSnapshotCol = cols.has('redemption_rate_snapshot');
+
       // 0. Idempotency & Deduplication Check (LOOP-09 Fix)
       if (idempotency_key || reference_id) {
-        const checkRes = await client.query(
-          `SELECT entry_id AS id, customer_id, points, created_at
-           FROM points_ledger
-           WHERE tenant_id = $1 AND (
-             (idempotency_key IS NOT NULL AND idempotency_key = $2)
-             OR (reference_id IS NOT NULL AND reference_id = $3 AND transaction_type = $4)
-           )
-           LIMIT 1;`,
-          [tenant_id, idempotency_key || null, reference_id || null, activeType]
-        );
+        let dedupClauses = [];
+        let dedupParams = [tenant_id];
 
-        if (checkRes.rows.length > 0) {
-          await client.query('ROLLBACK');
-          console.log(`[Points Earning Deduplicated] Reference '${reference_id}' already processed.`);
-          return {
-            status: 'deduplicated',
-            message: `Transaction '${reference_id}' was previously processed.`,
-            ledger_entry: checkRes.rows[0],
-            tier_snapshot: null,
-          };
+        if (idempotency_key && hasIdempotencyCol) {
+          dedupParams.push(idempotency_key);
+          dedupClauses.push(`(idempotency_key IS NOT NULL AND idempotency_key = $${dedupParams.length})`);
+        }
+
+        if (reference_id) {
+          dedupParams.push(reference_id);
+          dedupParams.push(`%${reference_id}%`);
+          dedupParams.push(ledgerType);
+          dedupClauses.push(`(${refCol} IS NOT NULL AND (${refCol} = $${dedupParams.length - 2} OR ${refCol} LIKE $${dedupParams.length - 1}) AND ${typeCol} = $${dedupParams.length})`);
+        }
+
+        if (dedupClauses.length > 0) {
+          const checkRes = await client.query(
+            `SELECT entry_id AS id, customer_id, points, created_at
+             FROM points_ledger
+             WHERE tenant_id = $1 AND (${dedupClauses.join(' OR ')})
+             LIMIT 1;`,
+            dedupParams
+          );
+
+          if (checkRes.rows.length > 0) {
+            await client.query('ROLLBACK');
+            console.log(`[Points Earning Deduplicated] Reference '${reference_id}' already processed.`);
+            return {
+              status: 'deduplicated',
+              message: `Transaction '${reference_id}' was previously processed.`,
+              ledger_entry: checkRes.rows[0],
+              tier_snapshot: null,
+            };
+          }
         }
       }
 
@@ -219,27 +253,7 @@ class PointsService {
       }
 
       // 4. Insert immutable record into points_ledger
-      const ledgerTypeMap = {
-        sale: 'earn_sale',
-        service: 'earn_service',
-        accessory: 'earn_service',
-        bodyshop: 'earn_service',
-        referral: 'earn_referral',
-      };
-      const ledgerType = ledgerTypeMap[activeCategory] || ledgerTypeMap[activeType] || 'earn_sale';
       const sourceRef = [reference_id, description, appliedRuleNotice].filter(Boolean).join(' | ') || `${activeCategory.toUpperCase()} transaction earning`;
-      
-      const colsRes = await client.query(
-        `SELECT column_name FROM information_schema.columns WHERE table_name = 'points_ledger';`
-      );
-      const cols = new Set(colsRes.rows.map(r => r.column_name));
-
-      const typeCol = cols.has('type') ? 'type' : 'transaction_type';
-      const refCol = cols.has('source_ref') ? 'source_ref' : 'reference_id';
-      const actorCol = cols.has('cashier_id') ? 'cashier_id' : 'created_by';
-      const hasCategoryCol = cols.has('transaction_category');
-      const hasIdempotencyCol = cols.has('idempotency_key');
-      const hasRateSnapshotCol = cols.has('redemption_rate_snapshot');
 
       let insertCols = ['customer_id', 'vehicle_id', 'branch_id', typeCol, 'points', refCol, actorCol, 'tenant_id'];
       let insertVals = [customer_id, vehicle_id || null, branch_id, ledgerType, earnedPoints, sourceRef, created_by || null, tenant_id];

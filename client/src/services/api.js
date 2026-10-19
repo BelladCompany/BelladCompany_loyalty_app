@@ -622,6 +622,104 @@ export class ApiService {
       body: payload,
     });
   }
+
+  // ─── Customer Priority Tiers (Silver, Gold, Platinum/VIP) ──────────────────
+  static async getMasterPriorityTiers(tenantId) {
+    const q = tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : '';
+    return this.request(`/master-rules/priority-tiers${q}`);
+  }
+
+  static async saveMasterPriorityTier(payload) {
+    return this.request('/master-rules/priority-tiers', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  // ─── Dealership Specific Policy & Active Modules ────────────────────────────
+  static async getDealershipPolicy(tenantId) {
+    const q = tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : '';
+    return this.request(`/master-rules/dealerships/policy${q}`);
+  }
+
+  static async saveDealershipPolicy(payload) {
+    return this.request('/master-rules/dealerships/policy', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  // ─── Points Gain Formulas across All 6 Categories ───────────────────────────
+  static async getPointsFormulas(tenantId) {
+    const q = tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : '';
+    return this.request(`/master-rules/points-formulas${q}`);
+  }
+
+  static async savePointsFormula(payload) {
+    return this.request('/master-rules/points-formulas', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  // ─── Live Policy Simulator (Testing dummy customer & all rules) ──────────────
+  static async simulateMasterRule(payload) {
+    return this.request('/master-rules/simulate', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  // ─── White-Label Rules Engine Platform V2 Endpoints ─────────────────────────
+  static async getPlatformActiveRules(tenantId) {
+    const q = tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : '';
+    return this.request(`/platform/rules/active${q}`);
+  }
+
+  static async getPlatformVersions(tenantId) {
+    const q = tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : '';
+    return this.request(`/platform/rules/versions${q}`);
+  }
+
+  static async savePlatformDraft(payload) {
+    return this.request('/platform/rules/draft', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async simulatePlatformRules(payload) {
+    return this.request('/platform/rules/simulate', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async publishPlatformRules(versionNumber, tenantId) {
+    return this.request('/platform/rules/publish', {
+      method: 'POST',
+      body: { version_number: versionNumber, tenant_id: tenantId },
+    });
+  }
+
+  static async rollbackPlatformRules(targetVersionNumber, tenantId) {
+    return this.request('/platform/rules/rollback', {
+      method: 'POST',
+      body: { target_version_number: targetVersionNumber, tenant_id: tenantId },
+    });
+  }
+
+  static async getPlatformBranding(tenantId) {
+    const q = tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : '';
+    return this.request(`/platform/rules/branding${q}`);
+  }
+
+  static async updatePlatformBranding(payload) {
+    return this.request('/platform/rules/branding', {
+      method: 'PUT',
+      body: payload,
+    });
+  }
 }
 
 export default ApiService;

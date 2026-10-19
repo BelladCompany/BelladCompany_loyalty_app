@@ -3,9 +3,13 @@ const router = express.Router();
 const TenantController = require('../controllers/tenant.controller');
 const authenticateToken = require('../middleware/auth');
 
-// List firms
-router.get('/firms', authenticateToken, TenantController.listFirms);
-router.post('/firms', authenticateToken, TenantController.createFirm);
-router.patch('/firms/:tenantId', authenticateToken, TenantController.updateFirm);
+const requireRole = require('../middleware/roles');
+
+// List firms (authorized staff)
+router.get('/firms', authenticateToken, requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'cashier']), TenantController.listFirms);
+
+// Create and update firms (strictly Admin / Super Admin)
+router.post('/firms', authenticateToken, requireRole(['admin', 'super_admin']), TenantController.createFirm);
+router.patch('/firms/:tenantId', authenticateToken, requireRole(['admin', 'super_admin']), TenantController.updateFirm);
 
 module.exports = router;

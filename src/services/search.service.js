@@ -214,7 +214,9 @@ class SearchService {
       name: row.customer_name || row.name || 'Customer',
       customer_name: row.customer_name || row.name || 'Customer',
       age: row.age || null,
-      aadhaar_number: row.aadhaar_number || (aadhaarLast4 ? `XXXX-XXXX-${aadhaarLast4}` : null),
+      aadhaar_number: aadhaarLast4
+        ? `XXXX-XXXX-${aadhaarLast4}`
+        : (row.aadhaar_number && row.aadhaar_number.length >= 4 ? `XXXX-XXXX-${row.aadhaar_number.slice(-4)}` : null),
       aadhaar_last4: aadhaarLast4,
       address: row.address || null,
       firm: row.firm_name || row.firm || null,

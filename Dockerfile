@@ -5,9 +5,13 @@ FROM node:20-alpine AS client-builder
 WORKDIR /app/client
 
 COPY client/package*.json ./
-RUN npm ci
+RUN npm ci || npm install
 
 COPY client/ ./
+ARG VITE_API_URL=""
+ARG VITE_TENANT_ID="bellad_and_company"
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_TENANT_ID=$VITE_TENANT_ID
 RUN npm run build
 
 # Stage 2: Production Backend & Fullstack Service
@@ -16,7 +20,7 @@ WORKDIR /app
 
 # Install backend production dependencies
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev || npm install --omit=dev
 
 # Copy backend source code and migrations
 COPY . .

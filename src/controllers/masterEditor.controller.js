@@ -7,7 +7,7 @@ class MasterEditorController {
    */
   static async listRules(req, res) {
     try {
-      const tenant_id = req.query.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       const {
         scheme_type,
         spend_type,
@@ -100,7 +100,7 @@ class MasterEditorController {
   static async getRuleById(req, res) {
     try {
       const { id } = req.params;
-      const tenant_id = req.query.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
 
       const ruleResult = await pool.query(
         `SELECT * FROM master_loyalty_rules WHERE rule_id = $1 AND tenant_id = $2;`,
@@ -132,7 +132,7 @@ class MasterEditorController {
    */
   static async createRule(req, res) {
     try {
-      const tenant_id = req.body.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       const currentUser = req.user?.username || 'director';
 
       const {
@@ -289,7 +289,7 @@ class MasterEditorController {
   static async updateRule(req, res) {
     try {
       const { id } = req.params;
-      const tenant_id = req.body.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       const currentUser = req.user?.username || 'director';
 
       const existingRes = await pool.query(
@@ -420,26 +420,25 @@ class MasterEditorController {
 
   /**
    * Director One-Click Approval & Publishing.
-   * STRICT GOVERNANCE: Only Director Agastya Bellad Sir ('agstya' / 'director') can approve rules into production!
    */
   static async approveRule(req, res) {
     try {
       const { id } = req.params;
-      const tenant_id = req.body.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       
       const callerUsername = (req.user?.username || req.body.username || '').toLowerCase();
       const callerRole = (req.user?.role || req.body.role || '').toLowerCase();
-      const isDirector = (callerUsername === 'agstya' || callerUsername === 'agastya' || callerRole === 'director');
+      const isDirector = (callerUsername === 'agstya' || callerUsername === 'agastya' || callerRole === 'director' || callerRole === 'admin');
 
       if (!isDirector) {
         return res.status(403).json({
           success: false,
-          error: "Access Denied: Only Executive Director Agastya Bellad Sir ('agstya') has authorization to approve rules into production. Please sign in with username agstya.",
+          error: "Access Denied: Only Director accounts have authorization to approve rules.",
         });
       }
 
       const directorName = 'Director Agastya Bellad';
-      const notes = req.body.approval_notes || 'Approved by Executive Director Agastya Bellad Sir';
+      const notes = req.body.approval_notes || 'Approved by Director';
 
       const updateResult = await pool.query(
         `UPDATE master_loyalty_rules
@@ -468,7 +467,7 @@ class MasterEditorController {
 
       return res.status(200).json({
         success: true,
-        message: `Rule "${approvedRule.rule_name}" successfully approved and activated by Director Agastya Bellad Sir!`,
+        message: `Rule "${approvedRule.rule_name}" approved successfully.`,
         data: approvedRule,
       });
     } catch (error) {
@@ -478,26 +477,26 @@ class MasterEditorController {
   }
 
   /**
-   * Reject rule with reasons (Only Director Agastya Sir).
+   * Reject rule with reasons.
    */
   static async rejectRule(req, res) {
     try {
       const { id } = req.params;
-      const tenant_id = req.body.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       
       const callerUsername = (req.user?.username || req.body.username || '').toLowerCase();
       const callerRole = (req.user?.role || req.body.role || '').toLowerCase();
-      const isDirector = (callerUsername === 'agstya' || callerUsername === 'agastya' || callerRole === 'director');
+      const isDirector = (callerUsername === 'agstya' || callerUsername === 'agastya' || callerRole === 'director' || callerRole === 'admin');
 
       if (!isDirector) {
         return res.status(403).json({
           success: false,
-          error: "Access Denied: Only Executive Director Agastya Bellad Sir ('agstya') has authorization to reject rules.",
+          error: "Access Denied: Only Director accounts have authorization to reject rules.",
         });
       }
 
       const directorName = 'Director Agastya Bellad';
-      const reason = req.body.rejection_reason || 'Rejected by Executive Director Agastya Bellad Sir';
+      const reason = req.body.rejection_reason || 'Rejected by Director';
 
       const updateResult = await pool.query(
         `UPDATE master_loyalty_rules
@@ -516,7 +515,7 @@ class MasterEditorController {
 
       return res.status(200).json({
         success: true,
-        message: 'Rule rejected',
+        message: 'Rule rejected.',
         data: updateResult.rows[0],
       });
     } catch (error) {
@@ -531,7 +530,7 @@ class MasterEditorController {
   static async toggleActive(req, res) {
     try {
       const { id } = req.params;
-      const tenant_id = req.body.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       const currentUser = req.user?.username || 'admin';
 
       const updateResult = await pool.query(
@@ -564,7 +563,7 @@ class MasterEditorController {
   static async deleteRule(req, res) {
     try {
       const { id } = req.params;
-      const tenant_id = req.body.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
 
       const deleteResult = await pool.query(
         `DELETE FROM master_loyalty_rules WHERE rule_id = $1 AND tenant_id = $2 RETURNING *;`,
@@ -590,7 +589,7 @@ class MasterEditorController {
    */
   static async simulateRule(req, res) {
     try {
-      const tenant_id = req.body.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       const {
         scheme_type,
         spend_type = 'sale',
@@ -633,7 +632,7 @@ class MasterEditorController {
    */
   static async getLookups(req, res) {
     try {
-      const tenant_id = req.query.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
 
       // 1. Get models from vehicles
       const modelsRes = await pool.query(
@@ -717,25 +716,27 @@ class MasterEditorController {
         data: {
           scheme_types: mergedSchemeTypes,
           spend_types: [
-            { id: 'sale', label: 'New Vehicle Sale' },
-            { id: 'service', label: 'Service (Paid/Free)' },
-            { id: 'accessories', label: 'Accessories' },
-            { id: 'bodyshop', label: 'Bodyshop & Accidental' },
+            { id: 'sale', label: 'Vehicle & Equipment Sales (Ex-Showroom)' },
+            { id: 'service', label: 'Workshop & Routine Service' },
+            { id: 'bodyshop', label: 'Bodyshop & Accidental Repairs' },
+            { id: 'accessories', label: 'Genuine Accessories' },
+            { id: 'spares', label: 'Spare Parts & Consumables' },
+            { id: 'gift_cards', label: 'Gift Cards & Referral Vouchers' },
             { id: 'redemption', label: 'Redemption & Voucher' },
           ],
           vehicle_types: [
-            { id: 'ALL', label: 'All Vehicles' },
-            { id: '2W', label: 'Two-Wheeler (2W)' },
+            { id: 'Commercial', label: 'Commercial Vehicles (Trucks / Buses / SCV)' },
+            { id: 'Machinery & Agriculture', label: 'Machinery & Agriculture Equipment' },
             { id: '4W', label: 'Four-Wheeler (4W)' },
+            { id: '2W', label: 'Two-Wheeler (2W)' },
             { id: 'EV', label: 'Electric Vehicle (EV)' },
-            { id: '3W', label: 'Three-Wheeler (3W)' },
-            { id: 'Commercial', label: 'Commercial Vehicle' },
+            { id: 'ALL', label: 'All Vehicle & Equipment Types' },
           ],
           priority_tiers: [
             { id: 'ALL', label: 'All Tiers' },
             { id: 'silver', label: 'Silver Tier' },
             { id: 'gold', label: 'Gold Tier' },
-            { id: 'platinum', label: 'Platinum Tier' },
+            { id: 'platinum', label: 'Platinum / VIP Tier' },
           ],
           models,
           variants,
@@ -754,7 +755,7 @@ class MasterEditorController {
    */
   static async getUsers(req, res) {
     try {
-      const tenant_id = req.query.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       const result = await pool.query(
         `SELECT id, user_id, username, role, branch_id, created_at 
          FROM users 
@@ -781,7 +782,7 @@ class MasterEditorController {
         return res.status(400).json({ success: false, error: `Invalid role. Allowed: ${validRoles.join(', ')}` });
       }
 
-      const tenant_id = req.body.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       const result = await pool.query(
         `UPDATE users 
          SET role = $1 
@@ -815,7 +816,7 @@ class MasterEditorController {
         return res.status(400).json({ success: false, error: 'Username is required.' });
       }
 
-      const tenant_id = req.body.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       const bcrypt = require('bcryptjs');
       const hash = await bcrypt.hash(password || 'Staff@123', 10);
 
@@ -843,7 +844,7 @@ class MasterEditorController {
   static async registerCustomScheme(req, res) {
     try {
       const { scheme_code, scheme_name, description } = req.body;
-      const tenant_id = req.body.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
 
       if (!scheme_code && !scheme_name) {
         return res.status(400).json({ success: false, error: 'Scheme name or code required.' });
@@ -874,6 +875,399 @@ class MasterEditorController {
       return res.status(500).json({ success: false, error: error.message });
     }
   }
+
+  /**
+   * Customer Priority Tiers: Dynamic Slabs (Silver, Gold, Platinum/VIP)
+   * Supports:
+   * - eval_basis: 'expenses_based' | 'points_based' | 'spend_range'
+   * - thresholds: min_expense_amount, max_expense_amount, min_lifetime_points
+   * - multiplier: 100 = 1.0x, 125 = 1.25x, 150 = 1.5x
+   * - discounts_json: category discounts (sales, service, bodyshop, accessories, spares)
+   */
+  static async getPriorityTiers(req, res) {
+    try {
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const tierRes = await pool.query(
+        `SELECT id, tier_name, min_lifetime_points, min_expense_amount, max_expense_amount, multiplier, eval_basis, discounts_json, applicable_from, applicable_upto, approval_status, approved_by, benefits_json
+         FROM tier_rules
+         WHERE tenant_id = $1
+         ORDER BY min_expense_amount ASC, min_lifetime_points ASC;`,
+        [tenant_id]
+      );
+
+      let rows = tierRes.rows;
+      if (!rows || rows.length === 0) {
+        rows = [
+          {
+            tier_id: 'silver',
+            tier_name: 'Silver Tier',
+            subtitle: 'Base Customer Entry Slab',
+            eval_basis: 'expenses_based',
+            min_expense_amount: 0,
+            max_expense_amount: 49999,
+            min_lifetime_points: 0,
+            multiplier: 100,
+            discounts_json: { sales: 0, service: 0, bodyshop: 10, accessories: 5, spares: 0 },
+            applicable_from: new Date().toISOString().slice(0, 10),
+            applicable_upto: new Date(Date.now() + 10 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+            approval_status: 'approved',
+            approved_by: 'Director',
+          },
+          {
+            tier_id: 'gold',
+            tier_name: 'Gold Tier',
+            subtitle: 'Accelerated Priority Slab',
+            eval_basis: 'expenses_based',
+            min_expense_amount: 50000,
+            max_expense_amount: 199999,
+            min_lifetime_points: 5000,
+            multiplier: 125,
+            discounts_json: { sales: 1, service: 5, bodyshop: 25, accessories: 10, spares: 5 },
+            applicable_from: new Date().toISOString().slice(0, 10),
+            applicable_upto: new Date(Date.now() + 10 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+            approval_status: 'approved',
+            approved_by: 'Director',
+          },
+          {
+            tier_id: 'platinum',
+            tier_name: 'Platinum / VIP Tier',
+            subtitle: 'Executive Leadership Club',
+            eval_basis: 'expenses_based',
+            min_expense_amount: 200000,
+            max_expense_amount: null,
+            min_lifetime_points: 15000,
+            multiplier: 150,
+            discounts_json: { sales: 2, service: 10, bodyshop: 40, accessories: 15, spares: 10 },
+            applicable_from: new Date().toISOString().slice(0, 10),
+            applicable_upto: new Date(Date.now() + 10 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+            approval_status: 'approved',
+            approved_by: 'Director',
+          },
+        ];
+      }
+
+      return res.status(200).json({ success: true, data: rows });
+    } catch (error) {
+      console.error('Error fetching priority tiers:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  static async savePriorityTier(req, res) {
+    try {
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const {
+        tier_name,
+        eval_basis = 'expenses_based',
+        min_expense_amount = 0,
+        max_expense_amount = null,
+        min_lifetime_points = 0,
+        multiplier = 100,
+        discounts_json = {},
+        applicable_from = new Date(),
+        applicable_upto = new Date(Date.now() + 10 * 365 * 24 * 3600 * 1000),
+        approval_status = 'approved',
+        approved_by = 'Director',
+      } = req.body;
+
+      if (!tier_name) {
+        return res.status(400).json({ success: false, error: 'Tier name is required.' });
+      }
+
+      const upsertQuery = `
+        INSERT INTO tier_rules (
+          tenant_id,
+          tier_name,
+          min_points,
+          min_lifetime_points,
+          min_expense_amount,
+          max_expense_amount,
+          multiplier,
+          eval_basis,
+          discounts_json,
+          applicable_from,
+          applicable_upto,
+          approval_status,
+          approved_by,
+          updated_at
+        ) VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+        ON CONFLICT (tenant_id, tier_name) DO UPDATE SET
+          min_points = EXCLUDED.min_points,
+          min_lifetime_points = EXCLUDED.min_lifetime_points,
+          min_expense_amount = EXCLUDED.min_expense_amount,
+          max_expense_amount = EXCLUDED.max_expense_amount,
+          multiplier = EXCLUDED.multiplier,
+          eval_basis = EXCLUDED.eval_basis,
+          discounts_json = EXCLUDED.discounts_json,
+          applicable_from = EXCLUDED.applicable_from,
+          applicable_upto = EXCLUDED.applicable_upto,
+          approval_status = EXCLUDED.approval_status,
+          approved_by = EXCLUDED.approved_by,
+          updated_at = NOW()
+        RETURNING *;
+      `;
+
+      const values = [
+        tenant_id,
+        tier_name.trim(),
+        Number(min_lifetime_points || 0),
+        Number(min_expense_amount || 0),
+        max_expense_amount != null ? Number(max_expense_amount) : null,
+        Number(multiplier || 100),
+        eval_basis,
+        JSON.stringify(discounts_json),
+        new Date(applicable_from),
+        new Date(applicable_upto),
+        approval_status,
+        approved_by,
+      ];
+
+      const result = await pool.query(upsertQuery, values);
+
+      // Also ensure corresponding rule exists in master_loyalty_rules
+      const ruleCode = `${tenant_id.slice(0, 6).toUpperCase()}-TIER-${tier_name.toUpperCase().replace(/\s+/g, '_')}`;
+      await pool.query(
+        `INSERT INTO master_loyalty_rules (
+          tenant_id, rule_code, rule_name, description, scheme_type, spend_type, vehicle_type,
+          priority_tier, priority_weight, min_spend_paise, max_spend_paise, discount_type, discount_value,
+          points_multiplier_numerator, points_multiplier_denominator, applicable_from, applicable_upto,
+          approval_status, approved_by, approved_at, is_active
+        ) VALUES (
+          $1, $2, $3, $4, 'standard', 'sale', 'ALL',
+          $5, 150, $6, $7, 'percentage', $8,
+          $9, 100, $10, $11,
+          $12, $13, NOW(), true
+        )
+        ON CONFLICT (tenant_id, rule_code) DO UPDATE SET
+          min_spend_paise = EXCLUDED.min_spend_paise,
+          max_spend_paise = EXCLUDED.max_spend_paise,
+          discount_value = EXCLUDED.discount_value,
+          points_multiplier_numerator = EXCLUDED.points_multiplier_numerator,
+          applicable_from = EXCLUDED.applicable_from,
+          applicable_upto = EXCLUDED.applicable_upto,
+          approval_status = EXCLUDED.approval_status,
+          updated_at = NOW();`,
+        [
+          tenant_id,
+          ruleCode,
+          `Customer Priority Tier: ${tier_name}`,
+          `Evaluation basis: ${eval_basis}. Min expense/points: ${min_expense_amount || min_lifetime_points}`,
+          tier_name.toLowerCase(),
+          Math.round(Number(min_expense_amount || 0) * 100),
+          max_expense_amount != null ? Math.round(Number(max_expense_amount) * 100) : null,
+          Number(discounts_json?.bodyshop || discounts_json?.service || 0),
+          Number(multiplier || 100),
+          new Date(applicable_from),
+          new Date(applicable_upto),
+          approval_status,
+          approved_by,
+        ]
+      ).catch((err) => console.warn('[savePriorityTier] Warning syncing master rule:', err.message));
+
+      return res.status(200).json({
+        success: true,
+        message: `Customer priority slab '${tier_name}' saved successfully.`,
+        data: result.rows[0],
+      });
+    } catch (error) {
+      console.error('Error saving priority tier:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Dealership-specific Policy & Active Modules Control
+   * E.g. Trident Automobiles can have only Sales & Service active, and Tier Policy disabled!
+   */
+  static async getDealershipPolicy(req, res) {
+    try {
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const firmRes = await pool.query(
+        `SELECT firm_id, tenant_id, firm_name, legal_name, brand_slug, point_to_rupee_rate, modules_config, rules_config, is_active
+         FROM firms
+         WHERE tenant_id = $1;`,
+        [tenant_id]
+      );
+
+      if (firmRes.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Dealership not found.' });
+      }
+
+      const defaultModules = {
+        sales: true,
+        service: true,
+        bodyshop: true,
+        accessories: true,
+        spares: true,
+        gift_cards: true,
+        tier_policy: true,
+      };
+
+      const firm = firmRes.rows[0];
+      firm.modules_config = firm.modules_config || defaultModules;
+
+      return res.status(200).json({ success: true, data: firm });
+    } catch (error) {
+      console.error('Error getting dealership policy:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  static async saveDealershipPolicy(req, res) {
+    try {
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const { modules_config, rules_config, point_to_rupee_rate } = req.body;
+
+      const updateRes = await pool.query(
+        `UPDATE firms SET
+          modules_config = COALESCE($1, modules_config),
+          rules_config = COALESCE($2, rules_config),
+          point_to_rupee_rate = COALESCE($3, point_to_rupee_rate),
+          updated_at = NOW()
+         WHERE tenant_id = $4
+         RETURNING *;`,
+        [
+          modules_config ? JSON.stringify(modules_config) : null,
+          rules_config ? JSON.stringify(rules_config) : null,
+          point_to_rupee_rate != null ? Number(point_to_rupee_rate) : null,
+          tenant_id,
+        ]
+      );
+
+      if (updateRes.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Dealership not found.' });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Dealership policy configuration updated successfully.',
+        data: updateRes.rows[0],
+      });
+    } catch (error) {
+      console.error('Error saving dealership policy:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Points Gain Formulas across all 6 core business categories:
+   * 1. Vehicle & Equipment Sales (Price base: Net Ex-Showroom)
+   * 2. Service
+   * 3. Spares
+   * 4. Accessories
+   * 5. Bodyshop
+   * 6. Gift Cards / Referral Advocacy
+   */
+  static async getPointsFormulas(req, res) {
+    try {
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+
+      // Fetch dynamic active rules for this tenant to provide live values
+      const rulesRes = await pool.query(
+        `SELECT DISTINCT ON (spend_type) spend_type, points_multiplier_numerator, points_multiplier_denominator, bonus_points, discount_value, min_spend_paise, max_spend_paise
+         FROM master_loyalty_rules
+         WHERE tenant_id = $1 AND is_active = true
+         ORDER BY spend_type, priority_weight DESC;`,
+        [tenant_id]
+      ).catch(() => ({ rows: [] }));
+
+      const ruleMap = {};
+      (rulesRes.rows || []).forEach((r) => {
+        ruleMap[r.spend_type] = r;
+      });
+
+      const formulas = [
+        {
+          category: 'sale',
+          title: 'Vehicle & Equipment Sales',
+          price_base: 'Net Ex-Showroom Price (Ex-Showroom Price − Deductions)',
+          earning_ratio: `${ruleMap.sale?.points_multiplier_numerator || 1} Pt per ₹100 (${ruleMap.sale?.points_multiplier_numerator || 1}%)`,
+          earning_pct: Number(ruleMap.sale?.points_multiplier_numerator || 1),
+          spend_range: 'Calculated on Net Ex-Showroom pricing for 2W, 4W, EV, Commercial & Agri Machinery',
+          description: 'Points are strictly calculated on the Ex-Showroom baseline, excluding road tax and insurance.',
+        },
+        {
+          category: 'service',
+          title: 'Workshop & Routine Service',
+          price_base: 'Service Invoice Bill (Labour + Scheduled Maintenance)',
+          earning_ratio: `${ruleMap.service?.points_multiplier_numerator || 4} Pts per ₹100 (${ruleMap.service?.points_multiplier_numerator || 4}%)`,
+          earning_pct: Number(ruleMap.service?.points_multiplier_numerator || 4),
+          spend_range: 'All workshop job-cards and periodic service invoices',
+          description: 'Calculated on the net service invoice bill value.',
+        },
+        {
+          category: 'spares',
+          title: 'Spare Parts & Consumables',
+          price_base: 'Spares Counter & Parts Invoice',
+          earning_ratio: `${ruleMap.spares?.points_multiplier_numerator || 2} Pts per ₹100 (${ruleMap.spares?.points_multiplier_numerator || 2}%)`,
+          earning_pct: Number(ruleMap.spares?.points_multiplier_numerator || 2),
+          spend_range: 'Over-the-counter and workshop genuine parts billing',
+          description: 'Earned on genuine OEM spares, oils, filters, and mechanical components.',
+        },
+        {
+          category: 'accessories',
+          title: 'Genuine Accessories',
+          price_base: 'Accessories Invoice Amount',
+          earning_ratio: `${ruleMap.accessories?.points_multiplier_numerator || 2} Pts per ₹100 (${ruleMap.accessories?.points_multiplier_numerator || 2}%)`,
+          earning_pct: Number(ruleMap.accessories?.points_multiplier_numerator || 2),
+          spend_range: 'All dealership styling and utility accessories',
+          description: 'Earned on official accessories purchased during or after vehicle delivery.',
+        },
+        {
+          category: 'bodyshop',
+          title: 'Bodyshop & Accidental Repairs',
+          price_base: 'Customer Paid / Deductible Bodyshop Amount',
+          earning_ratio: `${ruleMap.bodyshop?.points_multiplier_numerator || 3} Pts per ₹100 (${ruleMap.bodyshop?.points_multiplier_numerator || 3}%)`,
+          earning_pct: Number(ruleMap.bodyshop?.points_multiplier_numerator || 3),
+          spend_range: 'Accidental denting, painting and insurance deductible customer pay',
+          description: 'Earned on customer-borne portion of bodyshop and accident claims.',
+        },
+        {
+          category: 'gift_cards',
+          title: 'Gift Cards & Referral Advocacy',
+          price_base: 'Electronic Showroom Voucher / Referral Vehicle Delivery',
+          earning_ratio: '2,500 Bonus Points per verified vehicle delivery by new customer',
+          earning_pct: 2.5,
+          spend_range: 'Purchased by a brand-new customer (not existing account)',
+          description: 'Advocate receives points upon delivery when a new customer redeems the gift voucher.',
+        },
+      ];
+
+      return res.status(200).json({ success: true, data: formulas });
+    } catch (error) {
+      console.error('Error fetching points formulas:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  static async savePointsFormula(req, res) {
+    try {
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const { category, numerator = 1, denominator = 100 } = req.body;
+
+      if (!category) {
+        return res.status(400).json({ success: false, error: 'Category is required.' });
+      }
+
+      await pool.query(
+        `UPDATE master_loyalty_rules
+         SET points_multiplier_numerator = $1,
+             points_multiplier_denominator = $2,
+             updated_at = NOW()
+         WHERE tenant_id = $3 AND spend_type = $4;`,
+        [Number(numerator), Number(denominator), tenant_id, category]
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: `Points formula for '${category}' updated to ${numerator}/${denominator}.`,
+      });
+    } catch (error) {
+      console.error('Error saving points formula:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
 }
 
 module.exports = MasterEditorController;
+
