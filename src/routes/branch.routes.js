@@ -11,11 +11,11 @@ router.use(authenticateToken);
 // Create branch (Admin only)
 router.post('/', requireRole(['admin']), validate(createBranchSchema), BranchController.createBranch);
 
-// List branches (Cashier or Admin)
-router.get('/', requireRole(['cashier', 'admin']), BranchController.listBranches);
+// List branches (Cashier, Branch Manager, Regional Admin, Admin, Super Admin)
+router.get('/', requireRole(['cashier', 'admin', 'branch_manager', 'regional_admin', 'super_admin']), BranchController.listBranches);
 
-// Get branch by ID (Cashier or Admin)
-router.get('/:id', requireRole(['cashier', 'admin']), BranchController.getBranch);
+// Get branch by ID (All staff roles)
+router.get('/:id', requireRole(['cashier', 'admin', 'branch_manager', 'regional_admin', 'super_admin']), BranchController.getBranch);
 
 // Update branch (Admin only)
 router.put('/:id', requireRole(['admin']), validate(updateBranchSchema), BranchController.updateBranch);

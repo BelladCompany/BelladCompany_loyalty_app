@@ -11,11 +11,11 @@ router.use(authenticateToken);
 // Create brand (Admin only)
 router.post('/', requireRole(['admin']), validate(createBrandSchema), BrandController.createBrand);
 
-// List brands (Cashier or Admin)
-router.get('/', requireRole(['cashier', 'admin']), BrandController.listBrands);
+// List brands (Cashier, Branch Manager, Regional Admin, Admin, Super Admin)
+router.get('/', requireRole(['cashier', 'admin', 'branch_manager', 'regional_admin', 'super_admin']), BrandController.listBrands);
 
-// Get brand by ID (Cashier or Admin)
-router.get('/:id', requireRole(['cashier', 'admin']), BrandController.getBrand);
+// Get brand by ID (All staff roles)
+router.get('/:id', requireRole(['cashier', 'admin', 'branch_manager', 'regional_admin', 'super_admin']), BrandController.getBrand);
 
 // Update brand (Admin only)
 router.put('/:id', requireRole(['admin']), validate(updateBrandSchema), BrandController.updateBrand);

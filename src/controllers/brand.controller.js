@@ -33,10 +33,11 @@ class BrandController {
       const tenantId = req.tenantId;
 
       const brandsRes = await pool.query(
-        `SELECT brand_id AS id, brand_name AS name, NULL::text AS code, tenant_id, created_at, updated_at
+        `SELECT MIN(brand_id) AS id, MIN(brand_name) AS name, NULL::text AS code, tenant_id, MIN(created_at) AS created_at, MAX(updated_at) AS updated_at
          FROM brands
          WHERE tenant_id = $1
-         ORDER BY brand_id ASC;`,
+         GROUP BY LOWER(TRIM(brand_name)), tenant_id
+         ORDER BY name ASC;`,
         [tenantId]
       );
 

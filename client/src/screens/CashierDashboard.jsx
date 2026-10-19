@@ -71,7 +71,11 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
       ApiService.request('/brands').catch(() => ({ data: [] })),
     ]).then(([branchRes, brandRes]) => {
       setBranches(branchRes.data || []);
-      setBrands(brandRes.data || []);
+      const rawBrands = brandRes.data || [];
+      const uniqueBrands = Array.from(
+        new Map(rawBrands.map((b) => [b.name || b.brand_name, b])).values()
+      );
+      setBrands(uniqueBrands);
     });
   }, []);
 
@@ -120,7 +124,6 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
     const query = searchQuery.trim();
-    if (!query) return;
 
     setError('');
     setIsSearching(true);
@@ -423,11 +426,12 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
             </div>
 
             <button
+              id="search-customer-btn"
               type="submit"
-              disabled={isSearching || !searchQuery.trim()}
+              disabled={isSearching}
               className="h-14 px-8 text-sm font-black rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-md shadow-indigo-600/20 disabled:opacity-40"
             >
-              {isSearching ? 'Searching...' : 'Lookup'}
+              {isSearching ? 'Searching...' : 'Search'}
             </button>
 
             <button

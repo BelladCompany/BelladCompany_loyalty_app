@@ -37,7 +37,7 @@ const registerSchema = z.object({
 // Customer Validators
 const createCustomerSchema = z.object({
   name: z.string({ required_error: 'Customer name is required' }).trim().min(1, 'Customer name cannot be empty'),
-  email: z.string().email('Invalid email address').optional().nullable(),
+  email: z.string().email('Invalid email address').optional().nullable().or(z.literal('')),
   phone_numbers: z
     .array(phoneSchema, { required_error: 'At least one phone number is required' })
     .min(1, 'At least one phone number is required'),
@@ -61,14 +61,21 @@ const createCustomerSchema = z.object({
   opening_points: z.coerce.number().int().min(0, 'Opening points cannot be negative').default(0).optional(),
   // Aadhaar & Optional GST Number
   aadhaar_number: z
-    .string({ required_error: 'Aadhaar number is required' })
+    .string()
     .trim()
-    .regex(/^\d{12}$/, 'Aadhaar number must be exactly 12 numeric digits.'),
+    .transform((val) => (val ? val.replace(/[\s-]/g, '') : ''))
+    .refine((val) => !val || /^\d{12}$/.test(val), {
+      message: 'Aadhaar number must be exactly 12 numeric digits.',
+    })
+    .optional()
+    .nullable()
+    .or(z.literal('')),
   gst_number: z
     .string()
     .trim()
     .optional()
-    .nullable(),
+    .nullable()
+    .or(z.literal('')),
   age: z.coerce.number().int().positive().optional().nullable(),
   firm_name: z.string().trim().optional().nullable(),
   address: z.string().trim().optional().nullable(),
@@ -158,14 +165,12 @@ const updateBrandSchema = z.object({
 
 // Search Validators
 const searchSchema = z.object({
-  q: z.string().trim().optional(),
+  q: z.string().trim().optional().default(''),
   phone: z.string().trim().optional(),
   name: z.string().trim().optional(),
   vehicle: z.string().trim().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
-}).refine((data) => data.q || data.phone || data.name || data.vehicle, {
-  message: 'Must provide either "q", "phone", "name", or "vehicle" parameter for search',
 });
 
 // Points Earning Validator

@@ -16,13 +16,22 @@ const requireRole = (allowedRoles = []) => {
       });
     }
 
-    // Role aliases: 'admin' and 'super_admin' are treated as top-level admins
-    const userRole = req.user.role;
+    // Role inheritance hierarchy:
+    // super_admin > admin > regional_admin > branch_manager > cashier
+    const userRole = (req.user.role || '').toLowerCase();
     const effectiveRoles = [userRole];
-    if (userRole === 'super_admin') effectiveRoles.push('admin');
-    if (userRole === 'admin') effectiveRoles.push('super_admin');
 
-    const hasAccess = allowedRoles.some((role) => effectiveRoles.includes(role));
+    if (userRole === 'super_admin') {
+      effectiveRoles.push('admin', 'regional_admin', 'branch_manager', 'cashier');
+    } else if (userRole === 'admin') {
+      effectiveRoles.push('super_admin', 'regional_admin', 'branch_manager', 'cashier');
+    } else if (userRole === 'regional_admin') {
+      effectiveRoles.push('branch_manager', 'cashier');
+    } else if (userRole === 'branch_manager' || userRole === 'manager') {
+      effectiveRoles.push('cashier');
+    }
+
+    const hasAccess = allowedRoles.some((role) => effectiveRoles.includes(role.toLowerCase()));
 
     if (!hasAccess) {
       return res.status(403).json({

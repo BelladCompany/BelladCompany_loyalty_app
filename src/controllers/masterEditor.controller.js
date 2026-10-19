@@ -887,11 +887,28 @@ class MasterEditorController {
   static async getPriorityTiers(req, res) {
     try {
       const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const colsRes = await pool.query(
+        `SELECT column_name FROM information_schema.columns WHERE table_name = 'tier_rules';`
+      );
+      const cols = new Set(colsRes.rows.map(r => r.column_name));
+      const idCol = cols.has('id') ? 'id' : (cols.has('tier_rule_id') ? 'tier_rule_id AS id' : '1 AS id');
+      const minExpenseCol = cols.has('min_expense_amount') ? 'min_expense_amount' : '0 AS min_expense_amount';
+      const maxExpenseCol = cols.has('max_expense_amount') ? 'max_expense_amount' : 'NULL::numeric AS max_expense_amount';
+      const evalBasisCol = cols.has('eval_basis') ? 'eval_basis' : "'expenses_based' AS eval_basis";
+      const discountsCol = cols.has('discounts_json') ? 'discounts_json' : "'{}'::jsonb AS discounts_json";
+      const fromCol = cols.has('applicable_from') ? 'applicable_from' : 'NOW() AS applicable_from';
+      const uptoCol = cols.has('applicable_upto') ? 'applicable_upto' : '(NOW() + INTERVAL \'10 years\') AS applicable_upto';
+      const statusCol = cols.has('approval_status') ? 'approval_status' : "'approved' AS approval_status";
+      const approverCol = cols.has('approved_by') ? 'approved_by' : "'Director' AS approved_by";
+      const benefitsCol = cols.has('benefits_json') ? 'benefits_json' : "'{}'::jsonb AS benefits_json";
+      const multCol = cols.has('multiplier') ? 'multiplier' : '100 AS multiplier';
+      const minPointsCol = cols.has('min_lifetime_points') ? 'min_lifetime_points' : (cols.has('min_points') ? 'min_points AS min_lifetime_points' : '0 AS min_lifetime_points');
+
       const tierRes = await pool.query(
-        `SELECT id, tier_name, min_lifetime_points, min_expense_amount, max_expense_amount, multiplier, eval_basis, discounts_json, applicable_from, applicable_upto, approval_status, approved_by, benefits_json
+        `SELECT ${idCol}, tier_name, ${minPointsCol}, ${minExpenseCol}, ${maxExpenseCol}, ${multCol}, ${evalBasisCol}, ${discountsCol}, ${fromCol}, ${uptoCol}, ${statusCol}, ${approverCol}, ${benefitsCol}
          FROM tier_rules
          WHERE tenant_id = $1
-         ORDER BY min_expense_amount ASC, min_lifetime_points ASC;`,
+         ORDER BY tier_name ASC;`,
         [tenant_id]
       );
 

@@ -67,10 +67,12 @@ class GiftCardService {
       }
     }
 
+    const validity = parseInt(validity_months || 12, 10);
     const expiresAt = new Date();
-    expiresAt.setMonth(expiresAt.getMonth() + parseInt(validityMonths || 12, 10));
+    expiresAt.setMonth(expiresAt.getMonth() + (isNaN(validity) ? 12 : validity));
 
     const cleanPhone = recipient_phone ? recipient_phone.replace(/[^\d]/g, '') : null;
+    const creatorInt = (created_by != null && !isNaN(parseInt(created_by, 10))) ? parseInt(created_by, 10) : null;
 
     const res = await pool.query(
       `INSERT INTO gift_cards (
@@ -98,7 +100,7 @@ class GiftCardService {
         card_theme || 'celebration',
         expiresAt.toISOString(),
         tenant_id,
-        created_by,
+        creatorInt,
       ]
     );
 
@@ -149,8 +151,8 @@ class GiftCardService {
       card.status = 'expired';
     }
 
-    // PIN check if provided
-    if (pinCode != null) {
+    // PIN check only if a non-empty PIN code is provided
+    if (pinCode && String(pinCode).trim()) {
       const cleanPin = String(pinCode).trim();
       if (card.pin_code !== cleanPin) {
         throw { statusCode: 400, message: 'Incorrect 4-digit Security PIN for this gift card.' };
@@ -160,7 +162,7 @@ class GiftCardService {
     return {
       card_id: card.card_id,
       card_number: card.card_number,
-      pin_code: pinCode ? card.pin_code : '****',
+      pin_code: (pinCode && String(pinCode).trim() === card.pin_code) ? card.pin_code : '****',
       initial_amount: Number(card.initial_amount_paise) / 100,
       balance_amount: Number(card.balance_amount_paise) / 100,
       currency: card.currency,
@@ -311,18 +313,24 @@ class GiftCardService {
   static async redeemGiftCardAtPos({
     card_number,
     pin_code,
+    pin,
     amount_to_redeem,
+    amount,
     customer_id = null,
     reference_id = null,
+    bill_reference = null,
     cashier_id = null,
     notes = '',
     tenant_id = 'bellad_and_company',
   }) {
-    const redeemAmount = Number(amount_to_redeem);
+    const rawAmount = amount_to_redeem != null ? amount_to_redeem : amount;
+    const redeemAmount = Number(rawAmount);
     if (!redeemAmount || redeemAmount <= 0) {
       throw { statusCode: 400, message: 'Redeem amount must be greater than zero.' };
     }
 
+    const effectiveRefId = reference_id || bill_reference || null;
+    const effectivePin = String(pin_code || pin || '').trim();
     const redeemPaise = Math.round(redeemAmount * 100);
 
     const client = await pool.connect();
@@ -340,7 +348,7 @@ class GiftCardService {
 
       const card = cardRes.rows[0];
 
-      if (card.pin_code !== String(pin_code).trim()) {
+      if (card.pin_code !== effectivePin) {
         throw { statusCode: 400, message: 'Invalid 4-digit Security PIN.' };
       }
 
@@ -364,6 +372,9 @@ class GiftCardService {
       const newBalancePaise = currentBalancePaise - redeemPaise;
       const newStatus = newBalancePaise === 0 ? 'redeemed' : 'partially_redeemed';
 
+      const cleanCustomerId = (customer_id && String(customer_id).trim()) ? String(customer_id).trim() : null;
+      const cashierInt = (cashier_id != null && !isNaN(parseInt(cashier_id, 10))) ? parseInt(cashier_id, 10) : null;
+
       // Update card balance
       await client.query(
         `UPDATE gift_cards
@@ -372,7 +383,7 @@ class GiftCardService {
              assigned_customer_id = COALESCE(assigned_customer_id, $3),
              updated_at = NOW()
          WHERE card_id = $4;`,
-        [newBalancePaise, newStatus, customer_id, card.card_id]
+        [newBalancePaise, newStatus, cleanCustomerId, card.card_id]
       );
 
       // Audit log
@@ -385,12 +396,12 @@ class GiftCardService {
         RETURNING *;`,
         [
           card.card_id,
-          customer_id,
+          cleanCustomerId,
           redeemPaise,
           currentBalancePaise,
           newBalancePaise,
-          reference_id || `POS-BILL-${Date.now()}`,
-          cashier_id,
+          effectiveRefId || `POS-BILL-${Date.now()}`,
+          cashierInt,
           notes || `POS billing deduction of ₹${redeemAmount.toLocaleString()}`,
           tenant_id,
         ]
@@ -403,6 +414,7 @@ class GiftCardService {
         message: `Successfully redeemed ₹${redeemAmount.toLocaleString()} from gift card.`,
         amount_redeemed: redeemAmount,
         remaining_balance: newBalancePaise / 100,
+        new_balance: newBalancePaise / 100,
         card_status: newStatus,
         redemption: logRes.rows[0],
       };

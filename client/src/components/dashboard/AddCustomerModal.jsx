@@ -69,16 +69,17 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
     }
     if (!phone.trim()) {
       errs.phone = 'Phone number is required.';
-    } else if (!/^\d{10}$/.test(phone.trim())) {
+    } else if (!/^\d{10}$/.test(phone.trim().replace(/\D/g, ''))) {
       errs.phone = 'Phone number must be exactly 10 numeric digits.';
     }
-    if (!aadhaar.trim()) {
+    const cleanAadhaar = aadhaar.replace(/[\s-]/g, '');
+    if (!cleanAadhaar) {
       errs.aadhaar = 'Aadhaar Card number is required.';
-    } else if (!/^\d{12}$/.test(aadhaar.trim())) {
+    } else if (!/^\d{12}$/.test(cleanAadhaar)) {
       errs.aadhaar = 'Aadhaar number must be exactly 12 numeric digits.';
     }
-    if (!gstNumber.trim()) {
-      errs.gstNumber = 'GST Number is required.';
+    if (gstNumber.trim() && gstNumber.trim().length > 15) {
+      errs.gstNumber = 'GST Number must not exceed 15 characters.';
     }
     if (age.trim() && (isNaN(Number(age)) || Number(age) <= 0 || Number(age) > 120)) {
       errs.age = 'Please enter a valid age between 1 and 120.';
@@ -140,9 +141,9 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
 
       const payload = {
         name: name.trim(),
-        phone_numbers: [phone.trim()],
-        aadhaar_number: aadhaar.trim(),
-        gst_number: gstNumber.trim(),
+        phone_numbers: [phone.trim().replace(/\D/g, '')],
+        aadhaar_number: aadhaar.replace(/[\s-]/g, '').trim(),
+        gst_number: gstNumber.trim() || undefined,
         visit_type: 'first_time',
         is_first_time_visitor: true,
         otp: otp.trim(),
@@ -400,7 +401,7 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
                         htmlFor="add-cust-gst"
                         className="text-sm font-bold text-ink-primary block mb-1.5"
                       >
-                        GST Number / GSTIN <span className="text-action-danger">*</span>
+                        GST Number / GSTIN <span className="text-xs text-slate-400 font-normal">(Optional)</span>
                       </label>
                       <input
                         type="text"
