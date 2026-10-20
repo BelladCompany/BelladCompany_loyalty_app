@@ -497,16 +497,16 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2 hover:border-slate-300 hover:shadow-xs transition shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">
-                Gift Cards
+                Points Balance
               </span>
               <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
-                <Gift className="w-4 h-4" />
+                <Award className="w-4 h-4" />
               </div>
             </div>
             <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
-              {myGiftCards.length}
+              {(profile?.points || 0).toLocaleString('en-IN')} PTS
             </div>
-            <p className="text-[11px] text-slate-500 leading-tight">Digital gift cards available</p>
+            <p className="text-[11px] text-slate-500 leading-tight">Available loyalty points</p>
           </div>
 
           <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-2 hover:border-slate-300 hover:shadow-xs transition shadow-xs">
@@ -607,8 +607,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1.5 text-xs font-bold scrollbar-none">
           {[
             { id: 'overview', label: 'Activity & Ledger', icon: Sparkles, count: ledgerItems.length },
-            { id: 'gift_cards', label: 'Gift Cards', icon: Gift, count: myGiftCards.length },
-            { id: 'referrals', label: 'Gift Card Rewards', icon: Users, count: referralsList.length },
+            { id: 'referrals', label: 'Gift Card Rewards', icon: Gift, count: referralsList.length + myGiftCards.length },
             { id: 'garage', label: 'My Vehicles', icon: Car, count: profile?.vehicles?.length || 0 },
             { id: 'profile', label: 'Profile & KYC', icon: User, count: null },
           ].map((t) => {
@@ -702,8 +701,10 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           </div>
         )}
 
-        {/* ─── TAB 2: Gift Cards Hub (Amazon Style - Light Mode) ─────────────── */}
-        {activeTab === 'gift_cards' && (
+
+
+        {/* ─── TAB: Gift Card Rewards (Light Mode) ─────────────────────────── */}
+        {(activeTab === 'referrals' || activeTab === 'gift_cards') && (
           <div className="space-y-6">
             {/* Claim Card Input Banner */}
             <div className="bg-gradient-to-r from-amber-50/80 via-white to-amber-50/40 border border-amber-200/90 rounded-3xl p-6 space-y-4 shadow-xs">
@@ -753,26 +754,12 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               </form>
             </div>
 
-            {/* My Active Gift Cards */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                My Digital Gift Cards ({myGiftCards.length})
-              </h3>
-
-              {loadingGiftCards ? (
-                <div className="py-12 text-center text-slate-500 bg-white border border-slate-200 rounded-3xl shadow-xs">
-                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-amber-500" />
-                  <p className="text-xs">Loading gift cards...</p>
-                </div>
-              ) : myGiftCards.length === 0 ? (
-                <div className="p-8 text-center bg-white border border-slate-200 rounded-3xl space-y-2 shadow-xs">
-                  <Gift className="w-10 h-10 text-slate-400 mx-auto" />
-                  <p className="text-sm font-bold text-slate-800">No Gift Cards Linked</p>
-                  <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                    Claim a gift card code above or ask your sales executive at any Bellad showroom counter.
-                  </p>
-                </div>
-              ) : (
+            {/* My Active Gift Cards (if any) */}
+            {myGiftCards.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+                  My Digital Gift Cards ({myGiftCards.length})
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {myGiftCards.map((card) => {
                     const isPinVisible = revealedPins[card.card_id];
@@ -886,14 +873,9 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                     );
                   })}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+              </div>
+            )}
 
-        {/* ─── TAB 3: Refer & Earn (Light Mode) ─────────────────────────────── */}
-        {activeTab === 'referrals' && (
-          <div className="space-y-6">
             {/* Share Referral Link Card */}
             <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
