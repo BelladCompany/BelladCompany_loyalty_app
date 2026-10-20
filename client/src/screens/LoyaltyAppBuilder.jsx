@@ -1303,7 +1303,7 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
                   {modules.vouchersHub && (
                     <div className="p-2.5 bg-white rounded-xl border border-slate-200 text-center shadow-2xs">
                       <Gift className="w-4 h-4 mx-auto text-pink-600" />
-                      <span className="text-[10px] font-bold text-slate-700 block mt-1">Vouchers</span>
+                      <span className="text-[10px] font-bold text-slate-700 block mt-1">Gift Cards</span>
                     </div>
                   )}
                   {modules.customerGarage && (
@@ -1315,7 +1315,7 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
                   {modules.referralProgram && (
                     <div className="p-2.5 bg-white rounded-xl border border-slate-200 text-center shadow-2xs">
                       <Users className="w-4 h-4 mx-auto text-emerald-600" />
-                      <span className="text-[10px] font-bold text-slate-700 block mt-1">Refer</span>
+                      <span className="text-[10px] font-bold text-slate-700 block mt-1">Rewards</span>
                     </div>
                   )}
                 </div>

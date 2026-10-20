@@ -119,7 +119,7 @@ export const PublicReferralLeadScreen = () => {
   };
 
   const handleWhatsAppShare = () => {
-    const text = `Hi! My vehicle purchase referral code is *${generatedCode}*. Presenting this at purchase for loyalty bonus benefits!`;
+    const text = `Hi! My vehicle purchase gift card code is *${generatedCode}*. Presenting this at purchase for loyalty bonus benefits!`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -132,7 +132,7 @@ export const PublicReferralLeadScreen = () => {
           <div className="inline-flex items-center justify-center p-3 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
             <Sparkles className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">Vehicle Purchase Referral</h1>
+          <h1 className="text-2xl font-black tracking-tight text-white">Vehicle Purchase Gift Card</h1>
           <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
             Bellad & Company Loyalty Rewards
           </p>
@@ -284,11 +284,11 @@ export const PublicReferralLeadScreen = () => {
               <div className="space-y-6 text-center animate-in fade-in duration-300">
                 <div className="p-4 bg-emerald-950/60 border-2 border-emerald-500/50 rounded-2xl space-y-3">
                   <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-                  <h3 className="text-xl font-black text-white">Referral Code Generated!</h3>
+                  <h3 className="text-xl font-black text-white">Gift Card Code Generated!</h3>
                   
                   <div className="p-4 bg-slate-900 border-2 border-indigo-500 rounded-xl space-y-1">
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">
-                      Your Unique Lead Code
+                      Your Unique Gift Card Code
                     </span>
                     <span className="font-mono font-black text-3xl text-emerald-400 tracking-wider block">
                       {generatedCode}

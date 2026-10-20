@@ -115,7 +115,7 @@ const NAV_GROUPS = [
       { id: 'scheme_insurance', label: 'In-House Insurance', icon: ShieldCheck, countKey: 'insurance' },
       { id: 'scheme_finance', label: 'In-House Finance', icon: Coins, countKey: 'finance' },
       { id: 'scheme_google', label: 'Google 5★ Reviews', icon: Star, countKey: 'google' },
-      { id: 'scheme_gift_cards', label: 'Gift Cards & Referrals', icon: Gift, countKey: 'gift_cards' },
+      { id: 'scheme_gift_cards', label: 'Gift Card Rewards', icon: Gift, countKey: 'gift_cards' },
       { id: 'scheme_xyz', label: 'Director Dynamic (xyz)', icon: Star, badge: 'Custom', countKey: 'xyz' },
     ],
   },
@@ -129,7 +129,7 @@ const NAV_GROUPS = [
       { id: 'spend_bodyshop', label: 'Bodyshop & Accidental', icon: Layers, countKey: 'bodyshop' },
       { id: 'spend_accessories', label: 'Genuine Accessories', icon: ShoppingBag, countKey: 'accessories' },
       { id: 'spend_spares', label: 'Spare Parts & Consumables', icon: Tag, countKey: 'spares' },
-      { id: 'spend_gift_cards', label: 'Gift Cards & Vouchers', icon: Gift, countKey: 'gift_cards' },
+      { id: 'spend_gift_cards', label: 'Gift Cards', icon: Gift, countKey: 'gift_cards' },
     ],
   },
   {
@@ -1298,7 +1298,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                     { key: 'bodyshop', label: 'Bodyshop & Accidental', desc: 'Accidental repair claims', icon: Layers },
                     { key: 'accessories', label: 'Genuine Accessories', desc: 'Accessories purchases', icon: ShoppingBag },
                     { key: 'spares', label: 'Spare Parts & Consumables', desc: 'Over-the-counter spare parts', icon: Tag },
-                    { key: 'gift_cards', label: 'Gift Cards & Referral Vouchers', desc: 'Showroom delivery vouchers', icon: Gift },
+                    { key: 'gift_cards', label: 'Gift Cards', desc: 'Showroom delivery gift cards', icon: Gift },
                     { key: 'tier_policy', label: 'Customer Priority Tier Policy', desc: 'Silver, Gold & VIP multiplier slabs', icon: Crown, isSpecial: true },
                   ].map((mod) => {
                     const isEnabled = !!currentDealerPolicy.modules_config?.[mod.key];
@@ -1520,7 +1520,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                       <option value="spares" className="text-slate-900">Spare Parts &amp; Consumables (2%)</option>
                       <option value="accessories" className="text-slate-900">Genuine Accessories (2%)</option>
                       <option value="bodyshop" className="text-slate-900">Bodyshop &amp; Accidental (3%)</option>
-                      <option value="gift_cards" className="text-slate-900">Gift Card Referral Delivery</option>
+                      <option value="gift_cards" className="text-slate-900">Gift Card Delivery</option>
                     </select>
                   </div>
 
@@ -1920,7 +1920,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                           <option value="insurance">In-House Insurance</option>
                           <option value="finance">In-House Finance</option>
                           <option value="google">Google 5★ Review</option>
-                          <option value="gift_cards">Gift Cards &amp; Referrals</option>
+                          <option value="gift_cards">Gift Card Rewards</option>
                         </select>
                       </div>
                     </div>
@@ -1938,7 +1938,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                           <option value="bodyshop">Bodyshop &amp; Accidental</option>
                           <option value="accessories">Genuine Accessories</option>
                           <option value="spares">Spare Parts &amp; Consumables</option>
-                          <option value="gift_cards">Gift Cards &amp; Referrals</option>
+                          <option value="gift_cards">Gift Cards</option>
                         </select>
                       </div>
                       <div>
@@ -2439,7 +2439,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                       <option value="insurance">In-House Motor Insurance Reward</option>
                       <option value="finance">In-House Auto Finance Campaign</option>
                       <option value="google">Google 5-Star Review Feedback Reward</option>
-                      <option value="gift_cards">Gift Cards &amp; Referral Rewards</option>
+                      <option value="gift_cards">Gift Card Rewards</option>
                     </select>
                     <span className="text-[10px] text-slate-400 font-medium block">
                       Determines campaign tagging, director override rules, and promotional priority.
@@ -2500,7 +2500,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                         <option value="bodyshop">Bodyshop &amp; Accidental</option>
                         <option value="accessories">Genuine Accessories</option>
                         <option value="spares">Spare Parts &amp; Consumables</option>
-                        <option value="gift_cards">Gift Cards &amp; Vouchers</option>
+                        <option value="gift_cards">Gift Cards</option>
                       </select>
                     </div>
                   </div>

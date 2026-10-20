@@ -42,6 +42,7 @@ export const GiftCardsScreen = ({ user }) => {
   const [redeemModalOpen, setRedeemModalOpen] = useState(false);
   const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [selectedCardForView, setSelectedCardForView] = useState(null);
+  const [newlyIssuedCard, setNewlyIssuedCard] = useState(null);
 
   // Dynamic Referral Points Rules Configuration (XYZ receives upon ABC's vehicle delivery)
   const [dynamicPointsConfig, setDynamicPointsConfig] = useState({
@@ -125,7 +126,7 @@ export const GiftCardsScreen = ({ user }) => {
 
   const togglePinReveal = (card) => {
     if (!isPinCreator(card)) {
-      showError('Security Protected: Voucher PIN can only be viewed by the user who created it.');
+      showError('Security Protected: Gift Card PIN can only be viewed by the user who created it.');
       return;
     }
     setRevealedPins((prev) => ({ ...prev, [card.card_id]: !prev[card.card_id] }));
@@ -214,6 +215,7 @@ export const GiftCardsScreen = ({ user }) => {
       });
 
       showSuccess(`Digital Gift Card issued successfully: ${res.data.card_number}`);
+      setNewlyIssuedCard(res.data);
       setIssueModalOpen(false);
       // Reset form
       setRecipientName('');
@@ -225,6 +227,24 @@ export const GiftCardsScreen = ({ user }) => {
     } finally {
       setIsSubmittingIssue(false);
     }
+  };
+
+  const handleShareGiftCardWhatsApp = (card) => {
+    if (!card) return;
+    const phone = (card.recipient_phone || '').replace(/[^\d]/g, '');
+    const cleanPhone = phone.length === 10 ? `91${phone}` : phone;
+    const name = card.recipient_name || 'Valued Customer';
+    const amount = Number(card.initial_amount || card.balance_amount || 0).toLocaleString('en-IN');
+    const msg = `Dear ${name},\n\nCongratulations! You have received a Bellad Digital Gift Card worth ₹${amount}!\n\n💳 Gift Card Code: ${card.card_number}\n🔒 4-Digit Security PIN: ${card.pin_code}\n\nYou can claim points or view your gift card in your Customer Portal:\n${window.location.origin}/portal\n\nThank you,\nBellad & Company`;
+    const url = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleCopyGiftCardAndPin = (card) => {
+    if (!card) return;
+    const text = `Gift Card Code: ${card.card_number}\nSecurity PIN: ${card.pin_code}\nAmount: ₹${Number(card.initial_amount || card.balance_amount || 0).toLocaleString('en-IN')}`;
+    navigator.clipboard.writeText(text);
+    showSuccess('Copied Gift Card Code and PIN to clipboard!');
   };
 
   // Handle Quick Lookup for POS Redemption
@@ -296,15 +316,15 @@ export const GiftCardsScreen = ({ user }) => {
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
-                Referral Gift Card Program (XYZ → ABC)
+                Gift Card Rewards Program (XYZ → ABC)
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight mt-1.5 flex items-center gap-3">
               <Gift className="w-8 h-8 text-amber-400" />
-              Automotive Referral Vouchers &amp; Rewards
+              Automotive Gift Cards &amp; Rewards
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Existing customer (<strong>XYZ</strong>) sends a Gift Card to a friend (<strong>ABC</strong>). When <strong>ABC (who must be a verified new customer)</strong> purchases a vehicle, <strong>XYZ</strong> automatically receives dynamic referral loyalty points.
+              Existing customer (<strong>XYZ</strong>) sends a Gift Card to a friend (<strong>ABC</strong>). When <strong>ABC (who must be a verified new customer)</strong> purchases a vehicle, <strong>XYZ</strong> automatically receives dynamic gift card loyalty points.
             </p>
           </div>
 
@@ -332,7 +352,7 @@ export const GiftCardsScreen = ({ user }) => {
       <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800 text-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400" />
-          <span className="font-bold">Dynamic Referral Points Scheme:</span>
+          <span className="font-bold">Dynamic Gift Card Points Scheme:</span>
           <span className="text-slate-400">XYZ earns points only after ABC completes vehicle delivery</span>
         </div>
         <div className="flex items-center gap-4 font-mono font-bold text-xs">
@@ -353,7 +373,7 @@ export const GiftCardsScreen = ({ user }) => {
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Total Active Vouchers"
+          label="Total Active Gift Cards"
           value={activeCards.length}
           subtext="Ready for redemption & claiming"
           variant="primary"
@@ -361,13 +381,13 @@ export const GiftCardsScreen = ({ user }) => {
         <StatCard
           label="Outstanding Balance"
           value={`₹${totalActiveValue.toLocaleString('en-IN')}`}
-          subtext="Total circulating voucher value"
+          subtext="Total circulating gift card value"
           variant="default"
         />
         <StatCard
           label="Total Issued Value"
           value={`₹${totalIssuedValue.toLocaleString('en-IN')}`}
-          subtext="Lifetime vouchers generated"
+          subtext="Lifetime gift cards generated"
           variant="default"
         />
         <StatCard
@@ -443,14 +463,14 @@ export const GiftCardsScreen = ({ user }) => {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-bold text-[11px]">
                 <tr>
-                  <th className="py-3.5 px-4">Referrer (XYZ Person)</th>
-                  <th className="py-3.5 px-4">Referee (ABC Person)</th>
-                  <th className="py-3.5 px-4">Customer Status</th>
-                  <th className="py-3.5 px-4">Gift Voucher Key</th>
+                  <th className="py-3.5 px-4">Gift Card Code</th>
                   <th className="py-3.5 px-4">Security PIN</th>
-                  <th className="py-3.5 px-4">Purchase Delivery Status</th>
-                  <th className="py-3.5 px-4">Reward for XYZ</th>
-                  <th className="py-3.5 px-4 text-right">Delivery Action</th>
+                  <th className="py-3.5 px-4">Initial Value</th>
+                  <th className="py-3.5 px-4">Available Balance</th>
+                  <th className="py-3.5 px-4">Recipient</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4">Expiry</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -472,14 +492,14 @@ export const GiftCardsScreen = ({ user }) => {
                           <button
                             onClick={() => toggleCardReveal(card.card_id)}
                             className="p-1 text-slate-400 hover:text-slate-800 transition"
-                            title={isCardVisible ? 'Hide voucher key' : 'Reveal voucher key'}
+                            title={isCardVisible ? 'Hide card key' : 'Reveal card key'}
                           >
                             {isCardVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                           </button>
                           <button
                             onClick={() => handleCopy(card.card_number)}
                             className="p-1 text-slate-400 hover:text-slate-800 transition"
-                            title="Copy voucher code"
+                            title="Copy card number"
                           >
                             {copiedCode === card.card_number ? (
                               <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -505,9 +525,9 @@ export const GiftCardsScreen = ({ user }) => {
                           ) : (
                             <button
                               type="button"
-                              onClick={() => showError('Security Protected: Voucher PIN can only be viewed by the user who created it.')}
+                              onClick={() => showError('Security Protected: Gift Card PIN can only be viewed by the user who created it.')}
                               className="text-slate-300 hover:text-amber-600 p-1 transition"
-                              title="Protected: PIN visible only to voucher creator"
+                              title="Protected: PIN visible only to card creator"
                             >
                               <Lock className="w-3 h-3 text-slate-400" />
                             </button>
@@ -551,18 +571,39 @@ export const GiftCardsScreen = ({ user }) => {
                           : '—'}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => {
-                            setRedeemCardNumber(card.card_number);
-                            setRedeemPin(card.pin_code);
-                            setRedeemAmount(card.balance_amount.toString());
-                            setRedeemModalOpen(true);
-                          }}
-                          disabled={card.status === 'redeemed' || card.status === 'expired'}
-                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          Redeem
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {card.recipient_phone && (
+                            <button
+                              type="button"
+                              onClick={() => handleShareGiftCardWhatsApp(card)}
+                              className="px-2 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition flex items-center gap-1 cursor-pointer"
+                              title="Share gift card code & PIN to customer via WhatsApp"
+                            >
+                              <Share2 className="w-3 h-3 text-emerald-600" />
+                              <span className="hidden sm:inline">WhatsApp</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleCopyGiftCardAndPin(card)}
+                            className="p-1 text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 transition cursor-pointer"
+                            title="Copy Code & PIN"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setRedeemCardNumber(card.card_number);
+                              setRedeemPin(card.pin_code);
+                              setRedeemAmount(card.balance_amount.toString());
+                              setRedeemModalOpen(true);
+                            }}
+                            disabled={card.status === 'redeemed' || card.status === 'expired'}
+                            className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            Redeem
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -812,6 +853,94 @@ export const GiftCardsScreen = ({ user }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Newly Issued Voucher Sharing Modal ───────────────────────── */}
+      {newlyIssuedCard && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Gift Card Issued!</h3>
+                  <p className="text-xs text-slate-500">Share these details with your customer now</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setNewlyIssuedCard(null)}
+                className="text-slate-400 hover:text-slate-600 font-bold p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Voucher Details Card */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white space-y-3 shadow-md">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-amber-400 font-bold uppercase tracking-wider">Bellad Digital Gift Card</span>
+                <span className="bg-white/10 px-2 py-0.5 rounded-md text-[10px] text-slate-300">
+                  ₹{Number(newlyIssuedCard.initial_amount || newlyIssuedCard.amount || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-sans">Gift Card Code</span>
+                <span className="font-mono text-base font-extrabold text-amber-300 tracking-wider select-all">
+                  {newlyIssuedCard.card_number}
+                </span>
+              </div>
+
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-mono">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-sans">4-Digit Security PIN</span>
+                  <span className="font-extrabold text-white text-base tracking-widest select-all">
+                    {newlyIssuedCard.pin_code}
+                  </span>
+                </div>
+                <div className="text-right font-sans">
+                  <span className="text-[10px] text-slate-400 block">Recipient</span>
+                  <span className="font-bold text-white text-xs">
+                    {newlyIssuedCard.recipient_name || 'Customer'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sharing Action Buttons */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => handleShareGiftCardWhatsApp(newlyIssuedCard)}
+                className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Share Code &amp; PIN via WhatsApp</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleCopyGiftCardAndPin(newlyIssuedCard)}
+                className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition border border-slate-200 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Copy className="w-4 h-4 text-slate-600" />
+                <span>Copy Full Gift Card &amp; PIN</span>
+              </button>
+            </div>
+
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={() => setNewlyIssuedCard(null)}
+                className="text-xs text-slate-500 hover:text-slate-800 font-bold"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

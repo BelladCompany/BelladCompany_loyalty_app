@@ -82,13 +82,13 @@ export const SidebarLayout = ({
           group: 'Counter POS',
           items: [
             { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
-            { id: 'gift_cards', label: 'Vouchers Hub', icon: Tag },
           ],
         },
         {
           group: 'Gift Cards',
           items: [
-            { id: 'referrals', label: 'Gift Card Rewards', icon: Gift },
+            { id: 'gift_cards', label: 'Gift Cards', icon: Gift },
+            { id: 'referrals', label: 'Gift Card Rewards', icon: Sparkles },
           ],
         },
         {

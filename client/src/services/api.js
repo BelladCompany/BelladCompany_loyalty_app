@@ -108,6 +108,10 @@ export class ApiService {
     return res;
   }
 
+  static async portalVerifyOtp(payload) {
+    return this.portalOtpVerify(payload);
+  }
+
   static async portalGetMe() {
     return this.request('/v1/me');
   }

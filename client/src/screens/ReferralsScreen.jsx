@@ -168,7 +168,7 @@ export const ReferralsScreen = ({ user }) => {
   }, [activeTab, leadStatusFilter, leadSearch]);
 
   const handleConfirmRc = async (leadId) => {
-    if (!window.confirm(`Confirm RC Completion for Lead #${leadId}? This will credit referral bonus points to both referrer and buyer.`)) {
+    if (!window.confirm(`Confirm RC Completion for Lead #${leadId}? This will credit gift card bonus points to both referrer and buyer.`)) {
       return;
     }
 
@@ -364,7 +364,7 @@ export const ReferralsScreen = ({ user }) => {
     },
     {
       field: 'generated_code',
-      header: 'Referral Lead Code',
+      header: 'Gift Card Lead Code',
       render: (val) => (
         <span className="font-mono font-black text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded shadow-2xs">
           {val}

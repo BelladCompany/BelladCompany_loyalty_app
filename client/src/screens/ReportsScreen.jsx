@@ -270,7 +270,7 @@ export default function ReportsScreen({ user }) {
           { id: 'points_summary', label: 'Points Summary', icon: Coins },
           { id: 'customer_distribution', label: 'Customer Distribution', icon: Users },
           { id: 'liability', label: 'Points Liability Risk', icon: PieChart },
-          { id: 'referrals', label: 'Referral & Override Audit', icon: Share2 },
+          { id: 'referrals', label: 'Gift Card & Override Audit', icon: Share2 },
           { id: 'kyc_audit', label: 'KYC & Cashier Activity', icon: FileCheck2 },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -512,7 +512,7 @@ export default function ReportsScreen({ user }) {
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="bg-white p-5 rounded-xl border border-surface-border shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Total Referrals</span>
+              <span className="text-xs font-semibold text-slate-400 uppercase">Total Gift Cards</span>
               <p className="text-2xl font-bold text-slate-900 mt-1">{referralData?.summary?.total_referrals || 0}</p>
             </div>
 

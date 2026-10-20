@@ -207,8 +207,29 @@ class GiftCardService {
 
       const card = cardRes.rows[0];
 
-      if (card.pin_code !== String(pin_code).trim()) {
-        throw { statusCode: 400, message: 'Invalid 4-digit Security PIN.' };
+      // Check if user is the assigned customer or has the matching recipient phone
+      let isOwner = Boolean(card.assigned_customer_id && card.assigned_customer_id === customer_id);
+      if (!isOwner && card.recipient_phone) {
+        const cleanRecipient = card.recipient_phone.replace(/[^\d]/g, '');
+        const phoneCheck = await client.query(
+          `SELECT 1 FROM customer_phones WHERE customer_id = $1 AND tenant_id = $2 AND REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g') = $3 LIMIT 1;`,
+          [customer_id, tenant_id, cleanRecipient]
+        );
+        if (phoneCheck.rows.length > 0) {
+          isOwner = true;
+        }
+      }
+
+      const submittedPin = pin_code ? String(pin_code).trim() : '';
+      if (!isOwner) {
+        if (!submittedPin || card.pin_code !== submittedPin) {
+          throw { statusCode: 400, message: 'Invalid 4-digit Security PIN for this gift voucher.' };
+        }
+      } else {
+        // If verified owner is claiming from portal, PIN is optional; if provided verify it
+        if (submittedPin && card.pin_code !== submittedPin) {
+          throw { statusCode: 400, message: 'Incorrect 4-digit Security PIN.' };
+        }
       }
 
       if (card.status === 'redeemed' || Number(card.balance_amount_paise) <= 0) {
@@ -269,20 +290,19 @@ class GiftCardService {
 
       await client.query(
         `INSERT INTO points_ledger (
-          customer_id, branch_id, type, transaction_category, points, amount_paise,
-          source_ref, reason_type, reason_text, cashier_id, tenant_id
+          customer_id, branch_id, type, transaction_category, points,
+          source_ref, reason_type, reason_text, cashier_id, tenant_id, calc_snapshot
         )
-        VALUES ($1, $2, 'earn_service', 'service', $3, $4, $5, 'gift_card_claim', $6, $7, $8);`,
+        VALUES ($1, $2, 'earn_service', 'service', $3, $4, 'gift_card_claim', $5, $6, $7, $8);`,
         [
           customer_id,
           branchId,
           pointsToCredit,
-          balancePaise,
           `Gift Card Claim: ${card.card_number}`,
-          'gift_card_claim',
           `Claimed Digital Gift Card ${card.card_number} (+${pointsToCredit.toLocaleString()} PTS from ₹${balanceRupees.toLocaleString()})`,
           cashier_id,
           tenant_id,
+          JSON.stringify({ amount_paise: balancePaise, bill_amount: balanceRupees }),
         ]
       );
 

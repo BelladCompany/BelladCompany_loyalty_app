@@ -466,7 +466,7 @@ class CustomerPortalController {
       }
 
       let query = `
-        SELECT entry_id AS id, type, transaction_category, points, amount_paise, source_ref, reason_type, reason_text, created_at AS date
+        SELECT entry_id AS id, type, transaction_category, points, source_ref, reason_type, reason_text, calc_snapshot, created_at AS date
         FROM points_ledger
         WHERE customer_id = $1 AND tenant_id = $2
       `;
@@ -533,13 +533,28 @@ class CustomerPortalController {
           ? new Date(row.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
           : '—';
 
+        // Parse amount from calc_snapshot or source_ref/reason_text
+        let amount = null;
+        if (row.calc_snapshot?.amount_paise) {
+          amount = Number(row.calc_snapshot.amount_paise) / 100;
+        } else if (row.calc_snapshot?.bill_amount) {
+          amount = Number(row.calc_snapshot.bill_amount);
+        } else {
+          const match = (row.source_ref || row.reason_text || '').match(/(?:₹|Rs\.?)\s*([\d,]+(?:\.\d+)?)/i);
+          if (match) {
+            amount = parseFloat(match[1].replace(/,/g, ''));
+          } else if (type === 'redeem' && row.points) {
+            amount = Math.abs(Number(row.points)) * 0.25;
+          }
+        }
+
         return {
           id: parseInt(row.id, 10),
           type,
           text,
           date: dateFormatted,
           points: parseInt(row.points, 10),
-          amount: row.amount_paise ? Number(row.amount_paise) / 100 : null,
+          amount,
         };
       });
 
@@ -643,13 +658,13 @@ class CustomerPortalController {
       const tenantId = req.tenantId || env.defaultTenantId;
       const { card_number, pin_code } = req.body;
 
-      if (!card_number || !pin_code) {
-        return res.status(400).json({ status: 'fail', error: 'Card number and 4-digit Security PIN are required.' });
+      if (!card_number || !String(card_number).trim()) {
+        return res.status(400).json({ status: 'fail', error: 'Gift card number is required.' });
       }
 
       const result = await GiftCardService.claimGiftCardToPoints({
-        card_number,
-        pin_code,
+        card_number: String(card_number).trim().toUpperCase(),
+        pin_code: pin_code ? String(pin_code).trim() : null,
         customer_id: customerId,
         cashier_id: null,
         tenant_id: tenantId,
