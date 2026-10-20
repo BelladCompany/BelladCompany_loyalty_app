@@ -211,14 +211,14 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fadeIn">
       <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-7 py-5 bg-white border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-7 py-3.5 sm:py-5 bg-white border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-600">
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-900 tracking-tight">Add First-Time Customer</h3>
-              <p className="text-xs font-semibold text-slate-500">Identity Details & WhatsApp OTP Verification</p>
+              <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Add First-Time Customer</h3>
+              <p className="text-xs font-semibold text-slate-500">Identity Details &amp; WhatsApp OTP Verification</p>
             </div>
           </div>
           <button
@@ -233,7 +233,7 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
 
         {/* Form Body */}
         <form onSubmit={step === 'form' ? handleRequestOtp : handleVerifyAndCreate} className="overflow-y-auto flex-1">
-          <div className="p-7 space-y-6">
+          <div className="p-4 sm:p-7 space-y-4 sm:space-y-6">
             {submitError && (
               <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-700 font-bold text-sm">
                 <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-rose-600" />
@@ -686,16 +686,16 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
           </div>
 
           {/* Footer buttons */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-surface-border flex-shrink-0">
-            <Button variant="outline" size="lg" onClick={handleClose} disabled={isLoading || isSendingOtp}>
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-50 border-t border-surface-border flex-shrink-0">
+            <Button variant="outline" size="lg" onClick={handleClose} disabled={isLoading || isSendingOtp} className="w-full sm:w-auto">
               Cancel
             </Button>
             {step === 'form' ? (
-              <Button type="submit" variant="primary" size="lg" disabled={isSendingOtp || !!success}>
+              <Button type="submit" variant="primary" size="lg" disabled={isSendingOtp || !!success} className="w-full sm:w-auto">
                 {isSendingOtp ? 'Sending WhatsApp OTP…' : 'Send WhatsApp OTP'}
               </Button>
             ) : (
-              <Button type="submit" variant="primary" size="lg" disabled={isLoading || !!success}>
+              <Button type="submit" variant="primary" size="lg" disabled={isLoading || !!success} className="w-full sm:w-auto">
                 {isLoading ? 'Verifying OTP & Creating…' : 'Verify OTP & Create Customer'}
               </Button>
             )}

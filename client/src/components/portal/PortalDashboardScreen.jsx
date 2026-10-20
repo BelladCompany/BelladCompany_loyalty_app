@@ -69,14 +69,14 @@ const LedgerRow = memo(({ item }) => {
     : `${item.points.toLocaleString('en-IN')}`;
 
   return (
-    <div className="flex items-center justify-between py-3.5 px-4 bg-white border border-slate-200/90 rounded-2xl hover:border-slate-300 hover:shadow-xs transition-all">
-      <div className="flex items-center space-x-3.5 min-w-0 pr-2">
-        <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0 shadow-inner">
+    <div className="flex items-center justify-between py-3 px-3.5 sm:py-3.5 sm:px-4 bg-white border border-slate-200/90 rounded-2xl hover:border-slate-300 hover:shadow-xs transition-all gap-2">
+      <div className="flex items-center space-x-3 min-w-0 pr-1">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0 shadow-inner">
           <CategoryIcon type={item.type} />
         </div>
         <div className="min-w-0">
           <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">{item.text}</p>
-          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 font-medium">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-[11px] text-slate-500 font-medium">
             <span>{item.date}</span>
             {item.amount && (
               <>
@@ -89,7 +89,7 @@ const LedgerRow = memo(({ item }) => {
       </div>
       <div className="shrink-0 text-right">
         <span
-          className={`text-xs sm:text-sm font-black font-mono px-3 py-1 rounded-xl shadow-xs ${
+          className={`text-[11px] sm:text-sm font-black font-mono px-2 sm:px-3 py-1 rounded-xl shadow-xs whitespace-nowrap ${
             isPositive
               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
               : 'bg-rose-50 text-rose-700 border border-rose-200'
@@ -320,7 +320,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               />
             </div>
             <div>
-              <span className="text-sm sm:text-base font-black text-slate-900 tracking-tight block">
+              <span className="text-sm sm:text-base font-black text-slate-900 tracking-tight block truncate max-w-[150px] sm:max-w-xs md:max-w-none">
                 {profile?.firm_name || 'Bellad Automobile Corporation'}
               </span>
               <div className="flex items-center gap-1.5 -mt-0.5">
@@ -384,7 +384,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         )}
 
         {/* ─── 2. Luxury Digital Loyalty Pass Card (High-Contrast VIP Pass) ─── */}
-        <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden border border-slate-800">
+        <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-8 shadow-xl relative overflow-hidden border border-slate-800">
           {/* Card Ambient Glow Accents */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -393,7 +393,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
             {/* Top Pass Strip */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <span className="px-3 py-1 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-full shadow-md flex items-center gap-1.5">
                     <Star className="w-3.5 h-3.5 fill-slate-950" />
                     {profile?.tier?.current || 'Silver'} VIP Pass
@@ -403,7 +403,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                   </span>
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1">
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1 break-words">
                   {profile?.name || firstName}
                 </h1>
                 <p className="text-xs text-slate-300 flex flex-wrap items-center gap-2">
@@ -416,7 +416,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               </div>
 
               {/* Total Balance Big Number */}
-              <div className="bg-white/10 backdrop-blur-xl p-5 rounded-2xl border border-white/15 flex flex-col justify-between items-start sm:items-end shadow-xl">
+              <div className="bg-white/10 backdrop-blur-xl p-4 sm:p-5 rounded-2xl border border-white/15 flex flex-col justify-between items-start sm:items-end shadow-xl w-full sm:w-auto">
                 <span className="text-[11px] font-bold text-amber-300 uppercase tracking-widest font-mono">
                   Available Loyalty Balance
                 </span>
@@ -604,7 +604,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         </div>
 
         {/* ─── 5. Modern Segmented Tab Navigation (Light Mode) ─────────────── */}
-        <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1.5 text-xs font-bold scrollbar-none">
+        <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 text-xs font-bold scrollbar-none flex-nowrap">
           {[
             { id: 'overview', label: 'Activity & Ledger', icon: Sparkles, count: ledgerItems.length },
             { id: 'referrals', label: 'Gift Card Rewards', icon: Gift, count: referralsList.length + myGiftCards.length },
@@ -885,21 +885,21 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                     Share with friends &amp; family. Earn bonus loyalty points when they buy a 2W, 4W, or EV vehicle!
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(
                       `Hey! I love my vehicle experience at ${profile?.firm_name || 'Bellad Automobiles'}. Use my gift card link to get exclusive bonus rewards: ${referralLink}`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition flex items-center gap-2 shadow-xs cursor-pointer"
+                    className="flex-1 sm:flex-initial px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl transition flex items-center justify-center gap-2 shadow-xs cursor-pointer whitespace-nowrap"
                   >
                     <Share2 className="w-3.5 h-3.5" />
                     Share on WhatsApp
                   </a>
                   <button
                     onClick={handleCopyReferral}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-slate-200 cursor-pointer"
+                    className="flex-1 sm:flex-initial px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-200 cursor-pointer whitespace-nowrap"
                   >
                     {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copied ? 'Copied' : 'Copy Link'}</span>
@@ -957,7 +957,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                   <button
                     type="submit"
                     disabled={isSubmittingReferral}
-                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl transition shadow-xs disabled:opacity-50 cursor-pointer"
                   >
                     {isSubmittingReferral ? 'Submitting...' : 'Send Gift Card & Submit'}
                   </button>

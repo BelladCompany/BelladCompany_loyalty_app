@@ -355,16 +355,16 @@ export const RedemptionModal = ({
       <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
 
         {/* Clean Light Header */}
-        <div className="flex items-center justify-between px-7 py-5 bg-white border-b border-slate-100">
+        <div className="flex items-center justify-between px-4 sm:px-7 py-3.5 sm:py-5 bg-white border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600">
               <Gift className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-900 tracking-tight">
+              <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                 {isManualCustomer ? 'Get Points / Service Discount' : 'Points Redemption & Discount Calculation'}
               </h3>
-              <p className="text-xs font-semibold text-slate-500">Live Rate Calculation & OTP Verification</p>
+              <p className="text-xs font-semibold text-slate-500">Live Rate Calculation &amp; OTP Verification</p>
             </div>
           </div>
           {step !== 3 && (
@@ -379,7 +379,7 @@ export const RedemptionModal = ({
           )}
         </div>
 
-        <div className="p-7">
+        <div className="p-4 sm:p-7">
           {/* Error Banner */}
           {error && (
             <div className="mb-5 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-800 font-bold text-sm">
@@ -496,7 +496,7 @@ export const RedemptionModal = ({
                 <label className="text-sm font-bold text-slate-700 uppercase tracking-wider block mb-2">
                   Select Redemption Category:
                 </label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { id: 'service', label: 'Service', locked: isVehicleUnder12Months },
                     { id: 'accessories', label: 'Accessories', badge: 'Anytime' },

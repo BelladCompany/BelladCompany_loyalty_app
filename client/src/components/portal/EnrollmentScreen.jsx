@@ -303,7 +303,7 @@ export default function EnrollmentScreen({ onLoginSuccess }) {
 
         {/* Right Column: Interactive Login / Enrollment Card (Light Mode) */}
         <div className="lg:col-span-5 flex justify-center lg:justify-end">
-          <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xl relative text-slate-900">
+          <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-8 shadow-xl relative text-slate-900">
             {/* Card Accent Top Bar */}
             <div className="absolute top-0 left-6 right-6 h-1 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 rounded-b" />
 
@@ -472,7 +472,7 @@ export default function EnrollmentScreen({ onLoginSuccess }) {
                   <label className="block text-xs font-bold text-slate-700 mb-2 text-center">
                     Enter 6-digit WhatsApp OTP
                   </label>
-                  <div className="flex justify-between gap-2">
+                  <div className="flex items-center justify-between gap-1.5 sm:gap-2">
                     {otp.map((digit, index) => (
                       <input
                         key={index}
@@ -483,7 +483,7 @@ export default function EnrollmentScreen({ onLoginSuccess }) {
                         value={digit}
                         onChange={(e) => handleOtpBoxChange(index, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                        className="w-11 h-12 text-center text-lg font-black font-mono bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition shadow-xs"
+                        className="flex-1 min-w-0 max-w-[48px] h-12 text-center text-lg font-black font-mono bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition shadow-xs px-0"
                       />
                     ))}
                   </div>

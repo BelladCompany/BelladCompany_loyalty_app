@@ -328,10 +328,10 @@ export const GiftCardsScreen = ({ user }) => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
             <button
               onClick={() => setPointsRuleModalOpen(true)}
-              className="px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-xl border border-amber-400/30 flex items-center gap-2 transition shadow-sm"
+              className="w-full sm:w-auto px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-xl border border-amber-400/30 flex items-center justify-center gap-2 transition shadow-sm"
               title="Configure how many points XYZ receives per vehicle purchase"
             >
               <Sparkles className="w-4 h-4 text-amber-400" />
@@ -339,7 +339,7 @@ export const GiftCardsScreen = ({ user }) => {
             </button>
             <button
               onClick={() => setIssueModalOpen(true)}
-              className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs font-black rounded-xl shadow-lg flex items-center gap-2 transition"
+              className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs font-black rounded-xl shadow-lg flex items-center justify-center gap-2 transition"
             >
               <PlusCircle className="w-4 h-4 text-slate-950" />
               + Send Gift Card (XYZ → ABC)
@@ -349,13 +349,13 @@ export const GiftCardsScreen = ({ user }) => {
       </div>
 
       {/* Dynamic Points Rule Quick Strip */}
-      <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800 text-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
           <span className="font-bold">Dynamic Gift Card Points Scheme:</span>
-          <span className="text-slate-400">XYZ earns points only after ABC completes vehicle delivery</span>
+          <span className="text-slate-400 hidden sm:inline">XYZ earns points only after ABC completes vehicle delivery</span>
         </div>
-        <div className="flex items-center gap-4 font-mono font-bold text-xs">
+        <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap font-mono font-bold text-xs">
           <span className="text-amber-400">2-Wheeler: +{dynamicPointsConfig.points_2w} PTS</span>
           <span>•</span>
           <span className="text-blue-400">4-Wheeler: +{dynamicPointsConfig.points_4w} PTS</span>
@@ -363,7 +363,7 @@ export const GiftCardsScreen = ({ user }) => {
           <span className="text-emerald-400">EV Vehicle: +{dynamicPointsConfig.points_ev} PTS</span>
           <button
             onClick={() => setPointsRuleModalOpen(true)}
-            className="text-xs text-slate-300 underline font-sans ml-2 hover:text-white"
+            className="text-xs text-slate-300 underline font-sans ml-1 hover:text-white"
           >
             Customize
           </button>

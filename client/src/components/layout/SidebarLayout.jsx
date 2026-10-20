@@ -255,32 +255,32 @@ export const SidebarLayout = ({
       <main className="flex-1 flex flex-col overflow-hidden bg-[#EBF0F5]">
 
         {/* Top Header Bar (Image 1 Style: Bold Title + Add Loyalty Black Pill CTA) */}
-        <header className="h-20 px-6 lg:px-10 bg-white/80 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between gap-4 flex-shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
+        <header className="h-16 sm:h-20 px-4 sm:px-6 lg:px-10 bg-white/80 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between gap-3 sm:gap-4 flex-shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <button
               type="button"
               onClick={() => setMobileNavOpen(true)}
               className="lg:hidden p-2 -ml-1 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
-            <h1 className="text-2xl lg:text-3xl font-black text-slate-900 truncate tracking-tight">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 truncate tracking-tight">
               Dashboard
             </h1>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {/* Round Search Button (from Image 1 Reference) */}
             <button
               type="button"
               onClick={() => onTabChange('dashboard')}
-              className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 transition-colors border border-slate-200"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 transition-colors border border-slate-200"
               title="Search Customer"
             >
               <Search className="w-4 h-4" />
             </button>
 
-            {/* Black Pill CTA (Only visible for Admin/Director) */}
+            {/* Black Pill CTA (Only visible for Admin/Director on tablet/desktop) */}
             {isAdmin && (
               <button
                 type="button"
@@ -288,7 +288,7 @@ export const SidebarLayout = ({
                   if (onOpenStudio) onOpenStudio();
                   else window.location.href = '/editor';
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold shadow-md shadow-slate-900/10 transition-all hover:scale-[1.02]"
+                className="hidden sm:inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold shadow-md shadow-slate-900/10 transition-all hover:scale-[1.02]"
               >
                 <Sparkles className="w-4 h-4 text-amber-400" />
                 <span>+ Master Brain Editor</span>
@@ -296,8 +296,8 @@ export const SidebarLayout = ({
             )}
 
             {/* User Profile Pill Avatar */}
-            <div className="flex items-center gap-2.5 pl-2">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+            <div className="flex items-center gap-2.5 pl-1 sm:pl-2">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-sm">
                 {user?.username?.slice(0, 2).toUpperCase()}
               </div>
               <div className="hidden sm:block text-left">
@@ -309,7 +309,7 @@ export const SidebarLayout = ({
         </header>
 
         {/* Scrollable Page Body (Light Island Canvas) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto space-y-6">
             {children}
           </div>

@@ -383,12 +383,12 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
       </div>
 
       {/* ── Customer Search Card (Clean, High-Contrast Light Mode) ── */}
-      <div className="card-white-glow p-7 bg-white space-y-4">
+      <div className="card-white-glow p-4 sm:p-7 bg-white space-y-4">
         <form onSubmit={handleSearch} className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                Customer Lookup & Identification
+              <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                Customer Lookup &amp; Identification
               </h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
                 Search via 12-digit Aadhaar Card, Customer Full Name, Mobile Phone, or Vehicle VIN
@@ -409,7 +409,7 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
             </button>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col md:flex-row gap-2.5 sm:gap-3">
             <div className="relative flex-1">
               <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                 <Search className="w-5 h-5" />
@@ -418,39 +418,42 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
                 ref={searchInputRef}
                 id="counter-search"
                 type="text"
-                placeholder="Enter 12-digit Aadhaar Card Number, Customer Name, or VIN..."
+                placeholder="Search Aadhaar, Name, Mobile or VIN..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-14 pl-12 pr-4 bg-slate-50 border border-slate-200 focus:border-indigo-600 focus:bg-white text-base font-semibold text-slate-900 rounded-2xl focus:outline-none placeholder:text-slate-400 transition-all shadow-xs"
+                className="w-full h-12 sm:h-14 pl-11 sm:pl-12 pr-4 bg-slate-50 border border-slate-200 focus:border-indigo-600 focus:bg-white text-sm sm:text-base font-semibold text-slate-900 rounded-2xl focus:outline-none placeholder:text-slate-400 transition-all shadow-xs"
               />
             </div>
 
-            <button
-              id="search-customer-btn"
-              type="submit"
-              disabled={isSearching}
-              className="h-14 px-8 text-sm font-black rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-md shadow-indigo-600/20 disabled:opacity-40"
-            >
-              {isSearching ? 'Searching...' : 'Search'}
-            </button>
+            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2.5">
+              <button
+                id="search-customer-btn"
+                type="submit"
+                disabled={isSearching}
+                className="col-span-2 sm:col-span-1 h-11 sm:h-14 px-6 text-sm font-black rounded-xl sm:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-md shadow-indigo-600/20 disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                <Search className="w-4 h-4 sm:hidden" />
+                <span>{isSearching ? 'Searching...' : 'Search'}</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setAddModalOpen(true)}
-              className="h-14 px-5 text-sm font-bold whitespace-nowrap rounded-2xl bg-slate-900 hover:bg-slate-800 text-white flex items-center gap-2 transition-all shadow-sm"
-            >
-              <UserPlus className="w-4 h-4 text-amber-400" />
-              <span>+ Customer</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setAddModalOpen(true)}
+                className="h-11 sm:h-14 px-4 sm:px-5 text-xs sm:text-sm font-bold whitespace-nowrap rounded-xl sm:rounded-2xl bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-1.5 transition-all shadow-sm"
+              >
+                <UserPlus className="w-4 h-4 text-amber-400" />
+                <span>+ Customer</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setBulkModalOpen(true)}
-              className="h-14 px-4 text-xs font-bold whitespace-nowrap rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center gap-2 transition-all"
-            >
-              <Upload className="w-4 h-4 text-slate-500" />
-              <span>Import CSV</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setBulkModalOpen(true)}
+                className="h-11 sm:h-14 px-3.5 sm:px-4 text-xs font-bold whitespace-nowrap rounded-xl sm:rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center gap-1.5 transition-all"
+              >
+                <Upload className="w-3.5 h-3.5 text-slate-500" />
+                <span>Import CSV</span>
+              </button>
+            </div>
           </div>
 
           {/* Prominent Advanced Filter Panel */}
