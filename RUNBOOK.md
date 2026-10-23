@@ -152,3 +152,25 @@ node -r dotenv/config -e "
 - **Principal Architect**: Lead Engineering Team (`eng@bellad.co`)
 - **Operations & DBA**: DevOps On-Call (`ops@bellad.co`)
 - **Executive Oversight**: Agastya Bellad / Director Desk (`executive@bellad.co`)
+
+---
+
+## 8. Customer Gifting System (WhatsApp e-Gift Cards)
+
+### Business Rules & Flow
+1. **Funding Sources**:
+   - **Mode A (Loyalty Points)**: Sender shares points (4 PTS = ₹1). Points are immediately debited from sender's ledger (`type: 'redeem'`). Minimum ₹100 (400 PTS), Maximum ₹25,000.
+   - **Mode B (Razorpay Payment)**: Sender buys a gift voucher by paying via Razorpay. Receiver gets 4 PTS per ₹1.
+2. **Sharing**:
+   - Generates unique secure claim link: `https://<domain>/gift/<32_byte_token>` (stored as SHA-256 hash).
+   - One-click "Share via WhatsApp" pre-fills greeting and link.
+3. **Strict "New Customers Only" Rule**:
+   - When receiver opens link and enters mobile number, system verifies whether they have ever purchased a vehicle from Bellad (`vehicles` table + DMS records).
+   - If receiver is an **existing vehicle buyer**, the claim is **rejected**, and points/funds are **automatically refunded** back to the sender.
+   - If receiver is a **genuine new customer**, points are credited to their wallet (valid for 12 months) and a new guest profile is enrolled.
+4. **Automated Expiry**:
+   - Unclaimed links expire after 30 days. Background worker (`startGiftExpiryCron`) runs every 1 hour and reverts expired gifts to the sender.
+5. **Testing**:
+   ```bash
+   node scripts/test-gift-system.js
+   ```

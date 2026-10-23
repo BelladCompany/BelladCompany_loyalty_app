@@ -4,6 +4,7 @@ const { pool } = require('./config/db');
 const RealBooksService = require('./services/realbooks/realbooks.service');
 const { startRedemptionStatusCron } = require('./cron/redemption_status_cron');
 const { startAppSheetPullCron } = require('./cron/appsheet_pull_cron');
+const { startGiftExpiryCron } = require('./cron/gift_expiry_cron');
 
 // Test DB connection before listening
 pool.query('SELECT NOW()')
@@ -17,6 +18,9 @@ pool.query('SELECT NOW()')
 
       // Start recurring AppSheet pull worker (pulls unsynced rows into PostgreSQL)
       startAppSheetPullCron();
+
+      // Start gift expiry & auto-reversion worker (checks every 1 hour)
+      startGiftExpiryCron();
 
       // Start RealBooks background retry worker interval (every 60 seconds)
       setInterval(() => {

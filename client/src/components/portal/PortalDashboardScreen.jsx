@@ -35,6 +35,7 @@ import {
   Zap,
 } from 'lucide-react';
 import ApiService from '../../services/api';
+import SendGiftModal from './SendGiftModal';
 
 // Icon mapper for transaction categories
 const CategoryIcon = ({ type }) => {
@@ -117,6 +118,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [sendGiftModalOpen, setSendGiftModalOpen] = useState(false);
 
   // Gift Cards State
   const [myGiftCards, setMyGiftCards] = useState([]);
@@ -735,6 +737,29 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         {/* ─── TAB: Gift Card Rewards (Light Mode) ─────────────────────────── */}
         {(activeTab === 'referrals' || activeTab === 'gift_cards') && (
           <div className="space-y-6">
+            {/* Send a Gift to Friends & Family via WhatsApp (Amazon style) */}
+            <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-indigo-600 rounded-3xl p-6 text-white flex flex-col sm:flex-row items-center justify-between gap-5 shadow-lg">
+              <div className="space-y-1.5 text-center sm:text-left">
+                <span className="text-[10px] font-black uppercase tracking-widest bg-black/20 text-white px-2.5 py-0.5 rounded-full inline-block">
+                  WhatsApp e-Gift Card
+                </span>
+                <h3 className="text-lg sm:text-xl font-black">
+                  Gift Loyalty Points to Friends &amp; Family!
+                </h3>
+                <p className="text-xs text-amber-100 max-w-md leading-relaxed">
+                  Share your points or buy a gift with Razorpay. Your recipient receives a WhatsApp link to claim points directly into their Bellad wallet!
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSendGiftModalOpen(true)}
+                className="px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-900 font-black text-xs rounded-2xl shadow-md transition flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+              >
+                <Gift className="w-4 h-4 text-amber-600" />
+                <span>Send a Gift via WhatsApp</span>
+              </button>
+            </div>
+
             {/* Claim Card Input Banner */}
             <div className="bg-gradient-to-r from-amber-50/80 via-white to-amber-50/40 border border-amber-200/90 rounded-3xl p-6 space-y-4 shadow-xs">
               <div className="flex items-start gap-3.5">
@@ -1189,6 +1214,19 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           </div>
         </div>
       )}
+
+      {/* Send Gift to Friends & Family Modal */}
+      <SendGiftModal
+        isOpen={sendGiftModalOpen}
+        onClose={() => setSendGiftModalOpen(false)}
+        customer={profile}
+        currentBalance={profile?.balance || profile?.points_balance || profile?.current_balance || 0}
+        onGiftSent={() => {
+          loadProfile();
+          loadLedger();
+          loadGiftCards();
+        }}
+      />
     </div>
   );
 }

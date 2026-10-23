@@ -724,6 +724,43 @@ export class ApiService {
       body: payload,
     });
   }
+
+  // ─── Customer Gifting System APIs ─────────────────────────────────────────
+  static async createGiftFromPoints(payload) {
+    return this.request('/gifts/create-from-points', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async createGiftFromRazorpay(payload) {
+    return this.request('/gifts/create-from-razorpay', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async verifyRazorpayPayment(payload) {
+    return this.request('/gifts/verify-razorpay-payment', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async getGiftByClaimToken(token) {
+    return this.request(`/gifts/claim/${encodeURIComponent(token)}`);
+  }
+
+  static async claimGift(token, payload) {
+    return this.request(`/gifts/claim/${encodeURIComponent(token)}`, {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async getMySentGifts() {
+    return this.request('/gifts/my-sent-gifts');
+  }
 }
 
 export default ApiService;

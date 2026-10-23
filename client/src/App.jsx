@@ -15,6 +15,7 @@ import MasterRuleEditorScreen from './screens/MasterRuleEditorScreen';
 import StandaloneMasterEditorPortal from './screens/StandaloneMasterEditorPortal';
 import LoyaltyAppBuilder from './screens/LoyaltyAppBuilder';
 import CustomerPortalScreen from './pages/CustomerPortalScreen';
+import PublicGiftClaimScreen from './screens/PublicGiftClaimScreen';
 import ApiService from './services/api';
 
 class BuilderErrorBoundary extends React.Component {
@@ -80,6 +81,7 @@ export function App() {
   const path = window.location.pathname;
   const isPublicBalancePass = path.startsWith('/balance/');
   const isPublicReferralLead = path.startsWith('/refer/');
+  const isPublicGiftClaim = path.startsWith('/gift/') || path.startsWith('/claim-gift/');
   const isCustomerPortal = path.startsWith('/portal') || path.startsWith('/customer-portal');
   const isEditorPath = path.startsWith('/editor') || path.startsWith('/studio');
   const isBuilderPath = path.startsWith('/builder') || path.startsWith('/app-builder') || path.startsWith('/create-app');
@@ -88,7 +90,7 @@ export function App() {
   const [isBuilderMode, setIsBuilderMode] = useState(isBuilderPath);
 
   useEffect(() => {
-    if (isPublicBalancePass || isPublicReferralLead || isCustomerPortal) return;
+    if (isPublicBalancePass || isPublicReferralLead || isPublicGiftClaim || isCustomerPortal) return;
 
     // Validate stored token on mount
     const token = ApiService.getToken();
@@ -105,7 +107,7 @@ export function App() {
           setUser(null);
         });
     }
-  }, [isPublicBalancePass, isPublicReferralLead, isCustomerPortal]);
+  }, [isPublicBalancePass, isPublicReferralLead, isPublicGiftClaim, isCustomerPortal]);
 
   // Handle browser back/forward buttons for /editor & /builder navigation
   useEffect(() => {
@@ -125,6 +127,11 @@ export function App() {
   // Public referral lead form does not require user authentication
   if (isPublicReferralLead) {
     return <PublicReferralLeadScreen />;
+  }
+
+  // Public gift claim link does not require user authentication
+  if (isPublicGiftClaim) {
+    return <PublicGiftClaimScreen />;
   }
 
   // Customer Portal route or logged-in customer role
