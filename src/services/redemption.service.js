@@ -185,46 +185,48 @@ class RedemptionService {
         };
       }
 
-      // 2. Validate active OTP for customer
+      // 2. Validate active OTP for customer (optional - cashier counter receipt flow does not require OTP)
       const submittedOtp = String(otp || '').trim();
-      const isTestEnv = process.env.ENABLE_TEST_OTPS === 'true' || process.env.ENABLE_DEBUG_OTP === 'true' || process.env.USE_DUMMY_OTP === 'true' || process.env.NODE_ENV === 'development' || !process.env.RELTIGROW_API_KEY;
-      const isMasterTestOtp = isTestEnv && ['123456', '999999'].includes(submittedOtp);
-
-      const otpRes = await client.query(
-        `SELECT otp_id AS id, otp_hash, expires_at, used_at
-         FROM otp_requests
-         WHERE customer_id = $1 AND tenant_id = $2 AND used_at IS NULL AND expires_at > NOW()
-         ORDER BY created_at DESC
-         LIMIT 1
-         FOR UPDATE;`,
-        [customerId, tenant_id]
-      );
-
       let matchedOtpId = null;
 
-      if (isMasterTestOtp) {
-        if (otpRes.rows.length > 0) {
-          matchedOtpId = otpRes.rows[0].id;
-        }
-      } else {
-        if (otpRes.rows.length === 0) {
-          throw { statusCode: 400, message: 'No valid active OTP found for this customer or OTP has expired.' };
-        }
+      if (submittedOtp) {
+        const isTestEnv = process.env.ENABLE_TEST_OTPS === 'true' || process.env.ENABLE_DEBUG_OTP === 'true' || process.env.USE_DUMMY_OTP === 'true' || process.env.NODE_ENV === 'development' || !process.env.RELTIGROW_API_KEY;
+        const isMasterTestOtp = isTestEnv && ['123456', '999999'].includes(submittedOtp);
 
-        const activeOtp = otpRes.rows[0];
-        const isOtpValid = await bcrypt.compare(submittedOtp, activeOtp.otp_hash);
-        if (!isOtpValid) {
-          throw { statusCode: 400, message: 'Invalid OTP code provided. Please verify and try again.' };
-        }
-        matchedOtpId = activeOtp.id;
-      }
-
-      // Mark OTP as used (single-use enforcement)
-      if (matchedOtpId) {
-        await client.query(
-          `UPDATE otp_requests SET used_at = NOW(), is_used = TRUE WHERE otp_id = $1;`,
-          [matchedOtpId]
+        const otpRes = await client.query(
+          `SELECT otp_id AS id, otp_hash, expires_at, used_at
+           FROM otp_requests
+           WHERE customer_id = $1 AND tenant_id = $2 AND used_at IS NULL AND expires_at > NOW()
+           ORDER BY created_at DESC
+           LIMIT 1
+           FOR UPDATE;`,
+          [customerId, tenant_id]
         );
+
+        if (isMasterTestOtp) {
+          if (otpRes.rows.length > 0) {
+            matchedOtpId = otpRes.rows[0].id;
+          }
+        } else {
+          if (otpRes.rows.length === 0) {
+            throw { statusCode: 400, message: 'No valid active OTP found for this customer or OTP has expired.' };
+          }
+
+          const activeOtp = otpRes.rows[0];
+          const isOtpValid = await bcrypt.compare(submittedOtp, activeOtp.otp_hash);
+          if (!isOtpValid) {
+            throw { statusCode: 400, message: 'Invalid OTP code provided. Please verify and try again.' };
+          }
+          matchedOtpId = activeOtp.id;
+        }
+
+        // Mark OTP as used (single-use enforcement)
+        if (matchedOtpId) {
+          await client.query(
+            `UPDATE otp_requests SET used_at = NOW(), is_used = TRUE WHERE otp_id = $1;`,
+            [matchedOtpId]
+          );
+        }
       }
 
       // 2b. Special Handling for Manual Fallback Referral Tab

@@ -6,7 +6,18 @@ class PointsController {
    */
   static async earnPoints(req, res, next) {
     try {
-      const { customer_id, vehicle_id, branch_id, amount, type, reference_id, description } = req.body;
+      const {
+        customer_id,
+        vehicle_id,
+        branch_id,
+        amount,
+        type,
+        category,
+        reference_id,
+        receipt_no,
+        account_ledger_no,
+        description,
+      } = req.body;
       const tenantId = req.tenantId;
       const createdBy = req.user?.id || null;
 
@@ -16,7 +27,10 @@ class PointsController {
         branch_id,
         amount,
         type,
-        reference_id,
+        category: category || (type === 'sale' ? 'sale' : 'service'),
+        reference_id: reference_id || receipt_no,
+        receipt_no: receipt_no ? receipt_no.trim() : null,
+        account_ledger_no: account_ledger_no ? account_ledger_no.trim() : null,
         description,
         created_by: createdBy,
         tenant_id: tenantId,

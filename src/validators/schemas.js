@@ -183,7 +183,10 @@ const earnPointsSchema = z.object({
     required_error: "Transaction type is required ('sale' or 'service')",
     invalid_type_error: "Type must be either 'sale' or 'service'",
   }),
+  category: z.string().trim().optional().nullable(),
   reference_id: z.string().trim().optional().nullable(),
+  receipt_no: z.string().trim().optional().nullable(),
+  account_ledger_no: z.string().trim().optional().nullable(),
   description: z.string().trim().optional().nullable(),
 });
 
@@ -226,7 +229,7 @@ const requestOtpSchema = z.object({
 const redeemPointsSchema = z.object({
   phone: z.string().trim().optional().nullable(),
   customer_id: z.string().trim().optional().nullable(),
-  otp: z.string({ required_error: 'OTP is required' }).trim(),
+  otp: z.string().trim().optional().nullable(),
   bill_amount: z.coerce.number().optional().nullable(),
   points: z.coerce.number().int().min(0).optional().nullable(),
   category: z.string().optional().default('service'),
@@ -234,6 +237,7 @@ const redeemPointsSchema = z.object({
   account_ledger_no: z.string().optional().nullable(),
   branch_id: z.coerce.number().int().optional().nullable(),
   vehicle_id: z.coerce.number().int().optional().nullable(),
+  referral_code: z.string().optional().nullable(),
 });
 
 // Notification (Manual WhatsApp Send) Validators

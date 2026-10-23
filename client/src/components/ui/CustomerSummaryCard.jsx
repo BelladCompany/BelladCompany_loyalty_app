@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { User, Phone, Car, Award, ShieldCheck, Share2, CheckCircle2, PlusCircle, Gift, Lock, Sparkles } from 'lucide-react';
+import React from 'react';
+import { User, Phone, Car, Award, ShieldCheck, CheckCircle2, PlusCircle, Lock, Sparkles } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-import api from '../../services/api';
 
 /**
- * Clean Light Mode Customer Summary Card (Image 1 & 2 Reference)
- * Features high-contrast 16-18px typography, pure white card surface, and vibrant action buttons.
+ * Clean Light Mode Customer Summary Card
+ * Features high-contrast 16-18px typography, pure white card surface, and Add Receipt action button.
  */
 export const CustomerSummaryCard = ({
   customer,
+  onAddReceipt,
   onRecordEarning,
   onRedeemPoints,
   hasPendingCorrection = false,
@@ -22,9 +22,6 @@ export const CustomerSummaryCard = ({
   const phones = customer.phones || [];
   const vehicles = customer.vehicles || [];
   const aadhaarDisplay = customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 || null;
-
-  const [sendingReminder, setSendingReminder] = useState(false);
-  const [reminderSent, setReminderSent] = useState(false);
 
   // Calculate 12-month redemption eligibility status across linked vehicles or customer purchase date
   let redemptionEligible = true;
@@ -61,29 +58,6 @@ export const CustomerSummaryCard = ({
       }
     }
   }
-
-  // Send WhatsApp referral message
-  const handleSendReferralWhatsApp = async () => {
-    const primaryPhone = phones.find(p => p.is_primary)?.phone_number || phones[0]?.phone_number || phones[0];
-    if (!primaryPhone) {
-      alert('No phone number found for this customer');
-      return;
-    }
-
-    try {
-      setSendingReminder(true);
-      await api.sendReferralWhatsApp({
-        customer_id: customer.customer_id,
-        phone_number: String(primaryPhone).replace(/[^0-9]/g, ''),
-      });
-      setReminderSent(true);
-      setTimeout(() => setReminderSent(false), 4000);
-    } catch (err) {
-      alert(err.message || 'Failed to send WhatsApp referral link');
-    } finally {
-      setSendingReminder(false);
-    }
-  };
 
   return (
     <div className={`w-full bg-white rounded-3xl p-7 lg:p-8 border border-slate-200/90 shadow-card ${className}`}>
@@ -162,73 +136,28 @@ export const CustomerSummaryCard = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-            {/* WhatsApp Referral Link Reminder Button */}
+            {/* Combined Add Receipt Button */}
             <button
               type="button"
-              onClick={handleSendReferralWhatsApp}
-              disabled={sendingReminder}
-              className={`h-12 px-4 flex items-center gap-2 font-bold text-xs rounded-2xl border transition-all ${
-                reminderSent
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                  : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+              id="add-receipt-btn"
+              onClick={() => {
+                if (hasPendingCorrection) {
+                  alert("Billing correction request is currently pending admin approval. Actions are locked until approved.");
+                  return;
+                }
+                if (onAddReceipt) onAddReceipt(customer);
+                else if (onRecordEarning) onRecordEarning(customer);
+              }}
+              disabled={hasPendingCorrection}
+              className={`h-12 px-6 font-bold text-sm rounded-2xl flex items-center gap-2 transition-all shadow-md active:scale-[0.98] cursor-pointer ${
+                hasPendingCorrection
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/25'
               }`}
-              title="Send WhatsApp gift card link to customer"
             >
-              {reminderSent ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Gift Card Sent!</span>
-                </>
-              ) : (
-                <>
-                  <Gift className="w-4 h-4 text-emerald-600" />
-                  <span>{sendingReminder ? 'Sending...' : '🎁 Send Gift Card'}</span>
-                </>
-              )}
+              <PlusCircle className="w-4 h-4 text-white" />
+              <span>Add Receipt</span>
             </button>
-
-            {/* Earn Points Button */}
-            {onRecordEarning && (
-              <button
-                type="button"
-                onClick={() => onRecordEarning(customer)}
-                className="h-12 px-5 font-bold text-sm rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 transition-all shadow-md shadow-indigo-600/20 active:scale-[0.98]"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>+ Earn Points</span>
-              </button>
-            )}
-
-            {/* Redeem Points Button */}
-            {onRedeemPoints && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (hasPendingCorrection) {
-                    alert("Billing correction request is currently pending admin approval. Redemption is blocked until approved.");
-                    return;
-                  }
-                  onRedeemPoints(customer);
-                }}
-                disabled={hasPendingCorrection}
-                className={`h-12 px-5 font-bold text-sm rounded-2xl transition-all flex items-center gap-2 active:scale-[0.98] ${
-                  hasPendingCorrection
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                    : !redemptionEligible
-                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300'
-                    : 'bg-slate-900 hover:bg-slate-800 text-white shadow-md'
-                }`}
-              >
-                {!redemptionEligible ? <Gift className="w-4 h-4 text-amber-600" /> : <Gift className="w-4 h-4 text-amber-400" />}
-                <span>
-                  {hasPendingCorrection
-                    ? 'Locked (Correction Pending)'
-                    : !redemptionEligible
-                    ? 'Redeem (Accessories Unlocked)'
-                    : 'Redeem Points (OTP)'}
-                </span>
-              </button>
-            )}
           </div>
         </div>
 

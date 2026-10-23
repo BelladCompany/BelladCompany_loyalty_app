@@ -17,12 +17,13 @@ import {
   FileCheck2,
   UserCheck,
   Tag,
-  Receipt,
+  Coins,
   FileText,
   AlertTriangle,
 } from 'lucide-react';
 import EarnPointsModal from './EarnPointsModal';
 import RedemptionModal from './RedemptionModal';
+import AddReceiptModal from './AddReceiptModal';
 import RequestKycModal from './RequestKycModal';
 import RaiseCorrectionModal from './RaiseCorrectionModal';
 import ApiService from '../../services/api';
@@ -35,6 +36,7 @@ export const Customer360View = ({
   branches = [],
 }) => {
   const [activeProfileTab, setActiveProfileTab] = useState('ledger');
+  const [addReceiptModalOpen, setAddReceiptModalOpen] = useState(false);
   const [earnModalOpen, setEarnModalOpen] = useState(false);
   const [redeemModalOpen, setRedeemModalOpen] = useState(false);
   const [kycModalOpen, setKycModalOpen] = useState(false);
@@ -319,8 +321,7 @@ export const Customer360View = ({
           tier_name: tierName,
         }}
         hasPendingCorrection={hasPendingCorrection}
-        onRecordEarning={() => setEarnModalOpen(true)}
-        onRedeemPoints={() => setRedeemModalOpen(true)}
+        onAddReceipt={() => setAddReceiptModalOpen(true)}
       />
 
       {/* 2. Key Metrics Glanceable Strip */}
@@ -425,7 +426,7 @@ export const Customer360View = ({
             No vehicles registered yet for this customer profile.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="space-y-4 w-full">
             {customer.vehicles.map((v, idx) => {
               const vid = v.id || v.vehicle_id;
               const vs = vehicleStatuses[vid];
@@ -441,81 +442,19 @@ export const Customer360View = ({
               return (
                 <div
                   key={vid || idx}
-                  className="bg-slate-50 border-2 border-slate-200 rounded-xl p-5 space-y-4 hover:border-amber-500 transition shadow-sm"
+                  className="bg-slate-50 border-2 border-slate-200 rounded-xl p-5 space-y-4 hover:border-amber-500 transition shadow-sm w-full"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono font-extrabold text-base bg-white px-3 py-1 border border-slate-300 rounded-lg text-slate-900">
-                      Reg No: {v.registration_number || v.reg_no || v.vin || v.chassis_no || 'N/A'}
-                    </span>
-                    <span className="text-sm font-extrabold px-3 py-1 rounded-lg bg-amber-500/10 text-amber-900 border border-amber-500/30">
-                      {v.brand_name || v.brand || 'Vehicle'}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">VIN / Chassis No</span>
-                      <span className="font-mono font-extrabold text-slate-900 text-base">{v.vin || v.chassis_no || 'N/A'}</span>
-                    </div>
-
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Model Name</span>
-                      <span className="font-extrabold text-slate-900 text-base">{v.model || 'Unspecified'}</span>
-                    </div>
-
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Variant</span>
-                      <span className="font-extrabold text-slate-900 text-base">{v.variant || v.varient || 'N/A'}</span>
-                    </div>
-
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Fuel Type</span>
-                      <span className="font-extrabold text-blue-900 text-base uppercase">{v.fuel_type || 'Petrol / Diesel / EV'}</span>
-                    </div>
-
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Ex-Showroom Price (Gross)</span>
-                      <span className="font-extrabold text-slate-800 text-base">{grossPrice > 0 ? `₹${grossPrice.toLocaleString('en-IN')}` : 'N/A'}</span>
-                    </div>
-
-                    <div className="bg-white p-3 rounded-lg border border-rose-200 bg-rose-50/40">
-                      <span className="text-rose-700 block text-xs uppercase font-extrabold">Offers &amp; Discounts Deducted</span>
-                      <span className="font-extrabold text-rose-700 text-base">
-                        {grossPrice - netPrice > 0 ? `−₹${(grossPrice - netPrice).toLocaleString('en-IN')}` : '₹0 (No Offers)'}
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono font-extrabold text-base bg-white px-3 py-1 border border-slate-300 rounded-lg text-slate-900 shadow-sm">
+                        Reg No: {v.registration_number || v.reg_no || v.vin || v.chassis_no || 'N/A'}
+                      </span>
+                      <span className="text-sm font-extrabold px-3 py-1 rounded-lg bg-amber-500/10 text-amber-900 border border-amber-500/30">
+                        {v.brand_name || v.brand || 'Vehicle'}
                       </span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50/60 col-span-2">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-emerald-900 block text-xs uppercase font-extrabold">
-                            Net Ex-Showroom (After Discount)
-                          </span>
-                          <span className="font-black text-emerald-800 text-xl">
-                            {netPrice > 0 ? `₹${netPrice.toLocaleString('en-IN')}` : 'N/A'}
-                          </span>
-                        </div>
-                        <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">
-                          Points Base: +{Math.floor(netPrice / 100).toLocaleString('en-IN')} PTS
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Firm Name</span>
-                      <span className="font-bold text-slate-900 text-base">{v.firm_name || v.firm || customer.firm || 'N/A'}</span>
-                    </div>
-
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">DMS Invoice Date (Purchase)</span>
-                      <span className="font-extrabold text-slate-900 text-base">{v.dms_invoice_date || customer.dms_invoice_date || 'N/A'}</span>
-                    </div>
-                  </div>
-
-                  {/* Redemption Clock Status */}
-                  {vs && (
-                    <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-sm">
-                      <span className="text-slate-600 font-semibold">{vs.message}</span>
+                    {vs && (
                       <span
                         className={`px-3 py-1 rounded-lg font-extrabold text-xs uppercase ${
                           vs.status === 'eligible'
@@ -535,6 +474,73 @@ export const Customer360View = ({
                           ? 'Correction Locked'
                           : 'Expired'}
                       </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3 text-sm">
+                    <div className="bg-white p-3 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block text-xs uppercase font-extrabold">VIN / Chassis No</span>
+                      <span className="font-mono font-extrabold text-slate-900 text-base break-all">{v.vin || v.chassis_no || 'N/A'}</span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Model Name</span>
+                      <span className="font-extrabold text-slate-900 text-base">{v.model || 'Unspecified'}</span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Variant</span>
+                      <span className="font-extrabold text-slate-900 text-base">{v.variant || v.varient || 'N/A'}</span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Fuel Type</span>
+                      <span className="font-extrabold text-blue-900 text-base uppercase">{v.fuel_type || 'Petrol / Diesel / EV'}</span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Firm Name</span>
+                      <span className="font-bold text-slate-900 text-base">{v.firm_name || v.firm || customer.firm || 'N/A'}</span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block text-xs uppercase font-extrabold">DMS Invoice Date</span>
+                      <span className="font-extrabold text-slate-900 text-base">{v.dms_invoice_date || customer.dms_invoice_date || 'N/A'}</span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Ex-Showroom Price (Gross)</span>
+                      <span className="font-extrabold text-slate-800 text-base">{grossPrice > 0 ? `₹${grossPrice.toLocaleString('en-IN')}` : 'N/A'}</span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-rose-200 bg-rose-50/40">
+                      <span className="text-rose-700 block text-xs uppercase font-extrabold">Offers & Discounts</span>
+                      <span className="font-extrabold text-rose-700 text-base">
+                        {grossPrice - netPrice > 0 ? `−₹${(grossPrice - netPrice).toLocaleString('en-IN')}` : '₹0'}
+                      </span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50/60 col-span-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-emerald-900 block text-xs uppercase font-extrabold">
+                            Net Ex-Showroom (After Discount)
+                          </span>
+                          <span className="font-black text-emerald-800 text-xl">
+                            {netPrice > 0 ? `₹${netPrice.toLocaleString('en-IN')}` : 'N/A'}
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">
+                          Points Base: +{Math.floor(netPrice / 100).toLocaleString('en-IN')} PTS
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Redemption Clock Status message */}
+                  {vs && (
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-sm">
+                      <span className="text-slate-600 font-semibold">{vs.message}</span>
                     </div>
                   )}
                 </div>
@@ -551,7 +557,7 @@ export const Customer360View = ({
           {[
             { id: 'ledger', label: 'Points Ledger', icon: History },
             { id: 'referrals', label: 'Gift Cards', icon: Gift },
-            { id: 'redemptions', label: 'Redemptions', icon: Receipt },
+            { id: 'redemptions', label: 'Redemptions', icon: Coins },
             { id: 'kyc', label: 'KYC Requests', icon: FileCheck2 },
             { id: 'nominee', label: 'Nominee Details', icon: UserCheck },
           ].map((tab) => {
@@ -583,11 +589,11 @@ export const Customer360View = ({
               </h4>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setRedeemModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition"
+                  onClick={() => setAddReceiptModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition"
                 >
-                  <Gift className="w-3.5 h-3.5" />
-                  {customer?.vehicles?.[0]?.purchase_date || customer?.purchase_date ? 'Redeem (OTP)' : 'Get Points (OTP)'}
+                  <PlusCircle className="w-3.5 h-3.5 text-white" />
+                  Add Receipt
                 </button>
                 <button
                   onClick={() => {
@@ -794,22 +800,14 @@ export const Customer360View = ({
       </section>
 
       {/* Modal Dialogs */}
-      <EarnPointsModal
-        isOpen={earnModalOpen}
-        customer={customer}
-        branches={branches}
-        onClose={() => setEarnModalOpen(false)}
-        onSuccess={() => onRefresh && onRefresh()}
-      />
-
-      <RedemptionModal
-        isOpen={redeemModalOpen}
+      <AddReceiptModal
+        isOpen={addReceiptModalOpen}
         customer={{
           ...customer,
           points_balance: currentBalance,
         }}
         branches={branches}
-        onClose={() => setRedeemModalOpen(false)}
+        onClose={() => setAddReceiptModalOpen(false)}
         onSuccess={() => onRefresh && onRefresh()}
       />
 

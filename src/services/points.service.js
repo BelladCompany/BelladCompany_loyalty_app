@@ -95,6 +95,8 @@ class PointsService {
     type,
     category,
     reference_id,
+    receipt_no,
+    account_ledger_no,
     description,
     created_by,
     tenant_id,
@@ -269,6 +271,14 @@ class PointsService {
       if (hasRateSnapshotCol) {
         insertCols.push('redemption_rate_snapshot');
         insertVals.push(0.2500);
+      }
+      if (cols.has('receipt_no') && receipt_no) {
+        insertCols.push('receipt_no');
+        insertVals.push(receipt_no);
+      }
+      if (cols.has('account_ledger_no') && account_ledger_no) {
+        insertCols.push('account_ledger_no');
+        insertVals.push(account_ledger_no);
       }
 
       const placeholders = insertVals.map((_, i) => `$${i + 1}`).join(', ');

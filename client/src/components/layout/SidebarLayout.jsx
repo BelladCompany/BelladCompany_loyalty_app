@@ -85,10 +85,9 @@ export const SidebarLayout = ({
           ],
         },
         {
-          group: 'Gift Cards',
+          group: 'Gift Card Rewards',
           items: [
-            { id: 'gift_cards', label: 'Gift Cards', icon: Gift },
-            { id: 'referrals', label: 'Gift Card Rewards', icon: Sparkles },
+            { id: 'referrals', label: 'Gift Card Rewards', icon: Gift },
           ],
         },
         {
@@ -270,15 +269,7 @@ export const SidebarLayout = ({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            {/* Round Search Button (from Image 1 Reference) */}
-            <button
-              type="button"
-              onClick={() => onTabChange('dashboard')}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 transition-colors border border-slate-200"
-              title="Search Customer"
-            >
-              <Search className="w-4 h-4" />
-            </button>
+
 
             {/* Black Pill CTA (Only visible for Admin/Director on tablet/desktop) */}
             {isAdmin && (

@@ -340,6 +340,21 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               </span>
             )}
 
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('referrals');
+                setTimeout(() => {
+                  const el = document.getElementById('referral-share-card');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-300 transition shadow-xs cursor-pointer"
+            >
+              <Gift className="w-3.5 h-3.5 text-emerald-600" />
+              <span>🎁 Send Gift Card</span>
+            </button>
+
             <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shadow-xs">
                 {initials}
@@ -426,7 +441,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                   </span>
                   <span className="text-xs font-black text-amber-400">PTS</span>
                 </div>
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-2.5 flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-emerald-300 bg-emerald-950/70 border border-emerald-500/40 px-2 py-0.5 rounded-lg">
                     ≈ ₹{(profile?.redeemableValue || 0).toLocaleString('en-IN')} Cash Value
                   </span>
@@ -435,6 +450,20 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                     className="text-[11px] font-bold text-amber-300 hover:text-white underline cursor-pointer"
                   >
                     Redeem →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('referrals');
+                      setTimeout(() => {
+                        const el = document.getElementById('referral-share-card');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }, 100);
+                    }}
+                    className="px-3.5 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer ml-auto"
+                  >
+                    <Gift className="w-3.5 h-3.5 text-slate-950" />
+                    <span>🎁 Send Gift Card</span>
                   </button>
                 </div>
               </div>
@@ -877,7 +906,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
             )}
 
             {/* Share Referral Link Card */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-xs">
+            <div id="referral-share-card" className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-base font-black text-slate-900">Your Unique Gift Card Reward Link</h3>

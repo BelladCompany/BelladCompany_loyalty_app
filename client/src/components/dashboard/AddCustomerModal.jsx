@@ -73,10 +73,8 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
       errs.phone = 'Phone number must be exactly 10 numeric digits.';
     }
     const cleanAadhaar = aadhaar.replace(/[\s-]/g, '');
-    if (!cleanAadhaar) {
-      errs.aadhaar = 'Aadhaar Card number is required.';
-    } else if (!/^\d{12}$/.test(cleanAadhaar)) {
-      errs.aadhaar = 'Aadhaar number must be exactly 12 numeric digits.';
+    if (cleanAadhaar && !/^\d{12}$/.test(cleanAadhaar)) {
+      errs.aadhaar = 'Aadhaar number must be exactly 12 numeric digits (or leave blank).';
     }
     if (gstNumber.trim() && gstNumber.trim().length > 15) {
       errs.gstNumber = 'GST Number must not exceed 15 characters.';
@@ -142,7 +140,7 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
       const payload = {
         name: name.trim(),
         phone_numbers: [phone.trim().replace(/\D/g, '')],
-        aadhaar_number: aadhaar.replace(/[\s-]/g, '').trim(),
+        aadhaar_number: aadhaar.replace(/[\s-]/g, '').trim() || undefined,
         gst_number: gstNumber.trim() || undefined,
         visit_type: 'first_time',
         is_first_time_visitor: true,
@@ -379,12 +377,12 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
 
                     <div>
                       <label className="text-sm font-bold text-ink-primary block mb-1.5">
-                        Aadhaar Card No <span className="text-action-danger">*</span>
+                        Aadhaar Card No <span className="text-xs text-slate-400 font-normal">(Optional)</span>
                       </label>
                       <input
                         id="add-cust-aadhaar"
                         type="text"
-                        placeholder="e.g. 123456789012 (12 digits)"
+                        placeholder="e.g. 123456789012 (12 digits, optional)"
                         value={aadhaar}
                         onChange={(e) => setAadhaar(e.target.value.replace(/\D/g, '').slice(0, 12))}
                         disabled={isLoading || isSendingOtp || !!success}
