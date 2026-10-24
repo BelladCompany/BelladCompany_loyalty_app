@@ -41,6 +41,7 @@ export const SidebarLayout = ({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const isCashier = user?.role === 'cashier';
   const isManager = ['branch_manager', 'manager'].includes(user?.role);
+  const isAccountsHead = ['accounts_head', 'account_head'].includes(user?.role);
   const isAdmin = ['admin', 'super_admin', 'regional_admin', 'director'].includes(user?.role) ||
                   user?.username?.toLowerCase() === 'agstya' ||
                   user?.username?.toLowerCase() === 'agastya';
@@ -48,10 +49,26 @@ export const SidebarLayout = ({
   const closeMobileNav = () => setMobileNavOpen(false);
 
   const isNavActive = (id) =>
-    activeTab === id || (id === 'dashboard' && (activeTab === 'search' || activeTab === 'redemptions'));
+    activeTab === id || (id === 'dashboard' && activeTab === 'search');
 
   // Smart CRM Grouped Categories based on staff role
-  const navSections = isManager
+  const navSections = isAccountsHead
+    ? [
+        {
+          group: 'Counter POS',
+          items: [
+            { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
+          ],
+        },
+        {
+          group: 'Accounts Approvals',
+          items: [
+            { id: 'kyc_approvals', label: 'KYC Approvals', icon: ShieldCheck },
+            { id: 'corrections_queue', label: 'Queue Approvals', icon: FileText },
+          ],
+        },
+      ]
+    : isManager
     ? [
         {
           group: 'Counter POS',
@@ -62,8 +79,13 @@ export const SidebarLayout = ({
         {
           group: 'Managerial Approvals',
           items: [
-            { id: 'kyc_approvals', label: 'KYC Approvals', icon: ShieldCheck },
             { id: 'corrections_queue', label: 'Queue Approvals', icon: FileText },
+          ],
+        },
+        {
+          group: 'Analytics',
+          items: [
+            { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
           ],
         },
       ]
@@ -85,14 +107,16 @@ export const SidebarLayout = ({
           ],
         },
         {
-          group: 'Gift Card Rewards',
+          group: 'Rewards & Referrals',
           items: [
-            { id: 'referrals', label: 'Gift Card Rewards', icon: Gift },
+            { id: 'gift_cards', label: 'Gift Card Rewards', icon: Gift },
+            { id: 'referrals', label: 'Referral Rewards', icon: Users },
           ],
         },
         {
           group: 'Loyalty Rewards',
           items: [
+            { id: 'customer_redemptions', label: 'Customer Redemptions', icon: Sparkles },
             { id: 'kyc_approvals', label: 'KYC Approvals', icon: ShieldCheck },
             { id: 'corrections_queue', label: 'Queue Approvals', icon: FileText },
           ],

@@ -19,12 +19,24 @@ router.post('/claim/:token', giftCardRateLimiter, GiftController.claimGift);
 router.post('/webhooks/razorpay', GiftController.handleRazorpayWebhook);
 
 
+const jwt = require('jsonwebtoken');
+const env = require('../config/env');
+
 // ─── Protected / Sender Endpoints ────────────────────────────────────────────
 // Optional token for public self-service sender, or authenticated customer portal session
 const optionalAuthenticate = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authenticateToken(req, res, next);
+    const token = authHeader.slice(7);
+    jwt.verify(token, env.jwtSecret, (err, user) => {
+      if (!err && user) {
+        req.user = user;
+        const isAdmin = ['admin', 'super_admin', 'regional_admin'].includes(user.role);
+        req.tenantId = (isAdmin && req.headers['x-tenant-id']) ? req.headers['x-tenant-id'] : (user.tenant_id || req.headers['x-tenant-id'] || env.defaultTenantId);
+      }
+      next();
+    });
+    return;
   }
   next();
 };

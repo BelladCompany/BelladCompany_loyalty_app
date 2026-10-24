@@ -193,6 +193,34 @@ class GiftEngineService {
       );
       const gift = giftRes.rows[0];
 
+      // 6b. Generate 4-digit PIN and register in gift_cards registry so recipient can claim via Code + PIN in portal
+      const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
+      const amountPaise = Math.round(amountInr * 100);
+
+      await client.query(
+        `INSERT INTO gift_cards (
+          card_number, pin_code, initial_amount_paise, balance_amount_paise, currency,
+          sender_name, sender_phone, recipient_name, custom_message, card_theme,
+          status, expires_at, tenant_id
+        )
+        VALUES ($1, $2, $3, $4, 'INR', $5, $6, 'Gift Recipient', $7, $8, 'active', $9, $10)
+        ON CONFLICT (card_number) DO UPDATE
+        SET pin_code = EXCLUDED.pin_code,
+            balance_amount_paise = EXCLUDED.balance_amount_paise;`,
+        [
+          giftCode,
+          pinCode,
+          amountPaise,
+          amountPaise,
+          sender_name || 'Loyal Member',
+          cleanSenderPhone,
+          custom_message,
+          card_theme,
+          expiresAt.toISOString(),
+          tenant_id,
+        ]
+      );
+
       // 7. Audit log event
       await client.query(
         `INSERT INTO customer_gift_audit_logs (gift_id, event_type, actor_phone, actor_customer_id, details, tenant_id)
@@ -201,26 +229,30 @@ class GiftEngineService {
           gift.gift_id,
           cleanSenderPhone,
           resolvedCustomerId,
-          JSON.stringify({ points_deducted: points, amount_inr: amountInr, gift_code: giftCode }),
+          JSON.stringify({ points_deducted: points, amount_inr: amountInr, gift_code: giftCode, pin_code: pinCode }),
           tenant_id,
         ]
       );
 
       await client.query('COMMIT');
 
-      // 8. Generate WhatsApp sharing payload
-      const shareUrl = `${process.env.APP_BASE_URL || 'http://localhost:5173'}/gift/${claimToken}`;
+      // 8. Generate WhatsApp sharing payload with Card Code, PIN, and 1-Click Link
+      const baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://bellad.co.in');
+      const shareUrl = `${baseUrl}/gift/${claimToken}`;
       const whatsappText = encodeURIComponent(
-        `🎁 *You received a ₹${amountInr.toLocaleString('en-IN')} Gift from ${sender_name || 'a friend'}!*\n\n` +
+        `🎁 *You received a ₹${amountInr.toLocaleString('en-IN')} Gift Card from ${sender_name || 'a friend'}!*\n\n` +
         `"${custom_message}"\n\n` +
-        `Use it to get points towards vehicle service, accessories, or your first purchase at Bellad & Company.\n\n` +
-        `👉 *Claim your gift here:* ${shareUrl}\n\n` +
-        `*(Valid for new customers who have not previously purchased a vehicle. Terms apply).*`
+        `💳 *Card Code:* ${giftCode}\n` +
+        `🔐 *Secret PIN:* ${pinCode}\n` +
+        `💰 *Value:* ₹${amountInr.toLocaleString('en-IN')} (+${points.toLocaleString('en-IN')} Loyalty Points)\n\n` +
+        `👉 *1-Click Claim Link:* ${shareUrl}\n\n` +
+        `*(You can claim directly with the link above, or paste the Card Code & PIN in your Bellad Customer Portal to add points instantly!)*`
       );
 
       return {
         gift_id: gift.gift_id,
         gift_code: gift.gift_code,
+        pin_code: pinCode,
         claim_token: claimToken,
         claim_url: shareUrl,
         whatsapp_share_url: `https://api.whatsapp.com/send?text=${whatsappText}`,
@@ -744,6 +776,17 @@ class GiftEngineService {
          WHERE gift_id = $5;`,
         [receiverCustomer.customer_id, cleanReceiverPhone, receiver_name || receiverCustomer.name, receiverLedgerId, gift.gift_id]
       );
+
+      // 7b. Also sync gift_cards table if linked
+      await client.query(
+        `UPDATE gift_cards
+         SET balance_amount_paise = 0,
+             status = 'redeemed',
+             assigned_customer_id = $1,
+             updated_at = NOW()
+         WHERE card_number = $2;`,
+        [receiverCustomer.customer_id, gift.gift_code]
+      ).catch(() => {});
 
       // 8. Log audit
       await client.query(

@@ -44,7 +44,8 @@ class KycController {
   static async getPendingRequests(req, res, next) {
     try {
       const tenantId = req.tenantId;
-      const requests = await KycService.getPendingRequests(tenantId);
+      const status = req.query.status || 'pending';
+      const requests = await KycService.getPendingRequests(tenantId, status);
       res.status(200).json({
         status: 'success',
         data: requests,

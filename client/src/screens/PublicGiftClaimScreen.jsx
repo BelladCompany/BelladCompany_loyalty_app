@@ -54,7 +54,7 @@ export const PublicGiftClaimScreen = () => {
         setGiftData(res.data || null);
       })
       .catch((err) => {
-        setLoadError(err.message || 'Could not load gift voucher details. Link may be invalid or expired.');
+        setLoadError(err.message || 'Could not load digital gift card details. Link may be invalid or expired.');
       })
       .finally(() => {
         setLoading(false);
@@ -101,7 +101,7 @@ export const PublicGiftClaimScreen = () => {
       if (err.message && (err.message.includes('existing') || err.message.includes('vehicle'))) {
         setRejectionNotice(err.message);
       } else {
-        setFormError(err.message || 'Error claiming gift voucher.');
+        setFormError(err.message || 'Error claiming digital gift card.');
       }
     } finally {
       setSubmitting(false);
@@ -319,12 +319,12 @@ export const PublicGiftClaimScreen = () => {
                   {giftData.claim_status === 'claimed'
                     ? 'This Gift Card Has Already Been Claimed'
                     : giftData.claim_status === 'expired'
-                    ? 'This Gift Voucher Has Expired'
+                    ? 'This Gift Card Has Expired'
                     : 'Gift Currently Inactive'}
                 </h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
                   {giftData.claim_status === 'claimed'
-                    ? 'Each Bellad e-gift voucher is single-use only and moves directly to the first claimant’s wallet.'
+                    ? 'Each Bellad e-gift card is single-use only and moves directly to the first claimant’s wallet.'
                     : 'Unclaimed gift links expire after 30 days and the value is returned to the sender.'}
                 </p>
               </div>

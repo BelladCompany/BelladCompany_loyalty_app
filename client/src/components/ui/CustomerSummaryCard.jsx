@@ -141,19 +141,10 @@ export const CustomerSummaryCard = ({
               type="button"
               id="add-receipt-btn"
               onClick={() => {
-                if (hasPendingCorrection) {
-                  alert("Billing correction request is currently pending admin approval. Actions are locked until approved.");
-                  return;
-                }
                 if (onAddReceipt) onAddReceipt(customer);
                 else if (onRecordEarning) onRecordEarning(customer);
               }}
-              disabled={hasPendingCorrection}
-              className={`h-12 px-6 font-bold text-sm rounded-2xl flex items-center gap-2 transition-all shadow-md active:scale-[0.98] cursor-pointer ${
-                hasPendingCorrection
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/25'
-              }`}
+              className="h-12 px-6 font-bold text-sm rounded-2xl flex items-center gap-2 transition-all shadow-md active:scale-[0.98] cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/25"
             >
               <PlusCircle className="w-4 h-4 text-white" />
               <span>Add Receipt</span>

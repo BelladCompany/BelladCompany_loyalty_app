@@ -13,9 +13,9 @@ export const StatCard = ({
 }) => {
   const variantStyles = {
     default: 'border-slate-200 bg-white text-slate-900',
-    primary: 'border-indigo-200 bg-indigo-50/40 text-indigo-900',
-    success: 'border-emerald-200 bg-emerald-50/40 text-emerald-900',
-    danger: 'border-rose-200 bg-rose-50/40 text-rose-900',
+    primary: 'border-slate-200 bg-white text-slate-900',
+    success: 'border-emerald-200 bg-white text-emerald-900',
+    danger: 'border-rose-200 bg-white text-rose-900',
   };
 
   return (

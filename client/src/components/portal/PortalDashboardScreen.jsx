@@ -4,7 +4,6 @@ import {
   Copy,
   Check,
   ShieldCheck,
-  Repeat,
   Car,
   Star,
   Users,
@@ -20,50 +19,138 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  Fuel,
   Wrench,
   Award,
   Tag,
   Zap,
   ChevronRight,
   Home,
-  Receipt,
-  BadgePercent,
-  CheckCheck,
-  ArrowUpRight,
-  Ticket,
+  QrCode,
   Flame,
   Percent,
+  Upload,
+  FileText,
+  RefreshCw,
+  X,
+  ExternalLink,
+  Crown,
+  Coins,
+  IndianRupee,
+  Layers,
+  CheckCheck,
+  Lock
 } from 'lucide-react';
 import ApiService from '../../services/api';
 import SendGiftModal from './SendGiftModal';
 
-// Category Icon with soft pastel background
-const CategoryIcon = ({ type }) => {
-  switch (type) {
-    case 'finance':
-    case 'inhouse_finance':
-      return <span className="font-black text-xs text-emerald-700">₹</span>;
-    case 'insurance':
-    case 'inhouse_insurance':
-      return <ShieldCheck className="w-4 h-4 text-blue-600" />;
-    case 'exchange':
-    case 'inhouse_exchange':
-      return <Repeat className="w-4 h-4 text-amber-600" />;
-    case 'purchase':
-      return <Car className="w-4 h-4 text-indigo-600" />;
-    case 'gift_card':
-      return <Gift className="w-4 h-4 text-purple-600" />;
-    case 'referral':
-      return <Users className="w-4 h-4 text-pink-600" />;
-    case 'redeem':
-      return <Sparkles className="w-4 h-4 text-rose-600" />;
-    default:
-      return <Wrench className="w-4 h-4 text-slate-500" />;
-  }
-};
+// ─── Dynamic Monthly Vehicle & Service Offers (Easily Customizable) ─────────
+const INITIAL_MONTHLY_OFFERS = [
+  {
+    id: 'safari-dark-edition',
+    category: 'suv',
+    badge: 'FESTIVE SPECIAL',
+    badgeColor: 'bg-amber-500 text-slate-950 font-black',
+    title: 'Tata Safari & Harrier Dark Edition',
+    benefit: 'Up to ₹1,25,000 Total Benefits',
+    description: '₹40,000 Exchange Bonus + 10,000 Bonus Loyalty Points + 3-Year Free Scheduled Service Maintenance.',
+    image: '/offers/safari.jpg',
+    validTill: 'Valid till 31 Oct 2026',
+    code: 'BELLAD-DARK-OCT',
+    highlights: ['3-Row Luxury Seating', 'ADAS Level 2 Features', 'Ventilated Seats'],
+    whatsappMsg: 'Hi Bellad & Co, I am interested in the Tata Safari Dark Edition October offer (Code: BELLAD-DARK-OCT). Please share best price quote.',
+  },
+  {
+    id: 'nexon-ev-green-fest',
+    category: 'ev',
+    badge: 'ELECTRIC REVOLUTION',
+    badgeColor: 'bg-emerald-500 text-slate-950 font-black',
+    title: 'Tata Nexon.ev & Tiago.ev',
+    benefit: '₹50,000 Cash Benefit + Free 7.2 kW AC Charger',
+    description: 'Zero road tax in Karnataka + 2X Loyalty Points on all genuine accessories. Fast charger installed at your home.',
+    image: '/offers/nexon_ev.jpg',
+    validTill: 'Valid till 31 Oct 2026',
+    code: 'BELLAD-EV-GREEN',
+    highlights: ['465 km Certified Range', 'V2V & V2L Charging', 'Harman 12.3" Cinematic Screen'],
+    whatsappMsg: 'Hi Bellad & Co, I want to inquire about the Tata Nexon.ev Green Fest offer with free home fast charger.',
+  },
+  {
+    id: 'ceramic-coating-service',
+    category: 'service',
+    badge: 'WORKSHOP & BODYSHOP',
+    badgeColor: 'bg-indigo-600 text-white font-bold',
+    title: '9H Ceramic Paint Detailing & Body Shop',
+    benefit: 'Flat 30% OFF + 1,000 Bonus Loyalty Points',
+    description: 'Complete exterior 9H ceramic coating, underbody anti-rust treatment, and interior deep ozone sanitization at Bellad workshops.',
+    image: '/offers/detailing.jpg',
+    validTill: 'Valid till 15 Nov 2026',
+    code: 'BELLAD-CERAMIC-30',
+    highlights: ['3-Year Warranty Certificate', 'High Gloss Hydrophobic Finish', 'Ozone Interior Disinfection'],
+    whatsappMsg: 'Hi Bellad & Co, I would like to book a 9H ceramic detailing session under the 30% discount package.',
+  },
+];
 
-// Memoized Clean Transaction Ledger Row
+// Tier Privileges Config
+const TIER_BENEFITS_DATA = [
+  {
+    tier: 'Silver',
+    label: 'Silver Member',
+    color: 'from-slate-600 to-slate-800',
+    badgeColor: 'bg-slate-100 text-slate-700 border-slate-300',
+    minPoints: 0,
+    maxPoints: 5000,
+    serviceEarn: '2% of Bill',
+    accessoryEarn: '1% of Bill',
+    salesEarn: '1% Ex-Showroom',
+    bodyshopDiscount: 'Standard Rates',
+    perks: [
+      'Earn points on every periodic service',
+      'Digital WhatsApp Wallet Pass',
+      'Free 40-point vehicle monsoon health check',
+      'Digital e-gift card sharing access',
+    ],
+  },
+  {
+    tier: 'Gold',
+    label: 'Gold VIP Member',
+    color: 'from-amber-500 via-amber-600 to-amber-700',
+    badgeColor: 'bg-amber-100 text-amber-800 border-amber-300',
+    minPoints: 5000,
+    maxPoints: 15000,
+    serviceEarn: '4% of Bill',
+    accessoryEarn: '2% of Bill',
+    salesEarn: '1% Ex-Showroom',
+    bodyshopDiscount: '3% Customer Share Discount',
+    perks: [
+      'Double points on periodic workshop service',
+      'Priority workshop service bay booking',
+      '500 Bonus Points on every successful friend referral',
+      'Complimentary exterior wash during periodic maintenance',
+      'Dedicated Service Advisor support',
+    ],
+  },
+  {
+    tier: 'Platinum',
+    label: 'Platinum VIP Member',
+    color: 'from-slate-900 via-indigo-950 to-slate-900',
+    badgeColor: 'bg-indigo-100 text-indigo-900 border-indigo-300',
+    minPoints: 15000,
+    maxPoints: 999999,
+    serviceEarn: '6% of Bill',
+    accessoryEarn: '4% of Bill',
+    salesEarn: '1% Ex-Showroom',
+    bodyshopDiscount: '5% Customer Share Discount',
+    perks: [
+      'Maximum 6% cashback points on workshop bills',
+      'Free doorstep vehicle pickup and drop for service',
+      'VIP Concierge & Direct Dealership General Manager desk access',
+      '1,000 Bonus Points on friend vehicle referrals',
+      'Free annual wheel balancing and alignment check',
+      'Exclusive invitations to new model launch drive previews',
+    ],
+  },
+];
+
+// Memoized Ledger Row
 const LedgerRow = memo(({ item }) => {
   const isPositive = (item.points || 0) >= 0;
   const formattedPoints = isPositive
@@ -71,10 +158,11 @@ const LedgerRow = memo(({ item }) => {
     : `${(item.points || 0).toLocaleString('en-IN')}`;
 
   return (
-    <div className="flex items-center justify-between py-3.5 px-4 bg-white border border-slate-100/90 rounded-2xl hover:border-slate-200 transition-all shadow-xs gap-3">
+    <div className="flex items-center justify-between py-3.5 px-4 bg-white border border-slate-100 rounded-2xl hover:border-slate-200 transition shadow-2xs gap-3">
       <div className="flex items-center space-x-3.5 min-w-0 pr-1">
-        <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
-          <CategoryIcon type={item.type} />
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+          }`}>
+          {isPositive ? <Coins className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
         </div>
         <div className="min-w-0">
           <p className="text-xs sm:text-sm font-bold text-slate-900 truncate tracking-tight">{item.text}</p>
@@ -91,11 +179,10 @@ const LedgerRow = memo(({ item }) => {
       </div>
       <div className="shrink-0 text-right">
         <span
-          className={`text-xs font-black font-mono px-3 py-1 rounded-full whitespace-nowrap inline-block ${
-            isPositive
-              ? 'bg-emerald-50 text-emerald-700'
-              : 'bg-rose-50 text-rose-700'
-          }`}
+          className={`text-xs font-black font-mono px-3 py-1 rounded-full whitespace-nowrap inline-block ${isPositive
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              : 'bg-rose-50 text-rose-700 border border-rose-200'
+            }`}
         >
           {formattedPoints} PTS
         </span>
@@ -110,16 +197,18 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   const [profile, setProfile] = useState(null);
   const [ledgerItems, setLedgerItems] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
-  // Navigation tabs: overview, gift_cards, benefits, referrals, transactions, garage, profile
-  const [activeTab, setActiveTab] = useState('overview');
+
+  // 4 Main Tabs: 'gift_cards' | 'referrals' | 'offers' | 'benefits'
+  // Secondary Tabs: 'home' | 'transactions' | 'garage' | 'kyc'
+  const [activeTab, setActiveTab] = useState('home');
+
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingLedger, setLoadingLedger] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedCard, setCopiedCard] = useState('');
   const [copiedOffer, setCopiedOffer] = useState('');
-  const [showRedeemModal, setShowRedeemModal] = useState(false);
-  const [showClaimBox, setShowClaimBox] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [sendGiftModalOpen, setSendGiftModalOpen] = useState(false);
@@ -131,18 +220,45 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   const [claimPin, setClaimPin] = useState('');
   const [isClaimingGiftCard, setIsClaimingGiftCard] = useState(false);
   const [revealedPins, setRevealedPins] = useState({});
-  const [giftCardSubTab, setGiftCardSubTab] = useState('vouchers'); // 'vouchers' | 'purchased'
 
   // Referrals State
   const [referralsList, setReferralsList] = useState([]);
+  const [referralsSummary, setReferralsSummary] = useState({
+    locked_points: 0,
+    locked_value_inr: 0,
+    ready_to_claim_points: 0,
+    ready_to_claim_count: 0,
+    total_earned_referral_points: 0,
+    total_earned_value_inr: 0,
+    total_referrals: 0,
+  });
+  const [claimingReferralId, setClaimingReferralId] = useState(null);
   const [loadingReferrals, setLoadingReferrals] = useState(false);
   const [refereeName, setRefereeName] = useState('');
   const [refereePhone, setRefereePhone] = useState('');
   const [refereeModel, setRefereeModel] = useState('');
   const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
 
-  // Member Benefits Tab selection: Bronze, Silver, Gold
+  // Offers State
+  const [offersList, setOffersList] = useState(INITIAL_MONTHLY_OFFERS);
+  const [selectedOfferCategory, setSelectedOfferCategory] = useState('all');
+
+  // Member Benefits Tab selection: Silver, Gold, Platinum
   const [selectedTierTab, setSelectedTierTab] = useState('Gold');
+
+  // KYC Correction State
+  const [kycRequests, setKycRequests] = useState([]);
+  const [loadingKycHistory, setLoadingKycHistory] = useState(false);
+  const [kycNewPhone, setKycNewPhone] = useState('');
+  const [kycReason, setKycReason] = useState('');
+  const [kycIdProofType, setKycIdProofType] = useState('Aadhaar Card');
+  const [kycIdProofFile, setKycIdProofFile] = useState(null);
+  const [kycOtp, setKycOtp] = useState('');
+  const [kycOtpSent, setKycOtpSent] = useState(false);
+  const [isRequestingKycOtp, setIsRequestingKycOtp] = useState(false);
+  const [isSubmittingKyc, setIsSubmittingKyc] = useState(false);
+  const [kycFormSuccess, setKycFormSuccess] = useState('');
+  const [kycFormError, setKycFormError] = useState('');
 
   const loadProfile = useCallback(async () => {
     try {
@@ -154,11 +270,15 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
       }
     } catch (err) {
       console.error('Failed to load profile:', err);
+      if (err.status === 401 || err.status === 403 || String(err.message || '').toLowerCase().includes('token')) {
+        if (onSignOut) onSignOut();
+        return;
+      }
       setError('Could not load account details. Please refresh.');
     } finally {
       setLoadingProfile(false);
     }
-  }, []);
+  }, [onSignOut]);
 
   const loadLedger = useCallback(async (cursor = null) => {
     try {
@@ -197,10 +317,46 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
       setLoadingReferrals(true);
       const res = await ApiService.portalGetReferrals();
       setReferralsList(res.referrals || []);
+      setReferralsSummary({
+        locked_points: res.locked_points || 0,
+        locked_value_inr: res.locked_value_inr || 0,
+        ready_to_claim_points: res.ready_to_claim_points || 0,
+        ready_to_claim_count: res.ready_to_claim_count || 0,
+        total_earned_referral_points: res.total_earned_referral_points || 0,
+        total_earned_value_inr: res.total_earned_value_inr || 0,
+        total_referrals: res.total_referrals || (res.referrals ? res.referrals.length : 0),
+      });
     } catch (err) {
       console.error('Failed to load referrals:', err);
     } finally {
       setLoadingReferrals(false);
+    }
+  }, []);
+
+  const handleClaimReferral = async (referralId) => {
+    if (!referralId || claimingReferralId) return;
+    try {
+      setClaimingReferralId(referralId);
+      setError('');
+      const res = await ApiService.portalClaimReferral(referralId);
+      setSuccessMsg(res.message || '2,500 Referral Points credited to your wallet!');
+      await Promise.all([loadReferrals(), loadProfile(), loadLedger()]);
+    } catch (err) {
+      setError(err.message || 'Failed to claim referral reward. Please ensure friend vehicle purchase and PR are completed.');
+    } finally {
+      setClaimingReferralId(null);
+    }
+  };
+
+  const loadKycRequests = useCallback(async () => {
+    try {
+      setLoadingKycHistory(true);
+      const res = await ApiService.portalGetMyKycRequests();
+      setKycRequests(res.data || []);
+    } catch (err) {
+      console.error('Failed to load KYC requests:', err);
+    } finally {
+      setLoadingKycHistory(false);
     }
   }, []);
 
@@ -209,12 +365,24 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
     loadLedger();
     loadGiftCards();
     loadReferrals();
-  }, [loadProfile, loadLedger, loadGiftCards, loadReferrals]);
+    loadKycRequests();
+  }, [loadProfile, loadLedger, loadGiftCards, loadReferrals, loadKycRequests]);
 
   const firstName = profile?.name ? profile.name.split(' ')[0] : 'Valued Customer';
+  const fullName = profile?.name || customerInfo?.name || 'Rahul Sharma';
+  const customerId = profile?.customer_id || customerInfo?.customer_id || 'BAC-9821';
+  const primaryVehicle = profile?.vehicles?.[0]
+    ? `${profile.vehicles[0].brand_name || 'Tata'} ${profile.vehicles[0].model || 'Motors'}`
+    : 'Tata Safari Dark Edition';
+
   const referralLink = profile?.referralCode
     ? `${window.location.origin}/portal?ref=${profile.referralCode}`
     : `${window.location.origin}/portal`;
+
+  const whatsappReferralText = encodeURIComponent(
+    `Hey! Join Bellad & Co Loyalty Rewards using my referral link and earn exclusive bonus points on your new vehicle purchase or workshop service: ${referralLink}`
+  );
+  const whatsappReferralUrl = `https://wa.me/?text=${whatsappReferralText}`;
 
   const handleCopyReferral = () => {
     navigator.clipboard.writeText(referralLink);
@@ -238,7 +406,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
     setRevealedPins((prev) => ({ ...prev, [cardId]: !prev[cardId] }));
   };
 
-  // Direct 1-Click Claim for cards already in customer's account/phone
+  // 1-Click direct claim
   const handleClaimCardDirect = async (card) => {
     setIsClaimingGiftCard(true);
     setError('');
@@ -256,11 +424,11 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
     }
   };
 
-  // Claim Gift Card to Account by typing code & pin
+  // Manual code claim
   const handleClaimGiftCard = async (e) => {
     e.preventDefault();
     if (!claimCardCode.trim()) {
-      setError('Please enter the 16-character Gift Card Code.');
+      setError('Please enter the Gift Card Code.');
       return;
     }
 
@@ -272,12 +440,11 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
       setSuccessMsg(res.message || 'Gift card successfully claimed to your account!');
       setClaimCardCode('');
       setClaimPin('');
-      setShowClaimBox(false);
       loadProfile();
       loadLedger();
       loadGiftCards();
     } catch (err) {
-      setError(err.message || 'Failed to claim gift card. Please verify the code and PIN.');
+      setError(err.message || 'Failed to claim gift card. Please verify code and PIN.');
     } finally {
       setIsClaimingGiftCard(false);
     }
@@ -300,7 +467,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         referee_phone: refereePhone.trim(),
         vehicle_model: refereeModel.trim(),
       });
-      setSuccessMsg(res.message || 'Friend referral submitted successfully!');
+      setSuccessMsg(res.message || 'Friend referral submitted successfully! Points will be awarded upon vehicle purchase and PR completion.');
       setRefereeName('');
       setRefereePhone('');
       setRefereeModel('');
@@ -312,556 +479,387 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
     }
   };
 
-  // Calculate points and cash values
-  const currentBalance = profile?.balance || profile?.points || 0;
-  const cashValue = profile?.redeemableValue ?? Math.floor(currentBalance / 4);
-  const currentTier = profile?.tier?.current || 'Silver';
-  const nextTier = profile?.tier?.next || (currentTier === 'Silver' ? 'Gold' : 'Platinum');
-  const nextTierPoints = profile?.tier?.next_points || (currentTier === 'Silver' ? 5000 : 10000);
-  const lifetimePoints = profile?.lifetime_points || currentBalance;
+  // KYC submission
+  const handleRequestKycOtp = async () => {
+    setIsRequestingKycOtp(true);
+    setKycFormError('');
+    setKycFormSuccess('');
+    try {
+      const res = await ApiService.portalRequestKycOtp();
+      setKycOtpSent(true);
+      setKycFormSuccess(res.message || 'OTP sent successfully to your current registered mobile.');
+    } catch (err) {
+      setKycFormError(err.message || 'Failed to send OTP.');
+    } finally {
+      setIsRequestingKycOtp(false);
+    }
+  };
+
+  const handleSubmitKycForm = async (e) => {
+    e.preventDefault();
+    setKycFormError('');
+    setKycFormSuccess('');
+
+    const cleanNewPhone = kycNewPhone.replace(/\D/g, '').slice(-10);
+    if (!cleanNewPhone || cleanNewPhone.length !== 10) {
+      setKycFormError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    if (!kycReason.trim()) {
+      setKycFormError('Please enter the reason for KYC correction.');
+      return;
+    }
+    if (!kycIdProofFile) {
+      setKycFormError('Please upload an ID proof document (Aadhaar, PAN, DL, etc.).');
+      return;
+    }
+    if (!kycOtp.trim()) {
+      setKycFormError('Please enter the 6-digit OTP sent to your registered phone.');
+      return;
+    }
+
+    setIsSubmittingKyc(true);
+    try {
+      const formData = new FormData();
+      formData.append('new_value', cleanNewPhone);
+      formData.append('reason', kycReason.trim());
+      formData.append('id_proof_type', kycIdProofType);
+      formData.append('otp', kycOtp.trim());
+      formData.append('id_proof_file', kycIdProofFile);
+
+      const res = await ApiService.portalSubmitKycCorrection(formData);
+      setKycFormSuccess(res.message || 'KYC correction request submitted to Accounts Head for approval.');
+      setKycNewPhone('');
+      setKycReason('');
+      setKycIdProofFile(null);
+      setKycOtp('');
+      setKycOtpSent(false);
+      loadKycRequests();
+    } catch (err) {
+      setKycFormError(err.message || 'Failed to submit KYC correction.');
+    } finally {
+      setIsSubmittingKyc(false);
+    }
+  };
+
+  // Balances & Tier Calculations
+  const currentBalance = profile?.balance ?? profile?.points ?? customerInfo?.points ?? customerInfo?.balance ?? 4250;
+  const cashValue = (currentBalance * 0.25).toFixed(2);
+  const currentTier = profile?.tier?.current || customerInfo?.tier || 'Gold';
+  const nextTier = currentTier === 'Silver' ? 'Gold' : 'Platinum';
+  const nextTierPoints = currentTier === 'Silver' ? 5000 : 15000;
+  const lifetimePoints = profile?.lifetime_points || customerInfo?.lifetime_points || currentBalance;
   const pointsToLevelUp = Math.max(0, nextTierPoints - lifetimePoints);
-  const tierProgress = profile?.tier?.progress_percentage || Math.min(100, Math.round((lifetimePoints / nextTierPoints) * 100));
+  const tierProgress = Math.min(100, Math.round((lifetimePoints / nextTierPoints) * 100));
 
-  // Navigation Items
-  const navTabs = [
-    { id: 'overview', label: 'Home', icon: Home },
-    { id: 'benefits', label: 'Membership & Offers', icon: Award },
-    { id: 'gift_cards', label: 'Vouchers', icon: Ticket, count: myGiftCards.length || null },
-    { id: 'referrals', label: 'Refer & Earn', icon: Users, count: referralsList.length || null },
-    { id: 'transactions', label: 'Activity', icon: Clock },
-    { id: 'garage', label: 'Garage', icon: Car },
-    { id: 'profile', label: 'Profile', icon: User },
-  ];
-
-  // Curated Design Offers list
-  const promotionalOffers = [
-    {
-      id: 'srv-fest',
-      badge: '🔥 25% OFF',
-      badgeColor: 'bg-rose-500 text-white',
-      accentColor: 'from-rose-500/10 to-amber-500/10 border-rose-200/80',
-      title: 'Periodic Maintenance Fest',
-      discount: 'Flat 25% Off on Labor',
-      description: 'Wheel alignment, AC filter disinfection & complete foam wash with loyalty pass.',
-      code: 'BELLAD25',
-      actionText: 'Redeem at Desk',
-      category: 'Service',
-    },
-    {
-      id: 'acc-voucher',
-      badge: '✨ ₹1,000 VOUCHER',
-      badgeColor: 'bg-emerald-600 text-white',
-      accentColor: 'from-emerald-500/10 to-teal-500/10 border-emerald-200/80',
-      title: 'Genuine Accessories Credit',
-      discount: '₹1,000 Off on Bill',
-      description: 'Valid on seat covers, 7D floor mats, sunshades & alloy wheels above ₹4,000.',
-      code: 'ACC1000',
-      actionText: 'Apply Voucher',
-      category: 'Accessories',
-    },
-    {
-      id: 'gift-cashback',
-      badge: '🎁 BONUS CREDIT',
-      badgeColor: 'bg-purple-600 text-white',
-      accentColor: 'from-purple-500/10 to-indigo-500/10 border-purple-200/80',
-      title: 'WhatsApp Gifting Cashback',
-      discount: '+200 PTS Instant Cashback',
-      description: 'Gift ₹1,000 or 4,000 PTS to family via WhatsApp and receive 200 PTS reward.',
-      code: 'AUTO-CREDIT',
-      actionText: 'Send Gift Now',
-      category: 'Gifting',
-      isGiftTrigger: true,
-    },
-    {
-      id: 'diag-free',
-      badge: '🛡️ 100% FREE',
-      badgeColor: 'bg-blue-600 text-white',
-      accentColor: 'from-blue-500/10 to-cyan-500/10 border-blue-200/80',
-      title: '50-Point OEM Computer Scan',
-      discount: '₹1,200 Health Scan FREE',
-      description: 'Full computerized diagnostic OBD scan, brake pads, battery & suspension check.',
-      code: 'FREE50SCAN',
-      actionText: 'Claim Inspection',
-      category: 'Diagnostics',
-    },
-  ];
+  // Filtered Offers
+  const filteredOffers = useMemo(() => {
+    if (selectedOfferCategory === 'all') return offersList;
+    return offersList.filter((o) => o.category === selectedOfferCategory);
+  }, [offersList, selectedOfferCategory]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] via-[#F1F5F9] to-[#EEF2F6] text-slate-800 flex flex-col font-sans selection:bg-emerald-600 selection:text-white antialiased">
-      {/* ─── 1. Responsive App Header ───────────────────────────────────── */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40 shadow-2xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
-          <div className="flex items-center space-x-3.5">
-            <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-2xs">
-              <img
-                src="/bellad-logo.png"
-                alt="Bellad Logo"
-                className="w-full h-full object-contain rounded-lg"
-              />
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between font-sans selection:bg-amber-400 selection:text-slate-950">
+
+      {/* ─── 1. Top Brand Navigation Bar ──────────────────────────────────── */}
+      <header className="bg-indigo-600 text-white sticky top-0 z-40 shadow-md">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 p-1 flex items-center justify-center shrink-0">
+              <img src="/bellad-logo.png" alt="Bellad Logo" className="w-full h-full object-contain rounded-lg" />
             </div>
             <div>
-              <span className="text-sm sm:text-base font-black text-slate-900 tracking-tight block">
-                {profile?.firm_name || 'Bellad Automobile'}
+              <span className="text-base sm:text-lg font-black tracking-tight text-white block leading-tight">
+                Bellad &amp; Co Loyalty Pass
               </span>
-              <div className="flex items-center gap-1.5 -mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
-                  VIP Rewards Portal
-                </span>
-              </div>
+              <span className="text-[11px] font-medium text-indigo-200 block">
+                Karnataka&apos;s Premier Automotive Rewards
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {profile?.aadhaar && (
-              <span className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200/80">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                Aadhaar Verified
-              </span>
-            )}
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-sm">
+              <Crown className="w-3.5 h-3.5 text-amber-300" />
+              <span>{currentTier} VIP</span>
+            </span>
 
             <button
-              type="button"
-              onClick={() => setSendGiftModalOpen(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 px-3.5 py-1.5 rounded-full shadow-xs transition active:scale-95 cursor-pointer"
+              onClick={onSignOut}
+              title="Sign Out"
+              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition cursor-pointer"
             >
-              <Gift className="w-3.5 h-3.5" />
-              <span>Send e-Gift</span>
+              <LogOut className="w-4 h-4" />
             </button>
-
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-900 to-slate-700 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                {firstName.charAt(0)}
-              </div>
-              <button
-                onClick={onSignOut}
-                title="Sign out"
-                className="inline-flex items-center text-xs font-semibold text-slate-500 hover:text-slate-900 p-1.5 rounded-full hover:bg-slate-100 transition cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
           </div>
         </div>
       </header>
 
-      {/* ─── 2. Top Segmented Navigation Bar ────────────────────────────── */}
-      <nav className="bg-white border-b border-slate-200/80 sticky top-[59px] z-30 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none py-2">
-            {navTabs.map((t) => {
+      {/* ─── 2. Main Content ──────────────────────────────────────────────── */}
+      <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-5 sm:py-7 space-y-6 flex-1">
+
+        {/* Global Notifications */}
+        {error && (
+          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold rounded-2xl flex items-center justify-between shadow-xs animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{error}</span>
+            </div>
+            <button onClick={() => setError('')} className="text-rose-500 hover:text-rose-900 font-bold">✕</button>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-2xl flex items-center justify-between shadow-xs animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              <span>{successMsg}</span>
+            </div>
+            <button onClick={() => setSuccessMsg('')} className="text-emerald-500 hover:text-emerald-900 font-bold">✕</button>
+          </div>
+        )}
+
+        {/* ─── 3. DIGITAL MEMBER PASS (LUXURY WALLET CARD - Reference Styled) ─── */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white p-6 sm:p-7 shadow-xl shadow-amber-600/25 border border-amber-400/40">
+          {/* Subtle Ambient Radial Highlight */}
+          <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none -mr-16 -mt-16" />
+
+          <div className="relative z-10 space-y-4">
+            {/* Top Pass Row */}
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-black uppercase tracking-widest text-amber-100/90 block font-mono">
+                  Digital Member Pass
+                </span>
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-0.5">
+                  {fullName}
+                </h1>
+                <p className="text-xs text-amber-100 font-medium mt-0.5">
+                  ID: <span className="font-mono font-bold">{customerId}</span> &bull; {primaryVehicle}
+                </p>
+              </div>
+
+              <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-white shadow-sm shrink-0">
+                <Crown className="w-6 h-6 text-amber-200" />
+              </div>
+            </div>
+
+            {/* Bottom Row: Usable Points Balance & Cash Value */}
+            <div className="pt-3 flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-t border-white/15">
+              <div>
+                <span className="text-xs font-bold text-amber-100 block uppercase tracking-wider font-mono">
+                  Usable Points Balance
+                </span>
+                <div className="flex items-baseline gap-2 mt-0.5">
+                  <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white">
+                    {Number(currentBalance).toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-sm font-bold text-amber-200 font-mono">pts</span>
+                </div>
+              </div>
+
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-xs font-bold text-white self-start sm:self-auto shadow-xs">
+                <IndianRupee className="w-3.5 h-3.5 text-amber-200" />
+                <span>≈ ₹{cashValue} Cash Discount</span>
+                <span className="text-[10px] text-amber-200 font-mono">(4 pts = ₹1)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── 4. THE 4 MAIN CORE QUICK-ACTION BUTTONS (Mobile & Desktop) ─── */}
+        <div className="grid grid-cols-4 gap-2.5 sm:gap-3.5">
+          {/* Main 1: Gift Cards */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('gift_cards')}
+            className={`p-3 sm:p-4 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'gift_cards'
+                ? 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-500/20'
+                : 'bg-white border-slate-200/80 text-slate-700 hover:border-amber-300 hover:bg-amber-50/40 shadow-2xs'
+              }`}
+          >
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'gift_cards' ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'
+              }`}>
+              <Gift className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] sm:text-xs font-bold tracking-tight line-clamp-1">Gift Cards</span>
+          </button>
+
+          {/* Main 2: Referral Rewards */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('referrals')}
+            className={`p-3 sm:p-4 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'referrals'
+                ? 'bg-indigo-600 text-white border-indigo-700 shadow-md shadow-indigo-600/20'
+                : 'bg-white border-slate-200/80 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 shadow-2xs'
+              }`}
+          >
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'referrals' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'
+              }`}>
+              <Users className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] sm:text-xs font-bold tracking-tight line-clamp-1">Refer &amp; Earn</span>
+          </button>
+
+          {/* Main 3: Vehicle Offers (Dynamic Monthly) */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('offers')}
+            className={`p-3 sm:p-4 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'offers'
+                ? 'bg-rose-500 text-white border-rose-600 shadow-md shadow-rose-500/20'
+                : 'bg-white border-slate-200/80 text-slate-700 hover:border-rose-300 hover:bg-rose-50/40 shadow-2xs'
+              }`}
+          >
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'offers' ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-600'
+              }`}>
+              <Flame className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] sm:text-xs font-bold tracking-tight line-clamp-1">Vehicle Offers</span>
+          </button>
+
+          {/* Main 4: Silver, Gold, Platinum Benefits */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('benefits')}
+            className={`p-3 sm:p-4 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'benefits'
+                ? 'bg-purple-600 text-white border-purple-700 shadow-md shadow-purple-600/20'
+                : 'bg-white border-slate-200/80 text-slate-700 hover:border-purple-300 hover:bg-purple-50/40 shadow-2xs'
+              }`}
+          >
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'benefits' ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-600'
+              }`}>
+              <Award className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] sm:text-xs font-bold tracking-tight line-clamp-1">Tier Benefits</span>
+          </button>
+        </div>
+
+        {/* ─── 5. SECONDARY PILL BAR (Transactions, Garage, KYC, Home) ─────── */}
+        <div className="flex items-center justify-between border-b border-slate-200/80 pb-3 overflow-x-auto scrollbar-none gap-2">
+          <div className="flex items-center gap-1.5">
+            {[
+              { id: 'home', label: 'Overview', icon: Home },
+              { id: 'transactions', label: 'Transactions', icon: Clock },
+              { id: 'garage', label: 'My Vehicles', icon: Car },
+              { id: 'kyc', label: 'KYC Correction', icon: ShieldCheck },
+            ].map((t) => {
               const Icon = t.icon;
               const isActive = activeTab === t.id;
               return (
                 <button
                   key={t.id}
-                  onClick={() => {
-                    setActiveTab(t.id);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className={`relative flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 text-xs font-bold transition-all whitespace-nowrap cursor-pointer rounded-full shrink-0 ${
-                    isActive
-                      ? 'text-emerald-800 bg-emerald-50/90 font-black shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
+                  onClick={() => setActiveTab(t.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${isActive
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                    }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                  <Icon className="w-3.5 h-3.5" />
                   <span>{t.label}</span>
-                  {t.count !== null && t.count > 0 && (
-                    <span
-                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                        isActive ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {t.count}
-                    </span>
-                  )}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-emerald-600 rounded-full" />
-                  )}
                 </button>
               );
             })}
           </div>
-        </div>
-      </nav>
 
-      {/* ─── Main Content Container (Full Width Responsive) ─────────────── */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24 space-y-7 flex-1 w-full">
-        {/* Global Notifications */}
-        {error && (
-          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold rounded-2xl flex items-center justify-between shadow-xs">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span>{error}</span>
-            </div>
-            <button onClick={() => setError('')} className="text-rose-500 hover:text-rose-900 text-sm font-bold">✕</button>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-2xl flex items-center justify-between shadow-xs">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-              <span>{successMsg}</span>
-            </div>
-            <button onClick={() => setSuccessMsg('')} className="text-emerald-500 hover:text-emerald-900 text-sm font-bold">✕</button>
-          </div>
-        )}
-
-        {/* ─── 3. RESPONSIVE HERO SECTION (Grid on Desktop, Stack on Mobile) ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left Column: Member Tier & Progress Card (7 Cols on desktop) */}
-          <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-7 shadow-sm flex flex-col justify-between space-y-5">
-            <div className="space-y-4">
-              {/* Header Row */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                      You&apos;re {currentTier} Member
-                    </h1>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-mono">
-                      <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                      VIP
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Welcome back, <strong className="text-slate-800">{profile?.name || firstName}</strong>! Member ID: BELLAD-{profile?.customer_id || 'REWARDS'}
-                  </p>
-                </div>
-
-                <div className="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-xl shadow-xs shrink-0">
-                  {currentTier === 'Gold' ? '🥇' : '🥈'}
-                </div>
-              </div>
-
-              {/* Progress Bar Widget */}
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/70 space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                  <span>
-                    {pointsToLevelUp > 0 ? (
-                      <>
-                        <strong className="text-slate-950 font-black">{pointsToLevelUp.toLocaleString('en-IN')}</strong> more points to reach <span className="text-amber-600">{nextTier}</span>!
-                      </>
-                    ) : (
-                      <strong className="text-emerald-700 font-bold">🎉 Maximum VIP Tier Unlocked!</strong>
-                    )}
-                  </span>
-                  <span className="text-[11px] font-mono text-slate-500">
-                    {lifetimePoints.toLocaleString('en-IN')} / {nextTierPoints.toLocaleString('en-IN')} PTS
-                  </span>
-                </div>
-
-                <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden p-0.5">
-                  <div
-                    className="h-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 rounded-full transition-all duration-700 shadow-xs"
-                    style={{ width: `${Math.min(100, Math.max(8, tierProgress))}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Perk Banner */}
+          {activeTab === 'referrals' ? (
+            <a
+              href={whatsappReferralUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Send Referral on WhatsApp</span>
+            </a>
+          ) : (
             <button
               type="button"
-              onClick={() => {
-                setActiveTab('benefits');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 hover:bg-amber-100/70 transition text-left cursor-pointer group"
+              onClick={() => setSendGiftModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
             >
-              <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-                  <Gift className="w-3.5 h-3.5 text-amber-700" />
-                </div>
-                <span className="text-xs font-bold text-amber-950">
-                  Earn points on every vehicle purchase, periodic service &amp; friend referral
-                </span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-amber-700 group-hover:translate-x-0.5 transition shrink-0" />
+              <Gift className="w-3.5 h-3.5" />
+              <span>Send e-Gift</span>
             </button>
-          </div>
-
-          {/* Right Column: Points & Cash Amount Card (5 Cols on desktop) */}
-          <div className="lg:col-span-5 bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 text-white rounded-3xl p-5 sm:p-7 shadow-lg flex flex-col justify-between space-y-5 border border-slate-800 relative overflow-hidden">
-            {/* Subtle card glow */}
-            <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/15 rounded-full blur-2xl pointer-events-none" />
-
-            <div className="relative z-10 space-y-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 font-mono">
-                Available Loyalty Balance
-              </span>
-              <div className="flex items-baseline gap-2.5 pt-1">
-                <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center shadow-xs">
-                  ₹
-                </div>
-                <span className="text-3xl sm:text-4xl lg:text-5xl font-black font-mono tracking-tight text-white">
-                  {currentBalance.toLocaleString('en-IN')}
-                </span>
-                <span className="text-xs font-bold text-amber-300 font-mono uppercase">PTS</span>
-              </div>
-
-              <div className="pt-2 flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/30 px-3 py-1 rounded-xl">
-                  ≈ ₹{cashValue.toLocaleString('en-IN')} Cash Value
-                </span>
-                <span className="text-[11px] text-slate-400 font-mono">4 PTS = ₹1</span>
-              </div>
-            </div>
-
-            <div className="relative z-10 pt-4 border-t border-slate-800 flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('transactions');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="flex-1 py-2.5 px-3 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl transition text-center cursor-pointer border border-white/10"
-              >
-                Point History
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowRedeemModal(true)}
-                className="flex-1 py-2.5 px-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-black rounded-xl transition text-center shadow-md cursor-pointer"
-              >
-                Redeem →
-              </button>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* ─── TAB 1: OVERVIEW / HIGHLIGHTS ─────────────────────────────────── */}
-        {activeTab === 'overview' && (
-          <div className="space-y-8">
-            {/* 4 Action Highlights Grid (Responsive 4 Columns on Desktop) */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-black uppercase tracking-wider text-slate-500 font-mono">
-                  Quick Access Highlights
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* 1. Gift Cards */}
-                <div
-                  onClick={() => setSendGiftModalOpen(true)}
-                  className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-emerald-300 hover:shadow-md transition cursor-pointer group"
-                >
-                  <div className="space-y-3">
-                    <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 p-4 border border-emerald-100 flex items-center justify-between">
-                      <div>
-                        <span className="text-base font-black text-emerald-950 block">WhatsApp e-Gift</span>
-                        <span className="text-[11px] text-emerald-700 font-semibold">Instant digital link</span>
-                      </div>
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition">
-                        <Gift className="w-5 h-5" />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition">
-                        Gift Points to Friends &amp; Family!
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                        Share points or buy with Razorpay. Receiver gets a WhatsApp link!
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
-                      <span>Send Gift Now</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </span>
-                    <span className="text-[11px] font-mono font-bold text-slate-400">4 PTS = ₹1</span>
-                  </div>
-                </div>
-
-                {/* 2. Bill Discount */}
-                <div
-                  onClick={() => setShowRedeemModal(true)}
-                  className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-amber-300 hover:shadow-md transition cursor-pointer group"
-                >
-                  <div className="space-y-3">
-                    <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 p-4 border border-amber-100 flex items-center justify-between">
-                      <div>
-                        <span className="text-base font-black text-amber-950 block">Save ₹{cashValue}</span>
-                        <span className="text-[11px] text-amber-700 font-semibold">On service billing</span>
-                      </div>
-                      <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition">
-                        <Sparkles className="w-5 h-5" />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 group-hover:text-amber-700 transition">
-                        Score a discount on your bill!
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                        Redeem points directly at any workshop cashier desk during invoice billing.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs font-bold text-amber-700 flex items-center gap-1">
-                      <span>How to Redeem</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </span>
-                    <span className="text-[11px] font-mono font-bold text-slate-400">{currentBalance} PTS</span>
-                  </div>
-                </div>
-
-                {/* 3. Referral */}
-                <div
-                  onClick={() => {
-                    setActiveTab('referrals');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition cursor-pointer group"
-                >
-                  <div className="space-y-3">
-                    <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 p-4 border border-blue-100 flex items-center justify-between">
-                      <div>
-                        <span className="text-base font-black text-blue-950 block">500 Bonus PTS</span>
-                        <span className="text-[11px] text-blue-700 font-semibold">Per vehicle referral</span>
-                      </div>
-                      <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition">
-                        <Users className="w-5 h-5" />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition">
-                        Refer Friends &amp; Earn
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                        Share your unique invite link. Earn bonus points when friends buy a vehicle!
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs font-bold text-blue-700 flex items-center gap-1">
-                      <span>Share on WhatsApp</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </span>
-                    <span className="text-[11px] font-mono font-bold text-slate-400">{referralsList.length} Referred</span>
-                  </div>
-                </div>
-
-                {/* 4. Privileges */}
-                <div
-                  onClick={() => {
-                    setActiveTab('benefits');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-purple-300 hover:shadow-md transition cursor-pointer group"
-                >
-                  <div className="space-y-3">
-                    <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 p-4 border border-purple-100 flex items-center justify-between">
-                      <div>
-                        <span className="text-base font-black text-purple-950 block">{currentTier} Tier</span>
-                        <span className="text-[11px] text-purple-700 font-semibold">VIP dealership perks</span>
-                      </div>
-                      <div className="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition">
-                        <Award className="w-5 h-5" />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 group-hover:text-purple-700 transition">
-                        In-House Bonus Slabs
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                        Unlock finance loan bonus (+100 PTS), insurance (+50 PTS) &amp; exchange (+200 PTS).
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs font-bold text-purple-700 flex items-center gap-1">
-                      <span>View Benefits</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </span>
-                    <span className="text-[11px] font-mono font-bold text-slate-400">Level {currentTier}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ─── NEW: VIBRANT PROMOTIONAL OFFERS SECTION ─────────────────── */}
-            <div className="space-y-3">
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 1: OVERVIEW / HOME VIEW                                         */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'home' && (
+          <div className="space-y-6">
+            {/* Earning Privileges Card (from Reference Image) */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-black uppercase tracking-wider text-slate-500 font-mono">
-                    Exclusive Promotional Offers &amp; Vouchers
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Flash savings and seasonal perks available for your loyalty pass.
-                  </p>
+                  <h3 className="text-base font-bold text-slate-900">Current Earning Privileges</h3>
+                  <p className="text-xs text-slate-500">Active benefits locked to your {currentTier} VIP tier</p>
                 </div>
                 <button
-                  onClick={() => {
-                    setActiveTab('benefits');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="text-xs font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer"
+                  type="button"
+                  onClick={() => setActiveTab('benefits')}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
                 >
-                  View All Perks →
+                  View All Tiers <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {promotionalOffers.map((offer) => (
-                  <div
-                    key={offer.id}
-                    className={`bg-white border rounded-3xl p-5 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition ${offer.accentColor}`}
-                  >
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-2xs ${offer.badgeColor}`}>
-                          {offer.badge}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase font-mono">
-                          {offer.category}
-                        </span>
-                      </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase">Workshop Service</span>
+                  <p className="text-base font-black text-emerald-700 font-mono">4% Net Bill</p>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase">Vehicle Sales</span>
+                  <p className="text-base font-black text-purple-700 font-mono">1% Ex-Showroom</p>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-100 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase">Accessories</span>
+                  <p className="text-base font-black text-blue-700 font-mono">2% Counter</p>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-100 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase">Bodyshop Repair</span>
+                  <p className="text-base font-black text-amber-700 font-mono">3% Cust Share</p>
+                </div>
+              </div>
+            </div>
 
-                      <div>
-                        <h4 className="text-sm font-black text-slate-900 leading-tight">
-                          {offer.title}
-                        </h4>
-                        <span className="text-xs font-bold text-emerald-700 mt-1 block">
-                          {offer.discount}
-                        </span>
-                        <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                          {offer.description}
-                        </p>
-                      </div>
+            {/* Monthly Offers Preview Teaser */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-black uppercase font-mono">
+                    <Flame className="w-3 h-3" /> Monthly Highlights
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 mt-1">October Dealership Offers</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('offers')}
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition"
+                >
+                  Explore All Offers
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {offersList.slice(0, 2).map((offer) => (
+                  <div key={offer.id} className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-50/50 flex flex-col justify-between">
+                    <div className="h-36 relative overflow-hidden bg-slate-900">
+                      <img src={offer.image} alt={offer.title} className="w-full h-full object-cover" />
+                      <span className={`absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] ${offer.badgeColor}`}>
+                        {offer.badge}
+                      </span>
                     </div>
-
-                    <div className="pt-3 border-t border-slate-100 space-y-2">
-                      <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-200/80 font-mono text-xs">
-                        <span className="font-bold text-slate-800 tracking-wider">{offer.code}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyOfferCode(offer.code)}
-                          className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
-                        >
-                          {copiedOffer === offer.code ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                          <span>{copiedOffer === offer.code ? 'Copied' : 'Copy'}</span>
-                        </button>
-                      </div>
-
+                    <div className="p-4 space-y-2">
+                      <h4 className="font-bold text-slate-900 text-sm">{offer.title}</h4>
+                      <p className="text-xs font-bold text-emerald-700">{offer.benefit}</p>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (offer.isGiftTrigger) {
-                            setSendGiftModalOpen(true);
-                          } else {
-                            setShowRedeemModal(true);
-                          }
-                        }}
-                        className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition cursor-pointer text-center"
+                        onClick={() => setActiveTab('offers')}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 pt-1"
                       >
-                        {offer.actionText}
+                        Claim Offer Code <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -869,104 +867,511 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               </div>
             </div>
 
-            {/* Active Vouchers & Recent Activity Row (2 Columns on Desktop) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {/* Left Column: Active Vouchers */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs">
-                <div className="flex items-center justify-between">
+            {/* Recent Activity Snippet */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-slate-900">Recent Transactions</h3>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('transactions')}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                >
+                  Full History <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {ledgerItems.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400">
+                  No recent points activity found. Points earn automatically during vehicle billing.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {ledgerItems.slice(0, 3).map((item, idx) => (
+                    <LedgerRow key={item.id || idx} item={item} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 2: GIFT CARDS & VOUCHERS (Main 1)                               */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'gift_cards' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                <div>
+                  <h2 className="text-lg font-black text-slate-900">Gift Card Rewards &amp; Vouchers</h2>
+                  <p className="text-xs text-slate-500">
+                    Send e-gift passes to friends or redeem gift card codes directly into your points balance.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSendGiftModalOpen(true)}
+                  className="px-4 py-2 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs transition shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Gift className="w-4 h-4" />
+                  <span>Send Gift to Friend</span>
+                </button>
+              </div>
+
+              {/* Claim Gift Card Form */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <h4 className="text-xs font-bold text-slate-900">Have a Gift Card Code?</h4>
+                </div>
+                <form onSubmit={handleClaimGiftCard} className="flex flex-col sm:flex-row items-center gap-2.5">
+                  <input
+                    type="text"
+                    placeholder="Enter 16-character code (e.g. GIFT-BELL-XXXX)"
+                    value={claimCardCode}
+                    onChange={(e) => setClaimCardCode(e.target.value.toUpperCase())}
+                    className="w-full sm:flex-1 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <input
+                    type="password"
+                    placeholder="4-digit PIN (optional)"
+                    maxLength={4}
+                    value={claimPin}
+                    onChange={(e) => setClaimPin(e.target.value.replace(/\D/g, ''))}
+                    className="w-full sm:w-36 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isClaimingGiftCard || !claimCardCode.trim()}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {isClaimingGiftCard ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Claim Balance'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Sendable Points & Cash Value Showcase */}
+              <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-white border border-amber-300 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h3 className="text-sm font-black text-slate-900">
-                      My Digital Vouchers ({myGiftCards.length})
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Vouchers ready for 1-click points conversion.
+                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-800 font-mono block">
+                      Loyalty Value Available to Send as Gifts
+                    </span>
+                    <div className="flex flex-wrap items-baseline gap-2 mt-1">
+                      <span className="text-3xl sm:text-4xl font-black font-mono text-slate-900">
+                        {Number(currentBalance).toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-sm font-bold text-amber-700 font-mono">PTS</span>
+                      <span className="text-sm font-bold text-slate-600">
+                        (≈ ₹{cashValue} Cash Value)
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      You can create instant e-gift cards for friends &amp; family directly from your loyalty points without paying cash! (4 PTS = ₹1).
                     </p>
                   </div>
+
                   <button
-                    onClick={() => setActiveTab('gift_cards')}
-                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer"
+                    type="button"
+                    onClick={() => setSendGiftModalOpen(true)}
+                    className="px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs transition shadow-md shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer shrink-0"
                   >
-                    View All →
+                    <Gift className="w-4 h-4" />
+                    <span>Create &amp; Send Gift Voucher</span>
                   </button>
                 </div>
 
-                {myGiftCards.length === 0 ? (
-                  <div className="py-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                    <Ticket className="w-8 h-8 text-slate-300 mx-auto mb-1" />
-                    <p className="text-xs font-medium">No active gift vouchers right now.</p>
+                {/* Quick Points Preset Tiers */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t border-amber-200/60">
+                  <button
+                    type="button"
+                    onClick={() => setSendGiftModalOpen(true)}
+                    className="p-3 rounded-2xl bg-white border border-amber-200 hover:border-amber-400 text-left transition hover:shadow-xs cursor-pointer"
+                  >
+                    <span className="text-[10px] font-bold text-amber-700 block font-mono">1,000 PTS</span>
+                    <span className="text-xs font-black text-slate-900 block mt-0.5">₹250 Gift Voucher</span>
+                    <span className="text-[10px] text-slate-400">Tap to create</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSendGiftModalOpen(true)}
+                    className="p-3 rounded-2xl bg-white border border-amber-200 hover:border-amber-400 text-left transition hover:shadow-xs cursor-pointer"
+                  >
+                    <span className="text-[10px] font-bold text-amber-700 block font-mono">2,000 PTS</span>
+                    <span className="text-xs font-black text-slate-900 block mt-0.5">₹500 Gift Voucher</span>
+                    <span className="text-[10px] text-slate-400">Tap to create</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSendGiftModalOpen(true)}
+                    className="p-3 rounded-2xl bg-white border border-amber-200 hover:border-amber-400 text-left transition hover:shadow-xs cursor-pointer"
+                  >
+                    <span className="text-[10px] font-bold text-amber-700 block font-mono">4,000 PTS</span>
+                    <span className="text-xs font-black text-slate-900 block mt-0.5">₹1,000 Gift Voucher</span>
+                    <span className="text-[10px] text-slate-400">Tap to create</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSendGiftModalOpen(true)}
+                    className="p-3 rounded-2xl bg-white border border-amber-200 hover:border-amber-400 text-left transition hover:shadow-xs cursor-pointer"
+                  >
+                    <span className="text-[10px] font-bold text-amber-700 block font-mono">Custom Amount</span>
+                    <span className="text-xs font-black text-slate-900 block mt-0.5">Up to ₹{cashValue}</span>
+                    <span className="text-[10px] text-slate-400">Any multiple of 4 pts</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* My Available Gift Vouchers */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Your Received / Created Gift Vouchers ({myGiftCards.length})
+                  </h4>
+                  {myGiftCards.length > 0 && (
+                    <span className="text-[11px] text-slate-400 font-medium">Ready to claim or share</span>
+                  )}
+                </div>
+
+                {loadingGiftCards ? (
+                  <div className="p-8 text-center text-xs text-slate-400">Loading gift cards...</div>
+                ) : myGiftCards.length === 0 ? (
+                  <div className="p-6 text-center space-y-1.5 bg-slate-50/70 rounded-2xl border border-slate-200/60">
+                    <Gift className="w-7 h-7 text-slate-300 mx-auto" />
+                    <p className="text-xs font-semibold text-slate-700">No active gift vouchers on file</p>
+                    <p className="text-[11px] text-slate-500">
+                      When someone sends you a gift pass or you generate one with your points above, it will be listed here with its claim code.
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {myGiftCards.slice(0, 2).map((card) => {
-                      const balanceRupees = Number(card.balance_amount || 0);
-                      const convertiblePts = Math.floor(balanceRupees * 4);
-                      const isRedeemed = card.status === 'redeemed' || balanceRupees === 0;
-
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {myGiftCards.map((card) => {
+                      const isRevealed = revealedPins[card.card_id];
                       return (
-                        <div
-                          key={card.card_id}
-                          className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                        >
-                          <div>
-                            <span className="font-mono text-xs font-bold text-slate-800 block">
-                              {card.card_number}
-                            </span>
-                            <span className="text-xs font-bold text-emerald-700">
-                              ₹{balanceRupees.toLocaleString('en-IN')} Card Value
-                            </span>
+                        <div key={card.card_id} className="p-4 rounded-2xl bg-gradient-to-br from-amber-50/50 to-white border border-amber-200/80 shadow-xs space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-xs font-bold text-slate-900">{card.card_number}</span>
+                            <span className="font-black text-amber-700 text-sm">₹{Number(card.balance_amount).toLocaleString('en-IN')}</span>
                           </div>
-
-                          {!isRedeemed && balanceRupees > 0 && (
+                          <div className="flex items-center justify-between text-[11px] text-slate-500">
+                            <span>PIN: {isRevealed ? <strong className="font-mono text-slate-900">{card.pin_code}</strong> : '••••'}</span>
                             <button
                               type="button"
-                              disabled={isClaimingGiftCard}
-                              onClick={() => handleClaimCardDirect(card)}
-                              className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                              onClick={() => togglePinReveal(card.card_id)}
+                              className="text-indigo-600 hover:underline font-semibold"
                             >
-                              <Zap className="w-3.5 h-3.5" />
-                              <span>Add to Points (+{convertiblePts} PTS)</span>
+                              {isRevealed ? 'Hide PIN' : 'Show PIN'}
                             </button>
-                          )}
+                          </div>
+                          <button
+                            type="button"
+                            disabled={isClaimingGiftCard}
+                            onClick={() => handleClaimCardDirect(card)}
+                            className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5"
+                          >
+                            <Coins className="w-3.5 h-3.5" /> Claim ₹{card.balance_amount} to Points
+                          </button>
                         </div>
                       );
                     })}
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
 
-              {/* Right Column: Recent Activity */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs">
-                <div className="flex items-center justify-between">
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 3: REFERRAL REWARDS (Main 2)                                    */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'referrals' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                <div>
+                  <h2 className="text-lg font-black text-slate-900">Refer &amp; Earn Rewards</h2>
+                  <p className="text-xs text-slate-500">
+                    Invite friends to Bellad &amp; Co dealerships. Both you and your friend receive 2,500 bonus points (₹625 Value) when they purchase a vehicle!
+                  </p>
+                </div>
+              </div>
+
+              {/* 3 Metric Cards: Locked Points, Ready to Claim, Credited */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1. Locked Points Card */}
+                <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-sm font-black text-slate-900">
-                      Recent Activity
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Points earned, redeemed &amp; credited.
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
+                        Locked Points
+                      </span>
+                      <Lock className="w-3.5 h-3.5 text-amber-600" />
+                    </div>
+                    <div className="text-xl sm:text-2xl font-black text-amber-950 mt-1">
+                      +{(referralsSummary.locked_points || 0).toLocaleString()} <span className="text-xs font-bold text-amber-800">PTS</span>
+                    </div>
+                    <p className="text-[11px] font-bold text-amber-700">
+                      ₹{(referralsSummary.locked_value_inr || 0).toLocaleString()} Pending Value
                     </p>
                   </div>
+                  <p className="text-[10px] text-amber-700/90 mt-2.5 pt-2 border-t border-amber-200/60 leading-tight">
+                    Locked on both accounts until friend completes vehicle purchase &amp; PR at Bellad.
+                  </p>
+                </div>
+
+                {/* 2. Ready to Claim Card */}
+                <div className={`p-4 rounded-2xl border flex flex-col justify-between ${
+                  (referralsSummary.ready_to_claim_count || 0) > 0
+                    ? 'bg-emerald-50 border-emerald-300 shadow-xs ring-2 ring-emerald-500/20'
+                    : 'bg-slate-50/80 border-slate-200'
+                }`}>
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-black uppercase tracking-wider ${
+                        (referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-800' : 'text-slate-600'
+                      }`}>
+                        Ready to Claim
+                      </span>
+                      <Sparkles className={`w-3.5 h-3.5 ${
+                        (referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-600 animate-spin' : 'text-slate-400'
+                      }`} />
+                    </div>
+                    <div className={`text-xl sm:text-2xl font-black mt-1 ${
+                      (referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-950' : 'text-slate-900'
+                    }`}>
+                      {(referralsSummary.ready_to_claim_points || 0).toLocaleString()} <span className="text-xs font-bold text-slate-500">PTS</span>
+                    </div>
+                    <p className={`text-[11px] font-bold ${
+                      (referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-700' : 'text-slate-500'
+                    }`}>
+                      {referralsSummary.ready_to_claim_count || 0} referral(s) verified &amp; ready
+                    </p>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-2.5 pt-2 border-t border-slate-200/70 leading-tight">
+                    {(referralsSummary.ready_to_claim_count || 0) > 0
+                      ? 'Vehicle purchase verified! Click Claim below to add points.'
+                      : 'Unlocks as soon as friend vehicle delivery is verified.'}
+                  </p>
+                </div>
+
+                {/* 3. Total Credited in Wallet Card */}
+                <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-indigo-800">
+                        Credited in Wallet
+                      </span>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
+                    </div>
+                    <div className="text-xl sm:text-2xl font-black text-indigo-950 mt-1">
+                      {(referralsSummary.total_earned_referral_points || 0).toLocaleString()} <span className="text-xs font-bold text-indigo-800">PTS</span>
+                    </div>
+                    <p className="text-[11px] font-bold text-indigo-700">
+                      ₹{(referralsSummary.total_earned_value_inr || 0).toLocaleString()} Total Earned
+                    </p>
+                  </div>
+                  <p className="text-[10px] text-indigo-700/90 mt-2.5 pt-2 border-t border-indigo-200/60 leading-tight">
+                    Active in your wallet balance. Usable for Service, Body Shop, and Accessories.
+                  </p>
+                </div>
+              </div>
+
+              {/* WhatsApp Direct Share Card */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#25D366] text-white">
+                      <Share2 className="w-3.5 h-3.5" />
+                    </span>
+                    <h4 className="text-xs font-black text-slate-900">Send Referral Directly via WhatsApp</h4>
+                  </div>
+                  <p className="text-[11px] text-slate-600">
+                    Share your invite link with friends. When they register and purchase a vehicle from our Bellad dealerships, you both get 2,500 points!
+                  </p>
+                </div>
+                <a
+                  href={whatsappReferralUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition shrink-0 cursor-pointer"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span>Share on WhatsApp</span>
+                </a>
+              </div>
+
+              {/* Dealership Policy Rule Reminder */}
+              <div className="p-3.5 rounded-2xl bg-blue-50/80 border border-blue-200 text-xs text-blue-900 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  Vehicle Purchase &amp; PR Verification Rule:
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Both accounts will see <strong>+2,500 PTS (₹625 Value)</strong> in locked status. Points cannot be claimed or spent until your friend completes their vehicle purchase and Permanent Registration (PR) at Bellad dealerships. Once verified, tap <strong>Claim Points</strong> to credit the bonus directly into your loyalty wallet.
+                </p>
+              </div>
+
+              {/* Share Referral Link Box */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
+                <span className="text-xs font-bold text-slate-700 block">Your Exclusive Referral Link:</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={referralLink}
+                    className="flex-1 px-3.5 py-2.5 bg-white border border-indigo-200 rounded-xl text-xs font-mono text-slate-700 select-all"
+                  />
                   <button
-                    onClick={() => setActiveTab('transactions')}
-                    className="text-xs font-bold text-slate-700 hover:text-slate-900 cursor-pointer"
+                    type="button"
+                    onClick={handleCopyReferral}
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
-                    Ledger ({ledgerItems.length}) →
+                    {copied ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
+                    <span>{copied ? 'Copied!' : 'Copy'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Direct Refer a Friend Form */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <h4 className="text-xs font-bold text-slate-900">Directly Register Friend Referral</h4>
+                <form onSubmit={handleReferFriendSubmit} className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <input
+                      type="text"
+                      placeholder="Friend's Full Name"
+                      value={refereeName}
+                      onChange={(e) => setRefereeName(e.target.value)}
+                      required
+                      className="px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Friend's Mobile (10 digits)"
+                      maxLength={10}
+                      value={refereePhone}
+                      onChange={(e) => setRefereePhone(e.target.value.replace(/\D/g, ''))}
+                      required
+                      className="px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Interested Vehicle (e.g. Safari, Nexon)"
+                      value={refereeModel}
+                      onChange={(e) => setRefereeModel(e.target.value)}
+                      className="px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReferral}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {isSubmittingReferral ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Submit Friend Referral'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Referrals Status List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Your Referral Pipeline ({referralsList.length})
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={loadReferrals}
+                    className="text-[11px] text-indigo-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${loadingReferrals ? 'animate-spin' : ''}`} /> Refresh
                   </button>
                 </div>
 
-                {loadingLedger ? (
-                  <div className="py-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                    <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1 text-slate-400" />
-                    <p className="text-xs font-mono">Loading activity...</p>
-                  </div>
-                ) : ledgerItems.length === 0 ? (
-                  <div className="py-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                    <Clock className="w-8 h-8 text-slate-300 mx-auto mb-1" />
-                    <p className="text-xs font-medium">No activity recorded yet.</p>
+                {loadingReferrals ? (
+                  <div className="p-8 text-center text-xs text-slate-400">Loading referrals...</div>
+                ) : referralsList.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400 bg-slate-50/50 rounded-2xl border border-slate-100">
+                    No referrals registered yet. Share your referral link above!
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {ledgerItems.slice(0, 3).map((item) => (
-                      <LedgerRow key={item.id} item={item} />
+                  <div className="space-y-3">
+                    {referralsList.map((ref, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                          ref.can_claim
+                            ? 'bg-gradient-to-r from-emerald-50/90 to-teal-50/90 border-emerald-300 shadow-sm'
+                            : ref.is_claimed
+                            ? 'bg-white border-slate-200'
+                            : 'bg-white border-amber-200/80'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-slate-900 text-sm">
+                              {ref.friend_name || 'Friend'}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              ref.role === 'referee'
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {ref.role_label || 'Friend Referral'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500 flex-wrap">
+                            {ref.friend_phone && <span>Mobile: {ref.friend_phone}</span>}
+                            <span>&bull;</span>
+                            <span>Vehicle: {ref.vehicle_model || 'Automobile'}</span>
+                            {ref.created_at && (
+                              <>
+                                <span>&bull;</span>
+                                <span>{new Date(ref.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Status Description */}
+                          <p className="text-[11px] text-slate-600">
+                            {ref.status_label || (ref.is_claimed ? 'Points Credited in Wallet' : 'Pending Purchase & PR')}
+                          </p>
+                        </div>
+
+                        {/* Right Section: Status Pill or Claim Button */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {ref.can_claim && ref.referral_id ? (
+                            <button
+                              type="button"
+                              onClick={() => handleClaimReferral(ref.referral_id)}
+                              disabled={claimingReferralId === ref.referral_id}
+                              className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            >
+                              {claimingReferralId === ref.referral_id ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  <span>Claiming...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-3.5 h-3.5" />
+                                  <span>Claim 2,500 PTS (₹625)</span>
+                                </>
+                              )}
+                            </button>
+                          ) : ref.is_claimed ? (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>+2,500 PTS in Wallet</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
+                              <Lock className="w-3.5 h-3.5 text-amber-600" />
+                              <span>2,500 PTS Locked</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -975,475 +1380,313 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           </div>
         )}
 
-        {/* ─── TAB 2: MEMBERSHIP & OFFERS VIEW ──────────────────────────────── */}
-        {activeTab === 'benefits' && (
-          <div className="space-y-6 animate-in fade-in">
-            {/* Top Member Card */}
-            <div className="bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-transparent border border-amber-200/80 rounded-3xl p-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 font-black text-lg flex items-center justify-center shrink-0 shadow-xs">
-                    {currentTier === 'Gold' ? '🥇' : '🥈'}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 4: VEHICLE & SERVICE OFFERS (Main 3 - Dynamic Monthly Offers)   */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'offers' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-black uppercase font-mono">
+                    <Flame className="w-3 h-3" /> Updated Monthly
                   </div>
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900">
-                      {currentTier} Member Privileges
-                    </h3>
-                    <p className="text-xs text-slate-600 mt-0.5">
-                      {pointsToLevelUp > 0 ? `${pointsToLevelUp.toLocaleString('en-IN')} more points to level up to ${nextTier}!` : "You've reached the highest VIP status!"}
-                    </p>
-                  </div>
+                  <h2 className="text-lg font-black text-slate-900 mt-1">Exclusive Dealership Offers</h2>
+                  <p className="text-xs text-slate-500">
+                    Hand-crafted monthly offers for Bellad Loyalty Members on new vehicles, EV upgrades, and workshop services.
+                  </p>
                 </div>
 
-                <div className="p-3 bg-amber-100/70 rounded-2xl flex items-center gap-2 text-xs font-bold text-amber-950">
-                  <Award className="w-4 h-4 text-amber-800" />
-                  <span>Each service visit earns {currentTier === 'Gold' ? '100' : '60'} points</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Tier Selector: Bronze | Silver | Gold */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-6">
-              <div className="flex items-center justify-around border-b border-slate-200">
-                {['Bronze', 'Silver', 'Gold'].map((tierName) => {
-                  const isSelected = selectedTierTab === tierName;
-                  return (
+                {/* Offer Category Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                  {[
+                    { id: 'all', label: 'All Offers' },
+                    { id: 'suv', label: 'SUVs & Cars' },
+                    { id: 'ev', label: 'Electric (EV)' },
+                    { id: 'service', label: 'Service & Detail' },
+                  ].map((cat) => (
                     <button
-                      key={tierName}
-                      type="button"
-                      onClick={() => setSelectedTierTab(tierName)}
-                      className={`py-3.5 px-6 sm:px-12 text-sm font-bold relative transition cursor-pointer ${
-                        isSelected ? 'text-slate-900 font-black' : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                      key={cat.id}
+                      onClick={() => setSelectedOfferCategory(cat.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${selectedOfferCategory === cat.id
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
                     >
-                      <span>{tierName}</span>
-                      {isSelected && (
-                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-full" />
-                      )}
+                      {cat.label}
                     </button>
-                  );
-                })}
-              </div>
-
-              {/* Tier Benefits Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                  <div className="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase font-mono">
-                    <Sparkles className="w-4 h-4" />
-                    <span>Point Earning Multiplier</span>
-                  </div>
-                  <h4 className="text-sm font-black text-slate-900">
-                    Earn {selectedTierTab === 'Gold' ? '100 points' : selectedTierTab === 'Silver' ? '60 points' : '40 points'} per service
-                  </h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Automatically credited to your mobile wallet upon invoice clearance.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                  <div className="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase font-mono">
-                    <BadgePercent className="w-4 h-4" />
-                    <span>Discounts on Parts &amp; Accessories</span>
-                  </div>
-                  <h4 className="text-sm font-black text-slate-900">
-                    Up to {selectedTierTab === 'Gold' ? '30% savings' : '15% savings'}
-                  </h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Direct point deduction at cashier counter on genuine accessories and labor bills.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                  <div className="flex items-center gap-2 text-blue-600 font-bold text-xs uppercase font-mono">
-                    <Wrench className="w-4 h-4" />
-                    <span>Priority Workshop Lane</span>
-                  </div>
-                  <h4 className="text-sm font-black text-slate-900">
-                    {selectedTierTab === 'Gold' ? 'Dedicated Express Service Bay' : 'Rapid Customer Intake'}
-                  </h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Reduced waiting times and complimentary vehicle inspection reports.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                  <div className="flex items-center gap-2 text-purple-600 font-bold text-xs uppercase font-mono">
-                    <Gift className="w-4 h-4" />
-                    <span>WhatsApp e-Gift Vouchers</span>
-                  </div>
-                  <h4 className="text-sm font-black text-slate-900">
-                    Full WhatsApp Link Sharing
-                  </h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Share your loyalty balance with family anytime via WhatsApp links.
-                  </p>
+                  ))}
                 </div>
               </div>
-            </div>
 
-            {/* In-House Dealership Bonus Slabs */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-black uppercase tracking-wider text-slate-500 font-mono">
-                Dealership In-House Bonus Slabs
-              </h3>
+              {/* Dynamic Offers Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredOffers.map((offer) => (
+                  <div
+                    key={offer.id}
+                    className="bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col justify-between group"
+                  >
+                    <div>
+                      {/* High-Resolution Offer Image */}
+                      <div className="h-44 w-full relative overflow-hidden bg-slate-950">
+                        <img
+                          src={offer.image}
+                          alt={offer.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
+                        <span className={`absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] tracking-wider uppercase font-mono shadow-xs ${offer.badgeColor}`}>
+                          {offer.badge}
+                        </span>
+                        <span className="absolute bottom-3 right-3 text-[10px] text-white/90 font-mono bg-black/50 backdrop-blur-xs px-2 py-0.5 rounded-md">
+                          {offer.validTill}
+                        </span>
+                      </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-                      +100 PTS Loan Bonus
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">Finance</span>
+                      {/* Content */}
+                      <div className="p-5 space-y-3">
+                        <div>
+                          <h3 className="font-black text-slate-900 text-base leading-snug">{offer.title}</h3>
+                          <p className="text-xs font-black text-emerald-700 mt-1">{offer.benefit}</p>
+                        </div>
+
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          {offer.description}
+                        </p>
+
+                        {/* Feature Highlights Pills */}
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {offer.highlights.map((h, i) => (
+                            <span key={i} className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
+                              &bull; {h}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Actions */}
+                    <div className="p-5 pt-0 space-y-2 border-t border-slate-100 mt-3">
+                      <div className="flex items-center justify-between pt-3">
+                        <div className="flex items-center gap-1.5">
+                          <Tag className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="font-mono text-xs font-bold text-slate-800">{offer.code}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyOfferCode(offer.code)}
+                          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                        >
+                          {copiedOffer === offer.code ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          <span>{copiedOffer === offer.code ? 'Copied' : 'Copy Code'}</span>
+                        </button>
+                      </div>
+
+                      <a
+                        href={`https://wa.me/918197348730?text=${encodeURIComponent(offer.whatsappMsg)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Inquire on WhatsApp</span>
+                      </a>
+                    </div>
                   </div>
-                  <h4 className="text-sm font-bold text-slate-900">In-house Vehicle Finance</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Tie-up vehicle loan bonus on HDFC, Kotak &amp; Sundaram Finance.
-                  </p>
-                </div>
-
-                <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full">
-                      +50 PTS Renewal Bonus
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">Insurance</span>
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-900">In-house OEM Insurance</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Assured cashless policy renewal &amp; expedited claims assistance.
-                  </p>
-                </div>
-
-                <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full">
-                      +200 PTS Trade-In
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">Exchange</span>
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-900">In-house Vehicle Exchange</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Guaranteed top resale valuation &amp; upgrade bonus on trade-ins.
-                  </p>
-                </div>
+                ))}
               </div>
             </div>
           </div>
         )}
 
-        {/* ─── TAB 3: VOUCHERS & DIGITAL GIFT CARDS ─────────────────────────── */}
-        {activeTab === 'gift_cards' && (
-          <div className="space-y-6 animate-in fade-in">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 5: SILVER, GOLD, PLATINUM TIER BENEFITS (Main 4)                */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'benefits' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-6">
               <div>
-                <h2 className="text-lg font-black text-slate-900">
-                  Digital Vouchers &amp; Gift Cards
-                </h2>
+                <h2 className="text-lg font-black text-slate-900">Member Tiers &amp; Privileges</h2>
                 <p className="text-xs text-slate-500">
-                  Claim received voucher codes, or send WhatsApp e-gift cards to friends and family.
+                  Review the benefits for Silver, Gold, and Platinum VIP members. Higher tiers unlock up to 6% cashback on workshop bills and VIP perks.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setSendGiftModalOpen(true)}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-full shadow-xs transition cursor-pointer self-start sm:self-auto flex items-center gap-1.5"
-              >
-                <Gift className="w-3.5 h-3.5" />
-                <span>Send via WhatsApp</span>
-              </button>
-            </div>
-
-            {/* Quick Claim Box */}
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => setShowClaimBox(!showClaimBox)}
-                className="w-full flex items-center justify-between p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 hover:bg-emerald-100/60 transition text-left cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <ShieldCheck className="w-5 h-5 text-emerald-800" />
-                  <span className="text-xs font-bold text-emerald-950">
-                    Got a 16-character promo code or gift card? Enter here
+              {/* Progress Card to Next Tier */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-indigo-900 to-slate-900 text-white space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Crown className="w-5 h-5 text-amber-300" />
+                    <span className="font-bold text-sm">Your Status: {currentTier} VIP</span>
+                  </div>
+                  <span className="text-xs font-mono text-indigo-200">
+                    {lifetimePoints.toLocaleString('en-IN')} Lifetime PTS
                   </span>
                 </div>
-                <ChevronRight className={`w-4 h-4 text-emerald-800 transition ${showClaimBox ? 'rotate-90' : ''}`} />
-              </button>
 
-              {showClaimBox && (
-                <form onSubmit={handleClaimGiftCard} className="bg-white border border-slate-200/80 rounded-2xl p-5 space-y-3 shadow-xs">
-                  <p className="text-xs text-slate-500">
-                    Enter the 16-character code and optional 4-digit PIN to credit points directly into your loyalty balance.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <input
-                      type="text"
-                      required
-                      placeholder="GIFT-BELL-XXXX-XXXX"
-                      value={claimCardCode}
-                      onChange={(e) => setClaimCardCode(e.target.value.toUpperCase())}
-                      className="sm:col-span-1.5 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold uppercase text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white"
-                    />
-                    <input
-                      type="password"
-                      maxLength="6"
-                      placeholder="PIN"
-                      value={claimPin}
-                      onChange={(e) => setClaimPin(e.target.value)}
-                      className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold tracking-widest text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isClaimingGiftCard}
-                      className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition cursor-pointer disabled:opacity-50"
-                    >
-                      {isClaimingGiftCard ? 'Claiming...' : 'Claim Code →'}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
+                <div className="w-full h-2.5 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-700"
+                    style={{ width: `${tierProgress}%` }}
+                  />
+                </div>
 
-            {/* Vouchers Sub-Tabs */}
-            <div className="flex items-center justify-around border-b border-slate-200">
-              <button
-                type="button"
-                onClick={() => setGiftCardSubTab('vouchers')}
-                className={`py-3.5 px-6 sm:px-12 text-sm font-bold relative transition cursor-pointer ${
-                  giftCardSubTab === 'vouchers' ? 'text-slate-900 font-black' : 'text-slate-400'
-                }`}
-              >
-                <span>Active Vouchers ({myGiftCards.length})</span>
-                {giftCardSubTab === 'vouchers' && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-full" />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setGiftCardSubTab('purchased')}
-                className={`py-3.5 px-6 sm:px-12 text-sm font-bold relative transition cursor-pointer ${
-                  giftCardSubTab === 'purchased' ? 'text-slate-900 font-black' : 'text-slate-400'
-                }`}
-              >
-                <span>Sent via WhatsApp</span>
-                {giftCardSubTab === 'purchased' && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-full" />
-                )}
-              </button>
-            </div>
-
-            {/* Responsive Grid for Vouchers on Desktop */}
-            {myGiftCards.length === 0 ? (
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-10 text-center space-y-2">
-                <Ticket className="w-10 h-10 text-slate-300 mx-auto" />
-                <h4 className="text-sm font-bold text-slate-800">No Vouchers Found</h4>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  When you receive or buy an e-gift voucher, it will show up here for instant 1-click addition to your points.
-                </p>
+                <div className="flex items-center justify-between text-xs text-slate-300">
+                  <span>Progress to {nextTier}</span>
+                  <span className="font-bold text-amber-300">
+                    {pointsToLevelUp > 0 ? `${pointsToLevelUp.toLocaleString('en-IN')} PTS needed` : 'Maximum Tier Unlocked!'}
+                  </span>
+                </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {myGiftCards.map((card) => {
-                  const isPinVisible = revealedPins[card.card_id];
-                  const isRedeemed = card.status === 'redeemed' || Number(card.balance_amount) === 0;
-                  const balanceRupees = Number(card.balance_amount || 0);
-                  const convertiblePts = Math.floor(balanceRupees * 4);
 
+              {/* 3 Tier Comparison Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {TIER_BENEFITS_DATA.map((t) => {
+                  const isCurrent = currentTier.toLowerCase() === t.tier.toLowerCase();
                   return (
                     <div
-                      key={card.card_id}
-                      className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs space-y-3.5 flex flex-col justify-between"
+                      key={t.tier}
+                      className={`rounded-3xl border p-5 sm:p-6 space-y-4 flex flex-col justify-between transition relative ${isCurrent
+                          ? 'border-amber-400 shadow-md bg-amber-50/20 ring-2 ring-amber-400/30'
+                          : 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs'
+                        }`}
                     >
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center text-xs">
-                              ₹
-                            </div>
-                            <div>
-                              <h5 className="text-sm font-black text-slate-900">
-                                ₹{balanceRupees.toLocaleString('en-IN')} e-Gift
-                              </h5>
-                              <span className="text-[11px] text-slate-400 font-mono">
-                                Expires: {card.expires_at ? new Date(card.expires_at).toLocaleDateString('en-IN') : '1 Year'}
-                              </span>
-                            </div>
-                          </div>
+                      {isCurrent && (
+                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] uppercase tracking-wider font-mono shadow-xs">
+                          Your Active Tier
+                        </span>
+                      )}
 
-                          <span
-                            className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
-                              isRedeemed ? 'bg-slate-100 text-slate-600' : 'bg-emerald-50 text-emerald-700'
-                            }`}
-                          >
-                            {card.status.replace('_', ' ')}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-black text-slate-900 text-base">{t.label}</h3>
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${t.badgeColor}`}>
+                            {t.tier === 'Platinum' ? '15K+ PTS' : t.tier === 'Gold' ? '5K - 15K' : '0 - 5K'}
                           </span>
                         </div>
 
-                        {/* Code strip */}
-                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between font-mono text-xs">
-                          <span className="font-bold text-slate-800 tracking-wider">{card.card_number}</span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => togglePinReveal(card.card_id)}
-                              className="text-[11px] text-emerald-700 hover:text-emerald-800 font-sans cursor-pointer underline"
-                            >
-                              {isPinVisible ? card.pin_code : 'Reveal PIN'}
-                            </button>
-                            <button
-                              onClick={() => handleCopyCard(card.card_number)}
-                              className="p-1 hover:bg-slate-200 rounded cursor-pointer transition"
-                              title="Copy code"
-                            >
-                              {copiedCard === card.card_number ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5 text-slate-500" />
-                              )}
-                            </button>
+                        {/* Earning Rates Table */}
+                        <div className="space-y-1.5 pt-1 text-xs">
+                          <div className="flex justify-between py-1 border-b border-slate-100">
+                            <span className="text-slate-500">Workshop Service:</span>
+                            <span className="font-bold text-emerald-700">{t.serviceEarn}</span>
+                          </div>
+                          <div className="flex justify-between py-1 border-b border-slate-100">
+                            <span className="text-slate-500">Accessories:</span>
+                            <span className="font-bold text-blue-700">{t.accessoryEarn}</span>
+                          </div>
+                          <div className="flex justify-between py-1 border-b border-slate-100">
+                            <span className="text-slate-500">Vehicle Sales:</span>
+                            <span className="font-bold text-purple-700">{t.salesEarn}</span>
+                          </div>
+                          <div className="flex justify-between py-1 border-b border-slate-100">
+                            <span className="text-slate-500">Bodyshop Repair:</span>
+                            <span className="font-bold text-amber-700">{t.bodyshopDiscount}</span>
                           </div>
                         </div>
-                      </div>
 
-                      {/* 1-Click Action */}
-                      {!isRedeemed && balanceRupees > 0 && (
-                        <button
-                          type="button"
-                          disabled={isClaimingGiftCard}
-                          onClick={() => handleClaimCardDirect(card)}
-                          className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                        >
-                          {isClaimingGiftCard ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                          ) : (
-                            <span>Use Now: Add to Points (+{convertiblePts.toLocaleString('en-IN')} PTS)</span>
-                          )}
-                        </button>
-                      )}
+                        {/* Perks List */}
+                        <div className="space-y-1.5 pt-2">
+                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                            Included Privileges:
+                          </span>
+                          {t.perks.map((p, i) => (
+                            <div key={i} className="flex items-start gap-2 text-xs text-slate-700">
+                              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                              <span>{p}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            )}
+            </div>
           </div>
         )}
 
-        {/* ─── TAB 4: REFER & EARN ─────────────────────────────────────────── */}
-        {activeTab === 'referrals' && (
-          <div className="space-y-6 animate-in fade-in">
-            <h2 className="text-lg font-black text-slate-900">
-              Refer Friends &amp; Earn Rewards
-            </h2>
-
-            {/* Share Card */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 space-y-4 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 6: ACTIVITY / TRANSACTIONS                                      */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'transactions' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
-                  <h3 className="text-base font-black text-slate-900">Your Personal Referral Invite Link</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Share on WhatsApp. Earn 500 bonus points on every successful vehicle delivery!
+                  <h2 className="text-lg font-black text-slate-900">Activity &amp; Points Ledger</h2>
+                  <p className="text-xs text-slate-500">Complete record of points earned and redeemed across all Bellad dealership branches</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => loadLedger()}
+                  className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+                  title="Refresh activity"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+
+              {loadingLedger ? (
+                <div className="p-8 text-center text-xs text-slate-400">Loading activity...</div>
+              ) : ledgerItems.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-400">No transactions recorded yet.</div>
+              ) : (
+                <div className="space-y-2.5">
+                  {ledgerItems.map((item, idx) => (
+                    <LedgerRow key={item.id || idx} item={item} />
+                  ))}
+
+                  {nextCursor && (
+                    <div className="pt-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => loadLedger(nextCursor)}
+                        disabled={loadingMore}
+                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition disabled:opacity-50"
+                      >
+                        {loadingMore ? 'Loading older entries...' : 'Load More Transactions'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 7: GARAGE / VEHICLES                                            */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'garage' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-4">
+              <div>
+                <h2 className="text-lg font-black text-slate-900">Registered Vehicles</h2>
+                <p className="text-xs text-slate-500">Vehicles linked to your customer ID in Bellad dealership system</p>
+              </div>
+
+              {!profile?.vehicles || profile.vehicles.length === 0 ? (
+                <div className="p-8 text-center space-y-2 bg-slate-50 rounded-2xl border border-slate-100">
+                  <Car className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="text-xs font-semibold text-slate-700">Primary Vehicle: {primaryVehicle}</p>
+                  <p className="text-[11px] text-slate-500">
+                    To link a new chassis number or registration number, visit your nearest Bellad service desk.
                   </p>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(
-                      `Hey! I recommend ${profile?.firm_name || 'Bellad Automobiles'} for your next vehicle purchase. Use my reward link: ${referralLink}`
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-full transition flex items-center gap-1.5 shadow-xs cursor-pointer"
-                  >
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span>WhatsApp</span>
-                  </a>
-
-                  <button
-                    onClick={handleCopyReferral}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-full transition flex items-center gap-1.5 cursor-pointer border border-slate-200"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? 'Copied' : 'Copy Link'}</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 font-mono text-xs text-slate-700 select-all break-all">
-                {referralLink}
-              </div>
-            </div>
-
-            {/* Direct Friend Recommendation Form */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 space-y-3.5 shadow-xs">
-              <h3 className="text-base font-black text-slate-900">Direct Friend Recommendation</h3>
-              <p className="text-xs text-slate-500 -mt-1">
-                Enter your friend&apos;s contact details and our relationship manager will reach out with exclusive offers.
-              </p>
-
-              <form onSubmit={handleReferFriendSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
-                <input
-                  type="text"
-                  required
-                  placeholder="Friend's Full Name *"
-                  value={refereeName}
-                  onChange={(e) => setRefereeName(e.target.value)}
-                  className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white"
-                />
-                <input
-                  type="tel"
-                  required
-                  placeholder="Mobile Number *"
-                  value={refereePhone}
-                  onChange={(e) => setRefereePhone(e.target.value)}
-                  className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Interested Model (Optional)"
-                  value={refereeModel}
-                  onChange={(e) => setRefereeModel(e.target.value)}
-                  className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white"
-                />
-                <div className="sm:col-span-3 flex justify-end pt-1">
-                  <button
-                    type="submit"
-                    disabled={isSubmittingReferral}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmittingReferral ? 'Submitting...' : 'Submit Recommendation →'}
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {/* Referrals Status Table */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-black uppercase tracking-wider text-slate-500 font-mono">
-                Referral History ({referralsList.length})
-              </h3>
-
-              {referralsList.length === 0 ? (
-                <div className="p-8 bg-white border border-slate-200/80 rounded-3xl text-center text-xs text-slate-400">
-                  No friends referred yet. Share your link above to start earning!
-                </div>
               ) : (
-                <div className="space-y-2">
-                  {referralsList.map((ref, idx) => (
-                    <div
-                      key={ref.id || idx}
-                      className="p-4 bg-white border border-slate-200/80 rounded-2xl flex items-center justify-between text-xs shadow-xs"
-                    >
-                      <div>
-                        <span className="font-bold text-slate-900 text-sm block">{ref.referee_name || 'Friend'}</span>
-                        <span className="text-xs text-slate-400 font-mono">{ref.referee_phone}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {profile.vehicles.map((v, i) => (
+                    <div key={v.vehicle_id || i} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900 text-sm">{v.brand_name || 'Tata'} {v.model || 'Vehicle'}</span>
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-800">
+                          {v.registration_number || v.vin || 'PR Verified'}
+                        </span>
                       </div>
-                      <div className="text-right">
-                        <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">
-                          {ref.status || 'Pending'}
-                        </span>
-                        <span className="text-[11px] text-slate-400 block mt-0.5 font-mono">
-                          {ref.created_at ? new Date(ref.created_at).toLocaleDateString('en-IN') : ''}
-                        </span>
+                      <div className="text-[11px] text-slate-500 space-y-0.5">
+                        <p>Chassis: <span className="font-mono">{v.chassis_no || '—'}</span></p>
+                        <p>Purchase Date: {v.purchase_date ? new Date(v.purchase_date).toLocaleDateString('en-IN') : 'Verified'}</p>
                       </div>
                     </div>
                   ))}
@@ -1453,241 +1696,188 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           </div>
         )}
 
-        {/* ─── TAB 5: POINT HISTORY / TRANSACTIONS ─────────────────────────── */}
-        {activeTab === 'transactions' && (
-          <div className="space-y-5 animate-in fade-in">
-            <div className="flex items-center justify-between">
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 8: KYC CORRECTION                                               */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'kyc' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-6">
               <div>
-                <h2 className="text-lg font-black text-slate-900">
-                  Transaction &amp; Point History
-                </h2>
+                <h2 className="text-lg font-black text-slate-900">KYC Profile &amp; Phone Correction</h2>
                 <p className="text-xs text-slate-500">
-                  Complete audit ledger of points earned from invoices, purchases &amp; vouchers.
+                  Submit requests to update your registered mobile phone number. All KYC changes are reviewed and approved by the Accounts Head.
                 </p>
               </div>
-              <button
-                onClick={() => setShowRedeemModal(true)}
-                className="text-xs font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer"
-              >
-                Redemption Rules →
-              </button>
-            </div>
 
-            {loadingLedger ? (
-              <div className="py-14 text-center text-slate-400 bg-white border border-slate-200/80 rounded-3xl">
-                <Loader2 className="w-7 h-7 animate-spin mx-auto mb-2 text-slate-400" />
-                <p className="text-xs font-mono">Loading transaction records...</p>
-              </div>
-            ) : ledgerItems.length === 0 ? (
-              <div className="text-center py-14 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs">
-                <Clock className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <h4 className="text-sm font-bold text-slate-900">No Transactions Recorded Yet</h4>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  Points from vehicle purchases, service visits, and gift vouchers will appear here.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {ledgerItems.map((item) => (
-                  <LedgerRow key={item.id} item={item} />
-                ))}
-              </div>
-            )}
+              {kycFormError && (
+                <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{kycFormError}</span>
+                </div>
+              )}
 
-            {nextCursor && (
-              <div className="pt-2 text-center">
-                <button
-                  onClick={() => loadLedger(nextCursor)}
-                  disabled={loadingMore}
-                  className="inline-flex items-center text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 py-2.5 px-6 rounded-full transition shadow-xs disabled:opacity-50 cursor-pointer"
-                >
-                  {loadingMore ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5 mr-1.5" />
-                  )}
-                  <span>Load Earlier History</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              {kycFormSuccess && (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-2xl flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{kycFormSuccess}</span>
+                </div>
+              )}
 
-        {/* ─── TAB 6: MY GARAGE (Vehicles) ─────────────────────────────────── */}
-        {activeTab === 'garage' && (
-          <div className="space-y-5 animate-in fade-in">
-            <h2 className="text-lg font-black text-slate-900">
-              My Garage ({profile?.vehicles?.length || 0})
-            </h2>
+              <form onSubmit={handleSubmitKycForm} className="space-y-4 max-w-xl">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    New 10-Digit Mobile Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    placeholder="e.g. 9876543210"
+                    value={kycNewPhone}
+                    onChange={(e) => setKycNewPhone(e.target.value.replace(/\D/g, ''))}
+                    required
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                  />
+                </div>
 
-            {(profile?.vehicles || []).length === 0 ? (
-              <div className="p-10 text-center bg-white border border-slate-200/80 rounded-3xl space-y-2 shadow-xs">
-                <Car className="w-10 h-10 text-slate-300 mx-auto" />
-                <p className="text-sm font-bold text-slate-800">No Vehicles Linked</p>
-                <p className="text-xs text-slate-400">
-                  Vehicles purchased at {profile?.firm_name || 'our showroom'} will appear here automatically.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {profile.vehicles.map((v, idx) => (
-                  <div
-                    key={v.vehicle_id || idx}
-                    className="bg-white border border-slate-200/80 rounded-3xl p-5 space-y-4 shadow-xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-black text-slate-900 text-sm block">
-                          {v.brand_name} {v.model}
-                        </span>
-                        <span className="text-xs text-slate-400">{v.variant || 'Standard'}</span>
-                      </div>
-                      <span className="font-mono text-xs font-bold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
-                        {v.registration_number || v.vin || 'Pending Reg'}
-                      </span>
-                    </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Reason for Mobile / KYC Update
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Changed primary SIM card / Lost previous number"
+                    value={kycReason}
+                    onChange={(e) => setKycReason(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 font-mono">
-                      <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold block font-sans">Gross Price</span>
-                        <span className="font-bold text-slate-800">
-                          {v.gross_ex_showroom_price ? `₹${Number(v.gross_ex_showroom_price).toLocaleString('en-IN')}` : '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-emerald-700 text-[10px] uppercase font-bold block font-sans">Net Price</span>
-                        <span className="font-bold text-emerald-700">
-                          {v.net_ex_showroom_price ? `₹${Number(v.net_ex_showroom_price).toLocaleString('en-IN')}` : '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold block font-sans">Fuel Type</span>
-                        <span className="font-bold text-slate-800 uppercase">{v.fuel_type || 'Petrol'}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold block font-sans">Delivery Date</span>
-                        <span className="font-bold text-slate-800">{v.purchase_date || '—'}</span>
-                      </div>
-                    </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Upload Identity Proof (Aadhaar / Driving License / PAN)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => setKycIdProofFile(e.target.files?.[0] || null)}
+                    required
+                    className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
+                  />
+                </div>
 
-                    <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400">
-                      <span className="flex items-center gap-1 font-semibold text-emerald-700">
-                        <Check className="w-3.5 h-3.5" />
-                        Service Points &amp; Redemption Eligible
-                      </span>
-                      <span className="font-mono">VIN: {v.vin ? v.vin.slice(-6) : '—'}</span>
-                    </div>
+                {/* 2FA on Current Number */}
+                <div className="pt-2 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700">2FA Verification via Current Phone</span>
+                    <button
+                      type="button"
+                      onClick={handleRequestKycOtp}
+                      disabled={isRequestingKycOtp}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                    >
+                      {isRequestingKycOtp ? 'Sending code...' : kycOtpSent ? 'Resend OTP' : 'Request OTP'}
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
+                  <input
+                    type="text"
+                    placeholder="Enter 6-digit verification code"
+                    maxLength={6}
+                    value={kycOtp}
+                    onChange={(e) => setKycOtp(e.target.value.replace(/\D/g, ''))}
+                    required
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingKyc}
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition shadow-xs disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isSubmittingKyc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Submit KYC Request to Accounts Head'}
+                </button>
+              </form>
+
+              {/* KYC Request History */}
+              {kycRequests.length > 0 && (
+                <div className="space-y-3 pt-4 border-t border-slate-100">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Past KYC Correction Requests
+                  </h4>
+                  <div className="space-y-2">
+                    {kycRequests.map((req) => (
+                      <div key={req.request_id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="font-bold text-slate-900 block">Requested Phone: {req.new_value}</span>
+                          <span className="text-[11px] text-slate-500">Reason: {req.reason}</span>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${req.status === 'approved'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : req.status === 'rejected'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
+                          {req.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* ─── TAB 7: PROFILE & KYC ────────────────────────────────────────── */}
-        {activeTab === 'profile' && (
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-base font-bold text-slate-900">Customer Profile &amp; KYC Verification</h3>
-              </div>
-              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-50 text-emerald-700 font-mono">
-                Aadhaar Verified
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
-                <span className="text-slate-400 text-[10px] uppercase font-bold block">Customer Name</span>
-                <span className="font-bold text-slate-900 text-sm mt-0.5 block">
-                  {profile?.name || 'Customer'}
-                </span>
-              </div>
-
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
-                <span className="text-slate-400 text-[10px] uppercase font-bold block">WhatsApp Mobile Number</span>
-                <span className="font-mono font-bold text-slate-900 text-sm mt-0.5 block">
-                  +91 {profile?.phone || '—'}
-                </span>
-              </div>
-
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
-                <span className="text-slate-400 text-[10px] uppercase font-bold block">Dealership Group</span>
-                <span className="font-bold text-slate-900 text-sm mt-0.5 block">
-                  {profile?.firm_name || 'Bellad & Company'}
-                </span>
-              </div>
-
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
-                <span className="text-slate-400 text-[10px] uppercase font-bold block">Home Dealership Branch</span>
-                <span className="font-bold text-slate-900 text-sm mt-0.5 block">
-                  {profile?.branch_name || 'Main Showroom'}
-                </span>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-400 pt-3 border-t border-slate-100">
-              For security, to update your registered mobile number, visit your nearest showroom cashier desk with your Aadhaar card for instant WhatsApp verification.
-            </p>
-          </div>
-        )}
       </main>
 
-      {/* ─── Footer ────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-slate-200/80 bg-white py-4 mt-auto text-center text-xs text-slate-500 space-y-1">
-        <p>&copy; {new Date().getFullYear()} {profile?.firm_name || 'Bellad Automobile Corporation'}. All rights reserved.</p>
-        <p className="text-[11px] font-mono text-slate-400">
-          4 PTS = ₹1 &bull; Instant WhatsApp Redemption
-        </p>
-      </footer>
-
-      {/* ─── How to Redeem Modal ──────────────────────────────────────────── */}
-      {showRedeemModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center space-x-2 text-slate-900">
-              <Info className="w-5 h-5 text-emerald-600" />
-              <h3 className="text-base font-bold">How to Redeem Points</h3>
-            </div>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Loyalty points are directly redeemed at any authorized Bellad showroom or service cashier counter during invoice billing.
-            </p>
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-700 space-y-1.5 font-medium">
-              <p>
-                <strong className="font-bold text-slate-900">Current Points:</strong>{' '}
-                <span className="font-mono text-slate-900 font-bold">{currentBalance.toLocaleString('en-IN')} PTS</span>
-              </p>
-              <p>
-                <strong className="font-bold text-slate-900">Cashback Value:</strong>{' '}
-                <span className="font-mono text-emerald-700 font-bold">₹{cashValue.toLocaleString('en-IN')}</span>
-              </p>
-              <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-200">
-                Rule: 4 Points = ₹1 deduction against accessories, service labor, or spare parts.
-              </p>
-            </div>
+      {/* ─── 6. Fullscreen QR Code Scanning Modal ─────────────────────────── */}
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl border border-slate-100 relative">
             <button
-              onClick={() => setShowRedeemModal(false)}
-              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-full text-xs transition cursor-pointer"
+              onClick={() => setShowQrModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500"
             >
-              Understood
+              <X className="w-4 h-4" />
             </button>
+
+            <div className="space-y-1 pt-2">
+              <h3 className="text-base font-black text-slate-900">{fullName}</h3>
+              <p className="text-xs text-slate-500">Member ID: <span className="font-mono font-bold text-slate-800">{customerId}</span></p>
+            </div>
+
+            {/* Enlarged QR Code Box */}
+            <div className="w-56 h-56 mx-auto bg-slate-900 rounded-3xl p-4 flex items-center justify-center shadow-lg border-4 border-amber-400">
+              <QrCode className="w-44 h-44 text-white" />
+            </div>
+
+            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 font-bold space-y-0.5">
+              <p>Balance: {Number(currentBalance).toLocaleString('en-IN')} PTS</p>
+              <p className="text-[11px] text-amber-700 font-normal">Present this QR code to cashier desk for instant bill deduction</p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Send Gift to Friends & Family Modal */}
+      {/* ─── 7. Send e-Gift Modal ─────────────────────────────────────────── */}
       <SendGiftModal
         isOpen={sendGiftModalOpen}
         onClose={() => setSendGiftModalOpen(false)}
-        customer={profile}
+        customer={profile || customerInfo}
         currentBalance={currentBalance}
         onGiftSent={() => {
           loadProfile();
           loadLedger();
           loadGiftCards();
+          setSuccessMsg('Gift card generated and points debited! Share the WhatsApp claim link with your recipient.');
         }}
       />
+
+      {/* ─── 8. Minimal Clean Footer ──────────────────────────────────────── */}
+      <footer className="bg-white border-t border-slate-200/80 py-4 text-center text-xs text-slate-500">
+        <p>&copy; {new Date().getFullYear()} Bellad &amp; Company. Hubballi &bull; Belagavi &bull; Vijayapura</p>
+      </footer>
     </div>
   );
 }

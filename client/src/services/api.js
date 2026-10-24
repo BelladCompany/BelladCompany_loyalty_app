@@ -56,6 +56,10 @@ export class ApiService {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
+      if (res.status === 401 || (res.status === 403 && String(data?.error || '').toLowerCase().includes('token'))) {
+        localStorage.removeItem('bac_loyalty_token');
+        localStorage.removeItem('bac_loyalty_user');
+      }
       const errorMsg = data?.error || data?.message || data?.details?.[0]?.message || `HTTP Error ${res.status}`;
       const err = new Error(errorMsg);
       err.status = res.status;
@@ -89,17 +93,17 @@ export class ApiService {
   }
 
   // Customer Portal /v1 Endpoints
-  static async portalRequestOtp({ name, phone, aadhaar_number }) {
+  static async portalRequestOtp({ name, phone, aadhaar_number, referral_code }) {
     return this.request('/v1/auth/request-otp', {
       method: 'POST',
-      body: { name, phone, aadhaar_number },
+      body: { name, phone, aadhaar_number, referral_code },
     });
   }
 
-  static async portalOtpVerify({ name, phone, otp, aadhaar_number }) {
+  static async portalOtpVerify({ name, phone, otp, aadhaar_number, referral_code }) {
     const res = await this.request('/v1/auth/otp-verify', {
       method: 'POST',
-      body: { name, phone, otp, aadhaar_number },
+      body: { name, phone, otp, aadhaar_number, referral_code },
     });
     if (res?.token) {
       this.setToken(res.token);
@@ -228,6 +232,18 @@ export class ApiService {
   static async getVehicleRedemptionStatus(vehicleId, category = null) {
     const query = category ? `?category=${encodeURIComponent(category)}` : '';
     return this.request(`/redemptions/vehicle/${vehicleId}/status${query}`);
+  }
+
+  // Admin Customer Redemptions List (Admin Dashboard only)
+  static async getCustomerRedemptions(params = {}) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') {
+        searchParams.append(k, v);
+      }
+    });
+    const query = searchParams.toString();
+    return this.request(`/admin/customer-redemptions${query ? `?${query}` : ''}`);
   }
 
   // Admin & Duplicates Merge
@@ -398,8 +414,9 @@ export class ApiService {
     });
   }
 
-  static async getPendingKycRequests() {
-    return this.request('/admin/kyc-change/pending');
+  static async getPendingKycRequests(status = 'pending') {
+    const q = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request(`/admin/kyc-change/pending${q}`);
   }
 
   static async approveKycRequest(requestId, reviewNotes) {
@@ -522,6 +539,13 @@ export class ApiService {
     return this.request('/v1/me/referrals/submit', {
       method: 'POST',
       body: payload,
+    });
+  }
+
+  static async portalClaimReferral(referral_id) {
+    return this.request('/v1/me/referrals/claim', {
+      method: 'POST',
+      body: { referral_id },
     });
   }
 
@@ -761,7 +785,36 @@ export class ApiService {
   static async getMySentGifts() {
     return this.request('/gifts/my-sent-gifts');
   }
+  // ─── Customer Portal KYC Correction ───────────────────────────────────────
+  static async portalRequestKycOtp() {
+    return this.request('/v1/me/kyc/request-otp', {
+      method: 'POST',
+    });
+  }
+
+  static async portalSubmitKycCorrection(formData) {
+    return this.request('/v1/me/kyc/submit', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  static async portalGetMyKycRequests() {
+    return this.request('/v1/me/kyc/history');
+  }
+
+  // ─── Admin Gift Cards & Referral Rewards ──────────────────────────────────
+  static async getAdminGiftCards(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/admin/gift-cards${qs ? `?${qs}` : ''}`);
+  }
+
+  static async getAdminReferrals(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/admin/referrals${qs ? `?${qs}` : ''}`);
+  }
 }
 
 export default ApiService;
+
 

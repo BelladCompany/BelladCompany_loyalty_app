@@ -119,9 +119,6 @@ export const AddReceiptModal = ({
     if (eligibilityData.status === 'eligible') {
       isEligible = true;
       lockReason = '';
-    } else if (eligibilityData.status === 'locked_pending_correction') {
-      isEligible = false;
-      lockReason = 'Billing Correction Ticket is pending Admin approval. Redemption locked.';
     } else {
       isEligible = false;
       lockReason = eligibilityData.message || 'Points redemption is locked until 12 months after purchase date. (Accessories redemption is unlocked anytime).';

@@ -12,12 +12,20 @@ const {
 router.post('/auth/request-otp', otpRequestRateLimiter, CustomerPortalController.requestOtp);
 router.post('/auth/otp-verify', otpVerifyRateLimiter, CustomerPortalController.otpVerify);
 
+const { uploadKycProof } = require('../middleware/upload');
+
 // Protected customer portal endpoints
 router.get('/me', authenticateToken, CustomerPortalController.getMe);
 router.get('/me/ledger', authenticateToken, CustomerPortalController.getLedger);
 router.get('/me/referrals', authenticateToken, CustomerPortalController.getReferrals);
 router.post('/me/referrals/submit', authenticateToken, CustomerPortalController.submitReferral);
+router.post('/me/referrals/claim', authenticateToken, CustomerPortalController.claimReferral);
 router.get('/me/gift-cards', authenticateToken, CustomerPortalController.getMyGiftCards);
 router.post('/me/gift-cards/claim', authenticateToken, giftCardRateLimiter, CustomerPortalController.claimGiftCard);
+
+// Customer Portal KYC Correction endpoints
+router.post('/me/kyc/request-otp', authenticateToken, otpRequestRateLimiter, CustomerPortalController.requestKycOtp);
+router.post('/me/kyc/submit', authenticateToken, uploadKycProof.single('id_proof_file'), CustomerPortalController.submitKycCorrection);
+router.get('/me/kyc/history', authenticateToken, CustomerPortalController.getMyKycRequests);
 
 module.exports = router;

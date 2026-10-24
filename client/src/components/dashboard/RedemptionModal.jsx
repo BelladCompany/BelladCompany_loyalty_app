@@ -228,11 +228,10 @@ export const RedemptionModal = ({
 
   const currentBalance = Math.max(0, vehicleStatus?.points_balance ?? customer?.points_balance ?? customer?.current_balance ?? 0);
   const isAccessories = ['accessories', 'accessory'].includes(String(category || '').toLowerCase());
-  const isPendingCorrection = vehicleStatus?.status === 'locked_pending_correction' || vehicleStatus?.base_status === 'locked_pending_correction';
   const isExpired = vehicleStatus?.status === 'expired' || vehicleStatus?.base_status === 'expired';
   const isVehicleUnder12Months = vehicleStatus?.base_status === 'locked' || (!isAccessories && vehicleStatus?.status === 'locked');
-  const isLocked = isPendingCorrection || (isVehicleUnder12Months && !isAccessories);
-  const isEligible = !isPendingCorrection && !isExpired && (isAccessories || !isVehicleUnder12Months) && (currentBalance > 0);
+  const isLocked = isVehicleUnder12Months && !isAccessories;
+  const isEligible = !isExpired && (isAccessories || !isVehicleUnder12Months) && (currentBalance > 0);
 
   // Live Arithmetic Preview Calculations
   const numBillAmount = parseFloat(billAmount || '0');

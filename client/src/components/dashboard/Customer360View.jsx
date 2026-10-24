@@ -115,10 +115,6 @@ export const Customer360View = ({
   const tierName = tierInfo?.tier_name || customer.tier_name || 'Silver';
   const rupeeValue = Math.max(0, Math.floor(currentBalance / 4));
 
-  const hasPendingCorrection =
-    pendingCorrections.length > 0 ||
-    Object.values(vehicleStatuses).some((v) => v?.status === 'locked_pending_correction');
-
   // Redemptions filtered from ledger
   const redemptionsList = ledgerData.filter(
     (item) => item.type === 'redemption' || item.transaction_type === 'redemption' || item.points < 0
@@ -264,19 +260,6 @@ export const Customer360View = ({
           );
         }
 
-        if (hasPendingCorrection) {
-          return (
-            <button
-              type="button"
-              disabled
-              className="px-2 py-1 text-xs font-bold text-slate-400 bg-slate-100 rounded border border-slate-200 cursor-not-allowed"
-              title="A billing correction ticket is currently pending admin approval for this customer."
-            >
-              Locked
-            </button>
-          );
-        }
-
         return (
           <button
             type="button"
@@ -295,24 +278,6 @@ export const Customer360View = ({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Pending Correction Alert Banner */}
-      {hasPendingCorrection && (
-        <div className="p-4 bg-amber-50 border-2 border-amber-400 rounded-xl flex items-center justify-between shadow-sm animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0" />
-            <div>
-              <h4 className="font-extrabold text-amber-950 text-base">Billing Correction Ticket Pending Admin Approval</h4>
-              <p className="text-xs font-semibold text-amber-800 mt-0.5">
-                Correction ticket {pendingCorrections[0]?.id ? `#${pendingCorrections[0].id}` : ''} is currently under review by Admin. Points redemption and billing edits are temporarily locked for this customer.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 bg-amber-600 text-white font-mono font-extrabold text-xs rounded-full uppercase">
-            Account Locked
-          </span>
-        </div>
-      )}
-
       {/* 1. Customer Summary Card Header */}
       <CustomerSummaryCard
         customer={{
@@ -320,7 +285,6 @@ export const Customer360View = ({
           points_balance: currentBalance,
           tier_name: tierName,
         }}
-        hasPendingCorrection={hasPendingCorrection}
         onAddReceipt={() => setAddReceiptModalOpen(true)}
       />
 
@@ -330,7 +294,7 @@ export const Customer360View = ({
           label="Available Point Balance"
           value={`${Number(currentBalance).toLocaleString()} PTS`}
           subtext={`≈ ₹${Number(rupeeValue).toLocaleString()} in direct discount`}
-          variant="primary"
+          variant="default"
         />
         <StatCard
           label="Current Membership Tier"
@@ -461,8 +425,6 @@ export const Customer360View = ({
                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse'
                             : vs.status === 'locked'
                             ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                            : vs.status === 'locked_pending_correction'
-                            ? 'bg-amber-200 text-amber-950 border border-amber-400'
                             : 'bg-rose-100 text-rose-800 border border-rose-300'
                         }`}
                       >
@@ -470,8 +432,6 @@ export const Customer360View = ({
                           ? 'Eligible'
                           : vs.status === 'locked'
                           ? '12M Lock (Accessories Unlocked)'
-                          : vs.status === 'locked_pending_correction'
-                          ? 'Correction Locked'
                           : 'Expired'}
                       </span>
                     )}
@@ -550,7 +510,7 @@ export const Customer360View = ({
         )}
       </section>
 
-      {/* 5. Tabbed Customer Profile History (Ledger / Referrals / Redemptions / KYC / Nominee) */}
+      {/* 5. Tabbed Customer Profile History (Ledger / Referrals / Redemptions / KYC) */}
       <section className="bg-white border border-slate-200/90 rounded-3xl p-7 space-y-6 shadow-card">
         {/* Navigation Tabs (Smart CRM pill style) */}
         <div className="flex items-center gap-2 border-b border-slate-100 overflow-x-auto pb-3">
@@ -559,7 +519,6 @@ export const Customer360View = ({
             { id: 'referrals', label: 'Gift Cards', icon: Gift },
             { id: 'redemptions', label: 'Redemptions', icon: Coins },
             { id: 'kyc', label: 'KYC Requests', icon: FileCheck2 },
-            { id: 'nominee', label: 'Nominee Details', icon: UserCheck },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeProfileTab === tab.id;
@@ -754,45 +713,6 @@ export const Customer360View = ({
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 5: Nominee Details */}
-        {activeProfileTab === 'nominee' && (
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nominee Information</h4>
-            {customer.nominee ? (
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 max-w-md space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-slate-900">{customer.nominee.nominee_name}</span>
-                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded">
-                    Active Nominee
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs text-slate-700">
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Relation:</span>
-                    <span className="font-medium">{customer.nominee.relation || '—'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Nominee Phone:</span>
-                    <span className="font-mono font-medium">{customer.nominee.nominee_phone || '—'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">ID Proof Type:</span>
-                    <span className="font-medium">{customer.nominee.id_proof_type || '—'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">ID Proof Reference:</span>
-                    <span className="font-mono font-medium">{customer.nominee.id_proof_ref || '—'}</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-6 bg-slate-50 rounded-lg border border-slate-200 text-center text-xs text-slate-500">
-                No nominee on file for this customer account.
               </div>
             )}
           </div>

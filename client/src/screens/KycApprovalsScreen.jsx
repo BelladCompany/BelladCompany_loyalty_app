@@ -6,6 +6,7 @@ import RequestKycModal from '../components/dashboard/RequestKycModal';
 
 export const KycApprovalsScreen = () => {
   const { showSuccess, showError } = useToast();
+  const [statusFilter, setStatusFilter] = useState('pending');
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,22 +28,23 @@ export const KycApprovalsScreen = () => {
   // Modal state for previewing ID proof document
   const [previewFileUrl, setPreviewFileUrl] = useState(null);
 
-  const fetchPendingRequests = async () => {
+  const fetchRequests = async (overrideStatus) => {
     setIsLoading(true);
     setError('');
+    const targetStatus = overrideStatus !== undefined ? overrideStatus : statusFilter;
     try {
-      const res = await ApiService.getPendingKycRequests();
+      const res = await ApiService.getPendingKycRequests(targetStatus);
       setRequests(res.data || []);
     } catch (err) {
-      setError(err.message || 'Failed to load pending KYC requests.');
+      setError(err.message || 'Failed to load KYC requests.');
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPendingRequests();
-  }, []);
+    fetchRequests(statusFilter);
+  }, [statusFilter]);
 
   const handleApprove = async (reqItem) => {
     // Show confirmation modal instead of window.confirm
@@ -57,11 +59,11 @@ export const KycApprovalsScreen = () => {
     setActionSuccess('');
     setIsSubmitting(true);
     try {
-      const res = await ApiService.approveKycRequest(pendingApproveItem.id, 'Approved by Administrator');
+      const res = await ApiService.approveKycRequest(pendingApproveItem.id, 'Approved by Accounts Head / Manager');
       const msg = res.message || 'KYC request approved and phone number updated.';
       setActionSuccess(msg);
       showSuccess(msg);
-      await fetchPendingRequests();
+      await fetchRequests();
     } catch (err) {
       const msg = err.message || 'Failed to approve KYC request.';
       setError(msg);
@@ -94,7 +96,7 @@ export const KycApprovalsScreen = () => {
       setActionSuccess(res.message || 'KYC request rejected.');
       setRejectModalOpen(false);
       setSelectedReq(null);
-      await fetchPendingRequests();
+      await fetchRequests();
     } catch (err) {
       setError(err.message || 'Failed to reject KYC request.');
     } finally {
@@ -106,22 +108,46 @@ export const KycApprovalsScreen = () => {
     <div className="space-y-6">
       
       {/* Header Banner */}
-      <div className="bg-white border-2 border-surface-border rounded-lg p-6 flex items-center justify-between shadow-sm">
+      <div className="bg-white border-2 border-surface-border rounded-lg p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-action-primary-light text-action-primary rounded-lg">
             <ShieldCheck className="w-8 h-8" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-ink-primary">KYC Change Requests Approval Queue</h1>
+            <h1 className="text-2xl font-bold text-ink-primary">KYC Approvals & Audit Trail</h1>
             <p className="text-sm font-medium text-ink-secondary">
-              Review cashier-submitted customer phone number updates requiring mandatory ID proof and admin authorization.
+              Review customer phone number updates and inspect complete historical record of approved and rejected requests.
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center flex-wrap gap-3">
+          {/* Status Filter Tabs (like Billing Corrections Queue) */}
+          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold">
+            {[
+              { id: 'pending', label: 'Pending' },
+              { id: 'approved', label: 'Approved' },
+              { id: 'rejected', label: 'Rejected' },
+              { id: 'all', label: 'All Records' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setStatusFilter(tab.id)}
+                className={`px-3 py-1.5 rounded-md capitalize transition-all cursor-pointer font-bold ${
+                  statusFilter === tab.id
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           <Button
             variant="primary"
-            size="lg"
+            size="md"
             icon={PlusCircle}
             onClick={() => setRequestModalOpen(true)}
             className="font-bold whitespace-nowrap bg-action-primary hover:bg-blue-700"
@@ -130,13 +156,13 @@ export const KycApprovalsScreen = () => {
           </Button>
           <Button
             variant="outline"
-            size="lg"
+            size="md"
             icon={RefreshCw}
-            onClick={fetchPendingRequests}
+            onClick={() => fetchRequests()}
             disabled={isLoading}
             className="font-bold whitespace-nowrap"
           >
-            Refresh Queue
+            Refresh
           </Button>
         </div>
       </div>
@@ -156,15 +182,21 @@ export const KycApprovalsScreen = () => {
         </div>
       )}
 
-      {/* Pending Requests Queue */}
+      {/* Requests Queue / Audit Trail */}
       {isLoading ? (
         <Skeleton.KycQueue items={3} />
       ) : requests.length === 0 ? (
         <div className="bg-white border-2 border-surface-border rounded-lg p-12 text-center space-y-3 shadow-sm">
           <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-          <h3 className="text-xl font-bold text-ink-primary">All Clear! No Pending Requests</h3>
+          <h3 className="text-xl font-bold text-ink-primary">
+            {statusFilter === 'pending'
+              ? 'All Clear! No Pending Requests'
+              : `No ${statusFilter} KYC requests found`}
+          </h3>
           <p className="text-base font-medium text-ink-secondary">
-            There are currently no pending KYC phone update requests awaiting review.
+            {statusFilter === 'pending'
+              ? 'There are currently no pending KYC phone update requests awaiting review.'
+              : `No KYC records currently match the "${statusFilter}" status filter.`}
           </p>
         </div>
       ) : (
@@ -183,23 +215,31 @@ export const KycApprovalsScreen = () => {
                         {reqItem.customer_id}
                       </span>
                     </div>
-                    <div className="text-xs font-semibold text-ink-secondary flex items-center gap-3 mt-1">
+                    <div className="text-xs font-semibold text-ink-secondary flex items-center gap-3 mt-1 flex-wrap">
                       <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> Cashier: {reqItem.cashier_username || 'System'}</span>
                       <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> Branch: {reqItem.branch_name || 'Central'}</span>
-                      <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {new Date(reqItem.created_at).toLocaleString('en-IN')}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Requested: {new Date(reqItem.created_at).toLocaleString('en-IN')}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <StatusBadge status="warning">Pending Review</StatusBadge>
+                  {reqItem.status === 'pending' && (
+                    <StatusBadge status="warning">Pending Review</StatusBadge>
+                  )}
+                  {reqItem.status === 'approved' && (
+                    <StatusBadge status="success">Approved &amp; Updated</StatusBadge>
+                  )}
+                  {reqItem.status === 'rejected' && (
+                    <StatusBadge status="danger">Rejected</StatusBadge>
+                  )}
                 </div>
               </div>
 
               {/* Proposed Phone Update Card */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-3.5 bg-slate-50 border border-surface-border rounded-lg space-y-1">
-                  <div className="text-xs font-bold text-ink-secondary uppercase">Current Registered Phone</div>
+                  <div className="text-xs font-bold text-ink-secondary uppercase">Current / Previous Phone</div>
                   <div className="font-mono text-base font-bold text-slate-800 flex items-center gap-2">
                     <Phone className="w-4 h-4 text-ink-muted" />
                     {reqItem.old_value || 'None'}
@@ -207,7 +247,9 @@ export const KycApprovalsScreen = () => {
                 </div>
 
                 <div className="p-3.5 bg-action-primary-light/50 border border-blue-300 rounded-lg space-y-1">
-                  <div className="text-xs font-bold text-action-primary uppercase">Proposed New Phone</div>
+                  <div className="text-xs font-bold text-action-primary uppercase">
+                    {reqItem.status === 'approved' ? 'Active Updated Phone' : 'Proposed New Phone'}
+                  </div>
                   <div className="font-mono text-lg font-extrabold text-action-primary flex items-center gap-2">
                     <Phone className="w-5 h-5 text-action-primary" />
                     {reqItem.new_value}
@@ -222,9 +264,9 @@ export const KycApprovalsScreen = () => {
                       <button
                         type="button"
                         onClick={() => setPreviewFileUrl(reqItem.id_proof_file_url)}
-                        className="text-action-primary font-bold text-xs flex items-center gap-1 hover:underline"
+                        className="text-action-primary font-bold text-xs flex items-center gap-1 hover:underline cursor-pointer"
                       >
-                        <Eye className="w-4 h-4" /> View File
+                        <Eye className="w-4 h-4" /> View Proof
                       </button>
                     ) : (
                       <span className="text-xs text-ink-muted">No file attached</span>
@@ -239,31 +281,66 @@ export const KycApprovalsScreen = () => {
                 <div className="text-sm font-medium text-amber-950">{reqItem.reason}</div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  icon={XCircle}
-                  disabled={isSubmitting}
-                  onClick={() => openRejectModal(reqItem)}
-                  className="border-action-danger text-action-danger hover:bg-red-50 font-bold"
+              {/* Review Audit Trail (For Approved or Rejected Records) */}
+              {reqItem.status !== 'pending' && (
+                <div
+                  className={`p-3.5 rounded-lg border text-xs flex flex-col md:flex-row md:items-center justify-between gap-2 font-semibold ${
+                    reqItem.status === 'approved'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                      : 'bg-rose-50 border-rose-200 text-rose-950'
+                  }`}
                 >
-                  Reject Request
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  icon={CheckCircle2}
-                  disabled={isSubmitting}
-                  onClick={() => handleApprove(reqItem)}
-                  className="bg-emerald-600 hover:bg-emerald-700 font-bold"
-                >
-                  Approve & Update Phone
-                </Button>
-              </div>
+                  <div className="flex items-center gap-2">
+                    {reqItem.status === 'approved' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                    )}
+                    <div>
+                      <span>{reqItem.status === 'approved' ? 'Approved' : 'Rejected'} by:</span>{' '}
+                      <strong className="font-bold">{reqItem.reviewer_username || 'Accounts Head'}</strong>
+                      {reqItem.reviewed_at && (
+                        <span className="ml-2 font-normal text-slate-600">
+                          on {new Date(reqItem.reviewed_at).toLocaleString('en-IN')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {reqItem.review_notes && (
+                    <div className="italic text-slate-700">
+                      Notes: "{reqItem.review_notes}"
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons (Only when Pending) */}
+              {reqItem.status === 'pending' && (
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    icon={XCircle}
+                    disabled={isSubmitting}
+                    onClick={() => openRejectModal(reqItem)}
+                    className="border-action-danger text-action-danger hover:bg-red-50 font-bold"
+                  >
+                    Reject Request
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    icon={CheckCircle2}
+                    disabled={isSubmitting}
+                    onClick={() => handleApprove(reqItem)}
+                    className="bg-emerald-600 hover:bg-emerald-700 font-bold"
+                  >
+                    Approve & Update Phone
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -378,7 +455,7 @@ export const KycApprovalsScreen = () => {
           const msg = 'KYC Phone Change Request submitted successfully! Awaiting manager approval.';
           setActionSuccess(msg);
           showSuccess(msg);
-          fetchPendingRequests();
+          fetchRequests();
         }}
       />
     </div>

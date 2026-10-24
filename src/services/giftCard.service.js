@@ -261,6 +261,16 @@ class GiftCardService {
         [customer_id, card.card_id]
       );
 
+      // 1b. Sync customer_gifts table if linked
+      await client.query(
+        `UPDATE customer_gifts
+         SET claim_status = 'claimed',
+             claimed_at = NOW(),
+             receiver_customer_id = $1
+         WHERE gift_code = $2 AND tenant_id = $3 AND claim_status = 'unclaimed';`,
+        [customer_id, card.card_number, tenant_id]
+      ).catch(() => {});
+
       // 2. Insert gift card redemption audit log
       await client.query(
         `INSERT INTO gift_card_redemptions (

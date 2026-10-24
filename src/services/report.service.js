@@ -36,6 +36,8 @@ class ReportService {
     tenantId = 'bellad_and_company',
     branchId = null,
     brandId = null,
+    brandName = null,
+    city = null,
     vehicleType = null,
     category = null,
     startDate = null,
@@ -48,6 +50,11 @@ class ReportService {
     if (branchId) {
       whereClauses.push(`pl.branch_id = $${paramIdx++}`);
       queryParams.push(branchId);
+    }
+    if (city) {
+      whereClauses.push(`(b.branch_city ILIKE $${paramIdx} OR b.branch_name ILIKE $${paramIdx})`);
+      paramIdx++;
+      queryParams.push(`%${city}%`);
     }
     if (category) {
       whereClauses.push(`pl.transaction_category = $${paramIdx++}`);
@@ -66,8 +73,14 @@ class ReportService {
       queryParams.push(vehicleType);
     }
     if (brandId) {
-      whereClauses.push(`v.brand_id = $${paramIdx++}`);
+      whereClauses.push(`(v.brand_id = $${paramIdx} OR br.brand_id = $${paramIdx})`);
+      paramIdx++;
       queryParams.push(brandId);
+    }
+    if (brandName) {
+      whereClauses.push(`(v.brand_name ILIKE $${paramIdx} OR br.brand_name ILIKE $${paramIdx})`);
+      paramIdx++;
+      queryParams.push(`%${brandName}%`);
     }
 
     const whereSql = whereClauses.join(' AND ');
@@ -75,18 +88,22 @@ class ReportService {
     const sql = `
       SELECT 
         COALESCE(b.branch_name, 'Unassigned Branch') AS branch_name,
-        COALESCE(br.brand_name, 'General') AS brand_name,
+        COALESCE(b.branch_city, 'Karnataka') AS branch_city,
+        COALESCE(v.brand_name, br.brand_name, 'General') AS brand_name,
         COALESCE(pl.transaction_category, 'other') AS category,
         COUNT(pl.entry_id) AS total_transactions,
+        COUNT(DISTINCT pl.customer_id) AS total_customers,
+        COUNT(DISTINCT CASE WHEN pl.points < 0 OR pl.type = 'redeem' OR pl.transaction_category = 'redemption' THEN pl.customer_id END) AS customers_redeemed,
+        COUNT(DISTINCT CASE WHEN pl.points > 0 THEN pl.customer_id END) AS customers_issued,
         COALESCE(SUM(CASE WHEN pl.points > 0 THEN pl.points ELSE 0 END), 0) AS total_points_issued,
         COALESCE(SUM(CASE WHEN pl.points < 0 THEN ABS(pl.points) ELSE 0 END), 0) AS total_points_redeemed,
         COALESCE(SUM(pl.points), 0) AS net_points_balance
       FROM points_ledger pl
       LEFT JOIN branches b ON pl.branch_id = b.branch_id
-      LEFT JOIN vehicles v ON pl.vehicle_id = v.vehicle_id
+      LEFT JOIN vehicles v ON (pl.vehicle_id = v.vehicle_id OR (pl.vehicle_id IS NULL AND v.vehicle_id = (SELECT v2.vehicle_id FROM vehicles v2 WHERE v2.customer_id = pl.customer_id LIMIT 1)))
       LEFT JOIN brands br ON v.brand_id = br.brand_id
       WHERE ${whereSql}
-      GROUP BY b.branch_name, br.brand_name, pl.transaction_category
+      GROUP BY b.branch_name, b.branch_city, COALESCE(v.brand_name, br.brand_name, 'General'), pl.transaction_category
       ORDER BY b.branch_name ASC, total_points_issued DESC;
     `;
 
@@ -94,9 +111,13 @@ class ReportService {
 
     const rows = res.rows.map((r) => ({
       branch_name: r.branch_name,
+      branch_city: r.branch_city,
       brand_name: r.brand_name,
       category: r.category,
       total_transactions: parseInt(r.total_transactions, 10),
+      total_customers: parseInt(r.total_customers, 10),
+      customers_redeemed: parseInt(r.customers_redeemed, 10),
+      customers_issued: parseInt(r.customers_issued, 10),
       total_points_issued: parseInt(r.total_points_issued, 10),
       total_points_redeemed: parseInt(r.total_points_redeemed, 10),
       net_points_balance: parseInt(r.net_points_balance, 10),
@@ -104,7 +125,75 @@ class ReportService {
       equivalent_redeemed_rs: Math.floor(parseInt(r.total_points_redeemed, 10) / 4),
     }));
 
-    return rows;
+    // Fetch matching transaction drilldown list
+    const txSql = `
+      SELECT 
+        pl.entry_id,
+        pl.customer_id,
+        COALESCE(c.customer_name, 'Valued Customer') AS customer_name,
+        COALESCE(b.branch_name, 'Unassigned Branch') AS branch_name,
+        COALESCE(b.branch_city, 'Karnataka') AS branch_city,
+        COALESCE(v.brand_name, br.brand_name, 'General') AS brand_name,
+        COALESCE(v.model, 'Vehicle') AS model,
+        COALESCE(pl.transaction_category, 'other') AS category,
+        pl.type,
+        pl.points,
+        pl.reason_text,
+        COALESCE((pl.calc_snapshot->>'bill_amount')::numeric, (pl.calc_snapshot->>'amount_paise')::numeric / 100, CASE WHEN pl.points < 0 THEN ABS(pl.points) * 0.25 ELSE 0 END) AS bill_amount,
+        pl.created_at
+      FROM points_ledger pl
+      LEFT JOIN customers c ON pl.customer_id = c.customer_id AND pl.tenant_id = c.tenant_id
+      LEFT JOIN branches b ON pl.branch_id = b.branch_id
+      LEFT JOIN vehicles v ON (pl.vehicle_id = v.vehicle_id OR (pl.vehicle_id IS NULL AND v.vehicle_id = (SELECT v2.vehicle_id FROM vehicles v2 WHERE v2.customer_id = pl.customer_id LIMIT 1)))
+      LEFT JOIN brands br ON v.brand_id = br.brand_id
+      WHERE ${whereSql}
+      ORDER BY pl.entry_id DESC
+      LIMIT 150;
+    `;
+    const resTx = await pool.query(txSql, queryParams);
+    const transactions = resTx.rows.map((tx) => ({
+      ...tx,
+      bill_amount: Number(tx.bill_amount || 0),
+    }));
+
+    // Calculate exact distinct customer counts across categories
+    const countSql = `
+      SELECT
+        COUNT(pl.entry_id) AS total_transactions,
+        COUNT(DISTINCT pl.customer_id) AS total_customers,
+        COUNT(DISTINCT CASE WHEN pl.points < 0 OR pl.type = 'redeem' OR pl.transaction_category = 'redemption' THEN pl.customer_id END) AS customers_redeemed,
+        COUNT(DISTINCT CASE WHEN pl.transaction_category ILIKE '%sale%' THEN pl.customer_id END) AS customers_sale,
+        COUNT(DISTINCT CASE WHEN pl.transaction_category ILIKE '%service%' AND pl.transaction_category NOT ILIKE '%body%' THEN pl.customer_id END) AS customers_service,
+        COUNT(DISTINCT CASE WHEN pl.transaction_category ILIKE '%body%' THEN pl.customer_id END) AS customers_bodyshop
+      FROM points_ledger pl
+      LEFT JOIN branches b ON pl.branch_id = b.branch_id
+      LEFT JOIN vehicles v ON (pl.vehicle_id = v.vehicle_id OR (pl.vehicle_id IS NULL AND v.vehicle_id = (SELECT v2.vehicle_id FROM vehicles v2 WHERE v2.customer_id = pl.customer_id LIMIT 1)))
+      LEFT JOIN brands br ON v.brand_id = br.brand_id
+      WHERE ${whereSql};
+    `;
+    const countRes = await pool.query(countSql, queryParams);
+    const countRow = countRes.rows[0] || {};
+
+    // Calculate aggregated totals
+    const totals = {
+      total_transactions: parseInt(countRow.total_transactions || 0, 10),
+      total_customers: parseInt(countRow.total_customers || 0, 10),
+      total_customers_redeemed: parseInt(countRow.customers_redeemed || 0, 10),
+      customers_sale: parseInt(countRow.customers_sale || 0, 10),
+      customers_service: parseInt(countRow.customers_service || 0, 10),
+      customers_bodyshop: parseInt(countRow.customers_bodyshop || 0, 10),
+      total_points_issued: rows.reduce((s, r) => s + r.total_points_issued, 0),
+      total_points_redeemed: rows.reduce((s, r) => s + r.total_points_redeemed, 0),
+      net_points_balance: rows.reduce((s, r) => s + r.net_points_balance, 0),
+      equivalent_issued_rs: rows.reduce((s, r) => s + r.equivalent_issued_rs, 0),
+      equivalent_redeemed_rs: rows.reduce((s, r) => s + r.equivalent_redeemed_rs, 0),
+    };
+
+    return {
+      summary: rows,
+      transactions,
+      totals,
+    };
   }
 
   /**

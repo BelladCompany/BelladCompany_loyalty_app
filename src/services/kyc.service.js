@@ -130,20 +130,31 @@ class KycService {
   /**
    * Fetches pending KYC change requests for admin approval queue
    */
-  static async getPendingRequests(tenantId) {
+  static async getPendingRequests(tenantId, status = 'pending') {
+    let whereClauses = ['k.tenant_id = $1'];
+    let params = [tenantId];
+
+    if (status && status !== 'all') {
+      whereClauses.push(`k.status = $${params.length + 1}`);
+      params.push(status);
+    }
+
     const res = await pool.query(
       `SELECT k.id, k.customer_id, c.customer_name AS customer_name,
               k.change_type, k.old_value, k.new_value, k.reason,
               k.id_proof_type, k.id_proof_file_url, k.status,
               k.requested_by, u.username AS cashier_username,
-              b.branch_name AS branch_name, k.created_at
+              b.branch_name AS branch_name, k.created_at,
+              k.reviewed_at, k.review_notes, k.reviewed_by,
+              rev.username AS reviewer_username
        FROM kyc_change_requests k
        LEFT JOIN customers c ON k.customer_id = c.customer_id AND k.tenant_id = c.tenant_id
        LEFT JOIN users u ON k.requested_by = u.user_id
        LEFT JOIN branches b ON u.branch_id = b.branch_id
-       WHERE k.tenant_id = $1 AND k.status = 'pending'
-       ORDER BY k.created_at ASC;`,
-      [tenantId]
+       LEFT JOIN users rev ON k.reviewed_by = rev.user_id
+       WHERE ${whereClauses.join(' AND ')}
+       ORDER BY k.created_at DESC;`,
+      params
     );
 
     return res.rows.map((row) => ({
@@ -152,13 +163,10 @@ class KycService {
     }));
   }
 
-  /**
-   * Approves a pending KYC change request (Admin / Branch Manager only).
-   * Updates customer_phones and logs audit event.
-   */
   static async approveRequest({ requestId, reviewer_user_id, reviewer_role, review_notes, tenant_id }) {
-    if (!['admin', 'branch_manager'].includes(reviewer_role)) {
-      throw { statusCode: 403, message: 'Forbidden: Only admin or branch_manager can approve KYC change requests.' };
+    const allowedRoles = ['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager', 'accounts_head', 'account_head'];
+    if (!allowedRoles.includes(reviewer_role)) {
+      throw { statusCode: 403, message: 'Forbidden: Only Accounts Head or authorized managers can approve KYC change requests.' };
     }
 
     const client = await pool.connect();
@@ -244,8 +252,9 @@ class KycService {
    * Requires mandatory review_notes.
    */
   static async rejectRequest({ requestId, reviewer_user_id, reviewer_role, review_notes, tenant_id }) {
-    if (!['admin', 'branch_manager'].includes(reviewer_role)) {
-      throw { statusCode: 403, message: 'Forbidden: Only admin or branch_manager can reject KYC change requests.' };
+    const allowedRoles = ['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager', 'accounts_head', 'account_head'];
+    if (!allowedRoles.includes(reviewer_role)) {
+      throw { statusCode: 403, message: 'Forbidden: Only Accounts Head or authorized managers can reject KYC change requests.' };
     }
 
     if (!review_notes || !review_notes.trim()) {

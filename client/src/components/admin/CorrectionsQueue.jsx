@@ -100,10 +100,10 @@ export const CorrectionsQueue = () => {
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <FileText className="w-6 h-6 text-indigo-600" />
-            Billing Correction Requests Queue
+            Manager Billing Correction Approvals Queue
           </h2>
           <p className="text-xs font-medium text-slate-500 mt-1">
-            Review cashier billing mistake tickets. Approval creates strict reversal + corrected ledger entries.
+            Review and approve cashier billing mistake tickets. Approval generates reversal &amp; corrected entries.
           </p>
         </div>
 

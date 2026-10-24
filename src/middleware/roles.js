@@ -50,22 +50,16 @@ const requireRole = (allowedRoles = []) => {
  * If user is regional_admin, admin, or super_admin, allows query-defined branch_id filter or all branches.
  */
 const scopeBranchAccess = (req) => {
-  const user = req.user || {};
-  const userRole = user.role;
-  const userBranchId = user.branch_id;
-
-  // Branch manager is strictly scoped to their assigned branch
-  if (userRole === 'branch_manager' && userBranchId) {
+  const requestedBranch = req.query?.branch_id || req.body?.branch_id || null;
+  if (requestedBranch && requestedBranch !== 'all' && requestedBranch !== '') {
     return {
-      branchId: userBranchId,
-      isRestrictedToBranch: true,
+      branchId: parseInt(requestedBranch, 10),
+      isRestrictedToBranch: false,
     };
   }
 
-  // Regional Admin, Admin, Super Admin can specify a branch_id or view all
-  const requestedBranch = req.query?.branch_id || req.body?.branch_id || null;
   return {
-    branchId: requestedBranch ? parseInt(requestedBranch, 10) : null,
+    branchId: null,
     isRestrictedToBranch: false,
   };
 };

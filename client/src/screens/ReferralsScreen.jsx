@@ -1,312 +1,98 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users,
-  UserPlus,
   CheckCircle2,
   Clock,
   Award,
   AlertCircle,
   RefreshCw,
-  Info,
-  ChevronRight,
+  Search,
+  Check,
   ShieldCheck,
   X,
-  Sparkles,
-  Zap
+  Car,
+  FileCheck2,
+  Info,
+  Building2,
+  AlertTriangle,
+  Coins
 } from 'lucide-react';
-import { Button, DataTable, StatusBadge } from '../components/ui';
 import ApiService from '../services/api';
-
-const CustomerNameSelect = ({
-  label,
-  helpText,
-  placeholder,
-  value,
-  onChange,
-  selected,
-  onSelect,
-  results,
-  searching,
-  disabled,
-}) => {
-  const showDropdown = !(selected && value === selected.name) && !disabled;
-
-  return (
-    <div className="space-y-1.5">
-      <label className="text-sm font-semibold text-ink-primary block">
-        {label} <span className="text-action-danger">*</span>
-      </label>
-
-      <div className="relative">
-        {showDropdown && (
-          <div className="absolute top-0 -mt-2 right-2 z-30 p-0.5 px-2 bg-white rounded border border-surface-border shadow-sm">
-            <button
-              type="button"
-              onClick={() => { onChange(''); onSelect(null); }}
-              className="text-[11px] font-semibold text-ink-muted hover:text-action-danger flex items-center gap-1"
-            >
-              <X className="w-3 h-3" /> Clear
-            </button>
-          </div>
-        )}
-        <input
-          type="text"
-          placeholder={placeholder}
-          value={selected && value === selected.name ? selected.name : value}
-          onChange={(e) => onChange(e.target.value)}
-          autoComplete="off"
-          required
-          disabled={disabled}
-          className={`w-full h-11 px-3 border rounded-md text-sm focus:outline-none focus:border-action-primary bg-white transition-colors ${
-            selected ? 'border-green-400 bg-green-50' : 'border-surface-border'
-          }`}
-        />
-
-        {showDropdown && (
-          <div className="absolute z-20 mt-1 left-0 right-0 bg-white border border-surface-border rounded-md shadow-lg max-h-64 overflow-auto">
-            {searching && results.length === 0 && (
-              <div className="px-3 py-2.5 text-xs text-ink-muted animate-pulse">Searching customers…</div>
-            )}
-            {results.map((cust) => (
-              <button
-                key={cust.customer_id}
-                type="button"
-                onClick={() => onSelect(cust)}
-                className="w-full text-left px-3 py-2.5 hover:bg-blue-50 border-b border-slate-100 last:border-b-0 transition-colors"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-ink-primary truncate">{cust.name}</span>
-                  <span className="font-mono text-xs text-action-primary font-medium flex-shrink-0">{cust.customer_id}</span>
-                </div>
-                <div className="text-xs text-ink-muted">
-                  {cust.phones?.[0]?.phone_number ? `📱 ${cust.phones[0].phone_number}` : 'No phone on file'}
-                </div>
-              </button>
-            ))}
-            {!searching && results.length === 0 && value.trim().length > 0 && (
-              <div className="px-3 py-2.5 text-xs text-action-danger font-semibold flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" /> No customer matching "{value.trim()}" — check spelling.
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {selected ? (
-        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-green-50 border border-green-300 rounded-md">
-          <CheckCircle2 className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
-          <span className="text-sm font-bold text-green-800">{selected.name}</span>
-          <span className="text-xs font-mono text-green-600 ml-auto">{selected.customer_id}</span>
-        </div>
-      ) : (
-        <p className="text-xs text-ink-muted">{helpText}</p>
-      )}
-    </div>
-  );
-};
 
 export const ReferralsScreen = ({ user }) => {
   const [referrals, setReferrals] = useState([]);
   const [approvers, setApprovers] = useState([]);
+  const [totals, setTotals] = useState({
+    total_referrals: 0,
+    total_approved: 0,
+    total_pending: 0,
+    total_points_credited: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [lastUpdated, setLastUpdated] = useState(new Date());
 
-  // Register Referral Modal State
-  const [registerModalOpen, setRegisterModalOpen] = useState(false);
-  const [referrerName, setReferrerName] = useState('');
-  const [referredName, setReferredName] = useState('');
-  const [referrerResults, setReferrerResults] = useState([]);
-  const [referredResults, setReferredResults] = useState([]);
-  const [referrerSelected, setReferrerSelected] = useState(null);
-  const [referredSelected, setReferredSelected] = useState(null);
-  const [searchingReferrer, setSearchingReferrer] = useState(false);
-  const [searchingReferred, setSearchingReferred] = useState(false);
-  const [registerLoading, setRegisterLoading] = useState(false);
-  const [registerError, setRegisterError] = useState('');
-  const [registerSuccess, setRegisterSuccess] = useState('');
-
-  // Approve Referral Modal State
+  // Approval Modal State
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [selectedReferral, setSelectedReferral] = useState(null);
-  const [awardPoints, setAwardPoints] = useState('500');
-  const [approvalReason, setApprovalReason] = useState('');
+  const [awardPoints, setAwardPoints] = useState('2500');
+  const [approvalReason, setApprovalReason] = useState('Vehicle purchase from Bellad dealership & PR verified');
   const [selectedApproverId, setSelectedApproverId] = useState('');
   const [approveLoading, setApproveLoading] = useState(false);
   const [approveError, setApproveError] = useState('');
   const [approveSuccess, setApproveSuccess] = useState('');
 
-  const isAdmin = user?.role === 'admin';
-
-  // Referral Leads Pipeline State
-  const [activeTab, setActiveTab] = useState('leads'); // 'leads' | 'manual'
-  const [leadsPipeline, setLeadsPipeline] = useState([]);
-  const [leadsLoading, setLeadsLoading] = useState(false);
-  const [leadStatusFilter, setLeadStatusFilter] = useState('all');
-  const [leadSearch, setLeadSearch] = useState('');
-  const [rcActionLoading, setRcActionLoading] = useState(false);
-  const [rcActionSuccess, setRcActionSuccess] = useState('');
-  const [rcActionError, setRcActionError] = useState('');
-
-  const loadLeadsPipeline = async () => {
-    setLeadsLoading(true);
-    setRcActionError('');
-    try {
-      const res = await ApiService.getReferralLeadsPipeline(leadStatusFilter, leadSearch);
-      setLeadsPipeline(res.data || []);
-    } catch (err) {
-      setRcActionError(err.message || 'Failed to load referral leads pipeline.');
-    } finally {
-      setLeadsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'leads') {
-      loadLeadsPipeline();
-    }
-  }, [activeTab, leadStatusFilter, leadSearch]);
-
-  const handleConfirmRc = async (leadId) => {
-    if (!window.confirm(`Confirm RC Completion for Lead #${leadId}? This will credit gift card bonus points to both referrer and buyer.`)) {
-      return;
-    }
-
-    setRcActionLoading(true);
-    setRcActionSuccess('');
-    setRcActionError('');
-    try {
-      const res = await ApiService.confirmRcCompletion(leadId);
-      setRcActionSuccess(res.message || `RC Completion confirmed for Lead #${leadId}!`);
-      loadLeadsPipeline();
-    } catch (err) {
-      setRcActionError(err.message || 'Failed to confirm RC completion.');
-    } finally {
-      setRcActionLoading(false);
-    }
-  };
-
-  const loadReferrals = async () => {
+  const fetchReferrals = useCallback(async () => {
     setIsLoading(true);
-    setError('');
     try {
-      const res = await ApiService.getReferrals(statusFilter);
-      setReferrals(res.data || []);
+      const res = await ApiService.getAdminReferrals({
+        search: searchQuery,
+        status: statusFilter,
+        limit: 100,
+      });
+
+      if (res.status === 'success') {
+        setReferrals(res.data || []);
+        if (res.totals) {
+          setTotals(res.totals);
+        }
+        setLastUpdated(new Date());
+      }
     } catch (err) {
-      setError(err.message || 'Failed to load referrals.');
+      console.error('Error fetching admin referrals:', err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [searchQuery, statusFilter]);
 
-  const loadApprovers = async () => {
-    if (!isAdmin) return;
+  const fetchApprovers = useCallback(async () => {
     try {
       const res = await ApiService.getReferralApprovers();
-      const approverList = res.data || [];
-      setApprovers(approverList);
-      if (approverList.length > 0) {
-        setSelectedApproverId(approverList[0].approver_id || approverList[0].id);
+      if (res.data && res.data.length > 0) {
+        setApprovers(res.data);
+        setSelectedApproverId(String(res.data[0].approver_id || res.data[0].id));
       }
     } catch (err) {
-      console.warn('Failed to load approvers:', err.message);
+      console.error('Error fetching referral approvers:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadReferrals();
-  }, [statusFilter]);
+    fetchReferrals();
+    fetchApprovers();
+  }, [fetchReferrals, fetchApprovers]);
 
-  useEffect(() => {
-    loadApprovers();
-  }, [isAdmin]);
-
-  useEffect(() => {
-    if (!registerModalOpen) return;
-    const q = referrerName.trim();
-    if (referrerSelected && referrerSelected.name === q) { setReferrerResults([]); return; }
-    if (q.length < 2) { setReferrerResults([]); setSearchingReferrer(false); return; }
-    setSearchingReferrer(true);
-    const t = setTimeout(async () => {
-      try {
-        const res = await ApiService.searchByName(q);
-        setReferrerResults(Array.isArray(res.data) ? res.data : []);
-      } catch {
-        setReferrerResults([]);
-      } finally {
-        setSearchingReferrer(false);
-      }
-    }, 350);
-    return () => clearTimeout(t);
-  }, [referrerName, registerModalOpen, referrerSelected]);
-
-  useEffect(() => {
-    if (!registerModalOpen) return;
-    const q = referredName.trim();
-    if (referredSelected && referredSelected.name === q) { setReferredResults([]); return; }
-    if (q.length < 2) { setReferredResults([]); setSearchingReferred(false); return; }
-    setSearchingReferred(true);
-    const t = setTimeout(async () => {
-      try {
-        const res = await ApiService.searchByName(q);
-        setReferredResults(Array.isArray(res.data) ? res.data : []);
-      } catch {
-        setReferredResults([]);
-      } finally {
-        setSearchingReferred(false);
-      }
-    }, 350);
-    return () => clearTimeout(t);
-  }, [referredName, registerModalOpen, referredSelected]);
-
-  const handleRegisterSubmit = async (e) => {
-    e.preventDefault();
-    setRegisterError('');
-    setRegisterSuccess('');
-
-    const referrerId = referrerSelected?.customer_id;
-    const referredId = referredSelected?.customer_id;
-
-    if (!referrerId || !referredId) {
-      setRegisterError('Search and select both the Referrer and Referred customers by name to fetch their Customer IDs.');
-      return;
-    }
-
-    if (referrerId.toUpperCase() === referredId.toUpperCase()) {
-      setRegisterError('Self-referrals are not allowed. Referrer and Referred must be different customers.');
-      return;
-    }
-
-    setRegisterLoading(true);
-    try {
-      await ApiService.registerReferral({
-        referrer_customer_id: referrerId.toUpperCase(),
-        referred_customer_id: referredId.toUpperCase(),
-      });
-      setRegisterSuccess(`Referral registered successfully in Pending status for ${referrerSelected.name} → ${referredSelected.name}!`);
-      setReferrerName('');
-      setReferredName('');
-      setReferrerSelected(null);
-      setReferredSelected(null);
-      setReferrerResults([]);
-      setReferredResults([]);
-      setTimeout(() => {
-        setRegisterModalOpen(false);
-        setRegisterSuccess('');
-        loadReferrals();
-      }, 1000);
-    } catch (err) {
-      setRegisterError(err.message || 'Failed to register referral. Verify customer details.');
-    } finally {
-      setRegisterLoading(false);
-    }
-  };
-
-  const openApproveModal = (referral) => {
-    setSelectedReferral(referral);
-    const suggested = referral.suggested_points || referral.points_awarded || 500;
-    setAwardPoints(suggested.toString());
-    setApprovalReason(referral.approval_reason || 'Verified vehicle purchase referral');
+  const openApproveModal = (ref) => {
+    setSelectedReferral(ref);
+    const suggested = ref.suggested_points && parseInt(ref.suggested_points, 10) > 0
+      ? String(ref.suggested_points)
+      : '2500';
+    setAwardPoints(suggested);
+    setApprovalReason(
+      ref.approval_reason ||
+      `Vehicle purchased from ${ref.branch_name || 'dealership'} & PR verified (${ref.registration_number || ref.dms_invoice_number || 'PR Complete'})`
+    );
     setApproveError('');
     setApproveSuccess('');
     setApproveModalOpen(true);
@@ -314,36 +100,29 @@ export const ReferralsScreen = ({ user }) => {
 
   const handleApproveSubmit = async (e) => {
     e.preventDefault();
-    setApproveError('');
-    setApproveSuccess('');
+    if (!selectedReferral) return;
 
-    const pts = parseInt(awardPoints, 10);
-    if (isNaN(pts) || pts <= 0) {
-      setApproveError('Please enter a valid positive number of points to award.');
-      return;
-    }
-
-    if (!approvalReason.trim()) {
-      setApproveError('A mandatory reason is required to approve referral points.');
+    if (!selectedReferral.is_dealer_purchased || !selectedReferral.is_pr_done) {
+      setApproveError('Cannot award points: Referred customer has not purchased a vehicle from our dealership or Permanent Registration (PR) is not completed.');
       return;
     }
 
     setApproveLoading(true);
+    setApproveError('');
+    setApproveSuccess('');
+
     try {
-      const refId = selectedReferral.referral_id || selectedReferral.id;
-      await ApiService.approveReferral(refId, {
-        points: pts,
-        reason: approvalReason.trim(),
+      const res = await ApiService.approveReferral(selectedReferral.referral_id || selectedReferral.id, {
+        points: parseInt(awardPoints, 10),
+        reason: approvalReason,
         approver_id: selectedApproverId ? parseInt(selectedApproverId, 10) : undefined,
       });
 
-      setApproveSuccess(`Awarded ${pts} points to ${selectedReferral.referrer_name}!`);
+      setApproveSuccess(res.message || 'Points successfully credited to both Referrer and Buyer!');
       setTimeout(() => {
         setApproveModalOpen(false);
-        setApproveSuccess('');
-        setSelectedReferral(null);
-        loadReferrals();
-      }, 1200);
+        fetchReferrals();
+      }, 1500);
     } catch (err) {
       setApproveError(err.message || 'Failed to approve referral.');
     } finally {
@@ -351,721 +130,543 @@ export const ReferralsScreen = ({ user }) => {
     }
   };
 
-  const leadColumns = [
-    {
-      field: 'id',
-      header: 'Lead ID',
-      sortable: true,
-      render: (_, row) => (
-        <span className="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-          #{row.id}
-        </span>
-      ),
-    },
-    {
-      field: 'generated_code',
-      header: 'Gift Card Lead Code',
-      render: (val) => (
-        <span className="font-mono font-black text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded shadow-2xs">
-          {val}
-        </span>
-      ),
-    },
-    {
-      field: 'lead_name',
-      header: 'Lead Details (Friend)',
-      render: (val, row) => (
-        <div>
-          <div className="font-extrabold text-slate-900 text-sm">{val}</div>
-          <div className="font-mono text-xs text-slate-500 font-semibold">{row.lead_phone}</div>
-        </div>
-      ),
-    },
-    {
-      field: 'referrer_name',
-      header: 'Referrer Customer',
-      render: (val, row) => (
-        <div>
-          <div className="font-bold text-slate-900 text-sm">{val || 'Referrer'}</div>
-          <div className="font-mono text-xs text-indigo-600 font-bold">{row.referrer_customer_id}</div>
-        </div>
-      ),
-    },
-    {
-      field: 'status',
-      header: 'Pipeline Status',
-      render: (val) => {
-        if (val === 'rc_completed') {
-          return (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full text-xs font-extrabold">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> RC Completed (Credited)
-            </span>
-          );
-        }
-        if (val === 'used') {
-          return (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-950 border border-amber-400 rounded-full text-xs font-extrabold">
-              <Clock className="w-4 h-4 text-amber-600 animate-pulse" /> Used (Awaiting RC)
-            </span>
-          );
-        }
-        if (val === 'mismatched') {
-          return (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-950 border border-rose-400 rounded-full text-xs font-extrabold">
-              <AlertCircle className="w-4 h-4 text-rose-600" /> Aadhaar Mismatch
-            </span>
-          );
-        }
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 border border-slate-300 rounded-full text-xs font-bold">
-            Pending Purchase
-          </span>
-        );
-      },
-    },
-    {
-      field: 'matched_sale_reference',
-      header: 'Matched Sale / Invoice',
-      render: (val, row) => (
-        <div>
-          <div className="font-mono text-xs font-bold text-slate-800">{val || '—'}</div>
-          {row.flagged_reason && <div className="text-[11px] text-rose-600 font-semibold">{row.flagged_reason}</div>}
-        </div>
-      ),
-    },
-    {
-      field: 'created_at',
-      header: 'Date Registered',
-      render: (val) => (
-        <span className="text-xs text-slate-500 font-medium">
-          {val ? new Date(val).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-        </span>
-      ),
-    },
-    {
-      field: 'actions',
-      header: 'Action',
-      align: 'right',
-      render: (_, row) => {
-        if (row.status === 'rc_completed') {
-          return (
-            <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-300">
-              Credited
-            </span>
-          );
-        }
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—';
+    try {
+      return new Date(dateStr).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  };
 
-        if (row.status === 'used' || row.status === 'mismatched') {
-          return (
-            <button
-              type="button"
-              onClick={() => handleConfirmRc(row.id)}
-              disabled={rcActionLoading}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all whitespace-nowrap"
-            >
-              {rcActionLoading ? 'Processing…' : 'Confirm RC & Credit'}
-            </button>
-          );
-        }
-
-        return <span className="text-xs text-slate-400 font-medium">Awaiting Sale</span>;
-      },
-    },
-  ];
-
-  const columns = [
-    {
-      field: 'id',
-      header: 'Ref ID',
-      sortable: true,
-      render: (_, row) => (
-        <span className="font-mono text-xs font-bold text-ink-secondary bg-slate-100 px-2 py-1 rounded border border-slate-200">
-          #{row.referral_id || row.id}
-        </span>
-      ),
-    },
-    {
-      field: 'referrer',
-      header: 'Referrer (Loyalty Member)',
-      render: (_, row) => (
-        <div>
-          <div className="font-semibold text-ink-primary text-sm">{row.referrer_name || 'Customer'}</div>
-          <div className="font-mono text-xs text-action-primary font-medium">{row.referrer_customer_id}</div>
-        </div>
-      ),
-    },
-    {
-      field: 'referred',
-      header: 'Referred Customer',
-      render: (_, row) => (
-        <div>
-          <div className="font-semibold text-ink-primary text-sm">{row.referred_name || 'Customer'}</div>
-          <div className="font-mono text-xs text-ink-muted">{row.referred_customer_id}</div>
-        </div>
-      ),
-    },
-    {
-      field: 'status',
-      header: 'Status',
-      render: (val) => {
-        const status = val || 'pending';
-        return status === 'approved' ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-300 rounded-full text-xs font-semibold">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Approved
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-300 rounded-full text-xs font-semibold">
-            <Clock className="w-3.5 h-3.5" /> Pending Approval
-          </span>
-        );
-      },
-    },
-    {
-      field: 'points_awarded',
-      header: 'Points (Suggested / Final)',
-      align: 'right',
-      render: (val, row) => {
-        const isPending = (row.status || 'pending') === 'pending';
-        const suggested = Number(row.suggested_points || 0);
-        const awarded = Number(val || 0);
-        return (
-          <div className="space-y-0.5 text-right">
-            {isPending && suggested > 0 ? (
-              <div className="inline-flex items-center gap-1 text-xs font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                <Zap className="w-3 h-3 text-action-primary" /> Suggested: +{suggested.toLocaleString()} PTS
-              </div>
-            ) : (
-              <span className="font-mono font-bold text-sm text-ink-primary">
-                {awarded > 0 ? `+${awarded.toLocaleString()} PTS` : '0 PTS'}
-              </span>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      field: 'approval_reason',
-      header: 'Notes & Approver',
-      render: (val, row) => (
-        <div className="max-w-xs text-xs space-y-0.5">
-          {val ? (
-            <p className="text-ink-secondary italic truncate" title={val}>"{val}"</p>
-          ) : (
-            <span className="text-ink-muted">Awaiting transaction verification</span>
-          )}
-          {row.approver_name && (
-            <div className="text-ink-muted text-2xs">By: <strong className="text-ink-secondary">{row.approver_name}</strong></div>
-          )}
-        </div>
-      ),
-    },
-    {
-      field: 'created_at',
-      header: 'Created Date',
-      render: (val) => (
-        <span className="text-xs text-ink-secondary">
-          {val ? new Date(val).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-        </span>
-      ),
-    },
-    {
-      field: 'actions',
-      header: 'Action',
-      align: 'right',
-      render: (_, row) => {
-        const isPending = (row.status || 'pending') === 'pending';
-        if (!isPending) {
-          return (
-            <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              Completed
-            </span>
-          );
-        }
-
-        if (isAdmin) {
-          return (
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => openApproveModal(row)}
-              className="text-xs h-8 px-2.5 whitespace-nowrap shadow-xs font-bold"
-            >
-              Approve & Award
-            </Button>
-          );
-        }
-
-        return (
-          <span className="text-xs text-ink-muted italic">
-            Manager Review
-          </span>
-        );
-      },
-    },
-  ];
+  // Compute metrics
+  const eligibleCount = referrals.filter((r) => r.is_dealer_purchased && r.is_pr_done).length;
+  const ineligibleCount = referrals.filter((r) => !r.is_dealer_purchased || !r.is_pr_done).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Header Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-7 sm:p-8 text-white shadow-xl border border-indigo-900/40">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold uppercase tracking-wider">
+              <Users className="w-3.5 h-3.5" />
+              Referral Rewards & Verification
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
+              Referral Program Audit
+            </h1>
+            <p className="text-sm text-slate-300 max-w-2xl">
+              Track who has sent (referrer) and who has received (buyer). Points are credited to both only when the vehicle is purchased from our dealership and PR is completed.
+            </p>
+          </div>
 
-      {/* Navigation Sub-Tabs */}
-      <div className="flex border-b-2 border-slate-200 gap-6 text-base font-bold bg-white px-6 py-2 rounded-xl shadow-xs">
-        <button
-          type="button"
-          onClick={() => setActiveTab('leads')}
-          className={`pb-2 pt-2 border-b-4 transition-all flex items-center gap-2 ${
-            activeTab === 'leads'
-              ? 'border-indigo-600 text-indigo-900 font-black'
-              : 'border-transparent text-slate-500 hover:text-slate-900'
-          }`}
-        >
-          <Sparkles className="w-5 h-5 text-indigo-600" />
-          Gift Card Rewards Pipeline (RC Deferred Crediting)
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('manual')}
-          className={`pb-2 pt-2 border-b-4 transition-all flex items-center gap-2 ${
-            activeTab === 'manual'
-              ? 'border-indigo-600 text-indigo-900 font-black'
-              : 'border-transparent text-slate-500 hover:text-slate-900'
-          }`}
-        >
-          <Users className="w-5 h-5 text-slate-600" />
-          Manual Gift Card Rewards & Approvals
-        </button>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button
+              onClick={fetchReferrals}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition border border-white/10 backdrop-blur-sm disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+        </div>
       </div>
 
-      {activeTab === 'leads' && (
-        <div className="bg-white border border-surface-border rounded-xl p-6 shadow-sm space-y-4 animate-in fade-in duration-200">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-600" />
-                Gift Card Rewards Pipeline
-              </h3>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Tracks gift card reward leads generated via public links. Crediting triggers strictly upon RC Completion confirmation.
+      {/* Policy Rules Callout Card */}
+      <div className="rounded-2xl p-4 sm:p-5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-xs font-black uppercase tracking-wider text-amber-900">
+              Dealership Purchase & PR Rules Policy
+            </h4>
+            <div className="text-xs text-amber-950/80 space-y-0.5">
+              <p>
+                <strong>1. Dealer Purchase:</strong> Both parties receive points <u>only</u> if the referred customer purchases a vehicle from our Bellad dealerships. If not purchased with us, <strong>0 points for both</strong>.
+              </p>
+              <p>
+                <strong>2. PR Done Required:</strong> Permanent Registration (PR) or DMS Invoice delivery must be verified before points are credited.
+              </p>
+              <p>
+                <strong>3. Usage Restriction:</strong> Referral bonus points can <u>only</u> be redeemed during <strong>Service, Body Shop, or Accessories</strong> billing (locked for vehicle sales).
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Metric Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Total Referrals */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Referrals</span>
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-900 tracking-tight">
+              {totals.total_referrals.toLocaleString()}
+            </span>
+          </div>
+          <div className="mt-1 text-xs font-medium text-slate-500">
+            Registered referral pairs
+          </div>
+        </div>
+
+        {/* Dealer Purchased & PR Done */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Purchased & PR Done</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <FileCheck2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-emerald-600 tracking-tight">
+              {eligibleCount.toLocaleString()}
+            </span>
+          </div>
+          <div className="mt-1 text-xs font-medium text-slate-500">
+            Verified dealer vehicle buyers
+          </div>
+        </div>
+
+        {/* Ineligible / Pending PR */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">No Purchase / PR Pending</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-amber-600 tracking-tight">
+              {ineligibleCount.toLocaleString()}
+            </span>
+          </div>
+          <div className="mt-1 text-xs font-medium text-slate-500">
+            No points until purchase & PR
+          </div>
+        </div>
+
+        {/* Total Points Credited */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Points Awarded</span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Coins className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-blue-600 tracking-tight">
+              {Number(totals.total_points_credited).toLocaleString()} PTS
+            </span>
+          </div>
+          <div className="mt-1 text-xs font-medium text-slate-500">
+            Usable on Service / Body Shop / Acc
+          </div>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Search */}
+        <div className="relative w-full sm:w-96">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search by referrer or buyer name, phone, or customer ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+          />
+        </div>
+
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          {[
+            { id: 'all', label: 'All Referrals' },
+            { id: 'pending', label: 'Pending Approval' },
+            { id: 'approved', label: 'Approved & Credited' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                statusFilter === tab.id
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Referrals List Table */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Referral Verification & Audit</h2>
+            <p className="text-xs text-slate-500">
+              Showing {referrals.length} referral records • Last updated {lastUpdated.toLocaleTimeString('en-IN')}
+            </p>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="p-12 text-center space-y-3">
+            <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
+            <p className="text-sm font-semibold text-slate-600">Loading referral records...</p>
+          </div>
+        ) : referrals.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+              <Users className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">No Referrals Found</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              {searchQuery || statusFilter !== 'all'
+                ? 'No referrals match the current search or status filter.'
+                : 'No referrals have been registered yet.'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="py-3 px-5">Referrer (Who Sent)</th>
+                  <th className="py-3 px-5">Referred Buyer (Who Received)</th>
+                  <th className="py-3 px-5">Dealership Purchase</th>
+                  <th className="py-3 px-5">PR Status</th>
+                  <th className="py-3 px-5">Points Eligibility</th>
+                  <th className="py-3 px-5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {referrals.map((ref) => {
+                  const isApproved = ref.status === 'approved';
+                  const isEligible = ref.is_dealer_purchased && ref.is_pr_done;
+
+                  return (
+                    <tr key={ref.referral_id || ref.id} className="hover:bg-slate-50/60 transition">
+                      {/* Referrer Details */}
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
+                            {ref.referrer_name?.charAt(0)?.toUpperCase() || 'R'}
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-900 block truncate max-w-[170px]">
+                              {ref.referrer_name}
+                            </span>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                              <span className="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
+                                {ref.referrer_customer_id}
+                              </span>
+                              {ref.referrer_phone && ref.referrer_phone !== '—' && (
+                                <span>📱 {ref.referrer_phone}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Referred Buyer Details */}
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
+                            {ref.referred_name?.charAt(0)?.toUpperCase() || 'B'}
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-900 block truncate max-w-[170px]">
+                              {ref.referred_name}
+                            </span>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                              <span className="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
+                                {ref.referred_customer_id}
+                              </span>
+                              {ref.referred_phone && ref.referred_phone !== '—' && (
+                                <span>📱 {ref.referred_phone}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Dealership Purchase Status */}
+                      <td className="py-3.5 px-5">
+                        {ref.is_dealer_purchased ? (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <Building2 className="w-3 h-3 text-emerald-600" />
+                              {ref.branch_name || 'Bellad Dealership'}
+                            </span>
+                            {ref.vehicle_model && (
+                              <span className="text-[11px] text-slate-600 block mt-1 font-semibold flex items-center gap-1">
+                                <Car className="w-3 h-3 text-slate-400" />
+                                {ref.vehicle_model}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                              <AlertCircle className="w-3 h-3 text-rose-500" />
+                              Not Purchased with Us
+                            </span>
+                            <span className="text-[10px] text-rose-500 block mt-0.5 font-medium">
+                              No vehicle purchase on file
+                            </span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* PR Status */}
+                      <td className="py-3.5 px-5">
+                        {ref.is_pr_done ? (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              PR Done
+                            </span>
+                            <span className="text-[11px] font-mono text-slate-600 block mt-1">
+                              {ref.registration_number || ref.dms_invoice_number || 'DMS Verified'}
+                            </span>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                              <Clock className="w-3 h-3 text-amber-500" />
+                              PR Pending
+                            </span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              Reg / Invoice pending
+                            </span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Points Eligibility */}
+                      <td className="py-3.5 px-5">
+                        {isApproved ? (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                              <Award className="w-3 h-3 text-blue-600" />
+                              Credited: +{ref.points_credited || 2500} PTS Each
+                            </span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              Both Referrer & Buyer
+                            </span>
+                          </div>
+                        ) : isEligible ? (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <Coins className="w-3 h-3 text-emerald-600" />
+                              Eligible: Ready to Credit
+                            </span>
+                            <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">
+                              +2,500 PTS to both parties
+                            </span>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                              <AlertCircle className="w-3 h-3 text-slate-400" />
+                              0 Points (No Dealer Purchase)
+                            </span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              Points locked for both
+                            </span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Action */}
+                      <td className="py-3.5 px-5 text-right whitespace-nowrap">
+                        {isApproved ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
+                            <Check className="w-4 h-4" />
+                            Approved
+                          </span>
+                        ) : isEligible ? (
+                          <button
+                            onClick={() => openApproveModal(ref)}
+                            className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-sm inline-flex items-center gap-1.5"
+                          >
+                            <Award className="w-3.5 h-3.5" />
+                            Approve Points
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            title="Cannot approve: Vehicle must be purchased from our dealership with PR completed"
+                            className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-400 text-xs font-semibold cursor-not-allowed border border-slate-200"
+                          >
+                            Ineligible
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Approval Modal */}
+      {approveModalOpen && selectedReferral && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Approve Referral Reward</h3>
+                  <p className="text-xs text-slate-500">Ref #{selectedReferral.referral_id || selectedReferral.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setApproveModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Error or Success Alert */}
+            {approveError && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{approveError}</span>
+              </div>
+            )}
+            {approveSuccess && (
+              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{approveSuccess}</span>
+              </div>
+            )}
+
+            {/* Vehicle Purchase & PR Details Verification Card */}
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Referrer (Who Sent):</span>
+                <span className="font-bold text-slate-900">{selectedReferral.referrer_name} ({selectedReferral.referrer_customer_id})</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Referred Buyer:</span>
+                <span className="font-bold text-slate-900">{selectedReferral.referred_name} ({selectedReferral.referred_customer_id})</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Dealership Branch:</span>
+                <span className="font-bold text-emerald-700">{selectedReferral.branch_name || 'Bellad Central'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">PR Registration / Invoice:</span>
+                <span className="font-mono font-bold text-indigo-700">
+                  {selectedReferral.registration_number || selectedReferral.dms_invoice_number || 'Verified'}
+                </span>
+              </div>
+            </div>
+
+            {/* Important Rule Notice */}
+            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-800 space-y-1">
+              <div className="font-bold flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5" />
+                Automatic Dual-Credit & Service Usage:
+              </div>
+              <p>
+                Points will be credited to <strong>BOTH Referrer and Buyer</strong>.
+                These points can only be redeemed during <strong>Service, Body Shop, or Accessories</strong> billing (cannot be used for vehicle sales).
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="text"
-                placeholder="Search lead name, phone, code..."
-                value={leadSearch}
-                onChange={(e) => setLeadSearch(e.target.value)}
-                className="h-10 px-3 border border-slate-300 rounded-lg text-xs font-semibold w-48 sm:w-64 focus:outline-none focus:border-indigo-500"
-              />
-
-              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold">
-                {['all', 'pending', 'used', 'rc_completed', 'mismatched'].map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => setLeadStatusFilter(st)}
-                    className={`px-3 py-1 rounded-md capitalize transition-all ${
-                      leadStatusFilter === st
-                        ? 'bg-slate-900 text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    {st === 'used' ? 'Awaiting RC' : st === 'rc_completed' ? 'RC Completed' : st}
-                  </button>
-                ))}
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                icon={RefreshCw}
-                onClick={loadLeadsPipeline}
-                disabled={leadsLoading}
-                className="h-10 px-3"
-              >
-                Refresh
-              </Button>
-            </div>
-          </div>
-
-          {rcActionSuccess && (
-            <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-lg flex items-center justify-between text-emerald-900 font-extrabold text-sm">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span>{rcActionSuccess}</span>
-              </div>
-              <button onClick={() => setRcActionSuccess('')} className="text-emerald-800 hover:text-emerald-950 font-black">✕</button>
-            </div>
-          )}
-
-          {rcActionError && (
-            <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-lg flex items-center justify-between text-rose-900 font-bold text-sm">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-rose-600" />
-                <span>{rcActionError}</span>
-              </div>
-              <button onClick={() => setRcActionError('')} className="text-rose-800 hover:text-rose-950 font-bold">✕</button>
-            </div>
-          )}
-
-          <DataTable
-            columns={leadColumns}
-            data={leadsPipeline}
-            isLoading={leadsLoading}
-            keyField="id"
-            emptyMessage="No gift card reward leads found in pipeline matching filter criteria."
-          />
-        </div>
-      )}
-
-      {activeTab === 'manual' && (
-        <>
-          {/* ── 1. DEALERSHIP GIFT CARD REWARDS LOGIC EXPLANATION ── */}
-          <div className="bg-white border-2 border-surface-border rounded-xl p-6 shadow-sm relative overflow-hidden animate-in fade-in duration-200">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-surface-border">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-action-primary flex-shrink-0">
-                  <Users className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-ink-primary tracking-tight">Manual Gift Card Reward Entry & Approvals</h2>
-                  <p className="text-sm text-ink-secondary font-medium">
-                    Auto-calculated slab rewards with mandatory approver sign-off and audit logging.
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="md"
-                icon={UserPlus}
-                onClick={() => {
-                  setRegisterError('');
-                  setRegisterSuccess('');
-                  setRegisterModalOpen(true);
-                }}
-                className="shadow-sm whitespace-nowrap"
-              >
-                + Register Gift Card Reward
-              </Button>
-            </div>
-
-            {/* 4-Step Dealership Logic Explainer */}
-            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-mono px-2 py-0.5 bg-blue-100 text-blue-800 rounded">STEP 1</span>
-                  <UserPlus className="w-4 h-4 text-action-primary" />
-                </div>
-                <h4 className="text-sm font-bold text-ink-primary">Link Customer & Friend</h4>
-                <p className="text-xs text-ink-secondary leading-relaxed">
-                  When an existing loyal customer introduces a friend, register their linkage for gift card rewards.
-                </p>
-              </div>
-
-              <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-mono px-2 py-0.5 bg-amber-100 text-amber-800 rounded">STEP 2</span>
-                  <Zap className="w-4 h-4 text-amber-600" />
-                </div>
-                <h4 className="text-sm font-bold text-ink-primary">Auto Slab Pre-Fill</h4>
-                <p className="text-xs text-ink-secondary leading-relaxed">
-                  Upon vehicle purchase, system auto-matches 2W/4W slab price range & pre-fills suggested gift card reward points.
-                </p>
-              </div>
-
-              <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-mono px-2 py-0.5 bg-purple-100 text-purple-800 rounded">STEP 3</span>
-                  <ShieldCheck className="w-4 h-4 text-purple-700" />
-                </div>
-                <h4 className="text-sm font-bold text-ink-primary">Manager Sign-Off</h4>
-                <p className="text-xs text-ink-secondary leading-relaxed">
-                  Approver reviews suggested amount, overrides with mandatory note if needed, and signs off.
-                </p>
-              </div>
-
-              <div className="p-4 bg-slate-50 border border-surface-border rounded-lg space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-mono px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded">STEP 4</span>
-                  <Sparkles className="w-4 h-4 text-emerald-600" />
-                </div>
-                <h4 className="text-sm font-bold text-ink-primary">Instant Credit & Audit</h4>
-                <p className="text-xs text-ink-secondary leading-relaxed">
-                  Points posted to customer's ledger, logged in audit trail (suggested vs final), and WhatsApp sent!
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* ── 2. GIFT CARD REWARDS LIST TABLE & FILTERS ── */}
-          <div className="bg-white border border-surface-border rounded-xl p-6 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-ink-primary">Manual Gift Card Reward Records</h3>
-                <span className="text-xs font-semibold px-2.5 py-0.5 bg-slate-100 border border-slate-300 rounded-full text-ink-secondary">
-                  {referrals.length} Total
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-10 px-3 border border-surface-border rounded-md text-sm font-medium bg-white text-ink-primary focus:outline-none focus:border-action-primary"
-                >
-                  <option value="">All Statuses</option>
-                  <option value="pending">Pending Approval Only</option>
-                  <option value="approved">Approved Only</option>
-                </select>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon={RefreshCw}
-                  onClick={loadReferrals}
-                  disabled={isLoading}
-                  className="h-10 px-3"
-                >
-                  Refresh
-                </Button>
-              </div>
-            </div>
-
-            {error && (
-              <div className="p-4 bg-action-danger-light border border-red-300 rounded-lg flex items-center gap-2 text-action-danger font-semibold text-sm">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <DataTable
-              columns={columns}
-              data={referrals}
-              isLoading={isLoading}
-              keyField="id"
-              emptyMessage="No gift card rewards found matching your filter criteria. Register a new gift card reward to get started."
-            />
-          </div>
-        </>
-      )}
-
-      {/* ── 3. MODAL: REGISTER NEW GIFT CARD REWARD ── */}
-      {registerModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg bg-white border border-surface-border rounded-xl shadow-2xl max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-surface-border">
-              <div className="flex items-center gap-2.5">
-                <UserPlus className="w-5 h-5 text-action-primary" />
-                <h3 className="text-lg font-bold text-ink-primary">Register New Customer Gift Card Reward</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRegisterModalOpen(false)}
-                className="p-1 text-ink-muted hover:text-ink-primary rounded"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleRegisterSubmit} className="p-6 space-y-4">
-              {registerError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded text-action-danger text-sm font-medium flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{registerError}</span>
-                </div>
-              )}
-
-              {registerSuccess && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded text-action-success text-sm font-medium flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                  <span>{registerSuccess}</span>
-                </div>
-              )}
-
-              <CustomerNameSelect
-                label="Customer Name (Reward Beneficiary)"
-                helpText="Search by customer name, then select the row to verify the Customer ID before registering."
-                placeholder="Type customer name… e.g. Rahul Sharma"
-                value={referrerName}
-                onChange={(v) => { setReferrerName(v); setReferrerSelected(null); }}
-                selected={referrerSelected}
-                onSelect={(c) => { setReferrerSelected(c); setReferrerName(c?.name || ''); setReferrerResults([]); }}
-                results={referrerResults}
-                searching={searchingReferrer}
-                disabled={registerLoading}
-              />
-
-              <CustomerNameSelect
-                label="Referred Friend / Customer Name (New Buyer)"
-                helpText="Search by customer name, then select the row to verify the Customer ID before registering."
-                placeholder="Type customer name… e.g. Ananya Rao"
-                value={referredName}
-                onChange={(v) => { setReferredName(v); setReferredSelected(null); }}
-                selected={referredSelected}
-                onSelect={(c) => { setReferredSelected(c); setReferredName(c?.name || ''); setReferredResults([]); }}
-                results={referredResults}
-                searching={searchingReferred}
-                disabled={registerLoading}
-              />
-
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900 leading-relaxed space-y-1">
-                <p>ℹ️ The gift card reward will be registered in <strong>Pending status with 0 points</strong>. Points will be automatically suggested when the customer completes a vehicle purchase based on slab rates.</p>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-divider">
-                <Button variant="outline" size="md" onClick={() => setRegisterModalOpen(false)} disabled={registerLoading}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary" size="md" disabled={registerLoading}>
-                  {registerLoading ? 'Registering…' : 'Register Gift Card Reward'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── 4. MODAL: APPROVE GIFT CARD REWARD (ADMIN ONLY) ── */}
-      {approveModalOpen && selectedReferral && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg bg-white border border-surface-border rounded-xl shadow-2xl max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-surface-border">
-              <div className="flex items-center gap-2.5">
-                <Award className="w-5 h-5 text-action-primary" />
-                <h3 className="text-lg font-bold text-ink-primary">Approve Gift Card Reward & Award Points</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setApproveModalOpen(false)}
-                className="p-1 text-ink-muted hover:text-ink-primary rounded"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleApproveSubmit} className="p-6 space-y-4">
-              {approveError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded text-action-danger text-sm font-medium flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{approveError}</span>
-                </div>
-              )}
-
-              {approveSuccess && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded text-action-success text-sm font-medium flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                  <span>{approveSuccess}</span>
-                </div>
-              )}
-
-              {/* Gift Card Reward Context Summary */}
-              <div className="p-3 bg-slate-50 border border-surface-border rounded-lg text-xs space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-ink-muted">Customer (to receive reward points):</span>
-                  <strong className="text-ink-primary font-semibold">{selectedReferral.referrer_name} ({selectedReferral.referrer_customer_id})</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-ink-muted">Referred Buyer:</span>
-                  <strong className="text-ink-primary font-semibold">{selectedReferral.referred_name} ({selectedReferral.referred_customer_id})</strong>
-                </div>
-              </div>
-
-              {/* Auto-Suggested Points Banner */}
-              {selectedReferral.suggested_points > 0 && (
-                <div className="p-3 bg-blue-50 border border-blue-300 rounded-lg flex items-center justify-between text-xs text-blue-900 font-bold">
-                  <div className="flex items-center gap-1.5">
-                    <Zap className="w-4 h-4 text-action-primary" />
-                    <span>Auto-Suggested Points (from Slab):</span>
-                  </div>
-                  <span className="text-sm font-mono font-extrabold text-action-primary">
-                    +{selectedReferral.suggested_points.toLocaleString()} PTS
-                  </span>
-                </div>
-              )}
-
-              {/* Points to Award */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-ink-primary block">
-                  Points to Award to Customer <span className="text-action-danger">*</span>
+            <form onSubmit={handleApproveSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Points to Award to Each Party
                 </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="e.g. 2500"
-                    value={awardPoints}
-                    onChange={(e) => setAwardPoints(e.target.value)}
-                    required
-                    disabled={approveLoading}
-                    className="flex-1 h-11 px-3 border border-surface-border rounded-md font-mono text-base font-bold focus:outline-none focus:border-action-primary bg-white"
-                  />
-                  <div className="text-xs font-semibold text-action-primary bg-blue-50 px-3 py-2.5 rounded border border-blue-200 whitespace-nowrap">
-                    ≈ ₹{Math.floor(parseInt(awardPoints || '0', 10) / 4).toLocaleString()} Value
-                  </div>
-                </div>
-              </div>
-
-              {/* Override Warning Notice */}
-              {selectedReferral.suggested_points > 0 && parseInt(awardPoints || '0', 10) !== selectedReferral.suggested_points && (
-                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs font-semibold text-amber-900 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  <span>
-                    Override Notice: Changing points from suggested slab (+{selectedReferral.suggested_points} pts) to +{awardPoints || 0} pts will be logged in audit trail.
-                  </span>
-                </div>
-              )}
-
-              {/* Mandatory Reason */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-ink-primary block">
-                  Approval Reason / Override Explanation <span className="text-action-danger">*</span>
-                </label>
-                <textarea
-                  rows="2"
-                  placeholder="e.g. Auto-calculated from gift card reward slab: 5-10L"
-                  value={approvalReason}
-                  onChange={(e) => setApprovalReason(e.target.value)}
+                <input
+                  type="number"
+                  min="1"
+                  step="100"
+                  value={awardPoints}
+                  onChange={(e) => setAwardPoints(e.target.value)}
                   required
-                  disabled={approveLoading}
-                  className="w-full p-2.5 border border-surface-border rounded-md text-sm text-ink-primary focus:outline-none focus:border-action-primary bg-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
-              {/* Approver Selection */}
-              {approvers.length > 0 && (
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-ink-primary block">
-                    Authorizing Approver
-                  </label>
-                  <select
-                    value={selectedApproverId}
-                    onChange={(e) => setSelectedApproverId(e.target.value)}
-                    className="w-full h-10 px-3 border border-surface-border rounded-md text-sm font-medium bg-white text-ink-primary focus:outline-none focus:border-action-primary"
-                  >
-                    {approvers.map((app) => (
-                      <option key={app.approver_id || app.id} value={app.approver_id || app.id}>
-                        {app.name} (ID: {app.approver_id || app.id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Authorized Referral Approver
+                </label>
+                <select
+                  value={selectedApproverId}
+                  onChange={(e) => setSelectedApproverId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                >
+                  {approvers.map((app) => (
+                    <option key={app.approver_id || app.id} value={app.approver_id || app.id}>
+                      {app.name} (Approver #{app.approver_id || app.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-divider">
-                <Button variant="outline" size="md" onClick={() => setApproveModalOpen(false)} disabled={approveLoading}>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Approval Reason / Notes
+                </label>
+                <input
+                  type="text"
+                  value={approvalReason}
+                  onChange={(e) => setApprovalReason(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setApproveModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition"
+                >
                   Cancel
-                </Button>
-                <Button type="submit" variant="primary" size="md" disabled={approveLoading}>
-                  {approveLoading ? 'Approving…' : 'Approve & Credit Points'}
-                </Button>
+                </button>
+                <button
+                  type="submit"
+                  disabled={approveLoading}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-md disabled:opacity-50 flex items-center gap-2"
+                >
+                  {approveLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  Confirm & Credit Points
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
     </div>
   );
 };

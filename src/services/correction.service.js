@@ -151,8 +151,8 @@ class CorrectionService {
     branch_id,
     tenant_id,
   }) {
-    if (!explanation || explanation.trim().length < 20) {
-      throw { statusCode: 400, message: 'Explanation is mandatory and must be at least 20 characters long.' };
+    if (!explanation || !explanation.trim()) {
+      throw { statusCode: 400, message: 'Explanation is mandatory.' };
     }
 
     if (!screenshot_file_url || !screenshot_file_url.trim()) {
@@ -260,12 +260,6 @@ class CorrectionService {
       params.push(status);
     }
 
-    // Branch manager scoping: restrict to user's assigned branch
-    if (user_role === 'branch_manager' && user_branch_id) {
-      query += ` AND cr.branch_id = $${idx++}`;
-      params.push(user_branch_id);
-    }
-
     query += ` ORDER BY cr.created_at DESC;`;
 
     const res = await pool.query(query, params);
@@ -339,11 +333,6 @@ class CorrectionService {
 
       if (reqRecord.status !== 'pending') {
         throw { statusCode: 400, message: `Correction request #${request_id} is already ${reqRecord.status}.` };
-      }
-
-      // Branch Manager scoping check
-      if (reviewer_role === 'branch_manager' && reviewer_branch_id && reqRecord.branch_id !== reviewer_branch_id) {
-        throw { statusCode: 403, message: 'Branch managers can only approve correction requests from their assigned branch.' };
       }
 
       // 2. Fetch original points_ledger entries
@@ -555,11 +544,6 @@ class CorrectionService {
 
       if (reqRecord.status !== 'pending') {
         throw { statusCode: 400, message: `Correction request #${request_id} is already ${reqRecord.status}.` };
-      }
-
-      // Branch Manager scoping check
-      if (reviewer_role === 'branch_manager' && reviewer_branch_id && reqRecord.branch_id !== reviewer_branch_id) {
-        throw { statusCode: 403, message: 'Branch managers can only reject correction requests from their assigned branch.' };
       }
 
       const updateRes = await client.query(

@@ -28,19 +28,41 @@ class ReportController {
     try {
       const tenantId = req.tenantId || 'bellad_and_company';
       const { branchId } = scopeBranchAccess(req);
-      const { brand_id, vehicle_type, category, start_date, end_date } = req.query;
+      const { brand_id, brand_name, city, vehicle_type, category, start_date, end_date, format } = req.query;
 
       const data = await ReportService.getPointsSummaryReport({
         tenantId,
         branchId,
         brandId: brand_id ? parseInt(brand_id, 10) : null,
+        brandName: brand_name,
+        city,
         vehicleType: vehicle_type,
         category,
         startDate: start_date,
         endDate: end_date,
       });
 
-      return ReportController.respond(res, data, 'points_summary');
+      if (format === 'csv') {
+        const flatCsv = (data.summary || []).map((r) => ({
+          Branch: r.branch_name,
+          City: r.branch_city,
+          Brand: r.brand_name,
+          Category: r.category,
+          Total_Transactions: r.total_transactions,
+          Total_Customers: r.total_customers,
+          Customers_Redeemed: r.customers_redeemed,
+          Points_Issued: r.total_points_issued,
+          Points_Redeemed: r.total_points_redeemed,
+          Net_Points: r.net_points_balance,
+          Discount_Rupees: r.equivalent_redeemed_rs,
+        }));
+        return ReportController.respond(res, flatCsv, 'dynamic_loyalty_report');
+      }
+
+      return res.status(200).json({
+        status: 'success',
+        data,
+      });
     } catch (error) {
       next(error);
     }

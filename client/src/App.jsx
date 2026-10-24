@@ -16,6 +16,7 @@ import StandaloneMasterEditorPortal from './screens/StandaloneMasterEditorPortal
 import LoyaltyAppBuilder from './screens/LoyaltyAppBuilder';
 import CustomerPortalScreen from './pages/CustomerPortalScreen';
 import PublicGiftClaimScreen from './screens/PublicGiftClaimScreen';
+import CustomerRedemptionsScreen from './screens/CustomerRedemptionsScreen';
 import ApiService from './services/api';
 
 class BuilderErrorBoundary extends React.Component {
@@ -184,6 +185,7 @@ export function App() {
   const isAdmin = ['admin', 'super_admin', 'regional_admin', 'director'].includes(user?.role) ||
                   user?.username?.toLowerCase() === 'agstya' ||
                   user?.username?.toLowerCase() === 'agastya';
+  const isManager = ['branch_manager', 'manager'].includes(user?.role);
   if (isStudioMode) {
     if (!isAdmin) {
       return (
@@ -248,6 +250,17 @@ export function App() {
           activeTab={activeTab}
           resetNonce={searchResetNonce}
         />
+      ) : activeTab === 'customer_redemptions' ? (
+        isAdmin ? (
+          <CustomerRedemptionsScreen user={user} />
+        ) : (
+          <div className="p-8 bg-white rounded-3xl border border-rose-200 shadow-sm text-center max-w-lg mx-auto mt-12 space-y-4">
+            <h2 className="text-xl font-black text-slate-900">Restricted Admin Access</h2>
+            <p className="text-sm text-slate-600">
+              The Customer Redemptions list is restricted to Administrator privileges only.
+            </p>
+          </div>
+        )
       ) : activeTab === 'gift_cards' ? (
         <GiftCardsScreen user={user} />
       ) : activeTab === 'referrals' ? (
@@ -257,7 +270,11 @@ export function App() {
       ) : activeTab === 'reports' ? (
         <ReportsScreen user={user} />
       ) : activeTab === 'kyc_approvals' ? (
-        <KycApprovalsScreen />
+        isManager ? (
+          <CorrectionsQueueScreen />
+        ) : (
+          <KycApprovalsScreen />
+        )
       ) : activeTab === 'corrections_queue' ? (
         <CorrectionsQueueScreen />
       ) : activeTab === 'tenants' ? (

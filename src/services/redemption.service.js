@@ -52,21 +52,6 @@ class RedemptionService {
       resolvedPhone = phoneRes.rows[0].phone_number;
     }
 
-    // Check for pending billing correction ticket
-    const pendingTicketRes = await pool.query(
-      `SELECT id, points_ledger_reference FROM correction_requests
-       WHERE customer_id = $1 AND tenant_id = $2 AND status = 'pending' LIMIT 1;`,
-      [resolvedCustomerId, tenant_id]
-    );
-
-    if (pendingTicketRes.rows.length > 0) {
-      const ticket = pendingTicketRes.rows[0];
-      throw {
-        statusCode: 400,
-        message: `Billing Correction Ticket #${ticket.id} is pending Admin review. Redemption & point actions are locked until Admin approves or rejects the request.`,
-      };
-    }
-
     // Rate limiting: check requests in the last 1 hour
     const rateLimitRes = await pool.query(
       `SELECT COUNT(*) AS request_count
@@ -170,21 +155,6 @@ class RedemptionService {
         throw { statusCode: 400, message: 'Customer ID or valid Phone number is required for redemption.' };
       }
 
-      // Check for pending billing correction ticket
-      const pendingTicketRes = await client.query(
-        `SELECT id FROM correction_requests
-         WHERE customer_id = $1 AND tenant_id = $2 AND status = 'pending' LIMIT 1;`,
-        [customerId, tenant_id]
-      );
-
-      if (pendingTicketRes.rows.length > 0) {
-        const ticket = pendingTicketRes.rows[0];
-        throw {
-          statusCode: 400,
-          message: `Billing Correction Ticket #${ticket.id} is pending Admin review. Redemption & point actions are locked until Admin approves or rejects the request.`,
-        };
-      }
-
       // 2. Validate active OTP for customer (optional - cashier counter receipt flow does not require OTP)
       const submittedOtp = String(otp || '').trim();
       let matchedOtpId = null;
@@ -279,22 +249,47 @@ class RedemptionService {
          WHERE customer_id = $1 AND tenant_id = $2;`,
         [customerId, tenant_id]
       );
-      const currentPointBalance = Math.max(0, parseInt(balRes.rows[0].total_balance, 10));
+      let currentPointBalance = Math.max(0, parseInt(balRes.rows[0].total_balance, 10));
 
       if (currentPointBalance <= 0) {
         throw { statusCode: 400, message: 'Customer has 0 available points. Redemption cannot be performed.' };
       }
 
+      // Referral Points Usage Rule:
+      // Referral reward points can ONLY be redeemed during Service, Body Shop, or Accessories.
+      // They CANNOT be redeemed during vehicle Sales.
+      const normalizedCat = String(category || '').trim().toLowerCase();
+      const isServiceOrBodyOrAcc = ['service', 'bodyshop', 'body_shop', 'accessories', 'accessory'].includes(normalizedCat);
+
+      if (!isServiceOrBodyOrAcc && ['sale', 'sales', 'vehicle_sale'].includes(normalizedCat)) {
+        const nonRefRes = await client.query(
+          `SELECT GREATEST(0, COALESCE(SUM(points), 0)) AS non_referral_balance
+           FROM points_ledger
+           WHERE customer_id = $1 AND tenant_id = $2
+             AND transaction_category != 'referral'
+             AND type NOT LIKE '%referral%';`,
+          [customerId, tenant_id]
+        );
+        const nonReferralBalance = Math.max(0, parseInt(nonRefRes.rows[0]?.non_referral_balance || 0, 10));
+
+        if (nonReferralBalance <= 0 && currentPointBalance > 0) {
+          throw {
+            statusCode: 400,
+            message: 'Referral reward points cannot be used for vehicle sales. They can only be redeemed during Service, Body Shop, or Accessories billing.',
+          };
+        }
+
+        // Limit redeemable balance for vehicle sales to non-referral points
+        currentPointBalance = nonReferralBalance;
+      }
+
       // Check if vehicle is locked for redemption (<12 months from purchase)
       // ACCESSORIES EXEMPTION: Accessories can be redeemed anytime without the 12-month lock!
       // Other categories (service, sale, bodyshop, referral, etc.) strictly retain the 12-month lock.
-      const isAccessories = ['accessories', 'accessory'].includes(String(category || '').trim().toLowerCase());
+      const isAccessories = ['accessories', 'accessory'].includes(normalizedCat);
 
       if (vehicle_id) {
         const statusRes = await RedemptionEligibilityService.getVehicleRedemptionStatus(vehicle_id, tenant_id, category);
-        if (statusRes.status === 'locked_pending_correction') {
-          throw { statusCode: 400, message: statusRes.message || 'Points redemption is locked pending billing correction review.' };
-        }
         if (statusRes.status === 'locked' && !isAccessories) {
           throw { statusCode: 400, message: statusRes.message || 'Points redemption is locked for vehicles purchased less than 12 months ago.' };
         }

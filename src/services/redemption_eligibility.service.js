@@ -115,19 +115,6 @@ class RedemptionEligibilityService {
       baseStatus = 'locked';
     }
 
-    // 3. Check if there is a pending billing correction request for this customer
-    const pendingRes = await pool.query(
-      `SELECT id, points_ledger_reference FROM correction_requests
-       WHERE customer_id = $1 AND tenant_id = $2 AND status = 'pending'
-       ORDER BY created_at DESC LIMIT 1;`,
-      [vehicle.customer_id, tenantId]
-    );
-
-    const pendingTicket = pendingRes.rows[0];
-    if (pendingTicket) {
-      baseStatus = 'locked_pending_correction';
-    }
-
     // 4. Compute live non-expired points balance for this vehicle
     const balanceRes = await pool.query(
       `SELECT
@@ -160,9 +147,7 @@ class RedemptionEligibilityService {
 
     // 5. Build human-readable message
     let message;
-    if (status === 'locked_pending_correction') {
-      message = `Billing Correction Ticket #${pendingTicket.id} is pending Admin review. Point transactions & redemptions are locked until Admin approves or rejects the request.`;
-    } else if (!vehicle.purchase_date && !vehicle.redemption_eligible_at) {
+    if (!vehicle.purchase_date && !vehicle.redemption_eligible_at) {
       message = 'Active for point calculation and redemption.';
     } else if (isAccessories && baseStatus === 'locked') {
       message = `Eligible to redeem anytime for Accessories! (${points_balance.toLocaleString()} pts available).`;
@@ -190,7 +175,7 @@ class RedemptionEligibilityService {
       purchase_date: vehicle.purchase_date,
       status,
       base_status: baseStatus,
-      accessories_eligible: baseStatus !== 'locked_pending_correction' && baseStatus !== 'expired' && points_balance > 0,
+      accessories_eligible: baseStatus !== 'expired' && points_balance > 0,
       eligible_at: eligible_at?.toISOString() ?? null,
       expires_at: expires_at?.toISOString() ?? null,
       points_balance,

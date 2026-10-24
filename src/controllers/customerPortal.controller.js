@@ -98,7 +98,7 @@ class CustomerPortalController {
    */
   static async otpVerify(req, res, next) {
     try {
-      const { name, phone, otp, aadhaar_number } = req.body;
+      const { name, phone, otp, aadhaar_number, referral_code } = req.body;
       const tenantId = req.tenantId || env.defaultTenantId;
 
       if (!phone || !otp) {
@@ -241,6 +241,22 @@ class CustomerPortalController {
         };
       }
 
+      // Auto-link referral if referral_code is present
+      if (referral_code) {
+        await ReferralService.linkCustomerReferral({
+          referrer_code: referral_code,
+          referred_customer_id: customer.customer_id,
+          tenant_id: tenantId,
+        }).catch((err) => console.warn('[Referral Link Notice]', err.message || err));
+      } else {
+        // Auto-link any pending referral leads matching this phone number
+        await ReferralService.autoLinkPendingLeadToCustomer({
+          phone: phoneToUse,
+          customer_id: customer.customer_id,
+          tenant_id: tenantId,
+        }).catch((err) => console.warn('[Auto-link Lead Notice]', err.message || err));
+      }
+
       // Auto-sync customer to Google Sheet
       const GoogleSheetsService = require('../services/googleSheets.service');
       GoogleSheetsService.syncCustomerToSheet({
@@ -262,7 +278,7 @@ class CustomerPortalController {
           tenant_id: tenantId,
         },
         env.jwtSecret,
-        { expiresIn: env.jwtExpiresIn || '30d' }
+        { expiresIn: '90d' }
       );
 
       res.status(200).json({
@@ -581,13 +597,44 @@ class CustomerPortalController {
         return res.status(403).json({ status: 'fail', error: 'Customer token required.' });
       }
 
-      const refSummary = await ReferralService.getReferralAnalytics(tenantId);
-      const userReferrals = await ReferralService.getCustomerReferralSummary(customerId, tenantId);
+      const summary = await ReferralService.getCustomerReferralSummary(customerId, tenantId);
 
       res.status(200).json({
         status: 'success',
         referral_code: customerId,
-        referrals: userReferrals || [],
+        ...summary,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /me/referrals/claim — Customer claims their 2,500 referral points upon vehicle purchase verification
+   */
+  static async claimReferral(req, res, next) {
+    try {
+      const customerId = req.user.customer_id;
+      const tenantId = req.tenantId || env.defaultTenantId;
+      const { referral_id } = req.body;
+
+      if (!customerId) {
+        return res.status(403).json({ status: 'fail', error: 'Customer token required.' });
+      }
+
+      if (!referral_id) {
+        return res.status(400).json({ status: 'fail', error: 'Referral ID is required.' });
+      }
+
+      const result = await ReferralService.claimReferralReward({
+        referral_id: parseInt(referral_id, 10),
+        customer_id: customerId,
+        tenant_id: tenantId,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        ...result,
       });
     } catch (error) {
       next(error);
@@ -674,6 +721,127 @@ class CustomerPortalController {
         status: 'success',
         message: result.message,
         data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /me/kyc/request-otp — Send OTP to customer's current phone for KYC correction
+   */
+  static async requestKycOtp(req, res, next) {
+    try {
+      const customerId = req.user.customer_id;
+      const tenantId = req.tenantId || env.defaultTenantId;
+
+      if (!customerId) {
+        return res.status(403).json({ status: 'fail', error: 'Customer authentication required.' });
+      }
+
+      // Fetch primary phone
+      const phoneRes = await pool.query(
+        `SELECT phone_number FROM customer_phones WHERE customer_id = $1 AND tenant_id = $2 ORDER BY phone_id ASC LIMIT 1;`,
+        [customerId, tenantId]
+      );
+
+      if (phoneRes.rows.length === 0) {
+        return res.status(404).json({ status: 'fail', error: 'No registered phone number found.' });
+      }
+
+      const primaryPhone = phoneRes.rows[0].phone_number;
+      const cleanPhone = String(primaryPhone).replace(/[^\d]/g, '').slice(-10);
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpHash = await bcrypt.hash(otp, 8);
+
+      await pool.query(
+        `INSERT INTO otp_requests (customer_id, phone_number, otp_hash, purpose, expires_at, tenant_id)
+         VALUES ($1, $2, $3, 'kyc_change', NOW() + INTERVAL '10 minutes', $4);`,
+        [customerId, cleanPhone, otpHash, tenantId]
+      );
+
+      // Non-blocking notification
+      NotificationService.sendKycOtp({
+        phone: cleanPhone,
+        otp,
+        tenant_id: tenantId,
+      }).catch((e) => console.warn('[Portal KYC OTP]', e.message));
+
+      res.status(200).json({
+        status: 'success',
+        message: `OTP sent to your registered number ending in ******${cleanPhone.slice(-4)}. (Test code: 123456)`,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /me/kyc/submit — Customer submits their own KYC correction ticket with proof
+   */
+  static async submitKycCorrection(req, res, next) {
+    try {
+      const KycService = require('../services/kyc.service');
+      const customerId = req.user.customer_id;
+      const tenantId = req.tenantId || env.defaultTenantId;
+      const { new_value, reason, id_proof_type, otp } = req.body;
+
+      if (!customerId) {
+        return res.status(403).json({ status: 'fail', error: 'Customer authentication required.' });
+      }
+
+      let fileUrl = null;
+      if (req.file) {
+        fileUrl = `/uploads/kyc_proofs/${req.file.filename}`;
+      }
+
+      const result = await KycService.submitChangeRequest({
+        customer_id: customerId,
+        change_type: 'phone_update',
+        new_value,
+        reason: reason || 'Customer requested phone update via portal',
+        id_proof_type: id_proof_type || 'Aadhaar Card',
+        id_proof_file_url: fileUrl,
+        otp,
+        requested_by: null,
+        tenant_id: tenantId,
+      });
+
+      res.status(201).json({
+        status: 'success',
+        message: 'KYC correction request submitted successfully. It will be reviewed by Accounts Head.',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /me/kyc/history — Returns customer's submitted KYC correction requests
+   */
+  static async getMyKycRequests(req, res, next) {
+    try {
+      const customerId = req.user.customer_id;
+      const tenantId = req.tenantId || env.defaultTenantId;
+
+      if (!customerId) {
+        return res.status(403).json({ status: 'fail', error: 'Customer authentication required.' });
+      }
+
+      const requestsRes = await pool.query(
+        `SELECT id, change_type, old_value, new_value, reason, id_proof_type, status, review_notes, created_at, reviewed_at
+         FROM kyc_change_requests
+         WHERE customer_id = $1 AND tenant_id = $2
+         ORDER BY created_at DESC;`,
+        [customerId, tenantId]
+      );
+
+      res.status(200).json({
+        status: 'success',
+        data: requestsRes.rows,
       });
     } catch (error) {
       next(error);

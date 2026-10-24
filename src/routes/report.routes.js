@@ -5,7 +5,7 @@ const authenticateToken = require('../middleware/auth');
 const requireRole = require('../middleware/roles');
 
 router.use(authenticateToken);
-router.use(requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager']));
+router.use(requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager']));
 
 router.get('/points-summary', ReportController.getPointsSummary);
 router.get('/customer-distribution', ReportController.getCustomerDistribution);

@@ -17,29 +17,29 @@ router.post(
   KycController.submitChange
 );
 
-// Admin / Branch Manager queue and approval routes
+// Admin / Accounts Head / Branch Manager queue and approval routes
 router.get(
   '/admin/kyc-change/pending',
-  requireRole(['admin', 'branch_manager']),
+  requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager', 'accounts_head', 'account_head']),
   KycController.getPendingRequests
 );
 
 router.post(
   '/admin/kyc-change/:id/approve',
-  requireRole(['admin', 'branch_manager']),
+  requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager', 'accounts_head', 'account_head']),
   KycController.approveRequest
 );
 
 router.post(
   '/admin/kyc-change/:id/reject',
-  requireRole(['admin', 'branch_manager']),
+  requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager', 'accounts_head', 'account_head']),
   KycController.rejectRequest
 );
 
 // Authenticated route to view KYC proof files securely (LOOP-01 fix)
 router.get(
   '/kyc/proof/:filename',
-  requireRole(['admin', 'branch_manager']),
+  requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager', 'accounts_head', 'account_head']),
   KycController.getProofFile
 );
 

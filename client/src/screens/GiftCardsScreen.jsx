@@ -1,507 +1,337 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Gift,
-  PlusCircle,
   Search,
   RefreshCw,
   Copy,
   Check,
-  CreditCard,
-  Send,
   Calendar,
   Clock,
   Sparkles,
-  ShieldCheck,
-  Eye,
-  EyeOff,
-  User,
   Phone,
-  Mail,
-  Receipt,
-  Download,
-  Filter,
+  User,
+  ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  DollarSign,
-  Lock,
+  ExternalLink,
+  Coins,
+  IndianRupee,
+  Share2
 } from 'lucide-react';
-import { Button, Input, StatusBadge, DataTable, useToast, StatCard } from '../components/ui';
 import ApiService from '../services/api';
 
 export const GiftCardsScreen = ({ user }) => {
-  const { showSuccess, showError, showInfo } = useToast();
-
-  const [cards, setCards] = useState([]);
-  const [totalCards, setTotalCards] = useState(0);
+  const [giftCards, setGiftCards] = useState([]);
+  const [totals, setTotals] = useState({
+    total_cards: 0,
+    total_amount_inr: 0,
+    total_claimed: 0,
+    total_unclaimed: 0,
+    total_expired: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-
-  // Modals
-  const [issueModalOpen, setIssueModalOpen] = useState(false);
-  const [redeemModalOpen, setRedeemModalOpen] = useState(false);
-  const [claimModalOpen, setClaimModalOpen] = useState(false);
-  const [selectedCardForView, setSelectedCardForView] = useState(null);
-  const [newlyIssuedCard, setNewlyIssuedCard] = useState(null);
-
-  // Dynamic Referral Points Rules Configuration (XYZ receives upon ABC's vehicle delivery)
-  const [dynamicPointsConfig, setDynamicPointsConfig] = useState({
-    points_2w: 500,
-    points_4w: 1000,
-    points_ev: 2000,
-    flat_fallback: 1000,
-  });
-  const [pointsRuleModalOpen, setPointsRuleModalOpen] = useState(false);
-
-  // New Customer Verification Status for ABC Person
-  const [isAbcChecking, setIsAbcChecking] = useState(false);
-  const [abcCustomerStatus, setAbcCustomerStatus] = useState(null); // null | 'new' | 'existing'
-  const [selectedVehicleCategory, setSelectedVehicleCategory] = useState('EV');
-
-  // Issue Card Form State
-  const [issueAmount, setIssueAmount] = useState('2500');
-  const [senderName, setSenderName] = useState('Bellad Automobiles');
-  const [recipientName, setRecipientName] = useState('');
-  const [recipientPhone, setRecipientPhone] = useState('');
-  const [recipientEmail, setRecipientEmail] = useState('');
-  const [customMessage, setCustomMessage] = useState('Congratulations on your reward! Redeem on your next vehicle purchase or service.');
-  const [cardTheme, setCardTheme] = useState('premium');
-  const [validityMonths, setValidityMonths] = useState('12');
-  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
-
-  // POS Redeem Form State
-  const [redeemCardNumber, setRedeemCardNumber] = useState('');
-  const [redeemPin, setRedeemPin] = useState('');
-  const [redeemAmount, setRedeemAmount] = useState('');
-  const [redeemRef, setRedeemRef] = useState('');
-  const [isRedeeming, setIsRedeeming] = useState(false);
-  const [lookupCardData, setLookupCardData] = useState(null);
-
-  // Copied Card Code State
+  const [statusFilter, setStatusFilter] = useState('all');
   const [copiedCode, setCopiedCode] = useState('');
-  const [revealedPins, setRevealedPins] = useState({});
-  const [revealedCards, setRevealedCards] = useState({});
+  const [lastUpdated, setLastUpdated] = useState(new Date());
 
-  const loadGiftCards = useCallback(async () => {
+  const fetchGiftCards = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await ApiService.getGiftCards({
+      const res = await ApiService.getAdminGiftCards({
         search: searchQuery,
         status: statusFilter,
-        limit: 50,
+        limit: 100,
       });
-      setCards(res.data || []);
-      setTotalCards(res.total || 0);
+
+      if (res.status === 'success') {
+        setGiftCards(res.data || []);
+        if (res.totals) {
+          setTotals(res.totals);
+        }
+        setLastUpdated(new Date());
+      }
     } catch (err) {
-      showError(err.message || 'Failed to load gift cards.');
+      console.error('Error fetching admin gift cards:', err);
     } finally {
       setIsLoading(false);
     }
   }, [searchQuery, statusFilter]);
 
   useEffect(() => {
-    loadGiftCards();
-  }, [loadGiftCards]);
+    fetchGiftCards();
+  }, [fetchGiftCards]);
 
-  const handleCopy = (code) => {
+  const handleCopyCode = (code) => {
+    if (!code) return;
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
-    showSuccess(`Copied card code: ${code}`);
-    setTimeout(() => setCopiedCode(''), 2500);
+    setTimeout(() => setCopiedCode(''), 2000);
   };
 
-  const isPinCreator = (card) => {
-    if (!card) return false;
-    const currentUserId = user?.id || user?.user_id || user?.userId;
-    const currentUsername = user?.username;
-
-    if (card.created_by && currentUserId && String(card.created_by) === String(currentUserId)) {
-      return true;
-    }
-    if (card.created_by_username && currentUsername && card.created_by_username.toLowerCase() === currentUsername.toLowerCase()) {
-      return true;
-    }
-    return false;
+  const formatCurrency = (val) => {
+    const num = parseFloat(val) || 0;
+    return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const togglePinReveal = (card) => {
-    if (!isPinCreator(card)) {
-      showError('Security Protected: Gift Card PIN can only be viewed by the user who created it.');
-      return;
-    }
-    setRevealedPins((prev) => ({ ...prev, [card.card_id]: !prev[card.card_id] }));
-  };
-
-  const toggleCardReveal = (cardId) => {
-    setRevealedCards((prev) => ({ ...prev, [cardId]: !prev[cardId] }));
-  };
-
-  // Live Check if ABC is a New Customer (not registered in database)
-  const handleCheckAbcCustomer = async (phone) => {
-    const clean = phone.replace(/[^\d]/g, '');
-    if (clean.length !== 10) {
-      setAbcCustomerStatus(null);
-      return;
-    }
-    setIsAbcChecking(true);
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—';
     try {
-      const res = await ApiService.search(clean);
-      if (res.data && res.data.length > 0) {
-        setAbcCustomerStatus('existing'); // Found existing customer!
-      } else {
-        setAbcCustomerStatus('new'); // Brand new customer!
-      }
-    } catch {
-      setAbcCustomerStatus('new');
-    } finally {
-      setIsAbcChecking(false);
-    }
-  };
-
-  // 1-Click: Confirm ABC Vehicle Purchase & Credit Dynamic Points to XYZ
-  const handleConfirmVehiclePurchase = async (card) => {
-    const ptsToAward = selectedVehicleCategory === 'EV'
-      ? dynamicPointsConfig.points_ev
-      : selectedVehicleCategory === '2W'
-      ? dynamicPointsConfig.points_2w
-      : dynamicPointsConfig.points_4w;
-
-    const confirm = window.confirm(
-      `Confirm vehicle delivery for ${card.recipient_name || 'ABC'}?\n\nThis will credit ${ptsToAward} dynamic referral loyalty points to ${card.sender_name || 'XYZ'}!`
-    );
-    if (!confirm) return;
-
-    try {
-      setIsLoading(true);
-      // Auto redeem card and award referral bonus
-      await ApiService.redeemGiftCardAtPos({
-        card_number: card.card_number,
-        pin_code: card.pin_code || '1234',
-        amount_to_redeem: Number(card.balance_amount || card.initial_amount || 2500),
-        reference_id: `VEHICLE-DELIVERY-${card.card_id}`,
+      return new Date(dateStr).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       });
-      showSuccess(`Vehicle purchase confirmed! +${ptsToAward} Referral Points awarded to ${card.sender_name || 'XYZ'}!`);
-      loadGiftCards();
-    } catch (err) {
-      showError(err.message || 'Failed to complete vehicle referral completion.');
-    } finally {
-      setIsLoading(false);
+    } catch (e) {
+      return dateStr;
     }
   };
-
-  // Handle Issue Gift Card Submit
-  const handleIssueSubmit = async (e) => {
-    e.preventDefault();
-    if (!issueAmount || Number(issueAmount) <= 0) {
-      showError('Please enter a valid gift card denomination.');
-      return;
-    }
-    if (!recipientName.trim()) {
-      showError('Please enter recipient name.');
-      return;
-    }
-
-    setIsSubmittingIssue(true);
-    try {
-      const res = await ApiService.issueGiftCard({
-        amount: parseFloat(issueAmount),
-        sender_name: senderName,
-        recipient_name: recipientName,
-        recipient_phone: recipientPhone,
-        recipient_email: recipientEmail,
-        custom_message: customMessage,
-        card_theme: cardTheme,
-        validity_months: parseInt(validityMonths, 10),
-      });
-
-      showSuccess(`Digital Gift Card issued successfully: ${res.data.card_number}`);
-      setNewlyIssuedCard(res.data);
-      setIssueModalOpen(false);
-      // Reset form
-      setRecipientName('');
-      setRecipientPhone('');
-      setRecipientEmail('');
-      loadGiftCards();
-    } catch (err) {
-      showError(err.message || 'Failed to issue gift card.');
-    } finally {
-      setIsSubmittingIssue(false);
-    }
-  };
-
-  const handleShareGiftCardWhatsApp = (card) => {
-    if (!card) return;
-    const phone = (card.recipient_phone || '').replace(/[^\d]/g, '');
-    const cleanPhone = phone.length === 10 ? `91${phone}` : phone;
-    const name = card.recipient_name || 'Valued Customer';
-    const amount = Number(card.initial_amount || card.balance_amount || 0).toLocaleString('en-IN');
-    const msg = `Dear ${name},\n\nCongratulations! You have received a Bellad Digital Gift Card worth ₹${amount}!\n\n💳 Gift Card Code: ${card.card_number}\n🔒 4-Digit Security PIN: ${card.pin_code}\n\nYou can claim points or view your gift card in your Customer Portal:\n${window.location.origin}/portal\n\nThank you,\nBellad & Company`;
-    const url = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
-  };
-
-  const handleCopyGiftCardAndPin = (card) => {
-    if (!card) return;
-    const text = `Gift Card Code: ${card.card_number}\nSecurity PIN: ${card.pin_code}\nAmount: ₹${Number(card.initial_amount || card.balance_amount || 0).toLocaleString('en-IN')}`;
-    navigator.clipboard.writeText(text);
-    showSuccess('Copied Gift Card Code and PIN to clipboard!');
-  };
-
-  // Handle Quick Lookup for POS Redemption
-  const handleLookupCard = async () => {
-    if (!redeemCardNumber.trim()) {
-      showError('Please enter card number.');
-      return;
-    }
-    try {
-      const res = await ApiService.lookupGiftCard(redeemCardNumber.trim(), redeemPin || null);
-      setLookupCardData(res.data);
-      if (res.data?.balance_amount) {
-        setRedeemAmount(res.data.balance_amount.toString());
-      }
-    } catch (err) {
-      showError(err.message || 'Gift card lookup failed.');
-      setLookupCardData(null);
-    }
-  };
-
-  // Handle POS Redemption Submit
-  const handleRedeemSubmit = async (e) => {
-    e.preventDefault();
-    if (!redeemCardNumber.trim() || !redeemPin.trim()) {
-      showError('Card number and 4-digit Security PIN are required.');
-      return;
-    }
-    if (!redeemAmount || Number(redeemAmount) <= 0) {
-      showError('Please enter a valid amount to redeem.');
-      return;
-    }
-
-    setIsRedeeming(true);
-    try {
-      const res = await ApiService.redeemGiftCardAtPos({
-        card_number: redeemCardNumber.trim(),
-        pin_code: redeemPin.trim(),
-        amount_to_redeem: parseFloat(redeemAmount),
-        reference_id: redeemRef || `POS-${Date.now()}`,
-      });
-
-      showSuccess(res.message || `Redeemed ₹${redeemAmount} from gift card!`);
-      setRedeemModalOpen(false);
-      setRedeemCardNumber('');
-      setRedeemPin('');
-      setRedeemAmount('');
-      setLookupCardData(null);
-      loadGiftCards();
-    } catch (err) {
-      showError(err.message || 'Redemption failed.');
-    } finally {
-      setIsRedeeming(false);
-    }
-  };
-
-  // Metrics
-  const activeCards = cards.filter((c) => c.status === 'active' || c.status === 'partially_redeemed');
-  const totalActiveValue = activeCards.reduce((acc, c) => acc + Number(c.balance_amount || 0), 0);
-  const totalIssuedValue = cards.reduce((acc, c) => acc + Number(c.initial_amount || 0), 0);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Top Banner & Action Header */}
-      {/* Header Banner - Automotive Referral Gift Card Program */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden border border-slate-800">
-        <div className="absolute right-0 top-0 w-96 h-full opacity-10 pointer-events-none bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-400 via-emerald-400 to-transparent" />
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
-                Gift Card Rewards Program (XYZ → ABC)
-              </span>
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Header Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-7 sm:p-8 text-white shadow-xl border border-indigo-900/40">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold uppercase tracking-wider">
+              <Gift className="w-3.5 h-3.5" />
+              Gift Card Rewards Audit
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight mt-1.5 flex items-center gap-3">
-              <Gift className="w-8 h-8 text-amber-400" />
-              Automotive Gift Cards &amp; Rewards
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Existing customer (<strong>XYZ</strong>) sends a Gift Card to a friend (<strong>ABC</strong>). When <strong>ABC (who must be a verified new customer)</strong> purchases a vehicle, <strong>XYZ</strong> automatically receives dynamic gift card loyalty points.
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
+              Customer Gift Cards
+            </h1>
+            <p className="text-sm text-slate-300 max-w-2xl">
+              Track customer details, money sent in ₹, points converted, and recipient claim status. Customers create and share digital gift cards directly from the customer portal.
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <button
-              onClick={() => setPointsRuleModalOpen(true)}
-              className="w-full sm:w-auto px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-xl border border-amber-400/30 flex items-center justify-center gap-2 transition shadow-sm"
-              title="Configure how many points XYZ receives per vehicle purchase"
+              onClick={fetchGiftCards}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition border border-white/10 backdrop-blur-sm disabled:opacity-50"
             >
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              Dynamic Points Rule: {dynamicPointsConfig.points_4w} PTS
-            </button>
-            <button
-              onClick={() => setIssueModalOpen(true)}
-              className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs font-black rounded-xl shadow-lg flex items-center justify-center gap-2 transition"
-            >
-              <PlusCircle className="w-4 h-4 text-slate-950" />
-              + Send Gift Card (XYZ → ABC)
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
             </button>
           </div>
         </div>
       </div>
 
-      {/* Dynamic Points Rule Quick Strip */}
-      <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-          <span className="font-bold">Dynamic Gift Card Points Scheme:</span>
-          <span className="text-slate-400 hidden sm:inline">XYZ earns points only after ABC completes vehicle delivery</span>
+      {/* Metric Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Total Gift Money Sent */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Money Sent</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <IndianRupee className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-900 tracking-tight">
+              {formatCurrency(totals.total_amount_inr)}
+            </span>
+          </div>
+          <div className="mt-1 text-xs font-medium text-slate-500">
+            Customer-funded gift rewards
+          </div>
         </div>
-        <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap font-mono font-bold text-xs">
-          <span className="text-amber-400">2-Wheeler: +{dynamicPointsConfig.points_2w} PTS</span>
-          <span>•</span>
-          <span className="text-blue-400">4-Wheeler: +{dynamicPointsConfig.points_4w} PTS</span>
-          <span>•</span>
-          <span className="text-emerald-400">EV Vehicle: +{dynamicPointsConfig.points_ev} PTS</span>
-          <button
-            onClick={() => setPointsRuleModalOpen(true)}
-            className="text-xs text-slate-300 underline font-sans ml-1 hover:text-white"
-          >
-            Customize
-          </button>
+
+        {/* Total Gift Cards Shared */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Cards Shared</span>
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Gift className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-900 tracking-tight">
+              {totals.total_cards.toLocaleString()}
+            </span>
+          </div>
+          <div className="mt-1 text-xs font-medium text-slate-500">
+            Generated via portal
+          </div>
+        </div>
+
+        {/* Unclaimed / Active */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Unclaimed / Active</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-amber-600 tracking-tight">
+              {totals.total_unclaimed.toLocaleString()}
+            </span>
+          </div>
+          <div className="mt-1 text-xs font-medium text-slate-500">
+            Awaiting recipient claim
+          </div>
+        </div>
+
+        {/* Claimed Cards */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Claimed Cards</span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-blue-600 tracking-tight">
+              {totals.total_claimed.toLocaleString()}
+            </span>
+          </div>
+          <div className="mt-1 text-xs font-medium text-slate-500">
+            Redeemed by recipients
+          </div>
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Active Gift Cards"
-          value={activeCards.length}
-          subtext="Ready for redemption & claiming"
-          variant="primary"
-        />
-        <StatCard
-          label="Outstanding Balance"
-          value={`₹${totalActiveValue.toLocaleString('en-IN')}`}
-          subtext="Total circulating gift card value"
-          variant="default"
-        />
-        <StatCard
-          label="Total Issued Value"
-          value={`₹${totalIssuedValue.toLocaleString('en-IN')}`}
-          subtext="Lifetime gift cards generated"
-          variant="default"
-        />
-        <StatCard
-          label="Key & PIN Protection"
-          value="Masked Security"
-          subtext="Tamper-proof encrypted keys"
-          variant="default"
-        />
-      </div>
-
-      {/* Controls Bar (Search & Filter) */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+      {/* Filter and Search Bar */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Search */}
+        <div className="relative w-full sm:w-96">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search by card code, recipient, phone..."
+            placeholder="Search by customer name, phone, ID, or gift code..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 font-medium"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
           />
         </div>
 
-        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:outline-none"
-          >
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="partially_redeemed">Partially Redeemed</option>
-            <option value="redeemed">Fully Redeemed</option>
-            <option value="expired">Expired</option>
-          </select>
-
-          <button
-            onClick={loadGiftCards}
-            className="p-2 text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition"
-            title="Refresh"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          {[
+            { id: 'all', label: 'All Cards' },
+            { id: 'unclaimed', label: 'Unclaimed' },
+            { id: 'claimed', label: 'Claimed' },
+            { id: 'expired', label: 'Expired' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                statusFilter === tab.id
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Cards Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-900">
-            Gift Cards Inventory ({cards.length} cards)
-          </h3>
-          <span className="text-xs text-slate-500 font-medium">
-            Page 1 of {Math.ceil((totalCards || 1) / 50)}
-          </span>
+      {/* Gift Cards Details List */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Gift Cards Sent by Customers</h2>
+            <p className="text-xs text-slate-500">
+              Showing {giftCards.length} records • Last updated {lastUpdated.toLocaleTimeString('en-IN')}
+            </p>
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="p-12 text-center text-slate-400 space-y-2">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto text-slate-400" />
-            <p className="text-xs">Loading gift cards...</p>
+          <div className="p-12 text-center space-y-3">
+            <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
+            <p className="text-sm font-semibold text-slate-600">Loading gift cards...</p>
           </div>
-        ) : cards.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 space-y-3">
-            <Gift className="w-10 h-10 mx-auto text-slate-300" />
-            <p className="text-sm font-bold text-slate-700">No Gift Cards Found</p>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              Generate your first Amazon-style digital gift card using the "+ Issue New Gift Card" button above.
+        ) : giftCards.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+              <Gift className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">No Gift Cards Found</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              {searchQuery || statusFilter !== 'all'
+                ? 'No gift cards match the current filter or search criteria.'
+                : 'No gift cards have been shared by customers yet. Customers can share gift cards from their portal page.'}
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-bold text-[11px]">
-                <tr>
-                  <th className="py-3.5 px-4">Gift Card Code</th>
-                  <th className="py-3.5 px-4">Security PIN</th>
-                  <th className="py-3.5 px-4">Initial Value</th>
-                  <th className="py-3.5 px-4">Available Balance</th>
-                  <th className="py-3.5 px-4">Recipient</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4">Expiry</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="py-3 px-5">Sender (Customer Details)</th>
+                  <th className="py-3 px-5">Gift Amount (₹)</th>
+                  <th className="py-3 px-5">Gift Code</th>
+                  <th className="py-3 px-5">Recipient Details</th>
+                  <th className="py-3 px-5">Status</th>
+                  <th className="py-3 px-5">Sent Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {cards.map((card) => {
-                  const canSeePin = isPinCreator(card);
-                  const isPinVisible = canSeePin && !!revealedPins[card.card_id];
-                  const isCardVisible = revealedCards[card.card_id];
-                  const maskedKey = card.card_number
-                    ? `${'•'.repeat(Math.max(4, card.card_number.length - 4))}${card.card_number.slice(-4)}`
-                    : '••••••••••••';
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {giftCards.map((card) => {
+                  const isClaimed = card.claim_status === 'claimed';
+                  const isExpired = card.claim_status === 'expired';
+
                   return (
-                    <tr key={card.card_id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-                          <span className="tracking-wider">
-                            {isCardVisible ? card.card_number : maskedKey}
+                    <tr key={card.id || card.gift_code} className="hover:bg-slate-50/60 transition">
+                      {/* Sender Customer Details */}
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
+                            {card.sender_name?.charAt(0)?.toUpperCase() || 'C'}
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-900 block truncate max-w-[180px]">
+                              {card.sender_name}
+                            </span>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                              <span className="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
+                                {card.sender_customer_id}
+                              </span>
+                              {card.sender_phone && card.sender_phone !== '—' && (
+                                <span className="flex items-center gap-1 text-slate-500">
+                                  📱 {card.sender_phone}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Gift Amount (Money sent in ₹) */}
+                      <td className="py-3.5 px-5">
+                        <div>
+                          <span className="font-black text-slate-900 text-sm block">
+                            {formatCurrency(card.amount_inr)}
                           </span>
+                          <div className="flex items-center gap-1.5 text-[11px] text-indigo-600 font-medium mt-0.5">
+                            <Coins className="w-3 h-3" />
+                            {card.points_equivalent ? `${card.points_equivalent.toLocaleString()} PTS` : 'Cash'}
+                            <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded capitalize">
+                              {card.funding_source || 'points'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Gift Code */}
+                      <td className="py-3.5 px-5">
+                        <div className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-mono text-xs px-2.5 py-1 rounded-lg transition border border-slate-200">
+                          <span>{card.gift_code}</span>
                           <button
-                            onClick={() => toggleCardReveal(card.card_id)}
-                            className="p-1 text-slate-400 hover:text-slate-800 transition"
-                            title={isCardVisible ? 'Hide card key' : 'Reveal card key'}
+                            type="button"
+                            title="Copy Code"
+                            onClick={() => handleCopyCode(card.gift_code)}
+                            className="text-slate-400 hover:text-slate-700 ml-1"
                           >
-                            {isCardVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
-                          <button
-                            onClick={() => handleCopy(card.card_number)}
-                            className="p-1 text-slate-400 hover:text-slate-800 transition"
-                            title="Copy card number"
-                          >
-                            {copiedCode === card.card_number ? (
+                            {copiedCode === card.gift_code ? (
                               <Check className="w-3.5 h-3.5 text-emerald-600" />
                             ) : (
                               <Copy className="w-3.5 h-3.5" />
@@ -509,100 +339,50 @@ export const GiftCardsScreen = ({ user }) => {
                           </button>
                         </div>
                       </td>
-                      <td className="py-3 px-4 font-mono">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-slate-800">
-                            {isPinVisible ? card.pin_code : '••••'}
+
+                      {/* Recipient Details */}
+                      <td className="py-3.5 px-5">
+                        <div>
+                          <span className="font-semibold text-slate-800 block truncate max-w-[160px]">
+                            {card.receiver_name || 'Shared via WhatsApp'}
                           </span>
-                          {canSeePin ? (
-                            <button
-                              onClick={() => togglePinReveal(card)}
-                              className="text-slate-400 hover:text-slate-700 p-1"
-                              title={isPinVisible ? 'Hide PIN' : 'Reveal PIN'}
-                            >
-                              {isPinVisible ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => showError('Security Protected: Gift Card PIN can only be viewed by the user who created it.')}
-                              className="text-slate-300 hover:text-amber-600 p-1 transition"
-                              title="Protected: PIN visible only to card creator"
-                            >
-                              <Lock className="w-3 h-3 text-slate-400" />
-                            </button>
-                          )}
+                          <span className="text-[11px] text-slate-500 block">
+                            {card.receiver_phone && card.receiver_phone !== '—'
+                              ? `📱 ${card.receiver_phone}`
+                              : 'Shared via Claim Link'}
+                          </span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 font-bold text-slate-700">
-                        ₹{Number(card.initial_amount || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-emerald-600">
-                        ₹{Number(card.balance_amount || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-900">{card.recipient_name || '—'}</div>
-                        {card.recipient_phone && (
-                          <div className="text-[10px] text-slate-400 font-mono">{card.recipient_phone}</div>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-5">
+                        {isClaimed ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            Claimed
+                          </span>
+                        ) : isExpired ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                            <AlertCircle className="w-3 h-3 text-slate-400" />
+                            Expired
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                            <Clock className="w-3 h-3 text-blue-600" />
+                            Unclaimed / Active
+                          </span>
                         )}
                       </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                            card.status === 'active'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : card.status === 'partially_redeemed'
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : card.status === 'redeemed'
-                              ? 'bg-slate-100 text-slate-600 border border-slate-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }`}
-                        >
-                          {card.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-slate-500 font-medium">
-                        {card.expires_at
-                          ? new Date(card.expires_at).toLocaleDateString('en-IN', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                          : '—'}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {card.recipient_phone && (
-                            <button
-                              type="button"
-                              onClick={() => handleShareGiftCardWhatsApp(card)}
-                              className="px-2 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition flex items-center gap-1 cursor-pointer"
-                              title="Share gift card code & PIN to customer via WhatsApp"
-                            >
-                              <Share2 className="w-3 h-3 text-emerald-600" />
-                              <span className="hidden sm:inline">WhatsApp</span>
-                            </button>
+
+                      {/* Sent Date */}
+                      <td className="py-3.5 px-5 whitespace-nowrap text-slate-600">
+                        <div>
+                          <span className="block font-medium">{formatDate(card.created_at)}</span>
+                          {card.expires_at && !isClaimed && (
+                            <span className="text-[11px] text-slate-400 block">
+                              Exp: {new Date(card.expires_at).toLocaleDateString('en-IN')}
+                            </span>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => handleCopyGiftCardAndPin(card)}
-                            className="p-1 text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 transition cursor-pointer"
-                            title="Copy Code & PIN"
-                          >
-                            <Copy className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setRedeemCardNumber(card.card_number);
-                              setRedeemPin(card.pin_code);
-                              setRedeemAmount(card.balance_amount.toString());
-                              setRedeemModalOpen(true);
-                            }}
-                            disabled={card.status === 'redeemed' || card.status === 'expired'}
-                            className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                          >
-                            Redeem
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -613,337 +393,6 @@ export const GiftCardsScreen = ({ user }) => {
           </div>
         )}
       </div>
-
-      {/* ─── Issue Gift Card Modal ────────────────────────────────────────── */}
-      {issueModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-5 border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
-                  <Gift className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Issue Digital Gift Card</h3>
-                  <p className="text-[11px] text-slate-500">Generate an Amazon-style 16-character code with 4-digit PIN</p>
-                </div>
-              </div>
-              <button onClick={() => setIssueModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleIssueSubmit} className="space-y-4 text-xs">
-              {/* Preset Denominations */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1.5">Select Card Denomination (₹)</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['500', '1000', '2500', '5000'].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setIssueAmount(amt)}
-                      className={`py-2 text-xs font-extrabold rounded-xl border transition ${
-                        issueAmount === amt
-                          ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      ₹{parseInt(amt, 10).toLocaleString('en-IN')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Custom Amount (₹)</label>
-                <input
-                  type="number"
-                  min="100"
-                  step="50"
-                  value={issueAmount}
-                  onChange={(e) => setIssueAmount(e.target.value)}
-                  placeholder="e.g. 7500"
-                  required
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 font-bold text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Recipient Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                    placeholder="e.g. Rahul Sharma"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Recipient Mobile</label>
-                  <input
-                    type="tel"
-                    value={recipientPhone}
-                    onChange={(e) => setRecipientPhone(e.target.value)}
-                    placeholder="e.g. 9876543210"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 font-medium"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Personalized Message</label>
-                <textarea
-                  rows="2"
-                  value={customMessage}
-                  onChange={(e) => setCustomMessage(e.target.value)}
-                  placeholder="Greeting or terms message..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 font-medium text-xs resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Card Theme</label>
-                  <select
-                    value={cardTheme}
-                    onChange={(e) => setCardTheme(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none"
-                  >
-                    <option value="premium">Premium Gold &amp; Slate</option>
-                    <option value="celebration">Celebration Festive</option>
-                    <option value="automotive">Automotive Elite</option>
-                    <option value="birthday">Birthday Special</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Validity</label>
-                  <select
-                    value={validityMonths}
-                    onChange={(e) => setValidityMonths(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none"
-                  >
-                    <option value="12">12 Months (1 Year)</option>
-                    <option value="24">24 Months (2 Years)</option>
-                    <option value="6">6 Months</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIssueModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingIssue}
-                  className="px-5 py-2.5 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition disabled:opacity-50"
-                >
-                  {isSubmittingIssue ? 'Generating Card...' : 'Issue Gift Card'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ─── POS Redeem Modal ─────────────────────────────────────────────── */}
-      {redeemModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Gift className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-base font-bold text-slate-900">POS Gift Card Redemption</h3>
-              </div>
-              <button onClick={() => setRedeemModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
-            </div>
-
-            <form onSubmit={handleRedeemSubmit} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Gift Card Code *</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    required
-                    value={redeemCardNumber}
-                    onChange={(e) => setRedeemCardNumber(e.target.value.toUpperCase())}
-                    placeholder="e.g. GIFT-BELL-XXXX-XXXX"
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleLookupCard}
-                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl transition"
-                  >
-                    Lookup
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">4-Digit Security PIN *</label>
-                <input
-                  type="password"
-                  maxLength="6"
-                  required
-                  value={redeemPin}
-                  onChange={(e) => setRedeemPin(e.target.value)}
-                  placeholder="Enter 4-digit PIN"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-slate-900"
-                />
-              </div>
-
-              {lookupCardData && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
-                  <div className="flex items-center justify-between text-emerald-900 font-bold">
-                    <span>Available Balance:</span>
-                    <span>₹{lookupCardData.balance_amount.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="text-[11px] text-emerald-700">
-                    Recipient: {lookupCardData.recipient_name}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Amount to Deduct (₹) *</label>
-                <input
-                  type="number"
-                  step="1"
-                  required
-                  value={redeemAmount}
-                  onChange={(e) => setRedeemAmount(e.target.value)}
-                  placeholder="e.g. 1500"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Bill / Invoice Reference ID</label>
-                <input
-                  type="text"
-                  value={redeemRef}
-                  onChange={(e) => setRedeemRef(e.target.value)}
-                  placeholder="e.g. INV-2026-0891"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setRedeemModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isRedeeming}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition disabled:opacity-50"
-                >
-                  {isRedeeming ? 'Redeeming...' : 'Apply Redemption'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Newly Issued Voucher Sharing Modal ───────────────────────── */}
-      {newlyIssuedCard && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 border border-slate-200 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900">Gift Card Issued!</h3>
-                  <p className="text-xs text-slate-500">Share these details with your customer now</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setNewlyIssuedCard(null)}
-                className="text-slate-400 hover:text-slate-600 font-bold p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Voucher Details Card */}
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white space-y-3 shadow-md">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-amber-400 font-bold uppercase tracking-wider">Bellad Digital Gift Card</span>
-                <span className="bg-white/10 px-2 py-0.5 rounded-md text-[10px] text-slate-300">
-                  ₹{Number(newlyIssuedCard.initial_amount || newlyIssuedCard.amount || 0).toLocaleString('en-IN')}
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-sans">Gift Card Code</span>
-                <span className="font-mono text-base font-extrabold text-amber-300 tracking-wider select-all">
-                  {newlyIssuedCard.card_number}
-                </span>
-              </div>
-
-              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-mono">
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-sans">4-Digit Security PIN</span>
-                  <span className="font-extrabold text-white text-base tracking-widest select-all">
-                    {newlyIssuedCard.pin_code}
-                  </span>
-                </div>
-                <div className="text-right font-sans">
-                  <span className="text-[10px] text-slate-400 block">Recipient</span>
-                  <span className="font-bold text-white text-xs">
-                    {newlyIssuedCard.recipient_name || 'Customer'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Sharing Action Buttons */}
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => handleShareGiftCardWhatsApp(newlyIssuedCard)}
-                className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Share2 className="w-4 h-4" />
-                <span>Share Code &amp; PIN via WhatsApp</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleCopyGiftCardAndPin(newlyIssuedCard)}
-                className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition border border-slate-200 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Copy className="w-4 h-4 text-slate-600" />
-                <span>Copy Full Gift Card &amp; PIN</span>
-              </button>
-            </div>
-
-            <div className="pt-2 text-center">
-              <button
-                type="button"
-                onClick={() => setNewlyIssuedCard(null)}
-                className="text-xs text-slate-500 hover:text-slate-800 font-bold"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

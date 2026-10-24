@@ -30,24 +30,24 @@ router.get(
   CorrectionController.streamCorrectionProof
 );
 
-// Admin queue listing requests
+// Manager / Admin queue listing requests
 router.get(
   ['/list', '/admin/list'],
-  requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager']),
+  requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager']),
   CorrectionController.listCorrections
 );
 
-// Admin approve correction request
+// Manager / Admin approve correction request
 router.post(
   ['/:id/approve', '/admin/:id/approve'],
-  requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager']),
+  requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager']),
   CorrectionController.approveCorrection
 );
 
-// Admin reject correction request
+// Manager / Admin reject correction request
 router.post(
   ['/:id/reject', '/admin/:id/reject'],
-  requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager']),
+  requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager']),
   CorrectionController.rejectCorrection
 );
 

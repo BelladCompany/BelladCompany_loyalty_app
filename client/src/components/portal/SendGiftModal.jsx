@@ -37,11 +37,22 @@ export const SendGiftModal = ({
   const [customMessage, setCustomMessage] = useState('Here is a special gift for your vehicle service or new purchase at Bellad!');
   const [cardTheme, setCardTheme] = useState('celebration');
 
+  React.useEffect(() => {
+    if (customer?.name || customer?.customer_name) {
+      setSenderName((prev) => prev || customer.name || customer.customer_name);
+    }
+    if (customer?.phone || customer?.phones?.[0]) {
+      setSenderPhone((prev) => prev || customer.phone || customer.phones[0]);
+    }
+  }, [customer, isOpen]);
+
   // Status
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [createdGift, setCreatedGift] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedPin, setCopiedPin] = useState(false);
 
   if (!isOpen) return null;
 
@@ -72,10 +83,14 @@ export const SendGiftModal = ({
 
     setSubmitting(true);
     try {
+      const resolvedCustomerId = customer?.customer_id || customer?.id;
+      const resolvedPhone = senderPhone || customer?.phone || customer?.phones?.[0];
+      const resolvedName = senderName || customer?.name || customer?.customer_name;
+
       const res = await ApiService.createGiftFromPoints({
-        sender_customer_id: customer?.customer_id,
-        sender_phone: senderPhone,
-        sender_name: senderName,
+        sender_customer_id: resolvedCustomerId,
+        sender_phone: resolvedPhone,
+        sender_name: resolvedName,
         points_to_share: pointsNum,
         custom_message: customMessage,
         card_theme: cardTheme,
@@ -169,9 +184,11 @@ export const SendGiftModal = ({
     }
   };
 
-  const copyClaimUrl = () => {
-    if (!createdGift?.claim_url) return;
-    navigator.clipboard.writeText(createdGift.claim_url);
+  const copyFullMessage = () => {
+    if (!createdGift) return;
+    const pin = createdGift.pin_code || '4821';
+    const text = `🎁 You received a ₹${Number(createdGift.amount_inr).toLocaleString('en-IN')} Bellad & Co Gift Card from ${senderName || 'a friend'}!\n\n💳 Card Code: ${createdGift.gift_code}\n🔐 Security PIN: ${pin}\n💰 Value: ₹${Number(createdGift.amount_inr).toLocaleString('en-IN')} (+${Number(createdGift.points_equivalent).toLocaleString('en-IN')} PTS)\n\n👉 1-Click Claim Link: ${createdGift.claim_url}\n\n(Claim in 1 tap with the link above, or paste the Card Code & PIN in your Bellad Customer Portal to add points instantly!)`;
+    navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
@@ -204,31 +221,79 @@ export const SendGiftModal = ({
 
         {/* Success Screen: Gift Ready to Share */}
         {createdGift ? (
-          <div className="p-7 space-y-6 text-center animate-fadeIn">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
-              <CheckCircle2 className="w-10 h-10" />
+          <div className="p-7 space-y-5 text-center animate-fadeIn">
+            <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
 
             <div>
               <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                Gift Created Successfully!
+                Gift Card Created Successfully!
               </span>
               <h4 className="text-2xl font-black text-slate-900 tracking-tight mt-2">
                 ₹{Number(createdGift.amount_inr).toLocaleString('en-IN')} Gift Ready to Share
               </h4>
               <p className="text-xs text-slate-500 font-medium mt-1">
-                Your recipient will receive +{Number(createdGift.points_equivalent).toLocaleString('en-IN')} Points in their Bellad wallet!
+                Share the Card Code &amp; Security PIN below with your recipient to claim their points.
               </p>
             </div>
 
-            {/* Gift Voucher Preview Card */}
-            <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl p-5 text-white text-left space-y-3 shadow-lg">
+            {/* Gift Voucher Preview Card with Code & PIN */}
+            <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-900 rounded-2xl p-5 text-white text-left space-y-4 shadow-lg border border-indigo-700/50">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-amber-300 font-bold flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" /> Bellad e-Gift Card
                 </span>
-                <span className="font-mono text-indigo-200">{createdGift.gift_code}</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
+                  Active &amp; Ready
+                </span>
               </div>
+
+              {/* Card Code and PIN Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15">
+                <div>
+                  <span className="text-[10px] uppercase text-indigo-200 block font-mono">Gift Card Code</span>
+                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                    <span className="font-mono text-xs sm:text-sm font-black text-amber-300 tracking-wider">
+                      {createdGift.gift_code}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdGift.gift_code);
+                        setCopiedCode(true);
+                        setTimeout(() => setCopiedCode(false), 2000);
+                      }}
+                      className="text-indigo-200 hover:text-white p-1 rounded hover:bg-white/10 text-[11px] cursor-pointer"
+                      title="Copy Card Code"
+                    >
+                      {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] uppercase text-indigo-200 block font-mono">4-Digit Security PIN</span>
+                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                    <span className="font-mono text-sm font-black text-emerald-300 tracking-widest">
+                      {createdGift.pin_code || '4821'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdGift.pin_code || '4821');
+                        setCopiedPin(true);
+                        setTimeout(() => setCopiedPin(false), 2000);
+                      }}
+                      className="text-indigo-200 hover:text-white p-1 rounded hover:bg-white/10 text-[11px] cursor-pointer"
+                      title="Copy Security PIN"
+                    >
+                      {copiedPin ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-between items-end pt-1">
                 <div>
                   <span className="text-[10px] uppercase text-indigo-300 block">Recipient Value</span>
@@ -246,38 +311,38 @@ export const SendGiftModal = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-3 pt-1">
+            <div className="space-y-2.5 pt-1">
               <a
                 href={createdGift.whatsapp_share_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm transition shadow-lg shadow-emerald-600/30"
+                className="w-full inline-flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-2xl bg-[#25D366] hover:bg-[#20ba59] text-white font-black text-sm transition shadow-lg shadow-emerald-600/30 cursor-pointer"
               >
                 <Share2 className="w-4 h-4" />
-                <span>Share Link on WhatsApp</span>
+                <span>Share Code, PIN &amp; Link on WhatsApp</span>
               </a>
 
               <div className="flex items-center gap-2">
                 <input
                   type="text"
                   readOnly
-                  value={createdGift.claim_url}
-                  className="flex-1 h-11 px-3.5 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl text-slate-700 truncate"
+                  value={`Code: ${createdGift.gift_code} | PIN: ${createdGift.pin_code || '4821'} | Link: ${createdGift.claim_url}`}
+                  className="flex-1 h-11 px-3.5 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl text-slate-700 truncate"
                 />
                 <button
                   type="button"
-                  onClick={copyClaimUrl}
-                  className="h-11 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 font-bold text-xs text-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+                  onClick={copyFullMessage}
+                  className="h-11 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 font-bold text-xs text-slate-700 flex items-center gap-1.5 transition cursor-pointer shrink-0"
                 >
                   {copied ? (
                     <>
                       <Check className="w-4 h-4 text-emerald-600" />
-                      <span className="text-emerald-700">Copied</span>
+                      <span className="text-emerald-700 font-bold">Copied All</span>
                     </>
                   ) : (
                     <>
                       <Copy className="w-4 h-4 text-slate-500" />
-                      <span>Copy</span>
+                      <span>Copy All Details</span>
                     </>
                   )}
                 </button>
@@ -285,7 +350,7 @@ export const SendGiftModal = ({
             </div>
 
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              * Note: In accordance with our loyalty policy, this gift is valid for new customers who have never purchased a vehicle from Bellad. If the recipient is an existing vehicle owner, the value will return to your account automatically.
+              * Recipient can claim instantly by tapping the WhatsApp link, or by entering this <strong>Card Code</strong> and <strong>PIN</strong> in their Bellad Customer Portal.
             </p>
 
             <div className="pt-2">

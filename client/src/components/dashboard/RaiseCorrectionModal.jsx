@@ -5,11 +5,8 @@ import {
   CheckCircle2,
   X,
   Upload,
-  Calculator,
   Receipt,
   CreditCard,
-  Sparkles,
-  Eye,
 } from 'lucide-react';
 import ApiService from '../../services/api';
 import Button from '../ui/Button';
@@ -27,42 +24,12 @@ export const RaiseCorrectionModal = ({
   const [correctAmount, setCorrectAmount] = useState('');
   const [explanation, setExplanation] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
-  
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewData, setPreviewData] = useState(null);
-  const [previewError, setPreviewError] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successResult, setSuccessResult] = useState(null);
 
   if (!isOpen) return null;
-
-  const handlePreview = async () => {
-    if (!reference.trim()) {
-      setPreviewError('Please enter a Transaction Reference (Receipt No or Reference ID).');
-      return;
-    }
-    if (!correctAmount || parseFloat(correctAmount) <= 0) {
-      setPreviewError('Please enter a valid positive Correct Bill Amount.');
-      return;
-    }
-
-    setPreviewLoading(true);
-    setPreviewError('');
-    setPreviewData(null);
-    try {
-      const res = await ApiService.previewCorrection({
-        points_ledger_reference: reference.trim(),
-        correct_bill_amount: parseFloat(correctAmount),
-      });
-      setPreviewData(res.data);
-    } catch (err) {
-      setPreviewError(err.message || 'Failed to fetch correction preview.');
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -80,8 +47,8 @@ export const RaiseCorrectionModal = ({
       setError('Please enter the intended correct bill amount.');
       return;
     }
-    if (!explanation || explanation.trim().length < 20) {
-      setError('Mandatory explanation must be at least 20 characters long.');
+    if (!explanation || !explanation.trim()) {
+      setError('Explanation is required.');
       return;
     }
     if (!selectedFile) {
@@ -123,8 +90,6 @@ export const RaiseCorrectionModal = ({
     setCorrectAmount('');
     setExplanation('');
     setSelectedFile(null);
-    setPreviewData(null);
-    setPreviewError('');
     setError('');
     setSuccessResult(null);
     onClose();
@@ -133,7 +98,7 @@ export const RaiseCorrectionModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
       <div className="w-full max-w-2xl bg-white border-2 border-surface-border rounded-xl shadow-2xl max-h-[94vh] overflow-y-auto">
-        
+
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-100 border-b border-surface-border">
           <div className="flex items-center gap-2.5">
@@ -188,145 +153,61 @@ export const RaiseCorrectionModal = ({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
-              
-              <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-xs font-semibold text-indigo-900 leading-relaxed">
-                ℹ️ <strong>Append-Only Integrity Notice:</strong> Points ledger entries are never modified or deleted. Approving this request will automatically generate exact <strong>REVERSAL</strong> entries for the wrong transaction and <strong>CORRECTED</strong> entries for the right amount.
-              </div>
-
-              {/* Form Input Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Input
-                    label="Receipt No / Reference ID / Vehicle Reg No"
-                    placeholder="e.g. KA 25 MP 2009, BAC-100008, or REC-2026-9901"
-                    icon={Receipt}
-                    value={reference}
-                    onChange={(e) => setReference(e.target.value)}
-                    required
-                  />
-                  <p className="text-[11px] text-slate-500 font-medium mt-1">
-                    Accepts Vehicle Reg No (e.g. KA 25 MP 2009), Customer ID, or Receipt No.
-                  </p>
-                </div>
-
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <Input
-                      label="Wrong Bill Amount Recorded (₹)"
-                      type="number"
-                      placeholder="e.g. 2000"
-                      icon={CreditCard}
-                      value={wrongAmount}
-                      onChange={(e) => setWrongAmount(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
+              {/* Form Input Fields with Clean Alignment */}
+              <div className="space-y-4">
                 <Input
-                  label="Correct Bill Amount Intended (₹)"
-                  type="number"
-                  placeholder="e.g. 1200"
-                  icon={CreditCard}
-                  value={correctAmount}
-                  onChange={(e) => setCorrectAmount(e.target.value)}
+                  label="Receipt No / Reference ID / Vehicle Reg No"
+                  placeholder="e.g. KA 25 MP 2009, BAC-100008, or Receipt No"
+                  icon={Receipt}
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
                   required
                 />
 
-                <div className="flex items-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handlePreview}
-                    disabled={previewLoading || !reference || !correctAmount}
-                    className="w-full h-11 flex items-center justify-center gap-2 font-bold border-indigo-300 text-indigo-700 hover:bg-indigo-50"
-                  >
-                    {previewLoading ? 'Calculating…' : (
-                      <>
-                        <Eye className="w-4 h-4" /> Preview Correction Math
-                      </>
-                    )}
-                  </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Wrong Bill Amount (₹)"
+                    type="number"
+                    placeholder="e.g. 2000"
+                    icon={CreditCard}
+                    value={wrongAmount}
+                    onChange={(e) => setWrongAmount(e.target.value)}
+                    required
+                  />
+
+                  <Input
+                    label="Correct Bill Amount (₹)"
+                    type="number"
+                    placeholder="e.g. 1200"
+                    icon={CreditCard}
+                    value={correctAmount}
+                    onChange={(e) => setCorrectAmount(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
 
-              {/* Live Preview Card */}
-              {previewError && (
-                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs font-bold text-amber-900">
-                  {previewError}
-                </div>
-              )}
-
-              {previewData && previewData.calculation_breakup && (
-                <div className="p-4 bg-slate-900 text-white rounded-xl border-2 border-slate-700 space-y-3 shadow-lg">
-                  <div className="flex items-center justify-between border-b border-slate-700 pb-2 text-xs font-extrabold uppercase text-emerald-400">
-                    <span className="flex items-center gap-1.5"><Calculator className="w-4 h-4" /> Preview Impact Breakdown</span>
-                    <span>Customer: {previewData.customer_id}</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
-                    <div className="p-2 bg-slate-800 rounded border border-slate-700">
-                      <div className="text-slate-400 font-semibold uppercase">Original Net Pts</div>
-                      <div className="text-base font-mono font-bold text-rose-400">
-                        {previewData.calculation_breakup.original_net_points > 0 ? `+${previewData.calculation_breakup.original_net_points}` : previewData.calculation_breakup.original_net_points}
-                      </div>
-                    </div>
-
-                    <div className="p-2 bg-slate-800 rounded border border-slate-700">
-                      <div className="text-slate-400 font-semibold uppercase">Corrected Net Pts</div>
-                      <div className="text-base font-mono font-bold text-emerald-400">
-                        {previewData.calculation_breakup.corrected_net_points > 0 ? `+${previewData.calculation_breakup.corrected_net_points}` : previewData.calculation_breakup.corrected_net_points}
-                      </div>
-                    </div>
-
-                    <div className="p-2 bg-slate-800 rounded border border-slate-700">
-                      <div className="text-slate-400 font-semibold uppercase">Correct Cash Paid</div>
-                      <div className="text-base font-extrabold text-sky-400">
-                        ₹{previewData.calculation_breakup.cash_paid.toLocaleString()}
-                      </div>
-                    </div>
-
-                    <div className="p-2 bg-slate-800 rounded border border-slate-700">
-                      <div className="text-slate-400 font-semibold uppercase">Net Balance Adj.</div>
-                      <div className="text-base font-mono font-bold text-amber-400">
-                        {previewData.calculation_breakup.net_balance_adjustment > 0 ? `+${previewData.calculation_breakup.net_balance_adjustment}` : previewData.calculation_breakup.net_balance_adjustment} PTS
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Explanation Field (Mandatory min 20 chars) */}
+              {/* Explanation Field (Mandatory - No Character Limit) */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-sm font-bold text-slate-800">
-                    Mandatory Explanation & Mistake Details <span className="text-rose-600">*</span>
-                  </label>
-                  <span className={`text-xs font-bold ${explanation.trim().length >= 20 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {explanation.trim().length} / 20 min chars
-                  </span>
-                </div>
+                <label className="text-sm font-bold text-slate-800 block mb-1.5">
+                  Explanation &amp; Reason <span className="text-rose-600">*</span>
+                </label>
                 <textarea
                   rows={3}
                   value={explanation}
                   onChange={(e) => setExplanation(e.target.value)}
-                  placeholder="Explain exactly how the mistake happened (e.g. Entered ₹2000 instead of ₹1200 due to keying error on service bill)..."
+                  placeholder="Enter explanation for billing correction..."
                   className="w-full p-3 border-2 border-slate-300 rounded-lg text-sm focus:border-indigo-600 focus:outline-none font-medium"
                   required
                 />
-                {explanation.trim().length > 0 && explanation.trim().length < 20 && (
-                  <p className="text-xs text-amber-700 font-semibold mt-1">
-                    ⚠️ Minimum 20 characters required. Please type a brief sentence explaining the mistake.
-                  </p>
-                )}
               </div>
 
-              {/* Mandatory File Upload */}
+              {/* Proof File Upload */}
               <div>
                 <label className="text-sm font-bold text-slate-800 block mb-1.5">
-                  Mandatory Screenshot / Receipt Proof Upload <span className="text-rose-600">*</span>
+                  Screenshot / Receipt Proof <span className="text-rose-600">*</span>
                 </label>
-                <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-between">
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-3.5 bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Upload className="w-5 h-5 text-slate-500" />
                     <div>
@@ -355,7 +236,7 @@ export const RaiseCorrectionModal = ({
                   type="submit"
                   variant="primary"
                   size="lg"
-                  disabled={isLoading || !reference || !wrongAmount || !correctAmount || explanation.trim().length < 20 || !selectedFile}
+                  disabled={isLoading || !reference || !wrongAmount || !correctAmount || !explanation.trim() || !selectedFile}
                   className="font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
                 >
                   {isLoading ? 'Submitting Ticket…' : 'Submit Correction Ticket →'}

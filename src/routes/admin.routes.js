@@ -37,5 +37,14 @@ router.get('/google-sheets-logs', AdminController.getGoogleSheetsLogs);
 // 9. Generate tokenized cashier invitation link (48h validity)
 router.post('/cashiers/invite', AdminController.createCashierInvite);
 
+// 10. Get customer redemptions list (Admin dashboard only)
+router.get('/customer-redemptions', AdminController.getCustomerRedemptions);
+
+// 11. Get gift cards audit details list (Admin dashboard only)
+router.get('/gift-cards', AdminController.getAdminGiftCards);
+
+// 12. Get referral rewards details with vehicle purchase & PR checks (Admin dashboard only)
+router.get('/referrals', AdminController.getAdminReferrals);
+
 module.exports = router;
 
