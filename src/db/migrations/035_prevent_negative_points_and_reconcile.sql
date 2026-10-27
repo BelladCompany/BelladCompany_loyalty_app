@@ -1,5 +1,89 @@
 -- Migration 035: Prevent Negative Points Balance and Reconcile Historical Overdrafts
 
+-- 0. Ensure schema compatibility across points_ledger, customer_tier_snapshot, and tier_rules
+DO $$
+BEGIN
+  -- 0a. Add type column to points_ledger if missing
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'points_ledger' AND column_name = 'type'
+  ) THEN
+    ALTER TABLE points_ledger ADD COLUMN type VARCHAR(32);
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'points_ledger' AND column_name = 'transaction_type'
+    ) THEN
+      UPDATE points_ledger SET type = transaction_type WHERE type IS NULL;
+    END IF;
+  END IF;
+
+  -- 0b. Drop NOT NULL on transaction_type if it exists, so inserting with only 'type' succeeds
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'points_ledger' AND column_name = 'transaction_type' AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE points_ledger ALTER COLUMN transaction_type DROP NOT NULL;
+  END IF;
+
+  -- 0c. Ensure points_ledger constraints permit 'adjust'
+  IF EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE table_name = 'points_ledger' AND constraint_name = 'points_ledger_transaction_type_check'
+  ) THEN
+    ALTER TABLE points_ledger DROP CONSTRAINT points_ledger_transaction_type_check;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE table_name = 'points_ledger' AND constraint_name = 'points_ledger_type_check'
+  ) THEN
+    ALTER TABLE points_ledger DROP CONSTRAINT points_ledger_type_check;
+  END IF;
+
+  -- 0d. Ensure customer_tier_snapshot has current_tier column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'customer_tier_snapshot' AND column_name = 'current_tier'
+  ) THEN
+    ALTER TABLE customer_tier_snapshot ADD COLUMN current_tier VARCHAR(50);
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'customer_tier_snapshot' AND column_name = 'tier_name'
+    ) THEN
+      UPDATE customer_tier_snapshot SET current_tier = tier_name WHERE current_tier IS NULL;
+    END IF;
+  END IF;
+
+  -- 0e. Ensure tier_rules has min_lifetime_points
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'tier_rules' AND column_name = 'min_lifetime_points'
+  ) THEN
+    ALTER TABLE tier_rules ADD COLUMN min_lifetime_points BIGINT DEFAULT 0;
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'tier_rules' AND column_name = 'min_points'
+    ) THEN
+      UPDATE tier_rules SET min_lifetime_points = min_points WHERE min_lifetime_points IS NULL OR min_lifetime_points = 0;
+    END IF;
+  END IF;
+
+  -- 0f. Ensure tier_rules has min_vehicles and benefits_json for subsequent migrations
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'tier_rules' AND column_name = 'min_vehicles'
+  ) THEN
+    ALTER TABLE tier_rules ADD COLUMN min_vehicles INTEGER DEFAULT 0;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'tier_rules' AND column_name = 'benefits_json'
+  ) THEN
+    ALTER TABLE tier_rules ADD COLUMN benefits_json JSONB DEFAULT '{}'::jsonb;
+  END IF;
+END $$;
+
 -- 1. Reconcile all customers currently with a negative points balance
 INSERT INTO points_ledger (
   customer_id,

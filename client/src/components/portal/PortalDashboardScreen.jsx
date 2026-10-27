@@ -216,9 +216,6 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   // Gift Cards State
   const [myGiftCards, setMyGiftCards] = useState([]);
   const [loadingGiftCards, setLoadingGiftCards] = useState(false);
-  const [claimCardCode, setClaimCardCode] = useState('');
-  const [claimPin, setClaimPin] = useState('');
-  const [isClaimingGiftCard, setIsClaimingGiftCard] = useState(false);
   const [revealedPins, setRevealedPins] = useState({});
 
   // Referrals State
@@ -234,10 +231,6 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   });
   const [claimingReferralId, setClaimingReferralId] = useState(null);
   const [loadingReferrals, setLoadingReferrals] = useState(false);
-  const [refereeName, setRefereeName] = useState('');
-  const [refereePhone, setRefereePhone] = useState('');
-  const [refereeModel, setRefereeModel] = useState('');
-  const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
 
   // Offers State
   const [offersList, setOffersList] = useState(INITIAL_MONTHLY_OFFERS);
@@ -404,79 +397,6 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
 
   const togglePinReveal = (cardId) => {
     setRevealedPins((prev) => ({ ...prev, [cardId]: !prev[cardId] }));
-  };
-
-  // 1-Click direct claim
-  const handleClaimCardDirect = async (card) => {
-    setIsClaimingGiftCard(true);
-    setError('');
-    setSuccessMsg('');
-    try {
-      const res = await ApiService.portalClaimGiftCard(card.card_number, card.pin_code);
-      setSuccessMsg(res.message || 'Gift card balance successfully added to your loyalty points!');
-      loadProfile();
-      loadLedger();
-      loadGiftCards();
-    } catch (err) {
-      setError(err.message || 'Failed to claim gift card.');
-    } finally {
-      setIsClaimingGiftCard(false);
-    }
-  };
-
-  // Manual code claim
-  const handleClaimGiftCard = async (e) => {
-    e.preventDefault();
-    if (!claimCardCode.trim()) {
-      setError('Please enter the Gift Card Code.');
-      return;
-    }
-
-    setIsClaimingGiftCard(true);
-    setError('');
-    setSuccessMsg('');
-    try {
-      const res = await ApiService.portalClaimGiftCard(claimCardCode.trim(), claimPin.trim() || null);
-      setSuccessMsg(res.message || 'Gift card successfully claimed to your account!');
-      setClaimCardCode('');
-      setClaimPin('');
-      loadProfile();
-      loadLedger();
-      loadGiftCards();
-    } catch (err) {
-      setError(err.message || 'Failed to claim gift card. Please verify code and PIN.');
-    } finally {
-      setIsClaimingGiftCard(false);
-    }
-  };
-
-  // Submit Friend Referral
-  const handleReferFriendSubmit = async (e) => {
-    e.preventDefault();
-    if (!refereeName.trim() || !refereePhone.trim()) {
-      setError("Please enter your friend's name and mobile number.");
-      return;
-    }
-
-    setIsSubmittingReferral(true);
-    setError('');
-    setSuccessMsg('');
-    try {
-      const res = await ApiService.portalSubmitReferral({
-        referee_name: refereeName.trim(),
-        referee_phone: refereePhone.trim(),
-        vehicle_model: refereeModel.trim(),
-      });
-      setSuccessMsg(res.message || 'Friend referral submitted successfully! Points will be awarded upon vehicle purchase and PR completion.');
-      setRefereeName('');
-      setRefereePhone('');
-      setRefereeModel('');
-      loadReferrals();
-    } catch (err) {
-      setError(err.message || 'Failed to submit referral.');
-    } finally {
-      setIsSubmittingReferral(false);
-    }
   };
 
   // KYC submission
@@ -905,7 +825,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                 <div>
                   <h2 className="text-lg font-black text-slate-900">Gift Card Rewards &amp; Vouchers</h2>
                   <p className="text-xs text-slate-500">
-                    Send e-gift passes to friends or redeem gift card codes directly into your points balance.
+                    Send e-gift passes to friends or present active vouchers at Bellad dealerships.
                   </p>
                 </div>
                 <button
@@ -916,38 +836,6 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                   <Gift className="w-4 h-4" />
                   <span>Send Gift to Friend</span>
                 </button>
-              </div>
-
-              {/* Claim Gift Card Form */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-600" />
-                  <h4 className="text-xs font-bold text-slate-900">Have a Gift Card Code?</h4>
-                </div>
-                <form onSubmit={handleClaimGiftCard} className="flex flex-col sm:flex-row items-center gap-2.5">
-                  <input
-                    type="text"
-                    placeholder="Enter 16-character code (e.g. GIFT-BELL-XXXX)"
-                    value={claimCardCode}
-                    onChange={(e) => setClaimCardCode(e.target.value.toUpperCase())}
-                    className="w-full sm:flex-1 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                  <input
-                    type="password"
-                    placeholder="4-digit PIN (optional)"
-                    maxLength={4}
-                    value={claimPin}
-                    onChange={(e) => setClaimPin(e.target.value.replace(/\D/g, ''))}
-                    className="w-full sm:w-36 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isClaimingGiftCard || !claimCardCode.trim()}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
-                  >
-                    {isClaimingGiftCard ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Claim Balance'}
-                  </button>
-                </form>
               </div>
 
               {/* Sendable Points & Cash Value Showcase */}
@@ -1058,19 +946,17 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                             <button
                               type="button"
                               onClick={() => togglePinReveal(card.card_id)}
-                              className="text-indigo-600 hover:underline font-semibold"
+                              className="text-indigo-600 hover:underline font-semibold cursor-pointer"
                             >
                               {isRevealed ? 'Hide PIN' : 'Show PIN'}
                             </button>
                           </div>
-                          <button
-                            type="button"
-                            disabled={isClaimingGiftCard}
-                            onClick={() => handleClaimCardDirect(card)}
-                            className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5"
-                          >
-                            <Coins className="w-3.5 h-3.5" /> Claim ₹{card.balance_amount} to Points
-                          </button>
+                          <div className="pt-2 border-t border-amber-100 flex items-center justify-between text-[10px] text-slate-400">
+                            <span className="capitalize font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                              {card.status || 'Active'}
+                            </span>
+                            <span>Redeem at Dealership Billing Desk</span>
+                          </div>
                         </div>
                       );
                     })}
@@ -1230,46 +1116,6 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                     <span>{copied ? 'Copied!' : 'Copy'}</span>
                   </button>
                 </div>
-              </div>
-
-              {/* Direct Refer a Friend Form */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
-                <h4 className="text-xs font-bold text-slate-900">Directly Register Friend Referral</h4>
-                <form onSubmit={handleReferFriendSubmit} className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    <input
-                      type="text"
-                      placeholder="Friend's Full Name"
-                      value={refereeName}
-                      onChange={(e) => setRefereeName(e.target.value)}
-                      required
-                      className="px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <input
-                      type="tel"
-                      placeholder="Friend's Mobile (10 digits)"
-                      maxLength={10}
-                      value={refereePhone}
-                      onChange={(e) => setRefereePhone(e.target.value.replace(/\D/g, ''))}
-                      required
-                      className="px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Interested Vehicle (e.g. Safari, Nexon)"
-                      value={refereeModel}
-                      onChange={(e) => setRefereeModel(e.target.value)}
-                      className="px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={isSubmittingReferral}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {isSubmittingReferral ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Submit Friend Referral'}
-                  </button>
-                </form>
               </div>
 
               {/* Referrals Status List */}
