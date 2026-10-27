@@ -7,6 +7,22 @@ ALTER TABLE tier_rules
 ALTER TABLE customer_tier_snapshot
   ADD COLUMN IF NOT EXISTS total_expense_amount NUMERIC(12, 2) DEFAULT 0;
 
+-- Ensure redemptions has discount_amount column
+ALTER TABLE redemptions
+  ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(12, 2);
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'redemptions' AND column_name = 'discount_amount_rupees'
+  ) THEN
+    UPDATE redemptions
+    SET discount_amount = discount_amount_rupees
+    WHERE discount_amount IS NULL AND discount_amount_rupees IS NOT NULL;
+  END IF;
+END $$;
+
 -- Ensure unique constraint on (tenant_id, tier_name) for idempotent upserts
 DO $$
 BEGIN
@@ -81,7 +97,7 @@ cust_redemptions AS (
   SELECT 
     r.customer_id,
     r.tenant_id,
-    SUM(r.discount_amount) as redemption_rs
+    SUM(COALESCE(r.discount_amount, 0)) as redemption_rs
   FROM redemptions r
   GROUP BY r.customer_id, r.tenant_id
 ),
