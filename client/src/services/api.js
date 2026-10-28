@@ -60,7 +60,18 @@ export class ApiService {
         localStorage.removeItem('bac_loyalty_token');
         localStorage.removeItem('bac_loyalty_user');
       }
-      const errorMsg = data?.error || data?.message || data?.details?.[0]?.message || `HTTP Error ${res.status}`;
+      let errorMsg = data?.error || data?.message || data?.details?.[0]?.message;
+      if (!errorMsg) {
+        if (res.status === 405) {
+          errorMsg = 'HTTP Error 405 (Method Not Allowed): The API request hit a static host route instead of the backend server. Please verify VITE_API_URL or Vercel proxy rewrites to your Render backend.';
+        } else if (res.status === 404) {
+          errorMsg = `HTTP Error 404: Endpoint not found (${cleanEndpoint}). Please verify backend routing.`;
+        } else if (res.status === 502 || res.status === 503 || res.status === 504) {
+          errorMsg = `HTTP Error ${res.status}: Backend service is starting up or temporarily unavailable. If hosted on Render free tier, please wait 30 seconds for the instance to wake up and try again.`;
+        } else {
+          errorMsg = `HTTP Error ${res.status}`;
+        }
+      }
       const err = new Error(errorMsg);
       err.status = res.status;
       err.data = data;

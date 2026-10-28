@@ -2,6 +2,18 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/:match*",
+      "destination": "https://bellad-loyalty-api.onrender.com/api/:match*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://bellad-loyalty-api.onrender.com/health"
+    },
+    {
+      "source": "/uploads/:match*",
+      "destination": "https://bellad-loyalty-api.onrender.com/uploads/:match*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

@@ -35,6 +35,7 @@ const app = express();
 // Allowed origins configuration (CORS_ORIGINS comma-separated, FRONTEND_URL, or defaults)
 const defaultOrigins = [
   'https://bellad-company-loyalty-app.vercel.app',
+  'https://bellad-company-loyalty.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:3001',
@@ -63,9 +64,10 @@ const corsOptions = {
 
     const cleanOrigin = origin.replace(/\/+$/, '');
     const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin);
-    const isVercel = /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(cleanOrigin);
+    const isVercel = /^https?:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/i.test(cleanOrigin);
+    const isRender = /^https?:\/\/([a-zA-Z0-9-]+\.)*onrender\.com$/i.test(cleanOrigin);
 
-    if (allowedOrigins.includes(cleanOrigin) || isLocalhost || isVercel) {
+    if (allowedOrigins.includes(cleanOrigin) || isLocalhost || isVercel || isRender) {
       callback(null, true);
     } else {
       callback(new Error(`CORS policy violation: Origin '${origin}' is not allowed.`));
@@ -134,6 +136,9 @@ app.use('/api/public', publicBalanceRoutes);
 app.use('/api/public', publicReferralRoutes);
 app.use('/api', publicBalanceRoutes);
 app.use('/api', kycRoutes);
+
+// Serve static uploads (proofs, attachments)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Serve static client assets if client/dist exists (production fullstack deploy)
 const fs = require('fs');
