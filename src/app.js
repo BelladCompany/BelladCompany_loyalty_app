@@ -63,8 +63,9 @@ const corsOptions = {
 
     const cleanOrigin = origin.replace(/\/+$/, '');
     const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin);
+    const isVercel = /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(cleanOrigin);
 
-    if (allowedOrigins.includes(cleanOrigin) || isLocalhost) {
+    if (allowedOrigins.includes(cleanOrigin) || isLocalhost || isVercel) {
       callback(null, true);
     } else {
       callback(new Error(`CORS policy violation: Origin '${origin}' is not allowed.`));
