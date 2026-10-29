@@ -158,15 +158,15 @@ const LedgerRow = memo(({ item }) => {
     : `${(item.points || 0).toLocaleString('en-IN')}`;
 
   return (
-    <div className="flex items-center justify-between py-3.5 px-4 bg-white border border-slate-100 rounded-2xl hover:border-slate-200 transition shadow-2xs gap-3">
-      <div className="flex items-center space-x-3.5 min-w-0 pr-1">
-        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+    <div className="flex items-center justify-between py-2.5 sm:py-3.5 px-3 sm:px-4 bg-white border border-slate-100 rounded-xl sm:rounded-2xl hover:border-slate-200 transition shadow-2xs gap-2.5 sm:gap-3">
+      <div className="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0 pr-1 flex-1">
+        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 ${isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
           }`}>
-          {isPositive ? <Coins className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+          {isPositive ? <Coins className="w-4 h-4 sm:w-5 sm:h-5" /> : <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />}
         </div>
-        <div className="min-w-0">
-          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate tracking-tight">{item.text}</p>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-[11px] text-slate-400 font-medium">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight leading-snug line-clamp-2 break-words">{item.text}</p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-[10px] sm:text-[11px] text-slate-400 font-medium">
             <span>{item.date}</span>
             {item.amount && (
               <>
@@ -179,7 +179,7 @@ const LedgerRow = memo(({ item }) => {
       </div>
       <div className="shrink-0 text-right">
         <span
-          className={`text-xs font-black font-mono px-3 py-1 rounded-full whitespace-nowrap inline-block ${isPositive
+          className={`text-[11px] sm:text-xs font-bold font-mono px-2 sm:px-3 py-0.5 sm:py-1 rounded-full whitespace-nowrap inline-block ${isPositive
               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
               : 'bg-rose-50 text-rose-700 border border-rose-200'
             }`}
@@ -483,33 +483,33 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
 
       {/* ─── 1. Top Brand Navigation Bar ──────────────────────────────────── */}
       <header className="bg-indigo-600 text-white sticky top-0 z-40 shadow-md">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 p-1 flex items-center justify-center shrink-0">
+        <div className="max-w-4xl mx-auto px-3.5 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 p-1 flex items-center justify-center shrink-0">
               <img src="/bellad-logo.png" alt="Bellad Logo" className="w-full h-full object-contain rounded-lg" />
             </div>
-            <div>
-              <span className="text-base sm:text-lg font-black tracking-tight text-white block leading-tight">
+            <div className="min-w-0">
+              <span className="text-xs sm:text-lg font-black tracking-tight text-white block leading-tight truncate">
                 Bellad &amp; Co Loyalty Pass
               </span>
-              <span className="text-[11px] font-medium text-indigo-200 block">
+              <span className="text-[10px] sm:text-[11px] font-medium text-indigo-200 block truncate">
                 Karnataka&apos;s Premier Automotive Rewards
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-sm">
-              <Crown className="w-3.5 h-3.5 text-amber-300" />
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase tracking-wider px-2 sm:px-3 py-1 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-sm whitespace-nowrap">
+              <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 shrink-0" />
               <span>{currentTier} VIP</span>
             </span>
 
             <button
               onClick={onSignOut}
               title="Sign Out"
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition cursor-pointer"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition cursor-pointer shrink-0"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
@@ -588,51 +588,57 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         </div>
 
         {/* ─── 4. THE 4 MAIN CORE QUICK-ACTION BUTTONS (Mobile & Desktop) ─── */}
-        <div className="grid grid-cols-4 gap-2.5 sm:gap-3.5">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-3.5">
           {/* Main 1: Gift Cards */}
           <button
             type="button"
             onClick={() => setActiveTab('gift_cards')}
-            className={`p-3 sm:p-4 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'gift_cards'
+            className={`px-1 py-2 sm:p-4 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'gift_cards'
                 ? 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-500/20'
                 : 'bg-white border-slate-200/80 text-slate-700 hover:border-amber-300 hover:bg-amber-50/40 shadow-2xs'
               }`}
           >
-            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'gift_cards' ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'gift_cards' ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'
               }`}>
-              <Gift className="w-5 h-5" />
+              <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[11px] sm:text-xs font-bold tracking-tight line-clamp-1">Gift Cards</span>
+            <span className="text-[10px] sm:text-xs font-bold tracking-tight text-center leading-tight break-words max-w-full">
+              Gift Cards
+            </span>
           </button>
 
           {/* Main 2: Referral Rewards */}
           <button
             type="button"
             onClick={() => setActiveTab('referrals')}
-            className={`p-3 sm:p-4 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'referrals'
+            className={`px-1 py-2 sm:p-4 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'referrals'
                 ? 'bg-indigo-600 text-white border-indigo-700 shadow-md shadow-indigo-600/20'
                 : 'bg-white border-slate-200/80 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 shadow-2xs'
               }`}
           >
-            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'referrals' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'referrals' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'
               }`}>
-              <Users className="w-5 h-5" />
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[11px] sm:text-xs font-bold tracking-tight line-clamp-1">Refer &amp; Earn</span>
+            <span className="text-[10px] sm:text-xs font-bold tracking-tight text-center leading-tight break-words max-w-full">
+              Refer &amp; Earn
+            </span>
           </button>
 
           {/* Main 3: Vehicle Offers (Opens Dedicated /offers Page) */}
           <button
             type="button"
             onClick={() => window.open('/offers', '_blank')}
-            className="p-3 sm:p-4 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer bg-white border-slate-200/80 text-slate-700 hover:border-rose-300 hover:bg-rose-50/40 shadow-2xs group"
+            className="px-1 py-2 sm:p-4 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer bg-white border-slate-200/80 text-slate-700 hover:border-rose-300 hover:bg-rose-50/40 shadow-2xs group"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-rose-50 text-rose-600 group-hover:scale-105 transition-transform">
-              <Flame className="w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-rose-50 text-rose-600 group-hover:scale-105 transition-transform">
+              <Flame className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] sm:text-xs font-bold tracking-tight line-clamp-1">Brand Offers</span>
-              <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-rose-600" />
+            <div className="flex items-center justify-center gap-0.5 max-w-full">
+              <span className="text-[10px] sm:text-xs font-bold tracking-tight text-center leading-tight break-words">
+                Brand Offers
+              </span>
+              <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 group-hover:text-rose-600 shrink-0" />
             </div>
           </button>
 
@@ -640,16 +646,18 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           <button
             type="button"
             onClick={() => setActiveTab('benefits')}
-            className={`p-3 sm:p-4 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'benefits'
+            className={`px-1 py-2 sm:p-4 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'benefits'
                 ? 'bg-purple-600 text-white border-purple-700 shadow-md shadow-purple-600/20'
                 : 'bg-white border-slate-200/80 text-slate-700 hover:border-purple-300 hover:bg-purple-50/40 shadow-2xs'
               }`}
           >
-            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'benefits' ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-600'
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'benefits' ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-600'
               }`}>
-              <Award className="w-5 h-5" />
+              <Award className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[11px] sm:text-xs font-bold tracking-tight line-clamp-1">Tier Benefits</span>
+            <span className="text-[10px] sm:text-xs font-bold tracking-tight text-center leading-tight break-words max-w-full">
+              Tier Benefits
+            </span>
           </button>
         </div>
 

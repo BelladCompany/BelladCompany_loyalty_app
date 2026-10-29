@@ -122,75 +122,75 @@ export const GiftCardsScreen = ({ user }) => {
       </div>
 
       {/* Metric Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Total Gift Money Sent */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Money Sent</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <IndianRupee className="w-4 h-4" />
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
+          <div className="flex items-start justify-between gap-1.5">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">Total Money Sent</span>
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <IndianRupee className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="mt-1.5 sm:mt-3">
+            <span className="text-base sm:text-2xl font-black text-slate-900 tracking-tight tabular-nums block truncate">
               {formatCurrency(totals.total_amount_inr)}
             </span>
           </div>
-          <div className="mt-1 text-xs font-medium text-slate-500">
+          <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-medium text-slate-500 leading-tight">
             Customer-funded gift rewards
           </div>
         </div>
 
         {/* Total Gift Cards Shared */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Cards Shared</span>
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Gift className="w-4 h-4" />
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
+          <div className="flex items-start justify-between gap-1.5">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">Total Cards Shared</span>
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="mt-1.5 sm:mt-3">
+            <span className="text-base sm:text-2xl font-black text-slate-900 tracking-tight tabular-nums block">
               {totals.total_cards.toLocaleString()}
             </span>
           </div>
-          <div className="mt-1 text-xs font-medium text-slate-500">
+          <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-medium text-slate-500 leading-tight">
             Generated via portal
           </div>
         </div>
 
         {/* Unclaimed / Active */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Unclaimed / Active</span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
+          <div className="flex items-start justify-between gap-1.5">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">Unclaimed / Active</span>
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-amber-600 tracking-tight">
+          <div className="mt-1.5 sm:mt-3">
+            <span className="text-base sm:text-2xl font-black text-amber-600 tracking-tight tabular-nums block">
               {totals.total_unclaimed.toLocaleString()}
             </span>
           </div>
-          <div className="mt-1 text-xs font-medium text-slate-500">
+          <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-medium text-slate-500 leading-tight">
             Awaiting recipient claim
           </div>
         </div>
 
         {/* Claimed Cards */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Claimed Cards</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4" />
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
+          <div className="flex items-start justify-between gap-1.5">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">Claimed Cards</span>
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-blue-600 tracking-tight">
+          <div className="mt-1.5 sm:mt-3">
+            <span className="text-base sm:text-2xl font-black text-blue-600 tracking-tight tabular-nums block">
               {totals.total_claimed.toLocaleString()}
             </span>
           </div>
-          <div className="mt-1 text-xs font-medium text-slate-500">
+          <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-medium text-slate-500 leading-tight">
             Redeemed by recipients
           </div>
         </div>
@@ -263,15 +263,15 @@ export const GiftCardsScreen = ({ user }) => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-5">Sender (Customer Details)</th>
-                  <th className="py-3 px-5">Gift Amount (₹)</th>
-                  <th className="py-3 px-5">Gift Code</th>
-                  <th className="py-3 px-5">Recipient Details</th>
-                  <th className="py-3 px-5">Status</th>
-                  <th className="py-3 px-5">Sent Date</th>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Sender (Customer Details)</th>
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Gift Amount (₹)</th>
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Gift Code</th>
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Recipient Details</th>
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Status</th>
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Sent Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -282,16 +282,16 @@ export const GiftCardsScreen = ({ user }) => {
                   return (
                     <tr key={card.id || card.gift_code} className="hover:bg-slate-50/60 transition">
                       {/* Sender Customer Details */}
-                      <td className="py-3.5 px-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
+                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
                             {card.sender_name?.charAt(0)?.toUpperCase() || 'C'}
                           </div>
                           <div>
-                            <span className="font-bold text-slate-900 block truncate max-w-[180px]">
+                            <span className="font-bold text-slate-900 block whitespace-nowrap">
                               {card.sender_name}
                             </span>
-                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
                               <span className="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
                                 {card.sender_customer_id}
                               </span>
@@ -306,12 +306,12 @@ export const GiftCardsScreen = ({ user }) => {
                       </td>
 
                       {/* Gift Amount (Money sent in ₹) */}
-                      <td className="py-3.5 px-5">
+                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
                         <div>
-                          <span className="font-black text-slate-900 text-sm block">
+                          <span className="font-black text-slate-900 text-xs sm:text-sm block">
                             {formatCurrency(card.amount_inr)}
                           </span>
-                          <div className="flex items-center gap-1.5 text-[11px] text-indigo-600 font-medium mt-0.5">
+                          <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-indigo-600 font-medium mt-0.5">
                             <Coins className="w-3 h-3" />
                             {card.points_equivalent ? `${card.points_equivalent.toLocaleString()} PTS` : 'Cash'}
                             <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded capitalize">
@@ -322,14 +322,14 @@ export const GiftCardsScreen = ({ user }) => {
                       </td>
 
                       {/* Gift Code */}
-                      <td className="py-3.5 px-5">
-                        <div className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-mono text-xs px-2.5 py-1 rounded-lg transition border border-slate-200">
+                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                        <div className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-mono text-xs px-2 sm:px-2.5 py-1 rounded-lg transition border border-slate-200">
                           <span>{card.gift_code}</span>
                           <button
                             type="button"
                             title="Copy Code"
                             onClick={() => handleCopyCode(card.gift_code)}
-                            className="text-slate-400 hover:text-slate-700 ml-1"
+                            className="text-slate-400 hover:text-slate-700 ml-1 cursor-pointer"
                           >
                             {copiedCode === card.gift_code ? (
                               <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -341,12 +341,12 @@ export const GiftCardsScreen = ({ user }) => {
                       </td>
 
                       {/* Recipient Details */}
-                      <td className="py-3.5 px-5">
+                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
                         <div>
-                          <span className="font-semibold text-slate-800 block truncate max-w-[160px]">
+                          <span className="font-semibold text-slate-800 block whitespace-nowrap">
                             {card.receiver_name || 'Shared via WhatsApp'}
                           </span>
-                          <span className="text-[11px] text-slate-500 block">
+                          <span className="text-[10px] sm:text-[11px] text-slate-500 block">
                             {card.receiver_phone && card.receiver_phone !== '—'
                               ? `📱 ${card.receiver_phone}`
                               : 'Shared via Claim Link'}
@@ -355,14 +355,14 @@ export const GiftCardsScreen = ({ user }) => {
                       </td>
 
                       {/* Status */}
-                      <td className="py-3.5 px-5">
+                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
                         {isClaimed ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                             Claimed
                           </span>
                         ) : isExpired ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                          <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                             <AlertCircle className="w-3 h-3 text-slate-400" />
                             Expired
                           </span>

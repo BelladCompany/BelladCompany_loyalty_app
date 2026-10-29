@@ -205,75 +205,75 @@ export const ReferralsScreen = ({ user }) => {
       </div>
 
       {/* Metric Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Total Referrals */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Referrals</span>
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Users className="w-4 h-4" />
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm">
+          <div className="flex items-start justify-between gap-1.5">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">Total Referrals</span>
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="mt-1.5 sm:mt-3">
+            <span className="text-base sm:text-2xl font-black text-slate-900 tracking-tight tabular-nums block">
               {totals.total_referrals.toLocaleString()}
             </span>
           </div>
-          <div className="mt-1 text-xs font-medium text-slate-500">
+          <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-medium text-slate-500 leading-tight">
             Registered referral pairs
           </div>
         </div>
 
         {/* Dealer Purchased & PR Done */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Purchased & PR Done</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <FileCheck2 className="w-4 h-4" />
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm">
+          <div className="flex items-start justify-between gap-1.5">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">Purchased &amp; PR Done</span>
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <FileCheck2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-emerald-600 tracking-tight">
+          <div className="mt-1.5 sm:mt-3">
+            <span className="text-base sm:text-2xl font-black text-emerald-600 tracking-tight tabular-nums block">
               {eligibleCount.toLocaleString()}
             </span>
           </div>
-          <div className="mt-1 text-xs font-medium text-slate-500">
+          <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-medium text-slate-500 leading-tight">
             Verified dealer vehicle buyers
           </div>
         </div>
 
         {/* Ineligible / Pending PR */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">No Purchase / PR Pending</span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm">
+          <div className="flex items-start justify-between gap-1.5">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">No Purchase / PR Pending</span>
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-amber-600 tracking-tight">
+          <div className="mt-1.5 sm:mt-3">
+            <span className="text-base sm:text-2xl font-black text-amber-600 tracking-tight tabular-nums block">
               {ineligibleCount.toLocaleString()}
             </span>
           </div>
-          <div className="mt-1 text-xs font-medium text-slate-500">
-            No points until purchase & PR
+          <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-medium text-slate-500 leading-tight">
+            No points until purchase &amp; PR
           </div>
         </div>
 
         {/* Total Points Credited */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Points Awarded</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Coins className="w-4 h-4" />
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm">
+          <div className="flex items-start justify-between gap-1.5">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">Points Awarded</span>
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-blue-600 tracking-tight">
+          <div className="mt-1.5 sm:mt-3">
+            <span className="text-base sm:text-2xl font-black text-blue-600 tracking-tight tabular-nums block">
               {Number(totals.total_points_credited).toLocaleString()} PTS
             </span>
           </div>
-          <div className="mt-1 text-xs font-medium text-slate-500">
+          <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-medium text-slate-500 leading-tight">
             Usable on Service / Body Shop / Acc
           </div>
         </div>
@@ -345,15 +345,15 @@ export const ReferralsScreen = ({ user }) => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-5">Referrer (Who Sent)</th>
-                  <th className="py-3 px-5">Referred Buyer (Who Received)</th>
-                  <th className="py-3 px-5">Dealership Purchase</th>
-                  <th className="py-3 px-5">PR Status</th>
-                  <th className="py-3 px-5">Points Eligibility</th>
-                  <th className="py-3 px-5 text-right">Action</th>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Referrer (Who Sent)</th>
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Referred Buyer (Who Received)</th>
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Dealership Purchase</th>
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">PR Status</th>
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Points Eligibility</th>
+                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -364,16 +364,16 @@ export const ReferralsScreen = ({ user }) => {
                   return (
                     <tr key={ref.referral_id || ref.id} className="hover:bg-slate-50/60 transition">
                       {/* Referrer Details */}
-                      <td className="py-3.5 px-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
+                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
                             {ref.referrer_name?.charAt(0)?.toUpperCase() || 'R'}
                           </div>
                           <div>
-                            <span className="font-bold text-slate-900 block truncate max-w-[170px]">
+                            <span className="font-bold text-slate-900 block whitespace-nowrap">
                               {ref.referrer_name}
                             </span>
-                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
                               <span className="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
                                 {ref.referrer_customer_id}
                               </span>
@@ -386,16 +386,16 @@ export const ReferralsScreen = ({ user }) => {
                       </td>
 
                       {/* Referred Buyer Details */}
-                      <td className="py-3.5 px-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
+                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
                             {ref.referred_name?.charAt(0)?.toUpperCase() || 'B'}
                           </div>
                           <div>
-                            <span className="font-bold text-slate-900 block truncate max-w-[170px]">
+                            <span className="font-bold text-slate-900 block whitespace-nowrap">
                               {ref.referred_name}
                             </span>
-                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
                               <span className="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
                                 {ref.referred_customer_id}
                               </span>
