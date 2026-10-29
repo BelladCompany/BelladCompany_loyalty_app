@@ -2,9 +2,9 @@
  * Integration and sanity check script for Loyalty Program Express + PostgreSQL backend.
  */
 const http = require('http');
+const app = require('../src/app');
 
-const PORT = process.env.PORT || 5000;
-const BASE_URL = `http://localhost:${PORT}`;
+let BASE_URL = `http://localhost:${process.env.PORT || 5000}`;
 
 function makeRequest(path, options = {}, body = null) {
   return new Promise((resolve, reject) => {
@@ -42,7 +42,13 @@ function makeRequest(path, options = {}, body = null) {
 async function runTests() {
   console.log('🧪 Starting Full API & Notification Integration Tests...\n');
 
+  let server;
   try {
+    server = await new Promise((resolve) => {
+      const s = app.listen(0, () => resolve(s));
+    });
+    BASE_URL = `http://localhost:${server.address().port}`;
+
     // 1. Health check
     console.log('1️⃣ Checking Health Endpoint...');
     const health = await makeRequest('/health');
@@ -94,7 +100,7 @@ async function runTests() {
         branch_id: branchId,
         type: 'sale',
         amount: 800000,
-        reference_id: 'INV-SALE-2026-001',
+        reference_id: `INV-SALE-${Date.now()}`,
         description: 'New Vehicle Sale - Swift Dzire',
       }
     );
@@ -194,8 +200,14 @@ Thank you for choosing us!`;
     console.log('Cashier Invite Endpoint Status:', inviteRes.status, 'Invite URL:', inviteRes.body?.data?.invite_url, 'Body:', inviteRes.body);
 
     console.log('\n🎉 ALL REALBOOKS INTEGRATION, RBAC & API TESTS PASSED SUCCESSFULLY! 🚀');
+    process.exit(0);
   } catch (err) {
     console.error('\n❌ Test Error:', err);
+    process.exit(1);
+  } finally {
+    if (server) server.close();
+    const { pool } = require('../src/config/db');
+    await pool.end();
   }
 }
 

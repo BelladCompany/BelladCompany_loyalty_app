@@ -9,7 +9,8 @@ async function testPhase6Reports() {
 
   // --- Test 1: Points Summary Report ---
   console.log('--- Test 1: Points Summary Report ---');
-  const pointsSummary = await ReportService.getPointsSummaryReport({ tenantId });
+  const pointsSummaryRes = await ReportService.getPointsSummaryReport({ tenantId });
+  const pointsSummary = Array.isArray(pointsSummaryRes) ? pointsSummaryRes : pointsSummaryRes.summary;
   console.log('Points Summary Output Sample:', JSON.stringify(pointsSummary.slice(0, 2), null, 2));
 
   if (!Array.isArray(pointsSummary)) {

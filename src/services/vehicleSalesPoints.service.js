@@ -108,8 +108,8 @@ class VehicleSalesPointsService {
 
       if (vehicle_id) {
         const vInfo = await client.query(
-          `SELECT v.vehicle_type, v.model, b.name AS brand_name
-           FROM vehicles v LEFT JOIN brands b ON b.id = v.brand_id
+          `SELECT v.vehicle_type, v.model, COALESCE(v.brand_name, b.brand_name) AS brand_name
+           FROM vehicles v LEFT JOIN brands b ON b.brand_id = v.brand_id
            WHERE v.vehicle_id = $1 AND v.tenant_id = $2;`,
           [vehicle_id, tenantId]
         );
@@ -240,18 +240,17 @@ class VehicleSalesPointsService {
           if (effectiveDelta !== 0) {
             const adjIns = await client.query(
               `INSERT INTO points_ledger (
-                 customer_id, branch_id, transaction_type, points, amount_paise, reason, reference_id, created_by, tenant_id
-               ) VALUES ($1, $2, 'adjustment', $3, $4, $5, $6, $7, $8)
+                 customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, reason_type, reason_text, tenant_id
+               ) VALUES ($1, $2, $3, 'adjust', 'sale', $4, $5, 'manual_adjustment', $6, $7)
                RETURNING *;`,
               [
                 customer_id,
+                vehicle_id || null,
                 branch_id,
                 effectiveDelta,
-                0,
-                `Adjustment for sale transaction #${reference_id}: ${calcResult.reason_text}`,
                 `ADJ-${reference_id}`,
-                created_by || null,
-                tenant_id,
+                `Adjustment for sale transaction #${reference_id}: ${calcResult.reason_text}`,
+                tenantId,
               ]
             );
             ledgerResultRow = adjIns.rows[0];
@@ -270,7 +269,7 @@ class VehicleSalesPointsService {
         if (isOwnClient) await client.query('COMMIT');
 
         return {
-          status: 'adjusted',
+          status: pointDelta === 0 ? 'already_processed' : 'updated_in_place',
           points: calcResult.points,
           reason_text: calcResult.reason_text,
           ledger_entry: ledgerResultRow,

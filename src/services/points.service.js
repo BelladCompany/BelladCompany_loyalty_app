@@ -193,7 +193,7 @@ class PointsService {
 
       // 2. Verify branch exists
       const branchRes = await client.query(
-        `SELECT id, name FROM branches WHERE (id::text = $1::text OR code = $1::text) AND tenant_id = $2;`,
+        `SELECT branch_id AS id, branch_name AS name FROM branches WHERE branch_id::text = $1::text AND tenant_id = $2;`,
         [branch_id, tenant_id]
       );
       if (branchRes.rows.length === 0) {
@@ -208,9 +208,9 @@ class PointsService {
 
       if (vehicle_id) {
         const vInfoRes = await client.query(
-          `SELECT v.vehicle_type, v.model, v.variant, b.name AS brand_name
+          `SELECT v.vehicle_type, v.model, v.variant, COALESCE(v.brand_name, b.brand_name) AS brand_name
            FROM vehicles v
-           LEFT JOIN brands b ON b.id = v.brand_id
+           LEFT JOIN brands b ON b.brand_id = v.brand_id
            WHERE v.vehicle_id = $1 AND v.tenant_id = $2;`,
           [vehicle_id, tenant_id]
         );

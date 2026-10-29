@@ -39,10 +39,10 @@ async function testPhase4ReferralSlabs() {
   }
   console.log('✅ Test 1 Passed!');
 
-  // 3. Register vehicle for referred customer (4W category)
+  // 3. Register vehicle for referred customer (4W category) with PR registration number
   const vehRes = await pool.query(
-    `INSERT INTO vehicles (customer_id, model, vehicle_type, tenant_id)
-     VALUES ($1, 'TATA HARRIER 4W', '4W', $2)
+    `INSERT INTO vehicles (customer_id, model, vehicle_type, registration_number, dms_invoice_number, tenant_id)
+     VALUES ($1, 'TATA HARRIER 4W', '4W', 'KA-25-EA-9999', 'DMS-INV-9999', $2)
      RETURNING vehicle_id;`,
     [referredId, tenantId]
   );

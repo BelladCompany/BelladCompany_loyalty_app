@@ -24,6 +24,7 @@ async function testCorrectionFlow() {
     await client.query(`DELETE FROM correction_requests WHERE customer_id = $1;`, [customerId]);
     await client.query(`DELETE FROM otp_requests WHERE customer_id = $1;`, [customerId]);
     await client.query(`DELETE FROM customer_phones WHERE customer_id = $1;`, [customerId]);
+    await client.query(`DELETE FROM customer_tier_snapshot WHERE customer_id = $1;`, [customerId]);
     await client.query(`DELETE FROM customers WHERE customer_id = $1;`, [customerId]);
     await client.query(`ALTER TABLE points_ledger ENABLE TRIGGER USER;`);
 
@@ -203,6 +204,7 @@ async function testCorrectionFlow() {
     await client.query(`DELETE FROM correction_requests WHERE customer_id = 'BAC-CORR-TEST1';`);
     await client.query(`DELETE FROM otp_requests WHERE customer_id = 'BAC-CORR-TEST1';`);
     await client.query(`DELETE FROM customer_phones WHERE customer_id = 'BAC-CORR-TEST1';`);
+    await client.query(`DELETE FROM customer_tier_snapshot WHERE customer_id = 'BAC-CORR-TEST1';`);
     await client.query(`DELETE FROM customers WHERE customer_id = 'BAC-CORR-TEST1';`);
     await client.query(`ALTER TABLE points_ledger ENABLE TRIGGER USER;`);
     client.release();

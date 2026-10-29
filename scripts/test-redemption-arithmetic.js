@@ -52,6 +52,7 @@ async function testDatabaseTransaction() {
     await pool.query(`DELETE FROM redemptions WHERE customer_id = 'CUST-TEST-RED';`);
     await pool.query(`DELETE FROM otp_requests WHERE customer_id = 'CUST-TEST-RED';`);
     await pool.query(`DELETE FROM customer_phones WHERE customer_id = 'CUST-TEST-RED';`);
+    await pool.query(`DELETE FROM customer_tier_snapshot WHERE customer_id = 'CUST-TEST-RED';`);
     await pool.query(`DELETE FROM customers WHERE customer_id = 'CUST-TEST-RED';`);
 
     // 2. Create test customer
@@ -118,6 +119,7 @@ async function testDatabaseTransaction() {
     await pool.query(`DELETE FROM redemptions WHERE customer_id = 'CUST-TEST-RED';`);
     await pool.query(`DELETE FROM otp_requests WHERE customer_id = 'CUST-TEST-RED';`);
     await pool.query(`DELETE FROM customer_phones WHERE customer_id = 'CUST-TEST-RED';`);
+    await pool.query(`DELETE FROM customer_tier_snapshot WHERE customer_id = 'CUST-TEST-RED';`);
     await pool.query(`DELETE FROM customers WHERE customer_id = 'CUST-TEST-RED';`);
 
   } catch (err) {
