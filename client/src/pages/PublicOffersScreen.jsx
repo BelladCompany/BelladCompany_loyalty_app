@@ -922,11 +922,12 @@ export default function PublicOffersScreen() {
         </div>
       )}
 
-      {/* ─── Staff Create / Edit Modal (Modern Light Theme) ───────────────────── */}
+      {/* ─── Staff Create / Edit Modal (Never Cut Off - Fixed Header & Footer with Scrollable Body) ─── */}
       {showManageModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-6 sm:p-7 text-slate-800 shadow-2xl my-8 relative">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col text-slate-800 shadow-2xl overflow-hidden relative animate-fadeIn">
+            {/* Pinned Modal Header (Always 100% visible) */}
+            <div className="flex items-center justify-between p-5 sm:p-6 pb-4 border-b border-slate-100 flex-shrink-0 bg-white">
               <div>
                 <h3 className="text-base font-black text-slate-900">
                   {editingOffer ? 'Edit Monthly Offer' : 'Create New Monthly Offer'}
@@ -936,14 +937,16 @@ export default function PublicOffersScreen() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setShowManageModal(false)}
-                className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 transition"
+                className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 transition flex-shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveOffer} className="space-y-4 pt-4 text-xs font-medium">
+            {/* Scrollable Form Body */}
+            <form id="manageOfferForm" onSubmit={handleSaveOffer} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 text-xs font-medium">
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Brand */}
@@ -1158,32 +1161,33 @@ export default function PublicOffersScreen() {
                   />
                 </div>
               </div>
-
-              {/* Modal Footer */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowManageModal(false)}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingOffer}
-                  className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-2 disabled:opacity-50 shadow-md shadow-slate-900/10"
-                >
-                  {savingOffer ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Saving to Live System...</span>
-                    </>
-                  ) : (
-                    <span>{editingOffer ? 'Save & Update Live Offer' : 'Publish Live Offer'}</span>
-                  )}
-                </button>
-              </div>
             </form>
+
+            {/* Pinned Modal Footer (Always 100% visible) */}
+            <div className="flex items-center justify-end gap-3 p-4 sm:p-5 border-t border-slate-100 flex-shrink-0 bg-slate-50/90">
+              <button
+                type="button"
+                onClick={() => setShowManageModal(false)}
+                className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="manageOfferForm"
+                disabled={savingOffer}
+                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-2 disabled:opacity-50 shadow-md shadow-slate-900/10 cursor-pointer"
+              >
+                {savingOffer ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Saving to Live System...</span>
+                  </>
+                ) : (
+                  <span>{editingOffer ? 'Save & Update Live Offer' : 'Publish Live Offer'}</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

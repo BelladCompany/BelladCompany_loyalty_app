@@ -127,3 +127,4 @@ VALUES
   4
 )
 ON CONFLICT (offer_id) DO NOTHING;
+
