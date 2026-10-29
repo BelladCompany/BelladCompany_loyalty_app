@@ -251,7 +251,7 @@ export default function EnrollmentScreen({ onLoginSuccess }) {
       </nav>
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 max-w-6xl mx-auto w-full px-4 sm:px-8 py-6 sm:py-12 flex items-center justify-center">
+      <main className="relative z-10 flex-1 max-w-6xl mx-auto w-full px-3.5 sm:px-8 py-4 sm:py-12 flex items-center justify-center">
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
           
           {/* Left Column: Clean Minimal Presentation (Desktop & Tablet) */}
@@ -300,19 +300,19 @@ export default function EnrollmentScreen({ onLoginSuccess }) {
 
           {/* Right Column: Modern, Minimalist Login Card */}
           <div className="order-1 lg:order-2 lg:col-span-6 flex justify-center">
-            <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/50 text-slate-900 relative">
+            <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-8 shadow-xl shadow-slate-200/50 text-slate-900 relative">
               
               {/* Stepper Header */}
-              <div className="flex items-center justify-between pb-5 border-b border-slate-100">
+              <div className="flex items-center justify-between pb-4 sm:pb-5 border-b border-slate-100">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900">
                     {step === 'phone' ? 'Member Access' : 'Verify WhatsApp Code'}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                     {step === 'phone' ? 'Enter details to receive your one-time code' : `Code sent to +91 ${phone}`}
                   </p>
                 </div>
-                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+                <span className="text-[11px] sm:text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 shrink-0">
                   {step === 'phone' ? 'Step 1 of 2' : 'Step 2 of 2'}
                 </span>
               </div>
@@ -456,7 +456,7 @@ export default function EnrollmentScreen({ onLoginSuccess }) {
                     <label className="block text-xs font-bold text-slate-700 mb-2.5 text-center">
                       Enter 6-digit WhatsApp Code
                     </label>
-                    <div className="flex items-center justify-between gap-1.5 sm:gap-2" onPaste={handleOtpPaste}>
+                    <div className="flex items-center justify-center gap-1 sm:gap-2" onPaste={handleOtpPaste}>
                       {otp.map((digit, index) => (
                         <input
                           key={index}
@@ -467,7 +467,7 @@ export default function EnrollmentScreen({ onLoginSuccess }) {
                           value={digit}
                           onChange={(e) => handleOtpBoxChange(index, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                          className="flex-1 min-w-0 max-w-[48px] h-12 text-center text-lg font-black font-mono bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-xs"
+                          className="flex-1 min-w-0 max-w-[40px] sm:max-w-[48px] h-11 sm:h-12 text-center text-base sm:text-lg font-black font-mono bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-xs"
                         />
                       ))}
                     </div>

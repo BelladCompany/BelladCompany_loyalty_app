@@ -404,7 +404,7 @@ export const EarnPointsModal = ({
                 placeholder="123456"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                className="w-full h-13 text-center text-2xl font-mono font-black tracking-widest border border-indigo-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                className="w-full h-12 text-center text-xl sm:text-2xl font-mono font-black tracking-widest border border-indigo-300 rounded-xl bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
               />
 
               <div className="flex items-center justify-between text-xs font-bold text-indigo-900 pt-1">

@@ -381,48 +381,48 @@ export default function PublicOffersScreen() {
 
       {/* ─── Top Brand Navigation Bar ────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-xl border-b border-slate-200/80 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <a
               href="/portal"
-              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition flex items-center gap-1.5 text-xs shadow-2xs"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition flex items-center gap-1.5 text-xs shadow-2xs shrink-0"
               title="Return to Customer Portal"
             >
               <ArrowLeft className="w-4 h-4 text-slate-600" />
-              <span className="hidden sm:inline">Portal Dashboard</span>
+              <span className="hidden md:inline">Portal Dashboard</span>
             </a>
             
-            <div className="h-5 w-px bg-slate-200 hidden sm:block" />
+            <div className="h-5 w-px bg-slate-200 hidden md:block" />
             
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shadow-xs">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shadow-xs shrink-0">
                 <img
                   src="/bellad-logo.png"
                   alt="Bellad Logo"
-                  className="w-6 h-6 object-contain"
+                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
                   onError={(e) => {
                     e.target.style.display = 'none';
                   }}
                 />
-                <Car className="w-5 h-5 text-indigo-600" />
+                <Car className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
               </div>
-              <div>
-                <h1 className="text-sm sm:text-base font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-                  Bellad &amp; Co
-                  <span className="px-2 py-0.5 rounded-full text-[10px] uppercase font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                    Monthly Offers
+              <div className="min-w-0">
+                <h1 className="text-xs sm:text-base font-black text-slate-900 tracking-tight flex items-center gap-1.5 truncate">
+                  <span className="truncate">Bellad &amp; Co</span>
+                  <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] uppercase font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                    Offers
                   </span>
                 </h1>
-                <p className="text-[11px] text-slate-500 font-medium hidden sm:block">Dealership Model Benefits &amp; Schemes</p>
+                <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium hidden sm:block truncate">Dealership Model Benefits &amp; Schemes</p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* Editor Mode Quick Switch */}
             <button
               onClick={handleToggleEditorMode}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 ${
                 isEditorMode
                   ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
@@ -430,22 +430,22 @@ export default function PublicOffersScreen() {
               title={isEditorMode ? 'Exit Editor Mode' : 'Unlock Offer Editor'}
             >
               {isEditorMode ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-              <span>{isEditorMode ? 'Editor Active' : 'Editor Mode'}</span>
+              <span className="hidden sm:inline">{isEditorMode ? 'Editor Active' : 'Editor Mode'}</span>
             </button>
 
             {isEditorMode && (
               <button
                 onClick={handleOpenCreateModal}
-                className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                className="px-2.5 sm:px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm shrink-0"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Add Offer</span>
+                <span className="hidden sm:inline">Add Offer</span>
               </button>
             )}
 
             <a
               href="tel:+918197348730"
-              className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
+              className="px-2.5 sm:px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs shrink-0"
             >
               <PhoneCall className="w-3.5 h-3.5 text-indigo-600" />
               <span className="hidden sm:inline">Call Showroom</span>
@@ -456,27 +456,27 @@ export default function PublicOffersScreen() {
 
       {/* ─── Editor Mode Notification Banner (When active) ───────────────────── */}
       {isEditorMode && (
-        <div className="bg-amber-400 text-slate-950 px-4 py-2 text-xs font-bold shadow-xs flex items-center justify-between border-b border-amber-500">
-          <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+        <div className="bg-amber-400 text-slate-950 px-3.5 sm:px-4 py-2 text-xs font-bold shadow-xs border-b border-amber-500">
+          <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md bg-slate-950 text-white text-[10px] font-mono uppercase">
+              <span className="px-2 py-0.5 rounded-md bg-slate-950 text-white text-[10px] font-mono uppercase shrink-0">
                 Staff Editor Mode
               </span>
-              <span>You can create new offers, edit existing details, or toggle live status. Changes update immediately next second!</span>
+              <span className="text-[11px] sm:text-xs">Live edit enabled. Changes update immediately!</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={handleOpenCreateModal}
-                className="px-3 py-1 bg-slate-950 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition flex items-center gap-1"
+                className="px-2.5 sm:px-3 py-1 bg-slate-950 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" />
-                <span>Create New Offer</span>
+                <span>Create Offer</span>
               </button>
               <button
                 onClick={() => setIsEditorMode(false)}
                 className="text-slate-800 hover:text-black underline text-xs"
               >
-                Exit Editor
+                Exit
               </button>
             </div>
           </div>
@@ -834,7 +834,7 @@ export default function PublicOffersScreen() {
       </main>
 
       {/* ─── Floating Editor Mode Button (Bottom Right) ───────────────────────── */}
-      <div className="fixed bottom-6 right-6 z-40">
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40">
         <button
           onClick={handleToggleEditorMode}
           className={`px-4 py-2.5 rounded-2xl shadow-xl font-black text-xs transition-all flex items-center gap-2 transform hover:scale-105 active:scale-95 cursor-pointer ${

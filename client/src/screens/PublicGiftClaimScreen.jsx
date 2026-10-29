@@ -111,25 +111,25 @@ export const PublicGiftClaimScreen = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 text-slate-100 flex flex-col justify-between p-4 sm:p-6 font-sans">
       {/* ── Top Brand Bar ── */}
-      <header className="max-w-2xl w-full mx-auto flex items-center justify-between py-4 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400">
-            <Gift className="w-5 h-5" />
+      <header className="max-w-2xl w-full mx-auto flex items-center justify-between py-3.5 sm:py-4 border-b border-white/10 gap-2">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 shrink-0">
+            <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <h1 className="text-base font-black tracking-tight text-white flex items-center gap-2">
-              Bellad &amp; Company
-              <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-400/30 uppercase tracking-widest">
-                e-Gift Card
+          <div className="min-w-0">
+            <h1 className="text-xs sm:text-base font-black tracking-tight text-white flex items-center gap-1.5 sm:gap-2 truncate">
+              <span>Bellad &amp; Company</span>
+              <span className="text-[9px] sm:text-[10px] bg-amber-500/20 text-amber-300 font-bold px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-400/30 uppercase tracking-widest shrink-0">
+                e-Gift
               </span>
             </h1>
-            <p className="text-[11px] text-slate-400">Official Automobile Dealership Loyalty Program</p>
+            <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">Official Automotive Loyalty Program</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-slate-400 font-semibold bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Secure Claim</span>
+        <div className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs text-slate-400 font-semibold bg-white/5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-white/10 shrink-0">
+          <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+          <span>Secure</span>
         </div>
       </header>
 
@@ -264,45 +264,45 @@ export const PublicGiftClaimScreen = () => {
           /* ── MAIN CLAIM FORM: Amazon Style Card ── */
           <div className="space-y-6 animate-fadeIn">
             {/* Visual Digital Gift Card */}
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/20 bg-gradient-to-br from-indigo-700 via-indigo-900 to-slate-900 p-7 text-white space-y-6">
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/20 bg-gradient-to-br from-indigo-700 via-indigo-900 to-slate-900 p-5 sm:p-7 text-white space-y-5 sm:space-y-6">
               {/* Background Glow */}
               <div className="absolute -right-16 -top-16 w-64 h-64 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-300 bg-black/30 px-3 py-1 rounded-full border border-amber-300/30">
-                  <Sparkles className="w-3.5 h-3.5" />
+              <div className="flex items-center justify-between relative z-10 gap-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-black/30 px-2.5 sm:px-3 py-1 rounded-full border border-amber-300/30">
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
                   <span>Personal Gift Card</span>
                 </div>
-                <span className="font-mono text-xs text-indigo-200 font-bold tracking-wider">
+                <span className="font-mono text-xs text-indigo-200 font-bold tracking-wider truncate">
                   {giftData.gift_code}
                 </span>
               </div>
 
               <div className="space-y-2 relative z-10">
                 <div className="text-xs text-indigo-200 font-semibold flex items-center gap-1.5">
-                  <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
-                  <span>From: <strong>{giftData.sender_name}</strong></span>
+                  <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400 shrink-0" />
+                  <span className="truncate">From: <strong>{giftData.sender_name}</strong></span>
                 </div>
-                <blockquote className="text-sm font-medium italic text-slate-100 bg-white/10 p-3.5 rounded-2xl border border-white/10 leading-relaxed">
+                <blockquote className="text-xs sm:text-sm font-medium italic text-slate-100 bg-white/10 p-3 sm:p-3.5 rounded-2xl border border-white/10 leading-relaxed break-words">
                   "{giftData.custom_message || 'Enjoy this special gift at Bellad Dealerships!'}"
                 </blockquote>
               </div>
 
               {/* Value Banner */}
-              <div className="pt-2 border-t border-white/10 flex items-end justify-between relative z-10">
+              <div className="pt-2 border-t border-white/10 flex items-end justify-between relative z-10 gap-2">
                 <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-200 block">
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-indigo-200 block">
                     Gift Value
                   </span>
-                  <span className="text-3xl font-black font-mono text-amber-300">
+                  <span className="text-2xl sm:text-3xl font-black font-mono text-amber-300">
                     ₹{Number(giftData.amount_inr).toLocaleString('en-IN')}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-200 block">
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-indigo-200 block">
                     Wallet Credit
                   </span>
-                  <span className="text-xl font-black font-mono text-emerald-400">
+                  <span className="text-base sm:text-xl font-black font-mono text-emerald-400">
                     +{Number(giftData.points_equivalent).toLocaleString('en-IN')} PTS
                   </span>
                 </div>
@@ -330,9 +330,9 @@ export const PublicGiftClaimScreen = () => {
               </div>
             ) : (
               /* Receiver Claim Form Card */
-              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-2xl text-slate-900 space-y-5">
+              <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-2xl text-slate-900 space-y-4 sm:space-y-5">
                 <div>
-                  <h3 className="text-lg font-black tracking-tight text-slate-900">
+                  <h3 className="text-base sm:text-lg font-black tracking-tight text-slate-900">
                     Claim into Your Bellad Loyalty Wallet
                   </h3>
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -405,7 +405,7 @@ export const PublicGiftClaimScreen = () => {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3.5 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm transition shadow-lg shadow-indigo-600/25 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                    className="w-full py-3.5 px-4 sm:px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs sm:text-sm transition shadow-lg shadow-indigo-600/25 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
                   >
                     {submitting ? (
                       <span className="flex items-center gap-2">
@@ -414,8 +414,8 @@ export const PublicGiftClaimScreen = () => {
                       </span>
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4 text-amber-300" />
-                        <span>Claim ₹{giftData.amount_inr} ({giftData.points_equivalent} PTS) to Wallet</span>
+                        <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+                        <span className="truncate">Claim ₹{giftData.amount_inr} ({giftData.points_equivalent} PTS) to Wallet</span>
                       </>
                     )}
                   </button>

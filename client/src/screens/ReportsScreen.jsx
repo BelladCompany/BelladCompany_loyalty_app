@@ -472,79 +472,79 @@ export default function ReportsScreen({ user }) {
       )}
 
       {/* ─── 3. Dynamic Summary Cards (Only Customer Counts) ──────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* 1. Customers Redeemed (Only Customer Redeem Count, No Unnecessary Points) */}
-        <div className="bg-gradient-to-br from-amber-500/10 via-amber-50 to-orange-50/30 p-5 rounded-3xl border-2 border-amber-300/80 shadow-xs space-y-1">
+        <div className="bg-gradient-to-br from-amber-500/10 via-amber-50 to-orange-50/30 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border-2 border-amber-300/80 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 font-mono">
               Customers Redeemed
             </span>
-            <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
               <Gift className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-3xl font-black font-mono text-amber-800">
+          <p className="text-2xl sm:text-3xl font-black font-mono text-amber-800">
             {redeemedCustCount.toLocaleString('en-IN')}{' '}
-            <span className="text-base font-bold text-amber-700">Customers</span>
+            <span className="text-sm sm:text-base font-bold text-amber-700">Customers</span>
           </p>
-          <span className="text-[11px] text-amber-900/80 font-medium block">
+          <span className="text-[10px] sm:text-[11px] text-amber-900/80 font-medium block">
             Redeemed loyalty benefits
           </span>
         </div>
 
         {/* 2. Sale Customers */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
               Customers Took Sale
             </span>
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
               <Car className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-3xl font-black font-mono text-slate-900">
+          <p className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
             {saleCustCount.toLocaleString('en-IN')}{' '}
-            <span className="text-base font-bold text-slate-500">Customers</span>
+            <span className="text-sm sm:text-base font-bold text-slate-500">Customers</span>
           </p>
-          <span className="text-[11px] text-slate-500 font-medium block">
+          <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium block">
             Vehicle &amp; equipment purchase
           </span>
         </div>
 
         {/* 3. Service Customers */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
               Customers Took Service
             </span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
               <Wrench className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-3xl font-black font-mono text-slate-900">
+          <p className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
             {serviceCustCount.toLocaleString('en-IN')}{' '}
-            <span className="text-base font-bold text-slate-500">Customers</span>
+            <span className="text-sm sm:text-base font-bold text-slate-500">Customers</span>
           </p>
-          <span className="text-[11px] text-slate-500 font-medium block">
+          <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium block">
             Scheduled workshop &amp; maintenance
           </span>
         </div>
 
         {/* 4. Body Shop Customers */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
               Customers Took Body Shop
             </span>
-            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
               <Layers className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-3xl font-black font-mono text-slate-900">
+          <p className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
             {bodyshopCustCount.toLocaleString('en-IN')}{' '}
-            <span className="text-base font-bold text-slate-500">Customers</span>
+            <span className="text-sm sm:text-base font-bold text-slate-500">Customers</span>
           </p>
-          <span className="text-[11px] text-slate-500 font-medium block">
+          <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium block">
             Accidental repairs &amp; bodyshop
           </span>
         </div>
@@ -708,7 +708,7 @@ export default function ReportsScreen({ user }) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs whitespace-nowrap">
             <thead className="bg-slate-100/70 text-slate-600 font-bold border-b border-slate-200 uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="p-3.5">Dealership Branch</th>
@@ -809,7 +809,7 @@ export default function ReportsScreen({ user }) {
         </div>
 
         <div className="overflow-x-auto max-h-[500px]">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs whitespace-nowrap">
             <thead className="bg-slate-100/70 text-slate-600 font-bold border-b border-slate-200 uppercase tracking-wider text-[11px] sticky top-0 z-10">
               <tr>
                 <th className="p-3">Date</th>

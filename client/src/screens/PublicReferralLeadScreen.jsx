@@ -223,7 +223,7 @@ export const PublicReferralLeadScreen = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full h-13 mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-lg rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+                  className="w-full h-12 mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-base sm:text-lg rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isSubmitting ? 'Sending OTP…' : 'Verify Phone & Get Code →'}
                 </button>
@@ -258,12 +258,12 @@ export const PublicReferralLeadScreen = () => {
                   />
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-2.5 sm:gap-3">
                   <button
                     type="button"
                     onClick={() => { setStep(1); setErrorMessage(''); }}
                     disabled={isSubmitting}
-                    className="flex-1 h-12 bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm rounded-xl"
+                    className="flex-1 h-12 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs sm:text-sm rounded-xl cursor-pointer"
                   >
                     ← Back
                   </button>
@@ -271,7 +271,7 @@ export const PublicReferralLeadScreen = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex-2 h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-base rounded-xl shadow-lg transition-all"
+                    className="flex-[2] h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs sm:text-base rounded-xl shadow-lg transition-all cursor-pointer"
                   >
                     {isSubmitting ? 'Verifying…' : 'Confirm & Generate Code'}
                   </button>
@@ -284,13 +284,13 @@ export const PublicReferralLeadScreen = () => {
               <div className="space-y-6 text-center animate-in fade-in duration-300">
                 <div className="p-4 bg-emerald-950/60 border-2 border-emerald-500/50 rounded-2xl space-y-3">
                   <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-                  <h3 className="text-xl font-black text-white">Gift Card Code Generated!</h3>
+                  <h3 className="text-lg sm:text-xl font-black text-white">Gift Card Code Generated!</h3>
                   
-                  <div className="p-4 bg-slate-900 border-2 border-indigo-500 rounded-xl space-y-1">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">
+                  <div className="p-3.5 sm:p-4 bg-slate-900 border-2 border-indigo-500 rounded-xl space-y-1">
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest block">
                       Your Unique Gift Card Code
                     </span>
-                    <span className="font-mono font-black text-3xl text-emerald-400 tracking-wider block">
+                    <span className="font-mono font-black text-xl sm:text-3xl text-emerald-400 tracking-wider block break-all">
                       {generatedCode}
                     </span>
                   </div>

@@ -318,13 +318,13 @@ export const CorrectionsQueue = () => {
 
                 {/* Approve / Reject Controls (Pending Requests) */}
                 {req.status === 'pending' && (
-                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-3 border-t border-slate-100">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setRejectId(req.id)}
                       disabled={actionLoading}
-                      className="border-rose-300 text-rose-700 hover:bg-rose-50 font-bold"
+                      className="border-rose-300 text-rose-700 hover:bg-rose-50 font-bold justify-center"
                     >
                       <XCircle className="w-4 h-4 mr-1" /> Reject Request
                     </Button>
@@ -334,9 +334,9 @@ export const CorrectionsQueue = () => {
                       size="sm"
                       onClick={() => handleApprove(req.id)}
                       disabled={actionLoading}
-                      className="font-bold flex items-center gap-1"
+                      className="font-bold flex items-center justify-center gap-1"
                     >
-                      <CheckCircle2 className="w-4 h-4 mr-1" /> Approve & Execute Reversal
+                      <CheckCircle2 className="w-4 h-4 mr-1" /> Approve &amp; Execute Reversal
                     </Button>
                   </div>
                 )}

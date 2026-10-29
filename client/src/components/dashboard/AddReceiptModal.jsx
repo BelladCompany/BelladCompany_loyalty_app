@@ -393,12 +393,14 @@ export const AddReceiptModal = ({
                 Operation / Department Category *
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {CATEGORIES.map((cat) => (
+                {CATEGORIES.map((cat, idx) => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => setCategory(cat.id)}
-                    className={`py-3 px-2 rounded-2xl text-center border font-extrabold text-xs transition-all cursor-pointer ${
+                    className={`py-2.5 sm:py-3 px-2 rounded-xl sm:rounded-2xl text-center border font-extrabold text-xs transition-all cursor-pointer ${
+                      idx === 4 ? 'col-span-2 sm:col-span-1' : ''
+                    } ${
                       category === cat.id
                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
                         : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'

@@ -536,8 +536,8 @@ export const RedemptionModal = ({
               </div>
 
               {category !== 'accessories' && isVehicleUnder12Months && (
-                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-center justify-between">
-                  <div className="text-sm text-amber-900 font-semibold">
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                  <div className="text-xs sm:text-sm text-amber-900 font-semibold leading-relaxed">
                     💡 <strong>Accessories Unlocked:</strong> Points can be redeemed anytime for accessories without the 12-month lock!
                   </div>
                   <button
@@ -546,7 +546,7 @@ export const RedemptionModal = ({
                       setCategory('accessories');
                       setError('');
                     }}
-                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow transition-colors flex-shrink-0"
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow transition-colors shrink-0 cursor-pointer self-start sm:self-auto"
                   >
                     Switch to Accessories →
                   </button>

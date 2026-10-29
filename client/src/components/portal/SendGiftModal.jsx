@@ -197,23 +197,23 @@ export const SendGiftModal = ({
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
       <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
         {/* Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400">
-              <Gift className="w-5 h-5" />
+        <div className="px-4 sm:px-6 py-3.5 sm:py-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400 shrink-0">
+              <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h3 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
-                Send a Gift to Friends &amp; Family
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2 truncate">
+                <span>Send a Gift Card</span>
               </h3>
-              <p className="text-xs text-indigo-200 font-medium">
+              <p className="text-[11px] sm:text-xs text-indigo-200 font-medium truncate">
                 Share loyalty value directly via WhatsApp (Amazon e-Gift style)
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -412,9 +412,9 @@ export const SendGiftModal = ({
             {activeTab === 'points' && (
               <form onSubmit={handleSendFromPoints} className="space-y-4">
                 {/* Available Balance Strip */}
-                <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-2xl flex items-center justify-between text-xs text-amber-950">
-                  <span className="font-medium">Your Available Points:</span>
-                  <span className="font-mono font-black text-sm text-indigo-700">
+                <div className="p-3 sm:p-3.5 bg-amber-50/70 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-xs text-amber-950">
+                  <span className="font-medium text-[11px] sm:text-xs">Your Available Points:</span>
+                  <span className="font-mono font-black text-xs sm:text-sm text-indigo-700">
                     {currentBalance.toLocaleString()} PTS (≈ ₹{Math.floor(currentBalance / 4)})
                   </span>
                 </div>
@@ -443,14 +443,14 @@ export const SendGiftModal = ({
                 </div>
 
                 {/* Quick Points Buttons */}
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
                   {[1000, 2000, 4000, 8000].map((pts) => (
                     <button
                       key={pts}
                       type="button"
                       disabled={pts > currentBalance}
                       onClick={() => setPointsInput(String(pts))}
-                      className={`py-2 rounded-xl text-xs font-bold border transition ${
+                      className={`py-2 px-1.5 rounded-xl text-[11px] sm:text-xs font-bold border transition text-center truncate ${
                         pointsInput === String(pts)
                           ? 'bg-indigo-600 text-white border-indigo-600'
                           : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 disabled:opacity-40'

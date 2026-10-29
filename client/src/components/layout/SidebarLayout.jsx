@@ -137,20 +137,30 @@ export const SidebarLayout = ({
         },
       ];
 
-  const SidebarContent = ({ handleNavigate, handleLogout }) => (
+  const SidebarContent = ({ handleNavigate, handleLogout, isMobile = false }) => (
     <div className="flex flex-col h-full justify-between bg-white border-r border-slate-200/80">
       {/* Brand Header */}
       <div className="flex flex-col min-h-0 flex-1 overflow-y-auto">
-        <div className="h-20 px-6 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
+        <div className="h-16 sm:h-20 px-5 sm:px-6 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/20">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/20 shrink-0">
               <Crown className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-black text-lg text-slate-900 tracking-tight block">Bellad CRM</span>
-              <span className="text-xs font-semibold text-slate-500">Loyalty Platform</span>
+              <span className="font-black text-base sm:text-lg text-slate-900 tracking-tight block leading-tight">Bellad CRM</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-500">Loyalty Platform</span>
             </div>
           </div>
+          {isMobile && (
+            <button
+              type="button"
+              onClick={closeMobileNav}
+              className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 cursor-pointer"
+              title="Close Navigation"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* User Role Badge */}
@@ -260,6 +270,7 @@ export const SidebarLayout = ({
           />
           <aside className="absolute inset-y-0 left-0 w-64 max-w-[85vw] flex flex-col justify-between shadow-2xl animate-in slide-in-from-left duration-200">
             <SidebarContent
+              isMobile
               handleNavigate={onTabChange}
               handleLogout={() => {
                 if (onLogout) onLogout();
