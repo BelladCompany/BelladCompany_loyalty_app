@@ -876,6 +876,13 @@ export class ApiService {
       method: 'DELETE',
     });
   }
+
+  static async submitOfferEnquiry(enquiryData) {
+    return this.request('/offers/enquire', {
+      method: 'POST',
+      body: enquiryData,
+    });
+  }
 }
 
 export default ApiService;

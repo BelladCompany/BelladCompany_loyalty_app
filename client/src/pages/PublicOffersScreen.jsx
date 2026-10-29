@@ -6,9 +6,8 @@ import {
   Car,
   Zap,
   Phone,
-  MessageCircle,
-  Copy,
-  Check,
+  PhoneCall,
+  MessageSquare,
   Calendar,
   MapPin,
   ChevronRight,
@@ -26,7 +25,8 @@ import {
   ShieldCheck,
   RefreshCw,
   SlidersHorizontal,
-  Share2,
+  User,
+  Send,
 } from 'lucide-react';
 import ApiService from '../services/api';
 
@@ -37,15 +37,6 @@ const BRAND_ICONS = {
   'Ather Energy': '🔋',
   'Hyundai': '🚘',
   'All Brands': '🌟',
-};
-
-const CATEGORY_NAMES = {
-  all: 'All Categories',
-  suv: 'SUVs & Cars',
-  ev: 'Electric Vehicles (EV)',
-  bike_scooter: 'Bikes & Scooters',
-  service: 'Service & Detailing',
-  festive: 'Festive Specials',
 };
 
 export default function PublicOffersScreen() {
@@ -60,7 +51,17 @@ export default function PublicOffersScreen() {
   const [selectedBranch, setSelectedBranch] = useState('All');
   const [selectedMonth, setSelectedMonth] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [copiedCode, setCopiedCode] = useState('');
+
+  // Customer Enquiry Modal States
+  const [enquiryOffer, setEnquiryOffer] = useState(null);
+  const [enquiryForm, setEnquiryForm] = useState({
+    name: '',
+    phone: '',
+    branch: 'Hubli',
+    notes: '',
+  });
+  const [submittingEnquiry, setSubmittingEnquiry] = useState(false);
+  const [enquirySuccess, setEnquirySuccess] = useState(false);
 
   // Admin / Management states
   const currentUser = ApiService.getUser();
@@ -81,14 +82,12 @@ export default function PublicOffersScreen() {
     benefit: '',
     description: '',
     highlights: '',
-    code: '',
     valid_month: 'November 2026',
     valid_till: 'Valid till 30 Nov 2026',
     badge: 'MONTHLY SPECIAL',
     badge_color: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
     image_url: '',
     whatsapp_number: '918197348730',
-    whatsapp_msg: '',
     is_active: true,
     priority: 0,
   });
@@ -118,12 +117,39 @@ export default function PublicOffersScreen() {
     fetchOffers();
   }, [fetchOffers]);
 
-  // Copy offer code helper
-  const handleCopyCode = (code) => {
-    if (!code) return;
-    navigator.clipboard?.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(''), 2500);
+  // Open Enquiry Modal
+  const handleOpenEnquiryModal = (offer) => {
+    setEnquiryOffer(offer);
+    setEnquiryForm({
+      name: '',
+      phone: '',
+      branch: offer.branch_name !== 'All Branches' ? offer.branch_name : 'Hubli',
+      notes: '',
+    });
+    setEnquirySuccess(false);
+  };
+
+  // Submit Enquiry
+  const handleSubmitEnquiry = async (e) => {
+    e.preventDefault();
+    if (!enquiryOffer) return;
+    try {
+      setSubmittingEnquiry(true);
+      await ApiService.submitOfferEnquiry({
+        offer_id: enquiryOffer.offer_id,
+        brand_name: enquiryOffer.brand_name,
+        model_name: enquiryOffer.model_name,
+        customer_name: enquiryForm.name,
+        phone: enquiryForm.phone,
+        city_or_branch: enquiryForm.branch,
+        notes: enquiryForm.notes,
+      });
+      setEnquirySuccess(true);
+    } catch (err) {
+      alert(`Error submitting enquiry: ${err.message}`);
+    } finally {
+      setSubmittingEnquiry(false);
+    }
   };
 
   // Filtered offers list
@@ -157,8 +183,7 @@ export default function PublicOffersScreen() {
         const inModel = (offer.model_name || '').toLowerCase().includes(q);
         const inBrand = (offer.brand_name || '').toLowerCase().includes(q);
         const inDesc = (offer.description || '').toLowerCase().includes(q);
-        const inCode = (offer.code || '').toLowerCase().includes(q);
-        if (!inTitle && !inModel && !inBrand && !inDesc && !inCode) return false;
+        if (!inTitle && !inModel && !inBrand && !inDesc) return false;
       }
       return true;
     });
@@ -177,14 +202,12 @@ export default function PublicOffersScreen() {
       benefit: '',
       description: '',
       highlights: '',
-      code: `BELLAD-NOV-${Math.floor(100 + Math.random() * 900)}`,
       valid_month: 'November 2026',
       valid_till: 'Valid till 30 Nov 2026',
       badge: 'MONTHLY SPECIAL',
       badge_color: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
       image_url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
       whatsapp_number: '918197348730',
-      whatsapp_msg: 'Hi Bellad & Co, I am interested in this monthly dealership offer.',
       is_active: true,
       priority: 5,
     });
@@ -210,14 +233,12 @@ export default function PublicOffersScreen() {
       benefit: offer.benefit || '',
       description: offer.description || '',
       highlights: hl,
-      code: offer.code || '',
       valid_month: offer.valid_month || 'November 2026',
       valid_till: offer.valid_till || '',
       badge: offer.badge || 'MONTHLY SPECIAL',
       badge_color: offer.badge_color || 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
       image_url: offer.image_url || '',
       whatsapp_number: offer.whatsapp_number || '918197348730',
-      whatsapp_msg: offer.whatsapp_msg || '',
       is_active: offer.is_active ?? true,
       priority: offer.priority || 0,
     });
@@ -339,13 +360,11 @@ export default function PublicOffersScreen() {
             )}
 
             <a
-              href="https://wa.me/918197348730?text=Hi%20Bellad%20%26%20Co%2C%20I%20would%20like%20to%20inquire%20about%20the%20latest%20monthly%20offers."
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
+              href="tel:+918197348730"
+              className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
             >
-              <MessageCircle className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
-              <span className="hidden md:inline">WhatsApp Help</span>
+              <PhoneCall className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden sm:inline">Call Showroom</span>
             </a>
           </div>
         </div>
@@ -452,7 +471,7 @@ export default function PublicOffersScreen() {
               <option value="bike_scooter">Bikes &amp; Scooters</option>
               <option value="service">Service &amp; Detailing</option>
             </select>
-            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
           {/* Branch / City Filter */}
@@ -647,52 +666,25 @@ export default function PublicOffersScreen() {
                       )}
                     </div>
 
-                    {/* Promo Code & WhatsApp Action Bar */}
-                    <div className="space-y-2 pt-2">
-                      {offer.code && (
-                        <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200">
-                          <div className="flex items-center gap-1.5">
-                            <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                            <span className="font-mono text-xs font-bold text-slate-900">{offer.code}</span>
-                          </div>
-                          <button
-                            onClick={() => handleCopyCode(offer.code)}
-                            className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-[10px] font-bold transition flex items-center gap-1 shadow-2xs"
-                          >
-                            {copiedCode === offer.code ? (
-                              <>
-                                <Check className="w-3 h-3 text-emerald-600" />
-                                <span className="text-emerald-700 font-bold">Copied</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3 h-3 text-slate-500" />
-                                <span>Copy</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      )}
-
+                    {/* Action Bar: Enquire Now & Direct Call */}
+                    <div className="pt-2">
                       <div className="flex items-center gap-2">
-                        <a
-                          href={`https://wa.me/${offer.whatsapp_number || '918197348730'}?text=${encodeURIComponent(
-                            offer.whatsapp_msg || `Hi Bellad & Co, I am interested in the ${offer.title} offer (Code: ${offer.code}). Please share quote.`
-                          )}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-600/20"
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEnquiryModal(offer)}
+                          className="flex-1 py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                         >
-                          <MessageCircle className="w-3.5 h-3.5 fill-current" />
-                          <span>Claim on WhatsApp</span>
-                        </a>
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Enquire Now</span>
+                        </button>
 
                         <a
                           href={`tel:+${offer.whatsapp_number || '918197348730'}`}
-                          className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                          className="py-3 px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center gap-1.5 shadow-2xs"
                           title="Call Dealership"
                         >
                           <Phone className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Call</span>
                         </a>
 
                         {/* Staff Actions */}
@@ -700,21 +692,21 @@ export default function PublicOffersScreen() {
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => handleOpenEditModal(offer)}
-                              className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 transition"
+                              className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 transition"
                               title="Edit Offer"
                             >
                               <Edit className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleToggleActive(offer.offer_id)}
-                              className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                              className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
                               title={offer.is_active ? 'Deactivate' : 'Activate'}
                             >
                               {offer.is_active ? <EyeOff className="w-3.5 h-3.5 text-amber-600" /> : <Eye className="w-3.5 h-3.5 text-emerald-600" />}
                             </button>
                             <button
                               onClick={() => handleDeleteOffer(offer.offer_id, offer.title)}
-                              className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 transition"
+                              className="p-3 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 transition"
                               title="Delete Offer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -731,6 +723,149 @@ export default function PublicOffersScreen() {
         )}
       </main>
 
+      {/* ─── Customer Quick Enquiry Modal ────────────────────────────────────── */}
+      {enquiryOffer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-7 text-slate-800 shadow-2xl relative animate-fadeIn">
+            <button
+              onClick={() => setEnquiryOffer(null)}
+              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {enquirySuccess ? (
+              <div className="text-center py-6 space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto shadow-sm">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-black text-slate-900">Enquiry Received!</h3>
+                  <p className="text-xs text-slate-600 max-w-sm mx-auto leading-relaxed">
+                    Thank you <strong>{enquiryForm.name}</strong>. Our Bellad &amp; Co sales advisor for <strong>{enquiryOffer.model_name}</strong> will call you shortly on <strong>+91 {enquiryForm.phone}</strong>.
+                  </p>
+                </div>
+                
+                <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                  <a
+                    href={`tel:+${enquiryOffer.whatsapp_number || '918197348730'}`}
+                    className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Call Showroom Directly Now</span>
+                  </a>
+                  <button
+                    onClick={() => setEnquiryOffer(null)}
+                    className="w-full sm:w-auto px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="pb-4 border-b border-slate-100 space-y-1">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase">
+                    Model Enquiry
+                  </span>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900">
+                    Enquire for {enquiryOffer.title}
+                  </h3>
+                  <p className="text-xs font-bold text-emerald-700">{enquiryOffer.benefit}</p>
+                </div>
+
+                <form onSubmit={handleSubmitEnquiry} className="space-y-3.5 pt-4 text-xs font-medium">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Your Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh Patil"
+                      value={enquiryForm.name}
+                      onChange={(e) => setEnquiryForm({ ...enquiryForm, name: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Mobile Number (10 Digits) *</label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">+91</span>
+                      <input
+                        type="tel"
+                        required
+                        maxLength={10}
+                        placeholder="9876543210"
+                        value={enquiryForm.phone}
+                        onChange={(e) => setEnquiryForm({ ...enquiryForm, phone: e.target.value.replace(/\D/g, '') })}
+                        className="w-full pl-12 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Preferred Showroom Branch</label>
+                    <select
+                      value={enquiryForm.branch}
+                      onChange={(e) => setEnquiryForm({ ...enquiryForm, branch: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                    >
+                      <option value="Hubli">Hubli / Hubballi</option>
+                      <option value="Dharwad">Dharwad</option>
+                      <option value="Belgaum">Belgaum / Belagavi</option>
+                      <option value="Hospet">Hospet</option>
+                      <option value="Bangalore">Bangalore</option>
+                      <option value="Bellary">Bellary</option>
+                      <option value="Gulbarga">Gulbarga</option>
+                      <option value="Raichur">Raichur</option>
+                      <option value="Gadag">Gadag</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Remarks or Questions (Optional)</label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Interested in test drive this weekend, exchange quotation for old vehicle..."
+                      value={enquiryForm.notes}
+                      onChange={(e) => setEnquiryForm({ ...enquiryForm, notes: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setEnquiryOffer(null)}
+                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingEnquiry}
+                      className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-2 disabled:opacity-50 shadow-md shadow-slate-900/10"
+                    >
+                      {submittingEnquiry ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Sending...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Submit Enquiry</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ─── Staff Create / Edit Modal (Modern Light Theme) ───────────────────── */}
       {showManageModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
@@ -741,7 +876,7 @@ export default function PublicOffersScreen() {
                   {editingOffer ? 'Edit Monthly Offer' : 'Create New Monthly Offer'}
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  Update model discounts, exchange benefits &amp; WhatsApp triggers
+                  Update model discounts, exchange benefits &amp; branch coverage
                 </p>
               </div>
               <button
@@ -879,8 +1014,8 @@ export default function PublicOffersScreen() {
                 />
               </div>
 
-              {/* Month, Validity & Promo Code */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Month & Validity */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Valid Month *</label>
                   <input
@@ -901,17 +1036,6 @@ export default function PublicOffersScreen() {
                     value={formData.valid_till}
                     onChange={(e) => setFormData({ ...formData, valid_till: e.target.value })}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Promo Code</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. BELLAD-DARK-NOV"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
               </div>

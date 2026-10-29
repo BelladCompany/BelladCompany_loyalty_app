@@ -57,6 +57,50 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
+/**
+ * POST /api/offers/enquire
+ * Public endpoint to submit customer enquiry for a model/offer
+ */
+router.post('/enquire', async (req, res, next) => {
+  try {
+    const tenantId = req.headers['x-tenant-id'] || 'bellad_and_company';
+    const { offer_id, brand_name, model_name, customer_name, phone, city_or_branch, notes } = req.body;
+
+    if (!customer_name || !phone) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Name and phone number are required to submit an enquiry.',
+      });
+    }
+
+    const cleanPhone = String(phone).replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Please provide a valid 10-digit mobile number.',
+      });
+    }
+
+    const enquiry = await OfferService.createEnquiry({
+      offer_id: offer_id ? parseInt(offer_id, 10) : null,
+      brand_name: brand_name || '',
+      model_name: model_name || '',
+      customer_name: customer_name.trim(),
+      phone: cleanPhone,
+      city_or_branch: city_or_branch || 'Hubli',
+      notes: notes || '',
+    }, tenantId);
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Thank you! Your enquiry has been received. Our dealership representative will call you shortly.',
+      data: enquiry,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ─── PROTECTED ADMIN / MANAGEMENT ENDPOINTS ─────────────────────────────────
 
 const STAFF_ROLES = ['admin', 'super_admin', 'director', 'branch_manager', 'manager'];

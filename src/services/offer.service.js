@@ -258,6 +258,38 @@ class OfferService {
     const { rows } = await pool.query(query, [offerId, tenantId]);
     return rows.length > 0;
   }
+
+  static async createEnquiry(enquiryData, tenantId = 'bellad_and_company') {
+    const {
+      offer_id = null,
+      brand_name = '',
+      model_name = '',
+      customer_name,
+      phone,
+      city_or_branch = 'Hubli',
+      notes = '',
+    } = enquiryData;
+
+    const query = `
+      INSERT INTO offer_enquiries (
+        tenant_id, offer_id, brand_name, model_name, customer_name, phone, city_or_branch, notes, status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'new')
+      RETURNING *;
+    `;
+    const values = [
+      tenantId,
+      offer_id,
+      brand_name,
+      model_name,
+      customer_name,
+      phone,
+      city_or_branch,
+      notes,
+    ];
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  }
 }
 
 module.exports = OfferService;
