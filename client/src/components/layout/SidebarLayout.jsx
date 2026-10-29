@@ -111,6 +111,7 @@ export const SidebarLayout = ({
           items: [
             { id: 'gift_cards', label: 'Gift Card Rewards', icon: Gift },
             { id: 'referrals', label: 'Referral Rewards', icon: Users },
+            { id: 'monthly_offers', label: 'Monthly Brand Offers', icon: Tag, isExternalOffers: true },
           ],
         },
         {
@@ -177,7 +178,9 @@ export const SidebarLayout = ({
                       key={item.id}
                       type="button"
                       onClick={() => {
-                        if (item.isBuilder && onOpenBuilder) {
+                        if (item.isExternalOffers) {
+                          window.open('/offers', '_blank');
+                        } else if (item.isBuilder && onOpenBuilder) {
                           onOpenBuilder();
                         } else if (item.isStudio && onOpenStudio) {
                           onOpenStudio();

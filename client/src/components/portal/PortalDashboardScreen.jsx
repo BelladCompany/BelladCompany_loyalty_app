@@ -621,20 +621,19 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
             <span className="text-[11px] sm:text-xs font-bold tracking-tight line-clamp-1">Refer &amp; Earn</span>
           </button>
 
-          {/* Main 3: Vehicle Offers (Dynamic Monthly) */}
+          {/* Main 3: Vehicle Offers (Opens Dedicated /offers Page) */}
           <button
             type="button"
-            onClick={() => setActiveTab('offers')}
-            className={`p-3 sm:p-4 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'offers'
-                ? 'bg-rose-500 text-white border-rose-600 shadow-md shadow-rose-500/20'
-                : 'bg-white border-slate-200/80 text-slate-700 hover:border-rose-300 hover:bg-rose-50/40 shadow-2xs'
-              }`}
+            onClick={() => window.open('/offers', '_blank')}
+            className="p-3 sm:p-4 rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer bg-white border-slate-200/80 text-slate-700 hover:border-rose-300 hover:bg-rose-50/40 shadow-2xs group"
           >
-            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'offers' ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-600'
-              }`}>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-rose-50 text-rose-600 group-hover:scale-105 transition-transform">
               <Flame className="w-5 h-5" />
             </div>
-            <span className="text-[11px] sm:text-xs font-bold tracking-tight line-clamp-1">Vehicle Offers</span>
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] sm:text-xs font-bold tracking-tight line-clamp-1">Brand Offers</span>
+              <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-rose-600" />
+            </div>
           </button>
 
           {/* Main 4: Silver, Gold, Platinum Benefits */}
@@ -744,46 +743,31 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               </div>
             </div>
 
-            {/* Monthly Offers Preview Teaser */}
-            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-black uppercase font-mono">
-                    <Flame className="w-3 h-3" /> Monthly Highlights
+            {/* Monthly Offers Redirection Banner (Dedicated External Page) */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-7 border border-indigo-900/50 shadow-lg">
+              <div className="absolute -right-12 -bottom-12 w-56 h-56 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+                <div className="space-y-2 max-w-xl">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] font-black uppercase font-mono">
+                    <Sparkles className="w-3 h-3 text-amber-400" /> Live Monthly Dealership Schemes
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 mt-1">October Dealership Offers</h3>
+                  <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
+                    Explore Brand Offers: Tata, MG, Hero &amp; Ather
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    Check out model-specific exchange bonuses up to ₹1,35,000, EV charging perks, low-interest finance, and workshop detailing discounts across Hubli, Belgaum, Dharwad &amp; Bangalore.
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('offers')}
-                  className="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition"
-                >
-                  Explore All Offers
-                </button>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {offersList.slice(0, 2).map((offer) => (
-                  <div key={offer.id} className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-50/50 flex flex-col justify-between">
-                    <div className="h-36 relative overflow-hidden bg-slate-900">
-                      <img src={offer.image} alt={offer.title} className="w-full h-full object-cover" />
-                      <span className={`absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] ${offer.badgeColor}`}>
-                        {offer.badge}
-                      </span>
-                    </div>
-                    <div className="p-4 space-y-2">
-                      <h4 className="font-bold text-slate-900 text-sm">{offer.title}</h4>
-                      <p className="text-xs font-bold text-emerald-700">{offer.benefit}</p>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('offers')}
-                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 pt-1"
-                      >
-                        Claim Offer Code <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                <a
+                  href="/offers"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs sm:text-sm transition-all transform hover:scale-[1.02] shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer"
+                >
+                  <span>Explore Monthly Offers</span>
+                  <ExternalLink className="w-4 h-4 stroke-[2.5]" />
+                </a>
               </div>
             </div>
 
@@ -1227,120 +1211,43 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         )}
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* TAB 4: VEHICLE & SERVICE OFFERS (Main 3 - Dynamic Monthly Offers)   */}
+        {/* TAB 4: VEHICLE & SERVICE OFFERS (Redirects to Dedicated Offers Page) */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {activeTab === 'offers' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-black uppercase font-mono">
-                    <Flame className="w-3 h-3" /> Updated Monthly
-                  </div>
-                  <h2 className="text-lg font-black text-slate-900 mt-1">Exclusive Dealership Offers</h2>
-                  <p className="text-xs text-slate-500">
-                    Hand-crafted monthly offers for Bellad Loyalty Members on new vehicles, EV upgrades, and workshop services.
-                  </p>
-                </div>
+          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-slate-200/80 shadow-sm text-center max-w-2xl mx-auto space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto shadow-sm">
+              <Flame className="w-8 h-8" />
+            </div>
 
-                {/* Offer Category Filter Pills */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                  {[
-                    { id: 'all', label: 'All Offers' },
-                    { id: 'suv', label: 'SUVs & Cars' },
-                    { id: 'ev', label: 'Electric (EV)' },
-                    { id: 'service', label: 'Service & Detail' },
-                  ].map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedOfferCategory(cat.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${selectedOfferCategory === cat.id
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div className="space-y-2">
+              <span className="text-[11px] font-mono uppercase tracking-wider font-bold px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                Official Monthly Dealership Offers
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+                Interactive Brand Offers Portal
+              </h2>
+              <p className="text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                All monthly discounts, exchange bonuses, and festive schemes for <strong>Tata, MG Motors, Hero MotoCorp, and Ather Energy</strong> are hosted on our dedicated showroom offers portal with live branch and model filters.
+              </p>
+            </div>
 
-              {/* Dynamic Offers Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {filteredOffers.map((offer) => (
-                  <div
-                    key={offer.id}
-                    className="bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col justify-between group"
-                  >
-                    <div>
-                      {/* High-Resolution Offer Image */}
-                      <div className="h-44 w-full relative overflow-hidden bg-slate-950">
-                        <img
-                          src={offer.image}
-                          alt={offer.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
-                        <span className={`absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] tracking-wider uppercase font-mono shadow-xs ${offer.badgeColor}`}>
-                          {offer.badge}
-                        </span>
-                        <span className="absolute bottom-3 right-3 text-[10px] text-white/90 font-mono bg-black/50 backdrop-blur-xs px-2 py-0.5 rounded-md">
-                          {offer.validTill}
-                        </span>
-                      </div>
-
-                      {/* Content */}
-                      <div className="p-5 space-y-3">
-                        <div>
-                          <h3 className="font-black text-slate-900 text-base leading-snug">{offer.title}</h3>
-                          <p className="text-xs font-black text-emerald-700 mt-1">{offer.benefit}</p>
-                        </div>
-
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                          {offer.description}
-                        </p>
-
-                        {/* Feature Highlights Pills */}
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {offer.highlights.map((h, i) => (
-                            <span key={i} className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
-                              &bull; {h}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Actions */}
-                    <div className="p-5 pt-0 space-y-2 border-t border-slate-100 mt-3">
-                      <div className="flex items-center justify-between pt-3">
-                        <div className="flex items-center gap-1.5">
-                          <Tag className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="font-mono text-xs font-bold text-slate-800">{offer.code}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyOfferCode(offer.code)}
-                          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-                        >
-                          {copiedOffer === offer.code ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                          <span>{copiedOffer === offer.code ? 'Copied' : 'Copy Code'}</span>
-                        </button>
-                      </div>
-
-                      <a
-                        href={`https://wa.me/918197348730?text=${encodeURIComponent(offer.whatsappMsg)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-                      >
-                        <Phone className="w-3.5 h-3.5" />
-                        <span>Inquire on WhatsApp</span>
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href="/offers"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto px-8 py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-sm rounded-2xl transition shadow-md flex items-center justify-center gap-2"
+              >
+                <span>Launch Offers Portal</span>
+                <ExternalLink className="w-4 h-4 stroke-[2.5]" />
+              </a>
+              <button
+                type="button"
+                onClick={() => setActiveTab('dashboard')}
+                className="w-full sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-2xl transition"
+              >
+                Back to Dashboard
+              </button>
             </div>
           </div>
         )}

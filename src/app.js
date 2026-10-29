@@ -28,6 +28,7 @@ const tenantRoutes = require('./routes/tenant.routes');
 const masterEditorRoutes = require('./routes/masterEditor.routes');
 const platformRulesRoutes = require('../platform/api/rules.routes');
 const giftRoutes = require('./routes/gift.routes');
+const offerRoutes = require('./routes/offer.routes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -125,6 +126,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/gift-cards', giftCardRoutes);
 app.use('/api/gifts', giftRoutes);
 app.use('/api/v1/gifts', giftRoutes);
+app.use('/api/offers', offerRoutes);
+app.use('/api/v1/offers', offerRoutes);
 app.use('/api/tenants', tenantRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/tenants', tenantRoutes);

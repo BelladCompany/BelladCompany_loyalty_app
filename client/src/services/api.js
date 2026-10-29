@@ -834,6 +834,48 @@ export class ApiService {
     const qs = new URLSearchParams(params).toString();
     return this.request(`/admin/referrals${qs ? `?${qs}` : ''}`);
   }
+
+  // ─── Monthly Dealership Offers (Tata, MG, Hero, Ather, etc.) ──────────────
+  static async getOffers(params = {}) {
+    const cleanParams = {};
+    Object.keys(params).forEach((key) => {
+      if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+        cleanParams[key] = params[key];
+      }
+    });
+    const qs = new URLSearchParams(cleanParams).toString();
+    return this.request(`/offers${qs ? `?${qs}` : ''}`);
+  }
+
+  static async getOfferById(id) {
+    return this.request(`/offers/${id}`);
+  }
+
+  static async createOffer(offerData) {
+    return this.request('/offers', {
+      method: 'POST',
+      body: offerData,
+    });
+  }
+
+  static async updateOffer(id, offerData) {
+    return this.request(`/offers/${id}`, {
+      method: 'PUT',
+      body: offerData,
+    });
+  }
+
+  static async toggleOffer(id) {
+    return this.request(`/offers/${id}/toggle`, {
+      method: 'PATCH',
+    });
+  }
+
+  static async deleteOffer(id) {
+    return this.request(`/offers/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export default ApiService;

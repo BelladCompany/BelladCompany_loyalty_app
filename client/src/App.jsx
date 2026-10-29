@@ -15,6 +15,7 @@ import MasterRuleEditorScreen from './screens/MasterRuleEditorScreen';
 import StandaloneMasterEditorPortal from './screens/StandaloneMasterEditorPortal';
 import LoyaltyAppBuilder from './screens/LoyaltyAppBuilder';
 import CustomerPortalScreen from './pages/CustomerPortalScreen';
+import PublicOffersScreen from './pages/PublicOffersScreen';
 import PublicGiftClaimScreen from './screens/PublicGiftClaimScreen';
 import CustomerRedemptionsScreen from './screens/CustomerRedemptionsScreen';
 import ApiService from './services/api';
@@ -83,6 +84,7 @@ export function App() {
   const isPublicBalancePass = path.startsWith('/balance/');
   const isPublicReferralLead = path.startsWith('/refer/');
   const isPublicGiftClaim = path.startsWith('/gift/') || path.startsWith('/claim-gift/');
+  const isPublicOffers = path.startsWith('/offers') || path.startsWith('/deals') || path.startsWith('/monthly-offers');
   const isCustomerPortal = path.startsWith('/portal') || path.startsWith('/customer-portal');
   const isEditorPath = path.startsWith('/editor') || path.startsWith('/studio');
   const isBuilderPath = path.startsWith('/builder') || path.startsWith('/app-builder') || path.startsWith('/create-app');
@@ -91,7 +93,7 @@ export function App() {
   const [isBuilderMode, setIsBuilderMode] = useState(isBuilderPath);
 
   useEffect(() => {
-    if (isPublicBalancePass || isPublicReferralLead || isPublicGiftClaim || isCustomerPortal) return;
+    if (isPublicBalancePass || isPublicReferralLead || isPublicGiftClaim || isPublicOffers || isCustomerPortal) return;
 
     // Validate stored token on mount
     const token = ApiService.getToken();
@@ -108,7 +110,7 @@ export function App() {
           setUser(null);
         });
     }
-  }, [isPublicBalancePass, isPublicReferralLead, isPublicGiftClaim, isCustomerPortal]);
+  }, [isPublicBalancePass, isPublicReferralLead, isPublicGiftClaim, isPublicOffers, isCustomerPortal]);
 
   // Handle browser back/forward buttons for /editor & /builder navigation
   useEffect(() => {
@@ -119,6 +121,11 @@ export function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Public offers page does not require user authentication
+  if (isPublicOffers) {
+    return <PublicOffersScreen />;
+  }
 
   // Public balance pass does not require user authentication
   if (isPublicBalancePass) {
