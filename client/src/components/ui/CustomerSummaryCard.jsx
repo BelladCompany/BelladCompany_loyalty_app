@@ -60,59 +60,59 @@ export const CustomerSummaryCard = ({
   }
 
   return (
-    <div className={`w-full bg-white rounded-3xl p-7 lg:p-8 border border-slate-200/90 shadow-card ${className}`}>
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+    <div className={`w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-7 lg:p-8 border border-slate-200/90 shadow-card ${className}`}>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
 
         {/* Left: Customer Identity & Key Badges */}
-        <div className="flex-1 space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 text-white font-mono font-bold text-sm rounded-xl shadow-xs">
+        <div className="flex-1 space-y-3 sm:space-y-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-slate-900 text-white font-mono font-bold text-xs sm:text-sm rounded-xl shadow-xs shrink-0">
               {customer.customer_id}
             </span>
-            <h2 className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight break-words">
               {customer.name || customer.customer_name}
             </h2>
             <StatusBadge value={tierName} type="tier" />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-base pt-1">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm sm:text-base pt-0.5 sm:pt-1">
             {/* Contact Phone Numbers */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
               {phones.length > 0 ? (
                 phones.map((p, idx) => (
                   <span
                     key={idx}
-                    className="px-3 py-1 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-sm text-slate-800"
+                    className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-xs sm:text-sm text-slate-800"
                   >
                     {p.phone_number || p}
-                    {p.is_primary && <span className="ml-1.5 text-xs text-indigo-600 font-extrabold">(Primary)</span>}
+                    {p.is_primary && <span className="ml-1 text-[11px] sm:text-xs text-indigo-600 font-extrabold">(Primary)</span>}
                   </span>
                 ))
               ) : (
-                <span className="text-slate-400 font-medium text-sm">No phone registered</span>
+                <span className="text-slate-400 font-medium text-xs sm:text-sm">No phone registered</span>
               )}
             </div>
 
             {/* Aadhaar Number Display */}
             {aadhaarDisplay && (
-              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-900 px-3.5 py-1 rounded-xl">
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-amber-50 border border-amber-200 text-amber-900 px-3 py-0.5 sm:py-1 rounded-xl">
                 <ShieldCheck className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Aadhaar:</span>
-                <span className="font-mono font-bold text-sm text-slate-900">{aadhaarDisplay}</span>
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-700">Aadhaar:</span>
+                <span className="font-mono font-bold text-xs sm:text-sm text-slate-900">{aadhaarDisplay}</span>
               </div>
             )}
           </div>
 
           {/* Registered Vehicles */}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-0.5 sm:pt-1">
             <Car className="w-4 h-4 text-slate-400 flex-shrink-0" />
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mr-1">Vehicles:</span>
+            <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mr-1">Vehicles:</span>
             {vehicles.length > 0 ? (
               vehicles.map((v, idx) => (
                 <span
                   key={idx}
-                  className="px-3 py-1 bg-indigo-50 border border-indigo-200/80 rounded-xl text-xs font-bold text-indigo-800"
+                  className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-indigo-50 border border-indigo-200/80 rounded-xl text-xs font-bold text-indigo-800"
                 >
                   {v.registration_number || v.reg_no || v.vin || v.chassis_no} {v.model ? `(${v.model})` : ''}
                 </span>
@@ -124,13 +124,13 @@ export const CustomerSummaryCard = ({
         </div>
 
         {/* Right: Available Points & High-Impact CTA Actions */}
-        <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end justify-between gap-4 border-t lg:border-t-0 lg:border-l border-slate-100 pt-5 lg:pt-0 lg:pl-8">
-          <div className="text-left lg:text-right">
-            <div className="text-xs font-black text-slate-400 uppercase tracking-wider">Available Loyalty Balance</div>
-            <div className="text-3xl lg:text-4xl font-black text-slate-900 tabular-nums tracking-tight my-1">
-              {Number(currentPoints).toLocaleString()} <span className="text-xl font-bold text-indigo-600">PTS</span>
+        <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end justify-between gap-4 border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 sm:pt-5 lg:pt-0 lg:pl-8 w-full lg:w-auto">
+          <div className="text-left lg:text-right w-full sm:w-auto">
+            <div className="text-[11px] sm:text-xs font-black text-slate-400 uppercase tracking-wider">Available Loyalty Balance</div>
+            <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 tabular-nums tracking-tight my-1">
+              {Number(currentPoints).toLocaleString()} <span className="text-lg sm:text-xl font-bold text-indigo-600">PTS</span>
             </div>
-            <div className="text-sm font-bold text-emerald-600 font-mono">
+            <div className="text-xs sm:text-sm font-bold text-emerald-600 font-mono">
               ≈ ₹{Number(rupeeValue).toLocaleString()} Redeemable Value
             </div>
           </div>
@@ -144,7 +144,7 @@ export const CustomerSummaryCard = ({
                 if (onAddReceipt) onAddReceipt(customer);
                 else if (onRecordEarning) onRecordEarning(customer);
               }}
-              className="h-12 px-6 font-bold text-sm rounded-2xl flex items-center gap-2 transition-all shadow-md active:scale-[0.98] cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/25"
+              className="h-11 sm:h-12 px-5 sm:px-6 font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98] cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/25 w-full sm:w-auto"
             >
               <PlusCircle className="w-4 h-4 text-white" />
               <span>Add Receipt</span>
@@ -156,7 +156,7 @@ export const CustomerSummaryCard = ({
 
       {/* Lock Warning Banner if 12-month rule applies */}
       {!redemptionEligible && (
-        <div className="mt-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5 font-semibold">
+        <div className="mt-4 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5 font-semibold">
           <Lock className="w-4 h-4 text-amber-600 flex-shrink-0" />
           <span>{lockReason}</span>
         </div>

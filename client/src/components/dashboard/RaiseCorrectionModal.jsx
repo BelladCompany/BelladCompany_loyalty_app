@@ -96,28 +96,28 @@ export const RaiseCorrectionModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-      <div className="w-full max-w-2xl bg-white border-2 border-surface-border rounded-xl shadow-2xl max-h-[94vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/70 backdrop-blur-sm overflow-hidden">
+      <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-2xl sm:rounded-3xl shadow-2xl max-h-[94vh] flex flex-col overflow-hidden">
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-100 border-b border-surface-border">
-          <div className="flex items-center gap-2.5">
-            <FileText className="w-6 h-6 text-indigo-600" />
-            <h3 className="text-xl font-bold text-slate-900">
-              Raise Transaction Billing Correction Request
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-100 border-b border-slate-200 flex-shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 shrink-0" />
+            <h3 className="text-base sm:text-xl font-bold text-slate-900 truncate">
+              Raise Transaction Correction Request
             </h3>
           </div>
           <button
             type="button"
             onClick={handleResetAndClose}
             disabled={isLoading}
-            className="p-1 text-slate-500 hover:text-slate-900 rounded hover:bg-slate-200"
+            className="p-1.5 text-slate-500 hover:text-slate-900 rounded-xl hover:bg-slate-200 shrink-0 transition"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
           {/* Error Banner */}
           {error && (
             <div className="mb-5 p-4 bg-rose-50 border-2 border-rose-300 rounded-lg flex items-start gap-2.5 text-rose-800 font-bold text-base">

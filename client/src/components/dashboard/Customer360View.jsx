@@ -289,7 +289,7 @@ export const Customer360View = ({
       />
 
       {/* 2. Key Metrics Glanceable Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <StatCard
           label="Available Point Balance"
           value={`${Number(currentBalance).toLocaleString()} PTS`}
@@ -311,76 +311,76 @@ export const Customer360View = ({
       </div>
 
       {/* 3. Detailed Customer Master Profile Card */}
-      <section className="bg-white border border-slate-200/90 rounded-3xl p-7 space-y-5 shadow-card">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+      <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 space-y-4 sm:space-y-5 shadow-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
               <UserCheck className="w-5 h-5" />
             </div>
-            <h3 className="text-xl font-black text-slate-900 tracking-tight">Customer Master Details</h3>
+            <h3 className="text-base sm:text-xl font-black text-slate-900 tracking-tight">Customer Master Details</h3>
           </div>
-          <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 uppercase tracking-wider">
+          <span className="self-start sm:self-auto text-[11px] sm:text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 sm:px-3 py-1 rounded-full border border-emerald-200 uppercase tracking-wider shrink-0 whitespace-nowrap">
             PR Status: {customer.pr_status || customer.billing_status || 'PR Done'}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-base">
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-xs uppercase font-extrabold tracking-wider">Customer Name</span>
-            <span className="font-extrabold text-slate-900 text-lg mt-0.5 block">{customer.name || customer.customer_name || 'N/A'}</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-sm sm:text-base">
+          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Customer Name</span>
+            <span className="font-extrabold text-slate-900 text-base sm:text-lg mt-0.5 block break-words">{customer.name || customer.customer_name || 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-xs uppercase font-extrabold tracking-wider">Registered Phone Number</span>
-            <span className="font-mono font-extrabold text-slate-900 text-lg mt-0.5 block">
+          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Registered Phone Number</span>
+            <span className="font-mono font-extrabold text-slate-900 text-base sm:text-lg mt-0.5 block break-words">
               {(customer.phones || []).map((p) => p.phone_number || p).join(', ') || 'N/A'}
             </span>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-xs uppercase font-extrabold tracking-wider">Aadhaar Card No</span>
-            <span className="font-mono font-extrabold text-slate-900 text-lg mt-0.5 block">
+          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Aadhaar Card No</span>
+            <span className="font-mono font-extrabold text-slate-900 text-base sm:text-lg mt-0.5 block break-words">
               {customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 || 'N/A'}
             </span>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-xs uppercase font-extrabold tracking-wider">Age</span>
-            <span className="font-extrabold text-slate-900 text-lg mt-0.5 block">{customer.age ? `${customer.age} Years` : 'N/A'}</span>
+          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Age</span>
+            <span className="font-extrabold text-slate-900 text-base sm:text-lg mt-0.5 block">{customer.age ? `${customer.age} Years` : 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-xs uppercase font-extrabold tracking-wider">Firm Name</span>
-            <span className="font-bold text-slate-900 text-base mt-0.5 block">{customer.firm || customer.firm_name || 'N/A'}</span>
+          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Firm Name</span>
+            <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">{customer.firm || customer.firm_name || 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-xs uppercase font-extrabold tracking-wider">Branch Name</span>
-            <span className="font-bold text-slate-900 text-base mt-0.5 block">{customer.branch || customer.branch_name || 'Main Branch'}</span>
+          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Branch Name</span>
+            <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">{customer.branch || customer.branch_name || 'Main Branch'}</span>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-xs uppercase font-extrabold tracking-wider">DMS Invoice Date</span>
-            <span className="font-bold text-slate-900 text-base mt-0.5 block">{customer.dms_invoice_date || customer.dms_inv_date || 'N/A'}</span>
+          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">DMS Invoice Date</span>
+            <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">{customer.dms_invoice_date || customer.dms_inv_date || 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-xs uppercase font-extrabold tracking-wider">Customer Address</span>
-            <span className="font-semibold text-slate-800 text-base mt-0.5 block">{customer.address || 'N/A'}</span>
+          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Customer Address</span>
+            <span className="font-semibold text-slate-800 text-sm sm:text-base mt-0.5 block break-words">{customer.address || 'N/A'}</span>
           </div>
         </div>
       </section>
 
       {/* 4. Prominent Vehicle Details Block */}
-      <section className="bg-white border border-slate-200/90 rounded-3xl p-7 space-y-5 shadow-card">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+      <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 space-y-4 sm:space-y-5 shadow-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
               <Car className="w-5 h-5" />
             </div>
-            <h3 className="text-xl font-black text-slate-900 tracking-tight">Vehicle Specifications & Pricing</h3>
+            <h3 className="text-base sm:text-xl font-black text-slate-900 tracking-tight">Vehicle Specifications &amp; Pricing</h3>
           </div>
-          <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+          <span className="self-start sm:self-auto text-[11px] sm:text-xs font-bold text-slate-700 bg-slate-100 px-2.5 sm:px-3 py-1 rounded-full border border-slate-200 shrink-0 whitespace-nowrap">
             {(customer.vehicles || []).length} Vehicle(s)
           </span>
         </div>
@@ -406,21 +406,21 @@ export const Customer360View = ({
               return (
                 <div
                   key={vid || idx}
-                  className="bg-slate-50 border-2 border-slate-200 rounded-xl p-5 space-y-4 hover:border-amber-500 transition shadow-sm w-full"
+                  className="bg-slate-50 border-2 border-slate-200 rounded-xl p-3.5 sm:p-5 space-y-3 sm:space-y-4 hover:border-amber-500 transition shadow-sm w-full"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono font-extrabold text-base bg-white px-3 py-1 border border-slate-300 rounded-lg text-slate-900 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono font-extrabold text-xs sm:text-sm bg-white px-2.5 sm:px-3 py-1 border border-slate-300 rounded-lg text-slate-900 shadow-sm">
                         Reg No: {v.registration_number || v.reg_no || v.vin || v.chassis_no || 'N/A'}
                       </span>
-                      <span className="text-sm font-extrabold px-3 py-1 rounded-lg bg-amber-500/10 text-amber-900 border border-amber-500/30">
+                      <span className="text-xs sm:text-sm font-extrabold px-2.5 sm:px-3 py-1 rounded-lg bg-amber-500/10 text-amber-900 border border-amber-500/30">
                         {v.brand_name || v.brand || 'Vehicle'}
                       </span>
                     </div>
 
                     {vs && (
                       <span
-                        className={`px-3 py-1 rounded-lg font-extrabold text-xs uppercase ${
+                        className={`px-2.5 sm:px-3 py-1 rounded-lg font-extrabold text-[11px] sm:text-xs uppercase whitespace-nowrap ${
                           vs.status === 'eligible'
                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse'
                             : vs.status === 'locked'
@@ -437,60 +437,60 @@ export const Customer360View = ({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3 text-sm">
                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">VIN / Chassis No</span>
-                      <span className="font-mono font-extrabold text-slate-900 text-base break-all">{v.vin || v.chassis_no || 'N/A'}</span>
+                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">VIN / Chassis No</span>
+                      <span className="font-mono font-extrabold text-slate-900 text-sm sm:text-base break-all">{v.vin || v.chassis_no || 'N/A'}</span>
                     </div>
 
                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Model Name</span>
-                      <span className="font-extrabold text-slate-900 text-base">{v.model || 'Unspecified'}</span>
+                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">Model Name</span>
+                      <span className="font-extrabold text-slate-900 text-sm sm:text-base">{v.model || 'Unspecified'}</span>
                     </div>
 
                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Variant</span>
-                      <span className="font-extrabold text-slate-900 text-base">{v.variant || v.varient || 'N/A'}</span>
+                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">Variant</span>
+                      <span className="font-extrabold text-slate-900 text-sm sm:text-base">{v.variant || v.varient || 'N/A'}</span>
                     </div>
 
                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Fuel Type</span>
-                      <span className="font-extrabold text-blue-900 text-base uppercase">{v.fuel_type || 'Petrol / Diesel / EV'}</span>
+                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">Fuel Type</span>
+                      <span className="font-extrabold text-blue-900 text-sm sm:text-base uppercase">{v.fuel_type || 'Petrol / Diesel / EV'}</span>
                     </div>
 
                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Firm Name</span>
-                      <span className="font-bold text-slate-900 text-base">{v.firm_name || v.firm || customer.firm || 'N/A'}</span>
+                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">Firm Name</span>
+                      <span className="font-bold text-slate-900 text-sm sm:text-base">{v.firm_name || v.firm || customer.firm || 'N/A'}</span>
                     </div>
 
                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">DMS Invoice Date</span>
-                      <span className="font-extrabold text-slate-900 text-base">{v.dms_invoice_date || customer.dms_invoice_date || 'N/A'}</span>
+                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">DMS Invoice Date</span>
+                      <span className="font-extrabold text-slate-900 text-sm sm:text-base">{v.dms_invoice_date || customer.dms_invoice_date || 'N/A'}</span>
                     </div>
 
                     <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-xs uppercase font-extrabold">Ex-Showroom Price (Gross)</span>
-                      <span className="font-extrabold text-slate-800 text-base">{grossPrice > 0 ? `₹${grossPrice.toLocaleString('en-IN')}` : 'N/A'}</span>
+                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">Ex-Showroom Price (Gross)</span>
+                      <span className="font-extrabold text-slate-800 text-sm sm:text-base">{grossPrice > 0 ? `₹${grossPrice.toLocaleString('en-IN')}` : 'N/A'}</span>
                     </div>
 
                     <div className="bg-white p-3 rounded-lg border border-rose-200 bg-rose-50/40">
-                      <span className="text-rose-700 block text-xs uppercase font-extrabold">Offers & Discounts</span>
-                      <span className="font-extrabold text-rose-700 text-base">
+                      <span className="text-rose-700 block text-[11px] sm:text-xs uppercase font-extrabold">Offers &amp; Discounts</span>
+                      <span className="font-extrabold text-rose-700 text-sm sm:text-base">
                         {grossPrice - netPrice > 0 ? `−₹${(grossPrice - netPrice).toLocaleString('en-IN')}` : '₹0'}
                       </span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50/60 col-span-2">
-                      <div className="flex items-center justify-between">
+                    <div className="bg-white p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50/60 sm:col-span-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
-                          <span className="text-emerald-900 block text-xs uppercase font-extrabold">
+                          <span className="text-emerald-900 block text-[11px] sm:text-xs uppercase font-extrabold">
                             Net Ex-Showroom (After Discount)
                           </span>
-                          <span className="font-black text-emerald-800 text-xl">
+                          <span className="font-black text-emerald-800 text-lg sm:text-xl">
                             {netPrice > 0 ? `₹${netPrice.toLocaleString('en-IN')}` : 'N/A'}
                           </span>
                         </div>
-                        <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">
+                        <span className="self-start sm:self-auto text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">
                           Points Base: +{Math.floor(netPrice / 100).toLocaleString('en-IN')} PTS
                         </span>
                       </div>
@@ -499,7 +499,7 @@ export const Customer360View = ({
 
                   {/* Redemption Clock Status message */}
                   {vs && (
-                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-sm">
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-slate-600 font-semibold">{vs.message}</span>
                     </div>
                   )}
@@ -511,9 +511,9 @@ export const Customer360View = ({
       </section>
 
       {/* 5. Tabbed Customer Profile History (Ledger / Referrals / Redemptions / KYC) */}
-      <section className="bg-white border border-slate-200/90 rounded-3xl p-7 space-y-6 shadow-card">
+      <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 space-y-5 sm:space-y-6 shadow-card">
         {/* Navigation Tabs (Smart CRM pill style) */}
-        <div className="flex items-center gap-2 border-b border-slate-100 overflow-x-auto pb-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-100 overflow-x-auto pb-3 -mx-1 px-1">
           {[
             { id: 'ledger', label: 'Points Ledger', icon: History },
             { id: 'referrals', label: 'Gift Cards', icon: Gift },
@@ -526,14 +526,14 @@ export const Customer360View = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveProfileTab(tab.id)}
-                className={`inline-flex items-center gap-2 px-5 py-2.5 text-xs font-black rounded-2xl transition whitespace-nowrap ${
+                className={`inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 text-xs font-black rounded-xl sm:rounded-2xl transition whitespace-nowrap shrink-0 ${
                   isActive
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
                     : 'bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                {tab.label}
+                <Icon className="w-4 h-4 shrink-0" />
+                <span>{tab.label}</span>
               </button>
             );
           })}
@@ -542,14 +542,14 @@ export const Customer360View = ({
         {/* Tab 1: Points Ledger */}
         {activeProfileTab === 'ledger' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Transaction Audit Trail ({ledgerData.length} entries)
               </h4>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setAddReceiptModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition shadow-xs"
                 >
                   <PlusCircle className="w-3.5 h-3.5 text-white" />
                   Add Receipt
@@ -559,7 +559,7 @@ export const Customer360View = ({
                     setSelectedCorrectionRef('');
                     setCorrectionModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition shadow-xs"
                 >
                   <FileText className="w-3.5 h-3.5" /> Raise Billing Correction
                 </button>
@@ -578,7 +578,7 @@ export const Customer360View = ({
         {/* Tab 2: Gift Cards */}
         {activeProfileTab === 'referrals' && (
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Customer Gift Cards & Reward History</h4>
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Customer Gift Cards &amp; Reward History</h4>
             {loadingTabData ? (
               <div className="p-6 text-center text-xs text-slate-400">Loading gift card records...</div>
             ) : referralHistory.length === 0 ? (
@@ -586,8 +586,8 @@ export const Customer360View = ({
                 No gift card activity logged for this customer.
               </div>
             ) : (
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
+              <div className="border border-slate-200 rounded-xl overflow-x-auto">
+                <table className="w-full text-left text-xs whitespace-nowrap">
                   <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                     <tr>
                       <th className="p-3">Gift Card ID</th>
@@ -631,8 +631,8 @@ export const Customer360View = ({
                 No points redemption transactions recorded yet.
               </div>
             ) : (
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
+              <div className="border border-slate-200 rounded-xl overflow-x-auto">
+                <table className="w-full text-left text-xs whitespace-nowrap">
                   <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                     <tr>
                       <th className="p-3">Transaction Date</th>
@@ -664,12 +664,12 @@ export const Customer360View = ({
         {/* Tab 4: KYC Requests */}
         {activeProfileTab === 'kyc' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">KYC Change Requests</h4>
               <button
                 type="button"
                 onClick={() => setKycModalOpen(true)}
-                className="px-3 py-1.5 bg-action-primary text-white text-xs font-bold rounded-lg hover:bg-blue-700 flex items-center gap-1.5 transition-colors"
+                className="self-start sm:self-auto px-3 py-1.5 bg-action-primary text-white text-xs font-bold rounded-lg hover:bg-blue-700 flex items-center gap-1.5 transition-colors"
               >
                 <PlusCircle className="w-4 h-4" /> Request Phone Update
               </button>
@@ -688,8 +688,8 @@ export const Customer360View = ({
                 </button>
               </div>
             ) : (
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
+              <div className="border border-slate-200 rounded-xl overflow-x-auto">
+                <table className="w-full text-left text-xs whitespace-nowrap">
                   <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                     <tr>
                       <th className="p-3">Request ID</th>

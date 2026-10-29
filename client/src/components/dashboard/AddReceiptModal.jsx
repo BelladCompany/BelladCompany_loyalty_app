@@ -266,50 +266,50 @@ export const AddReceiptModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-4 overflow-hidden animate-fadeIn">
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[94vh] flex flex-col">
 
         {/* ── Modal Header ── */}
-        <div className="px-6 py-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shrink-0">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
                 Add Receipt &amp; Loyalty Points
               </h3>
-              <p className="text-xs text-indigo-200 font-medium">
+              <p className="text-[11px] sm:text-xs text-indigo-200 font-medium">
                 Record invoice, auto-calculate loyalty discount &amp; award points
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* ── Customer Info Strip ── */}
-        <div className="px-6 py-3.5 bg-slate-50 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2">
+        <div className="px-4 sm:px-6 py-2.5 sm:py-3.5 bg-slate-50 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-2.5 text-xs flex-shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-mono font-bold bg-slate-200 px-2.5 py-0.5 rounded-lg text-slate-800">
               {customer.customer_id}
             </span>
-            <span className="font-black text-slate-900 text-sm">{customer.name || customer.customer_name}</span>
+            <span className="font-black text-slate-900 text-xs sm:text-sm">{customer.name || customer.customer_name}</span>
             <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold uppercase text-[10px]">
               {customer.tier_name || customer.tier || 'Silver'}
             </span>
           </div>
 
           <div className="flex items-center gap-2 text-right">
-            <span className="text-slate-500 font-semibold">Available Loyalty:</span>
-            <span className="font-black font-mono text-indigo-700 text-sm">
+            <span className="text-slate-500 font-semibold text-[11px] sm:text-xs">Available:</span>
+            <span className="font-black font-mono text-indigo-700 text-xs sm:text-sm">
               {currentPoints.toLocaleString()} PTS
             </span>
-            <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+            <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 text-[11px] sm:text-xs">
               ≈ ₹{rupeeValue}
             </span>
           </div>
@@ -317,7 +317,7 @@ export const AddReceiptModal = ({
 
         {/* ── Success Screen ── */}
         {successData ? (
-          <div className="p-7 space-y-6 text-center animate-fadeIn">
+          <div className="p-5 sm:p-7 space-y-5 sm:space-y-6 text-center animate-fadeIn flex-1 overflow-y-auto">
             <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
               <CheckCircle2 className="w-9 h-9" />
             </div>
@@ -379,7 +379,7 @@ export const AddReceiptModal = ({
           </div>
         ) : (
           /* ── Main Receipt Form ── */
-          <form onSubmit={handleSubmit} className="p-6 sm:p-7 space-y-5">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-7 space-y-4 sm:space-y-5">
             {errorMessage && (
               <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold rounded-2xl flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />

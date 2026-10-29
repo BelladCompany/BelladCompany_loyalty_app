@@ -350,20 +350,20 @@ export const RedemptionModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fadeIn">
-      <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/40 backdrop-blur-md animate-fadeIn overflow-hidden">
+      <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-2xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
 
         {/* Clean Light Header */}
-        <div className="flex items-center justify-between px-4 sm:px-7 py-3.5 sm:py-5 bg-white border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600">
+        <div className="flex items-center justify-between px-4 sm:px-7 py-3.5 sm:py-5 bg-white border-b border-slate-100 flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 shrink-0">
               <Gift className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+              <h3 className="text-base sm:text-xl font-black text-slate-900 tracking-tight truncate">
                 {isManualCustomer ? 'Get Points / Service Discount' : 'Points Redemption & Discount Calculation'}
               </h3>
-              <p className="text-xs font-semibold text-slate-500">Live Rate Calculation &amp; OTP Verification</p>
+              <p className="text-[11px] sm:text-xs font-semibold text-slate-500">Live Rate Calculation &amp; OTP Verification</p>
             </div>
           </div>
           {step !== 3 && (
@@ -371,14 +371,14 @@ export const RedemptionModal = ({
               type="button"
               onClick={handleClose}
               disabled={isLoading}
-              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors shrink-0"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           )}
         </div>
 
-        <div className="p-4 sm:p-7">
+        <div className="p-4 sm:p-7 flex-1 overflow-y-auto">
           {/* Error Banner */}
           {error && (
             <div className="mb-5 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-800 font-bold text-sm">

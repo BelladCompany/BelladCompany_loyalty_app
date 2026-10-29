@@ -19,12 +19,12 @@ export const StatCard = ({
   };
 
   return (
-    <div className={`p-6 rounded-2xl border ${variantStyles[variant] || variantStyles.default} shadow-xs transition-all hover:shadow-md ${className}`}>
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-black uppercase tracking-wider text-slate-500">{label}</span>
-        {Icon && <Icon className="w-5 h-5 text-slate-400" />}
+    <div className={`p-4 sm:p-6 rounded-2xl border ${variantStyles[variant] || variantStyles.default} shadow-xs transition-all hover:shadow-md ${className}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-slate-500">{label}</span>
+        {Icon && <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" />}
       </div>
-      <div className="mt-3 text-3xl font-black tracking-tight text-slate-900 tabular-nums">
+      <div className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-black tracking-tight text-slate-900 tabular-nums break-words">
         {value}
       </div>
       {subtext && <div className="mt-1 text-xs font-semibold text-slate-500">{subtext}</div>}
