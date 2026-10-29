@@ -221,3 +221,4 @@ VALUES
   3
 )
 ON CONFLICT (offer_id) DO NOTHING;
+
