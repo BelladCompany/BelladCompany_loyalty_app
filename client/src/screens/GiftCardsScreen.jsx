@@ -132,8 +132,8 @@ export const GiftCardsScreen = ({ user }) => {
             </div>
           </div>
           <div className="mt-1.5 sm:mt-3">
-            <span className="text-base sm:text-2xl font-black text-slate-900 tracking-tight tabular-nums block truncate">
-              {formatCurrency(totals.total_amount_inr)}
+            <span className="text-base sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight tabular-nums block break-words">
+              ₹{Number(totals.total_amount_inr || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
           </div>
           <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-medium text-slate-500 leading-tight">
@@ -262,135 +262,227 @@ export const GiftCardsScreen = ({ user }) => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse whitespace-nowrap">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70 text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Sender (Customer Details)</th>
-                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Gift Amount (₹)</th>
-                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Gift Code</th>
-                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Recipient Details</th>
-                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Status</th>
-                  <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Sent Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs">
-                {giftCards.map((card) => {
-                  const isClaimed = card.claim_status === 'claimed';
-                  const isExpired = card.claim_status === 'expired';
+          <>
+            {/* Mobile Cards View (Optimized for small screens - No Horizontal Scroll needed) */}
+            <div className="block md:hidden divide-y divide-slate-100">
+              {giftCards.map((card) => {
+                const isClaimed = card.claim_status === 'claimed';
+                const isExpired = card.claim_status === 'expired';
 
-                  return (
-                    <tr key={card.id || card.gift_code} className="hover:bg-slate-50/60 transition">
-                      {/* Sender Customer Details */}
-                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
-                        <div className="flex items-center gap-2.5 sm:gap-3">
-                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
-                            {card.sender_name?.charAt(0)?.toUpperCase() || 'C'}
-                          </div>
-                          <div>
-                            <span className="font-bold text-slate-900 block whitespace-nowrap">
-                              {card.sender_name}
-                            </span>
-                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
-                              <span className="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
-                                {card.sender_customer_id}
+                return (
+                  <div key={card.id || card.gift_code} className="p-3.5 sm:p-4 space-y-2.5 bg-white hover:bg-slate-50/50 transition">
+                    {/* Top: Gift Code + Status Badge */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-mono text-xs px-2.5 py-1 rounded-lg transition border border-slate-200">
+                        <span className="font-bold">{card.gift_code}</span>
+                        <button
+                          type="button"
+                          title="Copy Code"
+                          onClick={() => handleCopyCode(card.gift_code)}
+                          className="text-slate-400 hover:text-slate-700 ml-0.5 cursor-pointer"
+                        >
+                          {copiedCode === card.gift_code ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+
+                      {isClaimed ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Claimed
+                        </span>
+                      ) : isExpired ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                          <AlertCircle className="w-3 h-3 text-slate-400" />
+                          Expired
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                          <Clock className="w-3 h-3 text-blue-600" />
+                          Active
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Value Bar */}
+                    <div className="flex items-center justify-between bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Gift Amount</span>
+                        <span className="font-black text-slate-900 text-sm">{formatCurrency(card.amount_inr)}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Converted Points</span>
+                        <span className="font-bold text-indigo-700 text-xs font-mono">
+                          {card.points_equivalent ? `${card.points_equivalent.toLocaleString()} PTS` : 'Cash'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Sender & Recipient Details */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Sender</span>
+                        <span className="font-bold text-slate-900 block truncate">{card.sender_name || 'Customer'}</span>
+                        <span className="text-[10px] font-mono text-slate-500 block truncate">{card.sender_customer_id}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Recipient</span>
+                        <span className="font-semibold text-slate-800 block truncate">{card.receiver_name || 'Shared via WhatsApp'}</span>
+                        <span className="text-[10px] text-slate-500 block truncate">
+                          {card.receiver_phone && card.receiver_phone !== '—' ? `📱 ${card.receiver_phone}` : 'Shared via Claim Link'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Footer Timestamps */}
+                    <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-100 flex items-center justify-between">
+                      <span>Sent: {formatDate(card.created_at)}</span>
+                      {card.expires_at && !isClaimed && (
+                        <span className="text-amber-700 font-medium">Exp: {new Date(card.expires_at).toLocaleDateString('en-IN')}</span>
+                      )}
+                      {isClaimed && card.claimed_at && (
+                        <span className="text-emerald-700 font-medium">Claimed: {formatDate(card.claimed_at)}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View (Full Width) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse whitespace-nowrap">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/70 text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Sender (Customer Details)</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Gift Amount (₹)</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Gift Code</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Recipient Details</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Status</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Sent Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {giftCards.map((card) => {
+                    const isClaimed = card.claim_status === 'claimed';
+                    const isExpired = card.claim_status === 'expired';
+
+                    return (
+                      <tr key={card.id || card.gift_code} className="hover:bg-slate-50/60 transition">
+                        {/* Sender Customer Details */}
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                          <div className="flex items-center gap-2.5 sm:gap-3">
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
+                              {card.sender_name?.charAt(0)?.toUpperCase() || 'C'}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-900 block whitespace-nowrap">
+                                {card.sender_name}
                               </span>
-                              {card.sender_phone && card.sender_phone !== '—' && (
-                                <span className="flex items-center gap-1 text-slate-500">
-                                  📱 {card.sender_phone}
+                              <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
+                                <span className="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
+                                  {card.sender_customer_id}
                                 </span>
-                              )}
+                                {card.sender_phone && card.sender_phone !== '—' && (
+                                  <span className="flex items-center gap-1 text-slate-500">
+                                    📱 {card.sender_phone}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Gift Amount (Money sent in ₹) */}
-                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
-                        <div>
-                          <span className="font-black text-slate-900 text-xs sm:text-sm block">
-                            {formatCurrency(card.amount_inr)}
-                          </span>
-                          <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-indigo-600 font-medium mt-0.5">
-                            <Coins className="w-3 h-3" />
-                            {card.points_equivalent ? `${card.points_equivalent.toLocaleString()} PTS` : 'Cash'}
-                            <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded capitalize">
-                              {card.funding_source || 'points'}
+                        {/* Gift Amount (Money sent in ₹) */}
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                          <div>
+                            <span className="font-black text-slate-900 text-xs sm:text-sm block">
+                              {formatCurrency(card.amount_inr)}
+                            </span>
+                            <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-indigo-600 font-medium mt-0.5">
+                              <Coins className="w-3 h-3" />
+                              {card.points_equivalent ? `${card.points_equivalent.toLocaleString()} PTS` : 'Cash'}
+                              <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded capitalize">
+                                {card.funding_source || 'points'}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Gift Code */}
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                          <div className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-mono text-xs px-2 sm:px-2.5 py-1 rounded-lg transition border border-slate-200">
+                            <span>{card.gift_code}</span>
+                            <button
+                              type="button"
+                              title="Copy Code"
+                              onClick={() => handleCopyCode(card.gift_code)}
+                              className="text-slate-400 hover:text-slate-700 ml-1 cursor-pointer"
+                            >
+                              {copiedCode === card.gift_code ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Recipient Details */}
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                          <div>
+                            <span className="font-semibold text-slate-800 block whitespace-nowrap">
+                              {card.receiver_name || 'Shared via WhatsApp'}
+                            </span>
+                            <span className="text-[10px] sm:text-[11px] text-slate-500 block">
+                              {card.receiver_phone && card.receiver_phone !== '—'
+                                ? `📱 ${card.receiver_phone}`
+                                : 'Shared via Claim Link'}
                             </span>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Gift Code */}
-                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
-                        <div className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-mono text-xs px-2 sm:px-2.5 py-1 rounded-lg transition border border-slate-200">
-                          <span>{card.gift_code}</span>
-                          <button
-                            type="button"
-                            title="Copy Code"
-                            onClick={() => handleCopyCode(card.gift_code)}
-                            className="text-slate-400 hover:text-slate-700 ml-1 cursor-pointer"
-                          >
-                            {copiedCode === card.gift_code ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-
-                      {/* Recipient Details */}
-                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
-                        <div>
-                          <span className="font-semibold text-slate-800 block whitespace-nowrap">
-                            {card.receiver_name || 'Shared via WhatsApp'}
-                          </span>
-                          <span className="text-[10px] sm:text-[11px] text-slate-500 block">
-                            {card.receiver_phone && card.receiver_phone !== '—'
-                              ? `📱 ${card.receiver_phone}`
-                              : 'Shared via Claim Link'}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
-                        {isClaimed ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            Claimed
-                          </span>
-                        ) : isExpired ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                            <AlertCircle className="w-3 h-3 text-slate-400" />
-                            Expired
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                            <Clock className="w-3 h-3 text-blue-600" />
-                            Unclaimed / Active
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Sent Date */}
-                      <td className="py-3.5 px-5 whitespace-nowrap text-slate-600">
-                        <div>
-                          <span className="block font-medium">{formatDate(card.created_at)}</span>
-                          {card.expires_at && !isClaimed && (
-                            <span className="text-[11px] text-slate-400 block">
-                              Exp: {new Date(card.expires_at).toLocaleDateString('en-IN')}
+                        {/* Status */}
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                          {isClaimed ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              Claimed
+                            </span>
+                          ) : isExpired ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                              <AlertCircle className="w-3 h-3 text-slate-400" />
+                              Expired
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                              <Clock className="w-3 h-3 text-blue-600" />
+                              Unclaimed / Active
                             </span>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+
+                        {/* Sent Date */}
+                        <td className="py-3.5 px-5 whitespace-nowrap text-slate-600">
+                          <div>
+                            <span className="block font-medium">{formatDate(card.created_at)}</span>
+                            {card.expires_at && !isClaimed && (
+                              <span className="text-[11px] text-slate-400 block">
+                                Exp: {new Date(card.expires_at).toLocaleDateString('en-IN')}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

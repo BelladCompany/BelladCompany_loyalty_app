@@ -165,13 +165,13 @@ const LedgerRow = memo(({ item }) => {
           {isPositive ? <Coins className="w-4 h-4 sm:w-5 sm:h-5" /> : <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight leading-snug line-clamp-2 break-words">{item.text}</p>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-[10px] sm:text-[11px] text-slate-400 font-medium">
-            <span>{item.date}</span>
+          <p className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight leading-snug break-words">{item.text}</p>
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5 text-[10px] sm:text-[11px] text-slate-400 font-medium">
+            <span className="whitespace-nowrap">{item.date}</span>
             {item.amount && (
               <>
-                <span>•</span>
-                <span className="font-mono text-slate-600">Bill: ₹{Number(item.amount).toLocaleString('en-IN')}</span>
+                <span className="shrink-0">•</span>
+                <span className="font-mono text-slate-600 whitespace-nowrap">Bill: ₹{Number(item.amount).toLocaleString('en-IN')}</span>
               </>
             )}
           </div>
@@ -636,7 +636,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
             </div>
             <div className="flex items-center justify-center gap-0.5 max-w-full">
               <span className="text-[10px] sm:text-xs font-bold tracking-tight text-center leading-tight break-words">
-                Brand Offers
+                Offers
               </span>
               <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 group-hover:text-rose-600 shrink-0" />
             </div>

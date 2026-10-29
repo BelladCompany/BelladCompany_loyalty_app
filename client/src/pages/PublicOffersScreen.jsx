@@ -924,31 +924,31 @@ export default function PublicOffersScreen() {
 
       {/* ─── Staff Create / Edit Modal (Never Cut Off - Fixed Header & Footer with Scrollable Body) ─── */}
       {showManageModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-hidden">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col text-slate-800 shadow-2xl overflow-hidden relative animate-fadeIn">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-2xl w-full my-auto max-h-[92vh] flex flex-col text-slate-800 shadow-2xl overflow-hidden relative animate-fadeIn">
             {/* Pinned Modal Header (Always 100% visible) */}
-            <div className="flex items-center justify-between p-5 sm:p-6 pb-4 border-b border-slate-100 flex-shrink-0 bg-white">
-              <div>
-                <h3 className="text-base font-black text-slate-900">
+            <div className="sticky top-0 z-10 flex items-start justify-between p-4 sm:p-6 pb-3 sm:pb-4 border-b border-slate-100 flex-shrink-0 bg-white">
+              <div className="pr-2">
+                <h3 className="text-sm sm:text-base font-black text-slate-900">
                   {editingOffer ? 'Edit Monthly Offer' : 'Create New Monthly Offer'}
                 </h3>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-tight mt-0.5">
                   Update model discounts, exchange benefits &amp; branch coverage. Updates take effect immediately.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowManageModal(false)}
-                className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 transition flex-shrink-0"
+                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 transition shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Scrollable Form Body */}
-            <form id="manageOfferForm" onSubmit={handleSaveOffer} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 text-xs font-medium">
+            <form id="manageOfferForm" onSubmit={handleSaveOffer} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 text-xs font-medium">
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 {/* Brand */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Brand Name *</label>
@@ -980,7 +980,7 @@ export default function PublicOffersScreen() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
                 {/* Category */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Category</label>
@@ -1014,7 +1014,7 @@ export default function PublicOffersScreen() {
                 </div>
 
                 {/* City */}
-                <div>
+                <div className="sm:col-span-2 md:col-span-1">
                   <label className="font-bold text-slate-700 block mb-1">Cities / Coverage</label>
                   <input
                     type="text"
@@ -1027,7 +1027,7 @@ export default function PublicOffersScreen() {
               </div>
 
               {/* Title & Benefit */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Offer Title *</label>
                   <input
@@ -1078,7 +1078,7 @@ export default function PublicOffersScreen() {
               </div>
 
               {/* Month & Validity */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Valid Month *</label>
                   <input
@@ -1104,7 +1104,7 @@ export default function PublicOffersScreen() {
               </div>
 
               {/* Image URL, Phone & Badge */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Banner Image URL</label>
                   <input
@@ -1127,7 +1127,7 @@ export default function PublicOffersScreen() {
                   />
                 </div>
 
-                <div>
+                <div className="sm:col-span-2 md:col-span-1">
                   <label className="font-bold text-slate-700 block mb-1">Badge Text</label>
                   <input
                     type="text"
@@ -1140,15 +1140,15 @@ export default function PublicOffersScreen() {
               </div>
 
               {/* Status & Priority */}
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 pt-2">
+                <label className="flex items-center gap-2 cursor-pointer bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                   <input
                     type="checkbox"
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-0"
+                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-0"
                   />
-                  <span className="font-bold text-slate-800">Publish as Active Live Offer</span>
+                  <span className="font-bold text-slate-800 text-xs">Publish as Active Live Offer</span>
                 </label>
 
                 <div>
@@ -1164,11 +1164,11 @@ export default function PublicOffersScreen() {
             </form>
 
             {/* Pinned Modal Footer (Always 100% visible) */}
-            <div className="flex items-center justify-end gap-3 p-4 sm:p-5 border-t border-slate-100 flex-shrink-0 bg-slate-50/90">
+            <div className="sticky bottom-0 z-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 p-3.5 sm:p-5 border-t border-slate-100 flex-shrink-0 bg-slate-50/90">
               <button
                 type="button"
                 onClick={() => setShowManageModal(false)}
-                className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition"
+                className="w-full sm:w-auto px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition text-center"
               >
                 Cancel
               </button>
@@ -1176,7 +1176,7 @@ export default function PublicOffersScreen() {
                 type="submit"
                 form="manageOfferForm"
                 disabled={savingOffer}
-                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-2 disabled:opacity-50 shadow-md shadow-slate-900/10 cursor-pointer"
+                className="w-full sm:w-auto px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-slate-900/10 cursor-pointer"
               >
                 {savingOffer ? (
                   <>

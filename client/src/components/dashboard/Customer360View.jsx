@@ -312,12 +312,12 @@ export const Customer360View = ({
 
       {/* 3. Detailed Customer Master Profile Card */}
       <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 space-y-4 sm:space-y-5 shadow-card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-100 pb-3 sm:pb-4">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
-              <UserCheck className="w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
+              <UserCheck className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <h3 className="text-base sm:text-xl font-black text-slate-900 tracking-tight">Customer Master Details</h3>
+            <h3 className="text-sm sm:text-lg font-black text-slate-900 tracking-tight">Customer Master Details</h3>
           </div>
           <span className="self-start sm:self-auto text-[11px] sm:text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 sm:px-3 py-1 rounded-full border border-emerald-200 uppercase tracking-wider shrink-0 whitespace-nowrap">
             PR Status: {customer.pr_status || customer.billing_status || 'PR Done'}
@@ -373,12 +373,12 @@ export const Customer360View = ({
 
       {/* 4. Prominent Vehicle Details Block */}
       <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 space-y-4 sm:space-y-5 shadow-card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-100 pb-3 sm:pb-4">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
-              <Car className="w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+              <Car className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <h3 className="text-base sm:text-xl font-black text-slate-900 tracking-tight">Vehicle Specifications &amp; Pricing</h3>
+            <h3 className="text-sm sm:text-lg font-black text-slate-900 tracking-tight">Vehicle Specifications &amp; Pricing</h3>
           </div>
           <span className="self-start sm:self-auto text-[11px] sm:text-xs font-bold text-slate-700 bg-slate-100 px-2.5 sm:px-3 py-1 rounded-full border border-slate-200 shrink-0 whitespace-nowrap">
             {(customer.vehicles || []).length} Vehicle(s)
@@ -438,34 +438,34 @@ export const Customer360View = ({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3 text-sm">
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">VIN / Chassis No</span>
-                      <span className="font-mono font-extrabold text-slate-900 text-sm sm:text-base break-all">{v.vin || v.chassis_no || 'N/A'}</span>
+                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">VIN / Chassis No</span>
+                      <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-all">{v.vin || v.chassis_no || 'N/A'}</span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">Model Name</span>
-                      <span className="font-extrabold text-slate-900 text-sm sm:text-base">{v.model || 'Unspecified'}</span>
+                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">Model Name</span>
+                      <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{v.model || 'Unspecified'}</span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">Variant</span>
-                      <span className="font-extrabold text-slate-900 text-sm sm:text-base">{v.variant || v.varient || 'N/A'}</span>
+                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">Variant</span>
+                      <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{v.variant || v.varient || 'N/A'}</span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">Fuel Type</span>
-                      <span className="font-extrabold text-blue-900 text-sm sm:text-base uppercase">{v.fuel_type || 'Petrol / Diesel / EV'}</span>
+                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">Fuel Type</span>
+                      <span className="font-bold text-blue-900 text-xs sm:text-sm mt-0.5 uppercase block">{v.fuel_type || 'Petrol / Diesel / EV'}</span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">Firm Name</span>
-                      <span className="font-bold text-slate-900 text-sm sm:text-base">{v.firm_name || v.firm || customer.firm || 'N/A'}</span>
+                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">Firm Name</span>
+                      <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{v.firm_name || v.firm || customer.firm || 'N/A'}</span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">DMS Invoice Date</span>
-                      <span className="font-extrabold text-slate-900 text-sm sm:text-base">{v.dms_invoice_date || customer.dms_invoice_date || 'N/A'}</span>
+                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">DMS Invoice Date</span>
+                      <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{v.dms_invoice_date || customer.dms_invoice_date || 'N/A'}</span>
                     </div>
 
                     <div className="bg-white p-3 rounded-lg border border-slate-200">
