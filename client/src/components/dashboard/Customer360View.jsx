@@ -324,49 +324,49 @@ export const Customer360View = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-sm sm:text-base">
-          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Customer Name</span>
-            <span className="font-extrabold text-slate-900 text-base sm:text-lg mt-0.5 block break-words">{customer.name || customer.customer_name || 'N/A'}</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 text-sm">
+          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Customer Name</span>
+            <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">{customer.name || customer.customer_name || 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Registered Phone Number</span>
-            <span className="font-mono font-extrabold text-slate-900 text-base sm:text-lg mt-0.5 block break-words">
+          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Registered Phone Number</span>
+            <span className="font-mono font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">
               {(customer.phones || []).map((p) => p.phone_number || p).join(', ') || 'N/A'}
             </span>
           </div>
 
-          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Aadhaar Card No</span>
-            <span className="font-mono font-extrabold text-slate-900 text-base sm:text-lg mt-0.5 block break-words">
+          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Aadhaar Card No</span>
+            <span className="font-mono font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">
               {customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 || 'N/A'}
             </span>
           </div>
 
-          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Age</span>
-            <span className="font-extrabold text-slate-900 text-base sm:text-lg mt-0.5 block">{customer.age ? `${customer.age} Years` : 'N/A'}</span>
+          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Age</span>
+            <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block">{customer.age ? `${customer.age} Years` : 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Firm Name</span>
+          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Firm Name</span>
             <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">{customer.firm || customer.firm_name || 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Branch Name</span>
+          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Branch Name</span>
             <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">{customer.branch || customer.branch_name || 'Main Branch'}</span>
           </div>
 
-          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">DMS Invoice Date</span>
+          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">DMS Invoice Date</span>
             <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">{customer.dms_invoice_date || customer.dms_inv_date || 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold tracking-wider">Customer Address</span>
-            <span className="font-semibold text-slate-800 text-sm sm:text-base mt-0.5 block break-words">{customer.address || 'N/A'}</span>
+          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
+            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Customer Address</span>
+            <span className="font-medium text-slate-800 text-xs sm:text-sm mt-0.5 block break-words">{customer.address || 'N/A'}</span>
           </div>
         </div>
       </section>
