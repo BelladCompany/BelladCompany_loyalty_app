@@ -52,7 +52,17 @@ export class ApiService {
     };
 
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const res = await fetch(`${API_BASE}${cleanEndpoint}`, config);
+    let res;
+    try {
+      res = await fetch(`${API_BASE}${cleanEndpoint}`, config);
+    } catch (fetchErr) {
+      if (fetchErr.name === 'TypeError' || fetchErr.message === 'Failed to fetch') {
+        throw new Error(
+          `Unable to connect to backend server (${API_BASE}). If Render backend is waking up, please wait 30 seconds and try again.`
+        );
+      }
+      throw fetchErr;
+    }
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {

@@ -1,7 +1,7 @@
 services:
   # Backend Web Service (Node.js Express + Database Migrations)
   - type: web
-    name: bellad-loyalty-api
+    name: belladcompany-loyalty-app
     runtime: node
     plan: free
     buildCommand: npm install

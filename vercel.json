@@ -5,15 +5,15 @@
   "rewrites": [
     {
       "source": "/api/:match*",
-      "destination": "https://bellad-loyalty-api.onrender.com/api/:match*"
+      "destination": "https://belladcompany-loyalty-app.onrender.com/api/:match*"
     },
     {
       "source": "/health",
-      "destination": "https://bellad-loyalty-api.onrender.com/health"
+      "destination": "https://belladcompany-loyalty-app.onrender.com/health"
     },
     {
       "source": "/uploads/:match*",
-      "destination": "https://bellad-loyalty-api.onrender.com/uploads/:match*"
+      "destination": "https://belladcompany-loyalty-app.onrender.com/uploads/:match*"
     },
     {
       "source": "/(.*)",
