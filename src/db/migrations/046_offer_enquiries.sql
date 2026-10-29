@@ -17,3 +17,4 @@ CREATE TABLE IF NOT EXISTS offer_enquiries (
 );
 
 CREATE INDEX IF NOT EXISTS idx_offer_enquiries_tenant ON offer_enquiries(tenant_id, status);
+

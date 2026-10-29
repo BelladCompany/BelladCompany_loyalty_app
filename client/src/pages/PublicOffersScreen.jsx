@@ -7,7 +7,6 @@ import {
   Zap,
   Phone,
   PhoneCall,
-  MessageSquare,
   Calendar,
   MapPin,
   ChevronRight,
@@ -25,19 +24,73 @@ import {
   ShieldCheck,
   RefreshCw,
   SlidersHorizontal,
-  User,
-  Send,
+  Lock,
+  Unlock,
+  Check,
+  Building2,
+  Wrench,
+  Bike,
+  Flame,
 } from 'lucide-react';
 import ApiService from '../services/api';
 
+const ALL_DEALERSHIP_BRANDS = [
+  'All',
+  'Tata Motors',
+  'MG Motors',
+  'Hero Moto Corp',
+  'Vida',
+  'Ather Energy',
+  'Hyundai',
+  'Maruti Suzuki',
+  'Swaraj',
+  'Workshop & Detailing',
+];
+
 const BRAND_ICONS = {
+  'All': '🌟',
   'Tata Motors': '🚙',
   'MG Motors': '⚡',
   'Hero Moto Corp': '🏍️',
+  'Vida': '🛵',
   'Ather Energy': '🔋',
   'Hyundai': '🚘',
-  'All Brands': '🌟',
+  'Maruti Suzuki': '🚗',
+  'Swaraj': '🚜',
+  'Workshop & Detailing': '🔧',
 };
+
+const ALL_DEALERSHIP_BRANCHES = [
+  'All Branches',
+  'Bellad Hubli',
+  'HYUNDAI DHARWAD',
+  'HYUNDAI HUBLI',
+  'HYUNDAI GADAG',
+  'HYUNDAI HAVERI',
+  'Vida Hubli',
+  'Vida Dharwad',
+  'ATHER ENERGY HUBBALLI',
+  'ATHER ENERGY BELGAUM',
+  'ATHER BANGALORE',
+  'MG MOTORS HUBBALLI',
+  'MG MOTORS BELGAUM',
+  'MG MOTORS HOSPET',
+  'MG MOTORS GULBARGA',
+  'TATA MOTORS BELLARY',
+  'TATA MOTORS HOSPET',
+  'TATA MOTORS RAICHUR',
+  'TATA MOTORS KOPPAL',
+  'TATA MOTORS SINDHNOOR',
+  'TATA MOTORS GANGAVATHI',
+  'TATA MOTORS BOMMASANDRA BANGALORE',
+  'TATA MOTORS SARJAPUR BANGALORE',
+  'HERO MOTO CORP HUBLI',
+  'SWARAJ HUBLI',
+  'Byadgi / Haveri TRZ',
+  'Belgaum / Tilakwadi',
+  'Ranebennur / Shiggaon',
+  'Kundgol / Alnavar',
+];
 
 export default function PublicOffersScreen() {
   const [offers, setOffers] = useState([]);
@@ -48,28 +101,25 @@ export default function PublicOffersScreen() {
   // Filtering states
   const [selectedBrand, setSelectedBrand] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedBranch, setSelectedBranch] = useState('All');
+  const [selectedBranch, setSelectedBranch] = useState('All Branches');
   const [selectedMonth, setSelectedMonth] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Customer Enquiry Modal States
-  const [enquiryOffer, setEnquiryOffer] = useState(null);
-  const [enquiryForm, setEnquiryForm] = useState({
-    name: '',
-    phone: '',
-    branch: 'Hubli',
-    notes: '',
-  });
-  const [submittingEnquiry, setSubmittingEnquiry] = useState(false);
-  const [enquirySuccess, setEnquirySuccess] = useState(false);
+  // Editor Mode & Staff Auth States
+  const [currentUser, setCurrentUser] = useState(() => ApiService.getUser());
+  const isAutoStaff = currentUser && ['admin', 'super_admin', 'director', 'branch_manager', 'manager'].includes(currentUser.role);
+  const [isEditorMode, setIsEditorMode] = useState(() => Boolean(isAutoStaff));
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [unlockUsername, setUnlockUsername] = useState('admin');
+  const [unlockPassword, setUnlockPassword] = useState('Admin@123');
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState('');
 
-  // Admin / Management states
-  const currentUser = ApiService.getUser();
-  const isStaff = currentUser && ['admin', 'super_admin', 'director', 'branch_manager', 'manager'].includes(currentUser.role);
-  const [includeInactive, setIncludeInactive] = useState(false);
+  // Offer CRUD modal states
   const [showManageModal, setShowManageModal] = useState(false);
   const [editingOffer, setEditingOffer] = useState(null);
   const [savingOffer, setSavingOffer] = useState(false);
+  const [includeInactive, setIncludeInactive] = useState(true);
 
   // Form State for creating/editing offers
   const [formData, setFormData] = useState({
@@ -89,17 +139,15 @@ export default function PublicOffersScreen() {
     image_url: '',
     whatsapp_number: '918197348730',
     is_active: true,
-    priority: 0,
+    priority: 5,
   });
 
   const fetchOffers = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
-      const params = {};
-      if (includeInactive && isStaff) {
-        params.includeInactive = 'true';
-      }
+      // In editor mode, include inactive drafts
+      const params = isEditorMode ? { includeInactive: 'true' } : {};
       const res = await ApiService.getOffers(params);
       if (res.status === 'success' && res.data) {
         setOffers(res.data.offers || []);
@@ -111,62 +159,72 @@ export default function PublicOffersScreen() {
     } finally {
       setLoading(false);
     }
-  }, [includeInactive, isStaff]);
+  }, [isEditorMode]);
 
   useEffect(() => {
     fetchOffers();
   }, [fetchOffers]);
 
-  // Open Enquiry Modal
-  const handleOpenEnquiryModal = (offer) => {
-    setEnquiryOffer(offer);
-    setEnquiryForm({
-      name: '',
-      phone: '',
-      branch: offer.branch_name !== 'All Branches' ? offer.branch_name : 'Hubli',
-      notes: '',
-    });
-    setEnquirySuccess(false);
+  // Handle staff unlock for Editor Mode
+  const handleUnlockEditor = async (e) => {
+    e.preventDefault();
+    setUnlockError('');
+    setUnlocking(true);
+    try {
+      const data = await ApiService.login(unlockUsername, unlockPassword);
+      if (data?.user) {
+        setCurrentUser(data.user);
+        setIsEditorMode(true);
+        setShowUnlockModal(false);
+        await fetchOffers();
+      } else {
+        throw new Error('Invalid credentials');
+      }
+    } catch (err) {
+      setUnlockError(err.message || 'Authentication failed. Please verify credentials.');
+    } finally {
+      setUnlocking(false);
+    }
   };
 
-  // Submit Enquiry
-  const handleSubmitEnquiry = async (e) => {
-    e.preventDefault();
-    if (!enquiryOffer) return;
-    try {
-      setSubmittingEnquiry(true);
-      await ApiService.submitOfferEnquiry({
-        offer_id: enquiryOffer.offer_id,
-        brand_name: enquiryOffer.brand_name,
-        model_name: enquiryOffer.model_name,
-        customer_name: enquiryForm.name,
-        phone: enquiryForm.phone,
-        city_or_branch: enquiryForm.branch,
-        notes: enquiryForm.notes,
-      });
-      setEnquirySuccess(true);
-    } catch (err) {
-      alert(`Error submitting enquiry: ${err.message}`);
-    } finally {
-      setSubmittingEnquiry(false);
+  const handleToggleEditorMode = () => {
+    if (isEditorMode) {
+      setIsEditorMode(false);
+    } else {
+      if (currentUser && ['admin', 'super_admin', 'director', 'branch_manager', 'manager'].includes(currentUser.role)) {
+        setIsEditorMode(true);
+      } else {
+        setShowUnlockModal(true);
+      }
     }
   };
 
   // Filtered offers list
   const filteredOffers = useMemo(() => {
     return offers.filter((offer) => {
+      // If not in editor mode and offer is inactive, hide it
+      if (!isEditorMode && !offer.is_active) return false;
+
       // Brand filter
       if (selectedBrand !== 'All') {
-        const b = offer.brand_name?.toLowerCase() || '';
+        const b = (offer.brand_name || '').toLowerCase();
         const target = selectedBrand.toLowerCase();
-        if (!b.includes(target) && !target.includes(b)) return false;
+        if (!b.includes(target) && !target.includes(b)) {
+          // Special case for workshop
+          if (selectedBrand === 'Workshop & Detailing' && offer.category !== 'service') {
+            return false;
+          }
+          if (selectedBrand !== 'Workshop & Detailing') {
+            return false;
+          }
+        }
       }
       // Category filter
       if (selectedCategory !== 'all') {
         if (offer.category !== selectedCategory) return false;
       }
       // Branch filter
-      if (selectedBranch !== 'All') {
+      if (selectedBranch !== 'All Branches') {
         const branchMatch = (offer.branch_name || '').toLowerCase().includes(selectedBranch.toLowerCase());
         const isAllBranches = offer.branch_name === 'All Branches';
         const cityMatch = (offer.city || '').toLowerCase().includes(selectedBranch.toLowerCase());
@@ -187,13 +245,13 @@ export default function PublicOffersScreen() {
       }
       return true;
     });
-  }, [offers, selectedBrand, selectedCategory, selectedBranch, selectedMonth, searchQuery]);
+  }, [offers, selectedBrand, selectedCategory, selectedBranch, selectedMonth, searchQuery, isEditorMode]);
 
   // Open modal for new offer
   const handleOpenCreateModal = () => {
     setEditingOffer(null);
     setFormData({
-      brand_name: 'Tata Motors',
+      brand_name: selectedBrand !== 'All' && selectedBrand !== 'Workshop & Detailing' ? selectedBrand : 'Tata Motors',
       model_name: '',
       category: 'new_vehicle',
       branch_name: 'All Branches',
@@ -245,7 +303,7 @@ export default function PublicOffersScreen() {
     setShowManageModal(true);
   };
 
-  // Save offer (create or update)
+  // Save offer (create or update) - updates state instantly
   const handleSaveOffer = async (e) => {
     e.preventDefault();
     try {
@@ -261,14 +319,23 @@ export default function PublicOffersScreen() {
       };
 
       if (editingOffer) {
-        await ApiService.updateOffer(editingOffer.offer_id, payload);
+        const res = await ApiService.updateOffer(editingOffer.offer_id, payload);
+        if (res.status === 'success' && res.data) {
+          // Instant state update without waiting
+          setOffers((prev) => prev.map((o) => (o.offer_id === editingOffer.offer_id ? res.data : o)));
+        }
       } else {
-        await ApiService.createOffer(payload);
+        const res = await ApiService.createOffer(payload);
+        if (res.status === 'success' && res.data) {
+          // Instant state insertion
+          setOffers((prev) => [res.data, ...prev]);
+        }
       }
 
       setShowManageModal(false);
       setEditingOffer(null);
-      await fetchOffers();
+      // Background re-fetch to sync metadata
+      fetchOffers();
     } catch (err) {
       alert(`Error saving offer: ${err.message}`);
     } finally {
@@ -276,34 +343,37 @@ export default function PublicOffersScreen() {
     }
   };
 
-  // Toggle active status
+  // Toggle active status instantly
   const handleToggleActive = async (offerId) => {
     try {
+      // Optimistic local state update
+      setOffers((prev) =>
+        prev.map((o) => (o.offer_id === offerId ? { ...o, is_active: !o.is_active } : o))
+      );
       await ApiService.toggleOffer(offerId);
-      await fetchOffers();
     } catch (err) {
       alert(`Error toggling status: ${err.message}`);
+      fetchOffers();
     }
   };
 
-  // Delete offer
+  // Delete offer instantly
   const handleDeleteOffer = async (offerId, title) => {
     if (!window.confirm(`Are you sure you want to delete the offer "${title}"?`)) {
       return;
     }
     try {
+      // Optimistic local state update
+      setOffers((prev) => prev.filter((o) => o.offer_id !== offerId));
       await ApiService.deleteOffer(offerId);
-      await fetchOffers();
     } catch (err) {
       alert(`Error deleting offer: ${err.message}`);
+      fetchOffers();
     }
   };
 
-  // Unique brand pill list
-  const brandPills = ['All', 'Tata Motors', 'MG Motors', 'Hero Moto Corp', 'Ather Energy'];
-
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col font-sans selection:bg-indigo-600 selection:text-white pb-20">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col font-sans selection:bg-indigo-600 selection:text-white pb-24">
       
       {/* ─── Light Ambient Background Orbs ────────────────────────────────────── */}
       <div className="fixed top-0 left-1/4 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-indigo-200/30 via-purple-100/20 to-blue-200/20 rounded-full blur-3xl pointer-events-none -z-10" />
@@ -349,7 +419,21 @@ export default function PublicOffersScreen() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            {isStaff && (
+            {/* Editor Mode Quick Switch */}
+            <button
+              onClick={handleToggleEditorMode}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer ${
+                isEditorMode
+                  ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+              }`}
+              title={isEditorMode ? 'Exit Editor Mode' : 'Unlock Offer Editor'}
+            >
+              {isEditorMode ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+              <span>{isEditorMode ? 'Editor Active' : 'Editor Mode'}</span>
+            </button>
+
+            {isEditorMode && (
               <button
                 onClick={handleOpenCreateModal}
                 className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
@@ -370,6 +454,35 @@ export default function PublicOffersScreen() {
         </div>
       </header>
 
+      {/* ─── Editor Mode Notification Banner (When active) ───────────────────── */}
+      {isEditorMode && (
+        <div className="bg-amber-400 text-slate-950 px-4 py-2 text-xs font-bold shadow-xs flex items-center justify-between border-b border-amber-500">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-md bg-slate-950 text-white text-[10px] font-mono uppercase">
+                Staff Editor Mode
+              </span>
+              <span>You can create new offers, edit existing details, or toggle live status. Changes update immediately next second!</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleOpenCreateModal}
+                className="px-3 py-1 bg-slate-950 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Create New Offer</span>
+              </button>
+              <button
+                onClick={() => setIsEditorMode(false)}
+                className="text-slate-800 hover:text-black underline text-xs"
+              >
+                Exit Editor
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── Hero Headline & Dealership Overview (Modern Light Mode) ─────────── */}
       <section className="relative overflow-hidden bg-gradient-to-b from-white via-indigo-50/20 to-[#F8FAFC] py-10 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto text-center space-y-4">
@@ -378,15 +491,15 @@ export default function PublicOffersScreen() {
             <span>Official November 2026 Dealership Schemes</span>
           </div>
 
-          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 max-w-3xl mx-auto leading-tight">
-            Special Monthly Offers on <br className="hidden sm:inline" />
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 max-w-4xl mx-auto leading-tight">
+            Monthly Offers Across All Brands <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-rose-600 bg-clip-text text-transparent">
-              Tata, MG, Hero &amp; Ather
+              Tata • MG • Hero • Vida • Ather • Hyundai • Maruti • Swaraj
             </span>
           </h2>
 
           <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto font-medium">
-            Explore exclusive exchange bonuses, EV subsidies, loyalty point boosts, and low down-payment plans across Bellad &amp; Co branches in Hubli, Belgaum, Dharwad &amp; Bangalore.
+            Explore exclusive manufacturer exchange bonuses, EV subsidies, and finance schemes across all Bellad &amp; Co branches in Hubli, Belgaum, Dharwad, Hospet, Bangalore, and Bellary.
           </p>
 
           {/* Quick Stats Highlights */}
@@ -411,16 +524,16 @@ export default function PublicOffersScreen() {
         </div>
       </section>
 
-      {/* ─── Brand Selector Tabs ────────────────────────────────────────────── */}
+      {/* ─── All Brand Selector Tabs ─────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 -mt-5 relative z-20">
         <div className="bg-white p-2 rounded-2xl border border-slate-200/90 shadow-lg shadow-slate-200/50 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-          {brandPills.map((brand) => {
+          {ALL_DEALERSHIP_BRANDS.map((brand) => {
             const isSelected = selectedBrand.toLowerCase() === brand.toLowerCase();
             return (
               <button
                 key={brand}
                 onClick={() => setSelectedBrand(brand)}
-                className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap ${
+                className={`flex-1 min-w-[125px] py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap ${
                   isSelected
                     ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20 scale-[1.01]'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
@@ -443,7 +556,7 @@ export default function PublicOffersScreen() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search model, offer, or discount..."
+              placeholder="Search model (Safari, Windsor, Creta, Splendor...)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition font-medium"
@@ -465,32 +578,28 @@ export default function PublicOffersScreen() {
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-bold focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition cursor-pointer appearance-none"
             >
-              <option value="all">All Categories</option>
-              <option value="suv">SUVs &amp; Cars</option>
+              <option value="all">All Vehicle Types</option>
+              <option value="new_vehicle">Cars &amp; Commuters</option>
+              <option value="suv">SUVs &amp; Luxury</option>
               <option value="ev">Electric Vehicles (EV)</option>
               <option value="bike_scooter">Bikes &amp; Scooters</option>
               <option value="service">Service &amp; Detailing</option>
             </select>
-            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          {/* Branch / City Filter */}
+          {/* All Branches Filter */}
           <div className="relative">
             <select
               value={selectedBranch}
               onChange={(e) => setSelectedBranch(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-bold focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition cursor-pointer appearance-none"
             >
-              <option value="All">All Branches &amp; Cities</option>
-              <option value="Hubli">Hubli / Hubballi</option>
-              <option value="Dharwad">Dharwad</option>
-              <option value="Belgaum">Belgaum / Belagavi</option>
-              <option value="Hospet">Hospet</option>
-              <option value="Bangalore">Bangalore</option>
-              <option value="Bellary">Bellary</option>
-              <option value="Gulbarga">Gulbarga</option>
-              <option value="Raichur">Raichur</option>
-              <option value="Gadag">Gadag</option>
+              {ALL_DEALERSHIP_BRANCHES.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
             </select>
             <MapPin className="w-3.5 h-3.5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
@@ -511,21 +620,15 @@ export default function PublicOffersScreen() {
           </div>
         </div>
 
-        {/* Staff Toggle: Show Inactive */}
-        {isStaff && (
-          <div className="flex items-center justify-between mt-3 px-1 text-xs text-slate-500 font-medium">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={includeInactive}
-                onChange={(e) => setIncludeInactive(e.target.checked)}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-0"
-              />
-              <span>Staff Mode: Show Inactive / Draft Offers</span>
-            </label>
-            <span>Showing {filteredOffers.length} available schemes</span>
-          </div>
-        )}
+        {/* Dynamic Count Indicator */}
+        <div className="flex items-center justify-between mt-3 px-1 text-xs text-slate-500 font-medium">
+          <span>Showing {filteredOffers.length} offers for {selectedBrand === 'All' ? 'All Brands' : selectedBrand}</span>
+          {isEditorMode && (
+            <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+              ⚡ Instant Editor Mode Enabled
+            </span>
+          )}
+        </div>
       </section>
 
       {/* ─── Offers Card Grid ────────────────────────────────────────────────── */}
@@ -554,18 +657,29 @@ export default function PublicOffersScreen() {
             <p className="text-xs text-slate-500 font-medium">
               No offers match your selected brand, branch, or search criteria.
             </p>
-            <button
-              onClick={() => {
-                setSelectedBrand('All');
-                setSelectedCategory('all');
-                setSelectedBranch('All');
-                setSelectedMonth('All');
-                setSearchQuery('');
-              }}
-              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition shadow-xs"
-            >
-              Reset All Filters
-            </button>
+            <div className="pt-2 flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  setSelectedBrand('All');
+                  setSelectedCategory('all');
+                  setSelectedBranch('All Branches');
+                  setSelectedMonth('All');
+                  setSearchQuery('');
+                }}
+                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition shadow-xs"
+              >
+                Reset All Filters
+              </button>
+              {isEditorMode && (
+                <button
+                  onClick={handleOpenCreateModal}
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-xs flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Create Offer for {selectedBrand}</span>
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -580,7 +694,7 @@ export default function PublicOffersScreen() {
                 <div
                   key={offer.offer_id}
                   className={`bg-white border rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:border-slate-300 ${
-                    offer.is_active ? 'border-slate-200/90 shadow-sm' : 'border-amber-300 bg-amber-50/20 opacity-75'
+                    offer.is_active ? 'border-slate-200/90 shadow-sm' : 'border-amber-300 bg-amber-50/20 opacity-80'
                   }`}
                 >
                   {/* Top Image & Badge Container */}
@@ -603,8 +717,8 @@ export default function PublicOffersScreen() {
                         {offer.badge || 'MONTHLY OFFER'}
                       </span>
                       {!offer.is_active && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-600 text-white font-bold">
-                          Draft
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-600 text-white font-bold shadow-xs">
+                          Draft (Inactive)
                         </span>
                       )}
                     </div>
@@ -666,54 +780,50 @@ export default function PublicOffersScreen() {
                       )}
                     </div>
 
-                    {/* Action Bar: Enquire Now & Direct Call */}
-                    <div className="pt-2">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEnquiryModal(offer)}
-                          className="flex-1 py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          <span>Enquire Now</span>
-                        </button>
+                    {/* ─── SINGLE CALL ACTION BUTTON ───────────────────────── */}
+                    <div className="pt-2 space-y-2">
+                      <a
+                        href={`tel:+${offer.whatsapp_number || '918197348730'}`}
+                        className="w-full py-3.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-sm cursor-pointer transform hover:scale-[1.01] active:scale-[0.99]"
+                      >
+                        <Phone className="w-4 h-4 text-emerald-400" />
+                        <span>Enquire Now (Call Showroom)</span>
+                      </a>
 
-                        <a
-                          href={`tel:+${offer.whatsapp_number || '918197348730'}`}
-                          className="py-3 px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center gap-1.5 shadow-2xs"
-                          title="Call Dealership"
-                        >
-                          <Phone className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Call</span>
-                        </a>
+                      {/* Staff Editor Mode Actions (Quick Edit & Delete on Card) */}
+                      {isEditorMode && (
+                        <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100">
+                          <button
+                            onClick={() => handleOpenEditModal(offer)}
+                            className="flex-1 py-1.5 px-2 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] transition flex items-center justify-center gap-1"
+                          >
+                            <Edit className="w-3 h-3" />
+                            <span>Edit</span>
+                          </button>
 
-                        {/* Staff Actions */}
-                        {isStaff && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleOpenEditModal(offer)}
-                              className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 transition"
-                              title="Edit Offer"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleToggleActive(offer.offer_id)}
-                              className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
-                              title={offer.is_active ? 'Deactivate' : 'Activate'}
-                            >
-                              {offer.is_active ? <EyeOff className="w-3.5 h-3.5 text-amber-600" /> : <Eye className="w-3.5 h-3.5 text-emerald-600" />}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteOffer(offer.offer_id, offer.title)}
-                              className="p-3 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 transition"
-                              title="Delete Offer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                          <button
+                            onClick={() => handleToggleActive(offer.offer_id)}
+                            className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold transition flex items-center gap-1 border ${
+                              offer.is_active
+                                ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+                                : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
+                            }`}
+                            title={offer.is_active ? 'Draft / Hide' : 'Publish Offer'}
+                          >
+                            {offer.is_active ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            <span>{offer.is_active ? 'Draft' : 'Publish'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteOffer(offer.offer_id, offer.title)}
+                            className="py-1.5 px-2.5 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 font-bold text-[11px] transition flex items-center gap-1"
+                            title="Delete Offer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -723,145 +833,91 @@ export default function PublicOffersScreen() {
         )}
       </main>
 
-      {/* ─── Customer Quick Enquiry Modal ────────────────────────────────────── */}
-      {enquiryOffer && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-7 text-slate-800 shadow-2xl relative animate-fadeIn">
+      {/* ─── Floating Editor Mode Button (Bottom Right) ───────────────────────── */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          onClick={handleToggleEditorMode}
+          className={`px-4 py-2.5 rounded-2xl shadow-xl font-black text-xs transition-all flex items-center gap-2 transform hover:scale-105 active:scale-95 cursor-pointer ${
+            isEditorMode
+              ? 'bg-amber-400 text-slate-950 border-2 border-slate-950 shadow-amber-500/20'
+              : 'bg-slate-900 text-white border border-slate-700 shadow-slate-950/20 hover:bg-slate-800'
+          }`}
+        >
+          {isEditorMode ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+          <span>{isEditorMode ? 'Editor Active (Exit)' : 'Dealership Editor Mode'}</span>
+        </button>
+      </div>
+
+      {/* ─── Staff Unlock Modal ──────────────────────────────────────────────── */}
+      {showUnlockModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-sm w-full p-6 text-slate-800 shadow-2xl relative">
             <button
-              onClick={() => setEnquiryOffer(null)}
-              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 transition"
+              onClick={() => setShowUnlockModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800"
             >
               <X className="w-4 h-4" />
             </button>
 
-            {enquirySuccess ? (
-              <div className="text-center py-6 space-y-4">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto shadow-sm">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-lg font-black text-slate-900">Enquiry Received!</h3>
-                  <p className="text-xs text-slate-600 max-w-sm mx-auto leading-relaxed">
-                    Thank you <strong>{enquiryForm.name}</strong>. Our Bellad &amp; Co sales advisor for <strong>{enquiryOffer.model_name}</strong> will call you shortly on <strong>+91 {enquiryForm.phone}</strong>.
-                  </p>
-                </div>
-                
-                <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-2.5">
-                  <a
-                    href={`tel:+${enquiryOffer.whatsapp_number || '918197348730'}`}
-                    className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs"
-                  >
-                    <Phone className="w-3.5 h-3.5" />
-                    <span>Call Showroom Directly Now</span>
-                  </a>
-                  <button
-                    onClick={() => setEnquiryOffer(null)}
-                    className="w-full sm:w-auto px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
-                  >
-                    Close
-                  </button>
-                </div>
+            <div className="text-center space-y-2 pb-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
+                <Lock className="w-6 h-6" />
               </div>
-            ) : (
-              <div>
-                <div className="pb-4 border-b border-slate-100 space-y-1">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase">
-                    Model Enquiry
-                  </span>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900">
-                    Enquire for {enquiryOffer.title}
-                  </h3>
-                  <p className="text-xs font-bold text-emerald-700">{enquiryOffer.benefit}</p>
-                </div>
+              <h3 className="text-base font-black text-slate-900">Unlock Offer Editor</h3>
+              <p className="text-xs text-slate-500 font-medium">
+                Enter dealership staff or administrator password to update offers in real time.
+              </p>
+            </div>
 
-                <form onSubmit={handleSubmitEnquiry} className="space-y-3.5 pt-4 text-xs font-medium">
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Your Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Ramesh Patil"
-                      value={enquiryForm.name}
-                      onChange={(e) => setEnquiryForm({ ...enquiryForm, name: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Mobile Number (10 Digits) *</label>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">+91</span>
-                      <input
-                        type="tel"
-                        required
-                        maxLength={10}
-                        placeholder="9876543210"
-                        value={enquiryForm.phone}
-                        onChange={(e) => setEnquiryForm({ ...enquiryForm, phone: e.target.value.replace(/\D/g, '') })}
-                        className="w-full pl-12 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Preferred Showroom Branch</label>
-                    <select
-                      value={enquiryForm.branch}
-                      onChange={(e) => setEnquiryForm({ ...enquiryForm, branch: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
-                    >
-                      <option value="Hubli">Hubli / Hubballi</option>
-                      <option value="Dharwad">Dharwad</option>
-                      <option value="Belgaum">Belgaum / Belagavi</option>
-                      <option value="Hospet">Hospet</option>
-                      <option value="Bangalore">Bangalore</option>
-                      <option value="Bellary">Bellary</option>
-                      <option value="Gulbarga">Gulbarga</option>
-                      <option value="Raichur">Raichur</option>
-                      <option value="Gadag">Gadag</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Remarks or Questions (Optional)</label>
-                    <textarea
-                      rows={2}
-                      placeholder="e.g. Interested in test drive this weekend, exchange quotation for old vehicle..."
-                      value={enquiryForm.notes}
-                      onChange={(e) => setEnquiryForm({ ...enquiryForm, notes: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
-                    />
-                  </div>
-
-                  <div className="pt-2 flex items-center justify-end gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setEnquiryOffer(null)}
-                      className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submittingEnquiry}
-                      className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-2 disabled:opacity-50 shadow-md shadow-slate-900/10"
-                    >
-                      {submittingEnquiry ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Sending...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Submit Enquiry</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
+            {unlockError && (
+              <div className="p-3 mb-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold text-center">
+                {unlockError}
               </div>
             )}
+
+            <form onSubmit={handleUnlockEditor} className="space-y-3 text-xs font-medium">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Username</label>
+                <input
+                  type="text"
+                  required
+                  value={unlockUsername}
+                  onChange={(e) => setUnlockUsername(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={unlockPassword}
+                  onChange={(e) => setUnlockPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={unlocking}
+                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                >
+                  {unlocking ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="w-3.5 h-3.5" />
+                      <span>Unlock Editor Mode</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -876,7 +932,7 @@ export default function PublicOffersScreen() {
                   {editingOffer ? 'Edit Monthly Offer' : 'Create New Monthly Offer'}
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  Update model discounts, exchange benefits &amp; branch coverage
+                  Update model discounts, exchange benefits &amp; branch coverage. Updates take effect immediately.
                 </p>
               </div>
               <button
@@ -899,11 +955,11 @@ export default function PublicOffersScreen() {
                     required
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
                   >
-                    <option value="Tata Motors">Tata Motors</option>
-                    <option value="MG Motors">MG Motors</option>
-                    <option value="Hero Moto Corp">Hero Moto Corp</option>
-                    <option value="Ather Energy">Ather Energy</option>
-                    <option value="Hyundai">Hyundai</option>
+                    {ALL_DEALERSHIP_BRANDS.filter((b) => b !== 'All').map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -913,7 +969,7 @@ export default function PublicOffersScreen() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Safari Dark Edition, Windsor EV"
+                    placeholder="e.g. Safari Dark Edition, Windsor EV, Creta, Splendor"
                     value={formData.model_name}
                     onChange={(e) => setFormData({ ...formData, model_name: e.target.value })}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
@@ -930,24 +986,28 @@ export default function PublicOffersScreen() {
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
                   >
-                    <option value="suv">SUVs &amp; Cars</option>
+                    <option value="new_vehicle">Cars &amp; Commuters</option>
+                    <option value="suv">SUVs &amp; Luxury</option>
                     <option value="ev">Electric Vehicles (EV)</option>
                     <option value="bike_scooter">Bikes &amp; Scooters</option>
                     <option value="service">Service &amp; Detailing</option>
-                    <option value="festive">Festive Specials</option>
                   </select>
                 </div>
 
                 {/* Branch */}
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Branch Name</label>
-                  <input
-                    type="text"
-                    placeholder="All Branches or Hubli"
+                  <label className="font-bold text-slate-700 block mb-1">Applicable Branch</label>
+                  <select
                     value={formData.branch_name}
                     onChange={(e) => setFormData({ ...formData, branch_name: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
-                  />
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                  >
+                    {ALL_DEALERSHIP_BRANCHES.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* City */}
@@ -1040,8 +1100,8 @@ export default function PublicOffersScreen() {
                 </div>
               </div>
 
-              {/* Image URL & Badge */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Image URL, Phone & Badge */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Banner Image URL</label>
                   <input
@@ -1050,6 +1110,17 @@ export default function PublicOffersScreen() {
                     value={formData.image_url}
                     onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Dealership Phone Number</label>
+                  <input
+                    type="tel"
+                    placeholder="918197348730"
+                    value={formData.whatsapp_number}
+                    onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
 
@@ -1074,7 +1145,7 @@ export default function PublicOffersScreen() {
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                     className="rounded border-slate-300 text-indigo-600 focus:ring-0"
                   />
-                  <span className="font-bold text-slate-800">Publish as Active Offer</span>
+                  <span className="font-bold text-slate-800">Publish as Active Live Offer</span>
                 </label>
 
                 <div>
@@ -1105,10 +1176,10 @@ export default function PublicOffersScreen() {
                   {savingOffer ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Saving...</span>
+                      <span>Saving to Live System...</span>
                     </>
                   ) : (
-                    <span>{editingOffer ? 'Update Offer' : 'Publish Offer'}</span>
+                    <span>{editingOffer ? 'Save & Update Live Offer' : 'Publish Live Offer'}</span>
                   )}
                 </button>
               </div>
@@ -1120,7 +1191,7 @@ export default function PublicOffersScreen() {
       {/* ─── Light Mode Footer ───────────────────────────────────────────────── */}
       <footer className="mt-16 border-t border-slate-200/80 pt-8 text-center text-xs text-slate-500 font-medium space-y-2">
         <p>© 2026 Bellad &amp; Company. Authorized Dealership Loyalty &amp; Rewards Program.</p>
-        <p className="text-[11px] text-slate-400">Hubballi • Belgaum • Dharwad • Hospet • Bangalore • Bellary • Gulbarga • Raichur • Gadag</p>
+        <p className="text-[11px] text-slate-400">Hubballi • Belgaum • Dharwad • Hospet • Bangalore • Bellary • Gulbarga • Raichur • Gadag • Haveri</p>
       </footer>
     </div>
   );
