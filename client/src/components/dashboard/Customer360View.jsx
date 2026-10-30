@@ -194,11 +194,51 @@ export const Customer360View = ({
       ),
     },
     {
-      field: 'amount_paise',
-      header: 'Base Bill (₹)',
+      field: 'points',
+      header: 'Amount Balance (₹)',
       sortable: true,
       align: 'right',
-      render: (val) => (val > 0 ? `₹${(val / 100).toLocaleString()}` : '—'),
+      render: (pts, row) => {
+        const numPts = Number(pts || 0);
+        // In Bellad & Company Loyalty: 4 Points = ₹1.00
+        const amountVal = Math.abs(numPts) / 4;
+        const formattedAmount = amountVal.toLocaleString('en-IN', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        });
+
+        // Determine recorded bill amount from calc_snapshot, amount_paise, or source_ref
+        let billAmount = null;
+        if (row.amount_paise && Number(row.amount_paise) > 0) {
+          billAmount = Number(row.amount_paise) / 100;
+        } else if (row.calc_snapshot?.bill_amount) {
+          billAmount = Number(row.calc_snapshot.bill_amount);
+        } else if (row.calc_snapshot?.net_ex_showroom) {
+          billAmount = Number(row.calc_snapshot.net_ex_showroom);
+        } else if (row.calc_snapshot?.amount_paise) {
+          billAmount = Number(row.calc_snapshot.amount_paise) / 100;
+        } else {
+          const match = String(row.reference_id || row.source_ref || '').match(/(?:₹|Rs\.?)\s*([\d,]+(?:\.\d+)?)/i);
+          if (match) billAmount = parseFloat(match[1].replace(/,/g, ''));
+        }
+
+        return (
+          <div className="flex flex-col items-end gap-0.5">
+            <span
+              className={`font-mono font-bold text-xs sm:text-sm ${
+                numPts < 0 ? 'text-rose-600' : 'text-emerald-700'
+              }`}
+            >
+              {numPts > 0 ? `+₹${formattedAmount}` : numPts < 0 ? `-₹${formattedAmount}` : `₹0`}
+            </span>
+            {billAmount && billAmount > 0 && (
+              <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap">
+                Bill: ₹{billAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       field: 'reference_id',
@@ -310,68 +350,70 @@ export const Customer360View = ({
         />
       </div>
 
-      {/* 3. Detailed Customer Master Profile Card */}
-      <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 space-y-3.5 sm:space-y-5 shadow-card">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 sm:pb-4">
-          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
-              <UserCheck className="w-4 h-4 text-indigo-600" />
+      {/* 3. Detailed Customer Master Profile Card (Hidden for now as requested - identity, Aadhaar, and phone details are already shown in CustomerSummaryCard above. Code preserved.) */}
+      {false && (
+        <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 space-y-3.5 sm:space-y-5 shadow-card">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 sm:pb-4">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
+                <UserCheck className="w-4 h-4 text-indigo-600" />
+              </div>
+              <h3 className="text-sm sm:text-base lg:text-lg font-black text-slate-900 tracking-tight">
+                Customer Master Details
+              </h3>
             </div>
-            <h3 className="text-sm sm:text-base lg:text-lg font-black text-slate-900 tracking-tight">
-              Customer Master Details
-            </h3>
-          </div>
-          <span className="inline-flex items-center text-[10px] sm:text-xs font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 uppercase tracking-wider shrink-0 whitespace-nowrap leading-none">
-            PR Status: {customer.pr_status || customer.billing_status || 'PR Done'}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 text-xs sm:text-sm">
-          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
-            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Customer Name</span>
-            <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.name || customer.customer_name || 'N/A'}</span>
-          </div>
-
-          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
-            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Registered Phone</span>
-            <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">
-              {(customer.phones || []).map((p) => p.phone_number || p).join(', ') || 'N/A'}
+            <span className="inline-flex items-center text-[10px] sm:text-xs font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 uppercase tracking-wider shrink-0 whitespace-nowrap leading-none">
+              PR Status: {customer.pr_status || customer.billing_status || 'PR Done'}
             </span>
           </div>
 
-          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
-            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Aadhaar Card No</span>
-            <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">
-              {customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 || 'N/A'}
-            </span>
-          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 text-xs sm:text-sm">
+            <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Customer Name</span>
+              <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.name || customer.customer_name || 'N/A'}</span>
+            </div>
 
-          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
-            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Age</span>
-            <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block">{customer.age ? `${customer.age} Years` : 'N/A'}</span>
-          </div>
+            <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Registered Phone</span>
+              <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">
+                {(customer.phones || []).map((p) => p.phone_number || p).join(', ') || 'N/A'}
+              </span>
+            </div>
 
-          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
-            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Firm Name</span>
-            <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.firm || customer.firm_name || 'N/A'}</span>
-          </div>
+            <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Aadhaar Card No</span>
+              <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">
+                {customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 || 'N/A'}
+              </span>
+            </div>
 
-          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
-            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Branch Name</span>
-            <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.branch || customer.branch_name || 'Main Branch'}</span>
-          </div>
+            <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Age</span>
+              <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block">{customer.age ? `${customer.age} Years` : 'N/A'}</span>
+            </div>
 
-          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
-            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">DMS Invoice Date</span>
-            <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.dms_invoice_date || customer.dms_inv_date || 'N/A'}</span>
-          </div>
+            <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Firm Name</span>
+              <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.firm || customer.firm_name || 'N/A'}</span>
+            </div>
 
-          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0 col-span-2 sm:col-span-2 lg:col-span-1">
-            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Customer Address</span>
-            <span className="font-medium text-slate-800 text-xs sm:text-sm mt-0.5 block break-words">{customer.address || 'N/A'}</span>
+            <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Branch Name</span>
+              <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.branch || customer.branch_name || 'Main Branch'}</span>
+            </div>
+
+            <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">DMS Invoice Date</span>
+              <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.dms_invoice_date || customer.dms_inv_date || 'N/A'}</span>
+            </div>
+
+            <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0 col-span-2 sm:col-span-2 lg:col-span-1">
+              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Customer Address</span>
+              <span className="font-medium text-slate-800 text-xs sm:text-sm mt-0.5 block break-words">{customer.address || 'N/A'}</span>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 4. Prominent Vehicle Details Block */}
       <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 space-y-3.5 sm:space-y-5 shadow-card">

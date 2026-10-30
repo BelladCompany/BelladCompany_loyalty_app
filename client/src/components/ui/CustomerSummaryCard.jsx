@@ -73,6 +73,11 @@ export const CustomerSummaryCard = ({
               {customer.name || customer.customer_name}
             </h2>
             <StatusBadge value={tierName} type="tier" />
+            {(customer.pr_status || customer.billing_status) && (
+              <span className="inline-flex items-center text-[10px] sm:text-xs font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 uppercase tracking-wider shrink-0 whitespace-nowrap leading-none">
+                PR Status: {customer.pr_status || customer.billing_status}
+              </span>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm sm:text-base pt-0.5 sm:pt-1">

@@ -421,6 +421,7 @@ class PointsService {
       `SELECT pl.entry_id AS id, pl.customer_id, pl.branch_id, b.branch_name AS branch_name,
               pl.type AS transaction_type, pl.points, pl.source_ref AS reference_id,
               pl.cashier_id AS created_by, u.username AS created_by_username,
+              pl.calc_snapshot, pl.reason_text,
               pl.created_at
        FROM points_ledger pl
        LEFT JOIN branches b ON pl.branch_id = b.branch_id
