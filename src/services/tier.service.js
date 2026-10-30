@@ -74,9 +74,9 @@ class TierService {
   /**
    * Determines the customer tier based on expense metric and tier_rules.
    * Slabs:
-   *   Silver:   Default (< ₹50,000)
-   *   Gold:     ₹50,000 - ₹1,99,999.99
-   *   Platinum: ₹200,000+
+   *   Silver:   Default (< ₹10,00,000)
+   *   Gold:     ₹10,00,000 - ₹24,99,999.99
+   *   Platinum: ₹25,00,000+
    */
   static async determineTier(totalMetricRs, tenantId, client = pool) {
     const rulesRes = await client.query(
@@ -92,8 +92,8 @@ class TierService {
       return rulesRes.rows[0].tier_name;
     }
 
-    if (totalMetricRs >= 200000) return 'Platinum';
-    if (totalMetricRs >= 50000) return 'Gold';
+    if (totalMetricRs >= 2500000) return 'Platinum';
+    if (totalMetricRs >= 1000000) return 'Gold';
     return 'Silver';
   }
 

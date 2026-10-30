@@ -147,9 +147,9 @@ class TenantService {
       await client.query(
         `INSERT INTO tier_rules (tenant_id, tier_name, min_lifetime_points, min_expense_amount, benefits_json)
          VALUES
-           ($1, 'Silver', 0, 0, '{"description": "Silver tier: Expense + Redemptions up to ₹49,999"}'),
-           ($1, 'Gold', 5000, 50000, '{"description": "Gold tier: Expense + Redemptions ₹50,000 - ₹1,99,999"}'),
-           ($1, 'Platinum', 15000, 200000, '{"description": "Platinum tier: Expense + Redemptions ₹200,000+"}')
+           ($1, 'Silver', 0, 0, '{"description": "Silver tier: Baseline tier for all customers (₹0 - ₹9,99,999 expense)"}'),
+           ($1, 'Gold', 5000, 1000000, '{"description": "Gold tier: Cumulative customer expense ₹10,00,000 - ₹24,99,999"}'),
+           ($1, 'Platinum', 15000, 2500000, '{"description": "Platinum tier: Cumulative customer expense ₹25,00,000+"}')
          ON CONFLICT (tenant_id, tier_name) DO UPDATE
          SET min_expense_amount = EXCLUDED.min_expense_amount;`,
         [cleanTenantId]

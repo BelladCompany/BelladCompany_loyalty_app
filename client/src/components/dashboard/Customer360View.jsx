@@ -4,7 +4,6 @@ import {
   Car,
   History,
   PlusCircle,
-  Gift,
   Phone,
   Mail,
   Calendar,
@@ -14,7 +13,6 @@ import {
   Clock,
   ShieldOff,
   Users,
-  FileCheck2,
   UserCheck,
   Tag,
   Coins,
@@ -24,7 +22,6 @@ import {
 import EarnPointsModal from './EarnPointsModal';
 import RedemptionModal from './RedemptionModal';
 import AddReceiptModal from './AddReceiptModal';
-import RequestKycModal from './RequestKycModal';
 import RaiseCorrectionModal from './RaiseCorrectionModal';
 import ApiService from '../../services/api';
 
@@ -39,15 +36,9 @@ export const Customer360View = ({
   const [addReceiptModalOpen, setAddReceiptModalOpen] = useState(false);
   const [earnModalOpen, setEarnModalOpen] = useState(false);
   const [redeemModalOpen, setRedeemModalOpen] = useState(false);
-  const [kycModalOpen, setKycModalOpen] = useState(false);
   const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
   const [selectedCorrectionRef, setSelectedCorrectionRef] = useState('');
   const [vehicleStatuses, setVehicleStatuses] = useState({});
-
-  // Additional tab data
-  const [referralHistory, setReferralHistory] = useState([]);
-  const [kycHistory, setKycHistory] = useState([]);
-  const [loadingTabData, setLoadingTabData] = useState(false);
   const [pendingCorrections, setPendingCorrections] = useState([]);
 
   // Fetch pending correction requests for customer
@@ -77,37 +68,6 @@ export const Customer360View = ({
         .catch(() => {});
     });
   }, [customer?.customer_id, ledgerData]);
-
-  // Load secondary tab data when switching tabs
-  useEffect(() => {
-    if (!customer?.customer_id) return;
-
-    if (activeProfileTab === 'referrals') {
-      setLoadingTabData(true);
-      ApiService.getReferrals()
-        .then((res) => {
-          const allRefs = res.data || [];
-          const userRefs = allRefs.filter(
-            (r) =>
-              r.referrer_customer_id === customer.customer_id ||
-              r.referred_customer_id === customer.customer_id
-          );
-          setReferralHistory(userRefs);
-        })
-        .catch(() => setReferralHistory([]))
-        .finally(() => setLoadingTabData(false));
-    } else if (activeProfileTab === 'kyc') {
-      setLoadingTabData(true);
-      ApiService.getPendingKycRequests()
-        .then((res) => {
-          const allKyc = res.data || [];
-          const userKyc = allKyc.filter((k) => k.customer_id === customer.customer_id);
-          setKycHistory(userKyc);
-        })
-        .catch(() => setKycHistory([]))
-        .finally(() => setLoadingTabData(false));
-    }
-  }, [activeProfileTab, customer?.customer_id]);
 
   if (!customer) return null;
 
@@ -563,15 +523,13 @@ export const Customer360View = ({
         )}
       </section>
 
-      {/* 5. Tabbed Customer Profile History (Ledger / Referrals / Redemptions / KYC) */}
+      {/* 5. Tabbed Customer Profile History (Ledger / Redemptions) */}
       <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 space-y-5 sm:space-y-6 shadow-card">
         {/* Navigation Tabs (Smart CRM pill style) */}
         <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-100 overflow-x-auto pb-3 -mx-1 px-1">
           {[
             { id: 'ledger', label: 'Points Ledger', icon: History },
-            { id: 'referrals', label: 'Gift Cards', icon: Gift },
             { id: 'redemptions', label: 'Redemptions', icon: Coins },
-            { id: 'kyc', label: 'KYC Requests', icon: FileCheck2 },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeProfileTab === tab.id;
@@ -628,54 +586,7 @@ export const Customer360View = ({
           </div>
         )}
 
-        {/* Tab 2: Gift Cards */}
-        {activeProfileTab === 'referrals' && (
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Customer Gift Cards &amp; Reward History</h4>
-            {loadingTabData ? (
-              <div className="p-6 text-center text-xs text-slate-400">Loading gift card records...</div>
-            ) : referralHistory.length === 0 ? (
-              <div className="p-6 bg-slate-50 rounded-lg border border-slate-200 text-center text-xs text-slate-500">
-                No gift card activity logged for this customer.
-              </div>
-            ) : (
-              <div className="border border-slate-200 rounded-xl overflow-x-auto">
-                <table className="w-full text-left text-xs whitespace-nowrap">
-                  <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
-                    <tr>
-                      <th className="p-3">Gift Card ID</th>
-                      <th className="p-3">Role</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-right">Suggested Points</th>
-                      <th className="p-3 text-right">Credited Points</th>
-                      <th className="p-3">Reason / Details</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {referralHistory.map((ref, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50">
-                        <td className="p-3 font-mono font-bold text-slate-900">#{ref.id || ref.referral_id}</td>
-                        <td className="p-3">
-                          {ref.referrer_customer_id === customer.customer_id ? (
-                            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold rounded">Gift Card Giver</span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 font-bold rounded">Gift Card Recipient</span>
-                          )}
-                        </td>
-                        <td className="p-3 uppercase font-bold text-slate-700">{ref.status}</td>
-                        <td className="p-3 text-right font-mono font-bold text-slate-600">{ref.suggested_points || 0}</td>
-                        <td className="p-3 text-right font-mono font-bold text-emerald-600">{ref.points_credited || 0}</td>
-                        <td className="p-3 text-slate-600">{ref.reason || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 3: Redemptions */}
+        {/* Tab 2: Redemptions */}
         {activeProfileTab === 'redemptions' && (
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Redemption Transactions</h4>
@@ -713,63 +624,6 @@ export const Customer360View = ({
             )}
           </div>
         )}
-
-        {/* Tab 4: KYC Requests */}
-        {activeProfileTab === 'kyc' && (
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">KYC Change Requests</h4>
-              <button
-                type="button"
-                onClick={() => setKycModalOpen(true)}
-                className="self-start sm:self-auto px-3 py-1.5 bg-action-primary text-white text-xs font-bold rounded-lg hover:bg-blue-700 flex items-center gap-1.5 transition-colors"
-              >
-                <PlusCircle className="w-4 h-4" /> Request Phone Update
-              </button>
-            </div>
-            {loadingTabData ? (
-              <div className="p-6 text-center text-xs text-slate-400">Loading KYC records...</div>
-            ) : kycHistory.length === 0 ? (
-              <div className="p-6 bg-slate-50 rounded-lg border border-slate-200 text-center text-xs text-slate-500 space-y-2">
-                <div>No KYC change requests submitted for this customer.</div>
-                <button
-                  type="button"
-                  onClick={() => setKycModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 text-action-primary font-bold hover:underline"
-                >
-                  <PlusCircle className="w-4 h-4" /> Submit first phone update request
-                </button>
-              </div>
-            ) : (
-              <div className="border border-slate-200 rounded-xl overflow-x-auto">
-                <table className="w-full text-left text-xs whitespace-nowrap">
-                  <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
-                    <tr>
-                      <th className="p-3">Request ID</th>
-                      <th className="p-3">Change Type</th>
-                      <th className="p-3">Old Value</th>
-                      <th className="p-3">New Value</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3">Reason</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {kycHistory.map((kyc, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50">
-                        <td className="p-3 font-mono font-bold text-slate-900">#{kyc.id}</td>
-                        <td className="p-3 capitalize text-slate-800">{kyc.change_type}</td>
-                        <td className="p-3 font-mono text-slate-600">{kyc.old_value}</td>
-                        <td className="p-3 font-mono font-bold text-slate-900">{kyc.new_value}</td>
-                        <td className="p-3 uppercase font-bold text-slate-700">{kyc.status}</td>
-                        <td className="p-3 text-slate-600">{kyc.reason || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
       </section>
 
       {/* Modal Dialogs */}
@@ -782,26 +636,6 @@ export const Customer360View = ({
         branches={branches}
         onClose={() => setAddReceiptModalOpen(false)}
         onSuccess={() => onRefresh && onRefresh()}
-      />
-
-      <RequestKycModal
-        isOpen={kycModalOpen}
-        initialCustomer={customer}
-        onClose={() => setKycModalOpen(false)}
-        onSuccess={() => {
-          // reload kyc history
-          if (customer?.customer_id) {
-            setLoadingTabData(true);
-            ApiService.getPendingKycRequests()
-              .then((res) => {
-                const allKyc = res.data || [];
-                const userKyc = allKyc.filter((k) => k.customer_id === customer.customer_id);
-                setKycHistory(userKyc);
-              })
-              .catch(() => {})
-              .finally(() => setLoadingTabData(false));
-          }
-        }}
       />
 
       <RaiseCorrectionModal

@@ -135,20 +135,21 @@ async function runRegressionSuite() {
   // ------------------------------------------------------------------------
   console.log('\n3️⃣ TESTING EXPENSE & REDEMPTION TIER CLASSIFICATION');
 
-  test('Tier Slabs: Silver (< ₹50k), Gold (₹50k - ₹200k), Platinum (₹200k+)', () => {
+  test('Tier Slabs: Silver (< ₹10 Lakhs), Gold (₹10 Lakhs - ₹25 Lakhs), Platinum (₹25 Lakhs+)', () => {
     function classifyTier(expenseRs) {
-      if (expenseRs >= 200000) return 'Platinum';
-      if (expenseRs >= 50000) return 'Gold';
+      if (expenseRs >= 2500000) return 'Platinum';
+      if (expenseRs >= 1000000) return 'Gold';
       return 'Silver';
     }
 
     assert.strictEqual(classifyTier(0), 'Silver', '₹0 expense should be Silver');
     assert.strictEqual(classifyTier(49999), 'Silver', '₹49,999 expense should be Silver');
-    assert.strictEqual(classifyTier(50000), 'Gold', '₹50,000 expense should be Gold');
-    assert.strictEqual(classifyTier(133996.25), 'Gold', '₹133,996.25 (Kavya MP) should be Gold');
-    assert.strictEqual(classifyTier(199999), 'Gold', '₹199,999 expense should be Gold');
-    assert.strictEqual(classifyTier(200000), 'Platinum', '₹200,000 expense should be Platinum');
-    assert.strictEqual(classifyTier(1066990), 'Platinum', '₹1,066,990 car expense should be Platinum');
+    assert.strictEqual(classifyTier(999999), 'Silver', '₹999,999 expense should be Silver');
+    assert.strictEqual(classifyTier(1000000), 'Gold', '₹10,00,000 expense should be Gold');
+    assert.strictEqual(classifyTier(1500000), 'Gold', '₹15,00,000 expense should be Gold');
+    assert.strictEqual(classifyTier(2499999), 'Gold', '₹24,99,999 expense should be Gold');
+    assert.strictEqual(classifyTier(2500000), 'Platinum', '₹25,00,000 expense should be Platinum');
+    assert.strictEqual(classifyTier(5000000), 'Platinum', '₹50,00,000 expense should be Platinum');
   });
 
   // ------------------------------------------------------------------------

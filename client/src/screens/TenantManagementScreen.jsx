@@ -330,7 +330,7 @@ export const TenantManagementScreen = ({ user }) => {
                   • Main Showroom &amp; Service Branch<br />
                   • Dedicated Admin User (<span className="font-mono font-bold">{tenantId || 'tenant'}_admin</span> / Admin@123)<br />
                   • Standard 2W &amp; 4W In-house point rules (+100 Finance, +50 Insurance, +200 Exchange)<br />
-                  • Silver (&lt;₹50k), Gold (₹50k - ₹200k) &amp; Platinum (₹200k+) expense tier slabs
+                  • Silver (&lt;₹10 Lakhs), Gold (₹10 Lakhs - ₹25 Lakhs) &amp; Platinum (₹25 Lakhs+) expense tier slabs
                 </p>
               </div>
 
