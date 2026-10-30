@@ -85,6 +85,28 @@ class VehicleSalesPointsService {
         };
       }
 
+      // RULE 5: Program Inception Policy (April 1, 2026)
+      // Only vehicles purchased on or after April 1, 2026 receive loyalty points and enroll in loyalty rewards.
+      let vehiclePurchaseDate = saleData.purchase_date || saleData.dms_invoice_date || null;
+      if (!vehiclePurchaseDate && vehicle_id) {
+        const vDateRes = await client.query(
+          `SELECT purchase_date, dms_invoice_date FROM vehicles WHERE vehicle_id = $1 AND tenant_id = $2;`,
+          [vehicle_id, tenantId]
+        );
+        if (vDateRes.rows.length > 0) {
+          vehiclePurchaseDate = vDateRes.rows[0].purchase_date || vDateRes.rows[0].dms_invoice_date;
+        }
+      }
+
+      if (vehiclePurchaseDate && new Date(vehiclePurchaseDate) < new Date('2026-04-01')) {
+        if (isOwnClient) await client.query('COMMIT');
+        return {
+          status: 'skipped_pre_april_2026',
+          message: `Vehicle purchase date (${vehiclePurchaseDate}) is prior to loyalty program launch (April 1, 2026). No loyalty points awarded.`,
+          points: 0,
+        };
+      }
+
       // RULE 6: Read rate dynamically from point_rules config table scoped per tenant
       const rateConfig = await this.getTenantRate(tenantId, client);
 

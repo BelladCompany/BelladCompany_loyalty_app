@@ -593,7 +593,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           <button
             type="button"
             onClick={() => setActiveTab('gift_cards')}
-            className={`px-1 py-2 sm:p-4 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'gift_cards'
+            className={`px-1 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'gift_cards'
                 ? 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-500/20'
                 : 'bg-white border-slate-200/80 text-slate-700 hover:border-amber-300 hover:bg-amber-50/40 shadow-2xs'
               }`}
@@ -602,7 +602,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               }`}>
               <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[10px] sm:text-xs font-bold tracking-tight text-center leading-tight break-words max-w-full">
+            <span className="text-[9.5px] sm:text-xs font-extrabold tracking-tight text-center leading-tight break-words max-w-full">
               Gift Cards
             </span>
           </button>
@@ -611,7 +611,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           <button
             type="button"
             onClick={() => setActiveTab('referrals')}
-            className={`px-1 py-2 sm:p-4 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'referrals'
+            className={`px-1 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'referrals'
                 ? 'bg-indigo-600 text-white border-indigo-700 shadow-md shadow-indigo-600/20'
                 : 'bg-white border-slate-200/80 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 shadow-2xs'
               }`}
@@ -620,7 +620,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               }`}>
               <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[10px] sm:text-xs font-bold tracking-tight text-center leading-tight break-words max-w-full">
+            <span className="text-[9.5px] sm:text-xs font-extrabold tracking-tight text-center leading-tight break-words max-w-full">
               Refer &amp; Earn
             </span>
           </button>
@@ -629,13 +629,13 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           <button
             type="button"
             onClick={() => window.open('/offers', '_blank')}
-            className="px-1 py-2 sm:p-4 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer bg-white border-slate-200/80 text-slate-700 hover:border-rose-300 hover:bg-rose-50/40 shadow-2xs group"
+            className="px-1 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer bg-white border-slate-200/80 text-slate-700 hover:border-rose-300 hover:bg-rose-50/40 shadow-2xs group"
           >
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-rose-50 text-rose-600 group-hover:scale-105 transition-transform">
               <Flame className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="flex items-center justify-center gap-0.5 max-w-full">
-              <span className="text-[10px] sm:text-xs font-bold tracking-tight text-center leading-tight break-words">
+              <span className="text-[9.5px] sm:text-xs font-extrabold tracking-tight text-center leading-tight break-words">
                 Offers
               </span>
               <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 group-hover:text-rose-600 shrink-0" />
@@ -646,7 +646,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           <button
             type="button"
             onClick={() => setActiveTab('benefits')}
-            className={`px-1 py-2 sm:p-4 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'benefits'
+            className={`px-1 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'benefits'
                 ? 'bg-purple-600 text-white border-purple-700 shadow-md shadow-purple-600/20'
                 : 'bg-white border-slate-200/80 text-slate-700 hover:border-purple-300 hover:bg-purple-50/40 shadow-2xs'
               }`}
@@ -655,7 +655,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               }`}>
               <Award className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[10px] sm:text-xs font-bold tracking-tight text-center leading-tight break-words max-w-full">
+            <span className="text-[9.5px] sm:text-xs font-extrabold tracking-tight text-center leading-tight break-words max-w-full">
               Tier Benefits
             </span>
           </button>

@@ -191,14 +191,19 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
       field: 'customer_id',
       header: 'Customer ID',
       sortable: true,
-      cellClassName: 'font-mono font-bold text-slate-900 whitespace-nowrap min-w-[130px]',
+      cellClassName: 'font-mono font-bold text-slate-900 whitespace-nowrap min-w-[120px]',
     },
-    { field: 'name', header: 'Customer Name', sortable: true, cellClassName: 'font-bold text-slate-900 whitespace-nowrap min-w-[170px]' },
+    { 
+      field: 'name', 
+      header: 'Customer Name', 
+      sortable: true, 
+      cellClassName: 'font-bold text-slate-900 break-words sm:whitespace-nowrap min-w-[140px] max-w-[220px] leading-snug' 
+    },
     {
       field: 'phones',
       header: 'Registered Phone(s)',
       render: (val) => (
-        <div className="flex flex-wrap gap-1 font-mono text-xs sm:text-sm whitespace-nowrap min-w-[140px]">
+        <div className="flex flex-wrap gap-1 font-mono text-xs sm:text-sm whitespace-nowrap min-w-[130px]">
           {(val || []).map((p, idx) => (
             <span key={idx} className="bg-slate-100 px-2 py-0.5 border border-slate-200 rounded-lg text-slate-800">
               {p.phone_number || p}
@@ -211,7 +216,7 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
       field: 'vehicles',
       header: 'Vehicles',
       render: (val) => (
-        <div className="text-xs font-semibold text-slate-700 whitespace-nowrap min-w-[140px]">
+        <div className="text-xs font-semibold text-slate-700 whitespace-nowrap min-w-[130px]">
           {(val || []).map((v) => v.registration_number || v.chassis_no || v.vin).join(', ') || 'None'}
         </div>
       ),
@@ -329,13 +334,13 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
       {/* Multiple Matches Picker */}
       {!customerData && hasSearched && searchResults.length > 1 && (
         <div className="card-white-glow p-4 sm:p-6 bg-white space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <h3 className="text-sm sm:text-base font-bold text-slate-900">
-              Matching Customers ({searchResults.length} found)
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+              Matching Customers <span className="text-indigo-600 font-extrabold">({searchResults.length} found)</span>
             </h3>
             <button
               onClick={handleExportSearchCsv}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition self-start sm:self-auto shrink-0 whitespace-nowrap shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shrink-0 whitespace-nowrap shadow-xs cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 shrink-0" />
               <span>Export Results CSV</span>

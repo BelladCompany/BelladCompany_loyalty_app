@@ -11,13 +11,18 @@ class TierService {
         SELECT 
           SUM(GREATEST(0, (st.ex_showroom_price_paise - COALESCE(st.dealer_cash_discount_paise, 0) - COALESCE(st.emps_discount_paise, 0) - COALESCE(st.oem_offers_amount_paise, 0)) / 100)) as sales_rs
         FROM sale_transactions st
+        LEFT JOIN vehicles v ON st.vehicle_id = v.vehicle_id
         WHERE st.customer_id = $1 AND st.tenant_id = $2
+          AND (v.purchase_date IS NULL OR v.purchase_date >= '2026-04-01')
+          AND COALESCE(st.stage, '') <> 'pre_program_launch'
       ),
       cust_ledger_sales AS (
         SELECT 
           SUM(pl.points * 100) as ledger_sales_rs
         FROM points_ledger pl
+        LEFT JOIN vehicles v ON pl.vehicle_id = v.vehicle_id
         WHERE pl.customer_id = $1 AND pl.tenant_id = $2 AND pl.type = 'earn_sale'
+          AND (v.purchase_date IS NULL OR v.purchase_date >= '2026-04-01')
       ),
       cust_service AS (
         SELECT 

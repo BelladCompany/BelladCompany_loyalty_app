@@ -45,7 +45,7 @@ export const DataTable = ({
   }, [data, sortField, sortDirection]);
 
   return (
-    <div className={`w-full overflow-x-auto border border-slate-200/90 rounded-2xl bg-white shadow-xs ${className}`}>
+    <div className={`w-full overflow-x-auto overscroll-x-contain border border-slate-200/90 rounded-2xl bg-white shadow-xs ${className}`}>
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600">
@@ -54,7 +54,7 @@ export const DataTable = ({
                 key={idx}
                 onClick={() => col.sortable && handleSort(col.field)}
                 className={`
-                  h-11 sm:h-12 px-3 sm:px-5 text-[11px] sm:text-xs font-black uppercase tracking-wider text-slate-500 select-none whitespace-nowrap
+                  h-10 sm:h-12 px-2.5 sm:px-5 text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-500 select-none whitespace-nowrap
                   ${col.sortable ? 'cursor-pointer hover:bg-slate-100 hover:text-slate-800' : ''}
                   ${col.align === 'right' ? 'text-right' : 'text-left'}
                   ${col.headerClassName || ''}
@@ -104,7 +104,7 @@ export const DataTable = ({
                     <td
                       key={colIdx}
                       className={`
-                        px-3 sm:px-5 py-2.5 sm:py-3.5 text-xs sm:text-sm
+                        px-2.5 sm:px-5 py-2 sm:py-3.5 text-xs sm:text-sm
                         ${col.align === 'right' ? 'text-right' : 'text-left'}
                         ${col.cellClassName || ''}
                       `}

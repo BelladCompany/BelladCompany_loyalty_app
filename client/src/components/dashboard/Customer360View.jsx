@@ -289,7 +289,7 @@ export const Customer360View = ({
       />
 
       {/* 2. Key Metrics Glanceable Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
         <StatCard
           label="Available Point Balance"
           value={`${Number(currentBalance).toLocaleString()} PTS`}
@@ -311,76 +311,80 @@ export const Customer360View = ({
       </div>
 
       {/* 3. Detailed Customer Master Profile Card */}
-      <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 space-y-4 sm:space-y-5 shadow-card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-100 pb-3 sm:pb-4">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
-              <UserCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+      <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 space-y-3.5 sm:space-y-5 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 sm:pb-4">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
+              <UserCheck className="w-4 h-4 text-indigo-600" />
             </div>
-            <h3 className="text-sm sm:text-lg font-black text-slate-900 tracking-tight">Customer Master Details</h3>
+            <h3 className="text-sm sm:text-base lg:text-lg font-black text-slate-900 tracking-tight">
+              Customer Master Details
+            </h3>
           </div>
-          <span className="self-start sm:self-auto text-[11px] sm:text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 sm:px-3 py-1 rounded-full border border-emerald-200 uppercase tracking-wider shrink-0 whitespace-nowrap">
+          <span className="inline-flex items-center text-[10px] sm:text-xs font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 uppercase tracking-wider shrink-0 whitespace-nowrap leading-none">
             PR Status: {customer.pr_status || customer.billing_status || 'PR Done'}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 text-sm">
-          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Customer Name</span>
-            <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">{customer.name || customer.customer_name || 'N/A'}</span>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 text-xs sm:text-sm">
+          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Customer Name</span>
+            <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.name || customer.customer_name || 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Registered Phone Number</span>
-            <span className="font-mono font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">
+          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Registered Phone</span>
+            <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">
               {(customer.phones || []).map((p) => p.phone_number || p).join(', ') || 'N/A'}
             </span>
           </div>
 
-          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Aadhaar Card No</span>
-            <span className="font-mono font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">
+          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Aadhaar Card No</span>
+            <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">
               {customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 || 'N/A'}
             </span>
           </div>
 
-          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Age</span>
-            <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block">{customer.age ? `${customer.age} Years` : 'N/A'}</span>
+          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Age</span>
+            <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block">{customer.age ? `${customer.age} Years` : 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Firm Name</span>
-            <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">{customer.firm || customer.firm_name || 'N/A'}</span>
+          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Firm Name</span>
+            <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.firm || customer.firm_name || 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Branch Name</span>
-            <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">{customer.branch || customer.branch_name || 'Main Branch'}</span>
+          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Branch Name</span>
+            <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.branch || customer.branch_name || 'Main Branch'}</span>
           </div>
 
-          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">DMS Invoice Date</span>
-            <span className="font-bold text-slate-900 text-sm sm:text-base mt-0.5 block break-words">{customer.dms_invoice_date || customer.dms_inv_date || 'N/A'}</span>
+          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">DMS Invoice Date</span>
+            <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{customer.dms_invoice_date || customer.dms_inv_date || 'N/A'}</span>
           </div>
 
-          <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
-            <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-bold tracking-wider">Customer Address</span>
+          <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0 col-span-2 sm:col-span-2 lg:col-span-1">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Customer Address</span>
             <span className="font-medium text-slate-800 text-xs sm:text-sm mt-0.5 block break-words">{customer.address || 'N/A'}</span>
           </div>
         </div>
       </section>
 
       {/* 4. Prominent Vehicle Details Block */}
-      <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-7 space-y-4 sm:space-y-5 shadow-card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-100 pb-3 sm:pb-4">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
-              <Car className="w-4 h-4 sm:w-5 sm:h-5" />
+      <section className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 space-y-3.5 sm:space-y-5 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 sm:pb-4">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+              <Car className="w-4 h-4 text-amber-600" />
             </div>
-            <h3 className="text-sm sm:text-lg font-black text-slate-900 tracking-tight">Vehicle Specifications &amp; Pricing</h3>
+            <h3 className="text-sm sm:text-base lg:text-lg font-black text-slate-900 tracking-tight">
+              Vehicle Specifications &amp; Pricing
+            </h3>
           </div>
-          <span className="self-start sm:self-auto text-[11px] sm:text-xs font-bold text-slate-700 bg-slate-100 px-2.5 sm:px-3 py-1 rounded-full border border-slate-200 shrink-0 whitespace-nowrap">
+          <span className="text-[10px] sm:text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 shrink-0 whitespace-nowrap">
             {(customer.vehicles || []).length} Vehicle(s)
           </span>
         </div>
@@ -403,24 +407,31 @@ export const Customer360View = ({
                 ? Number(v.net_ex_showroom_price)
                 : Math.max(0, grossPrice - dealerDisc - empsDisc - oemOffers);
 
+              const isPreApril2026 = v.purchase_date && new Date(v.purchase_date) < new Date('2026-04-01');
+
               return (
                 <div
                   key={vid || idx}
-                  className="bg-slate-50 border-2 border-slate-200 rounded-xl p-3.5 sm:p-5 space-y-3 sm:space-y-4 hover:border-amber-500 transition shadow-sm w-full"
+                  className="bg-slate-50 border-2 border-slate-200 rounded-xl p-3 sm:p-4 space-y-3 hover:border-amber-500 transition shadow-xs w-full"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono font-extrabold text-xs sm:text-sm bg-white px-2.5 sm:px-3 py-1 border border-slate-300 rounded-lg text-slate-900 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <span className="font-mono font-extrabold text-xs bg-white px-2.5 py-1 border border-slate-300 rounded-lg text-slate-900 shadow-2xs">
                         Reg No: {v.registration_number || v.reg_no || v.vin || v.chassis_no || 'N/A'}
                       </span>
-                      <span className="text-xs sm:text-sm font-extrabold px-2.5 sm:px-3 py-1 rounded-lg bg-amber-500/10 text-amber-900 border border-amber-500/30">
+                      <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-900 border border-amber-500/30">
                         {v.brand_name || v.brand || 'Vehicle'}
                       </span>
+                      {isPreApril2026 && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 border border-slate-300">
+                          Pre-April 2026 (No Sales Points)
+                        </span>
+                      )}
                     </div>
 
                     {vs && (
                       <span
-                        className={`px-2.5 sm:px-3 py-1 rounded-lg font-extrabold text-[11px] sm:text-xs uppercase whitespace-nowrap ${
+                        className={`px-2.5 py-1 rounded-lg font-extrabold text-[10px] sm:text-xs uppercase whitespace-nowrap ${
                           vs.status === 'eligible'
                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse'
                             : vs.status === 'locked'
@@ -437,60 +448,60 @@ export const Customer360View = ({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3 text-sm">
-                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
-                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">VIN / Chassis No</span>
-                      <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-all">{v.vin || v.chassis_no || 'N/A'}</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-2.5 text-xs">
+                    <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">VIN / Chassis No</span>
+                      <span className="font-mono font-bold text-slate-900 text-xs mt-0.5 block break-all leading-snug">{v.vin || v.chassis_no || 'N/A'}</span>
                     </div>
 
-                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
-                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">Model Name</span>
-                      <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{v.model || 'Unspecified'}</span>
+                    <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Model Name</span>
+                      <span className="font-bold text-slate-900 text-xs mt-0.5 block break-words leading-snug">{v.model || 'Unspecified'}</span>
                     </div>
 
-                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
-                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">Variant</span>
-                      <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{v.variant || v.varient || 'N/A'}</span>
+                    <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Variant</span>
+                      <span className="font-bold text-slate-900 text-xs mt-0.5 block break-words leading-snug">{v.variant || v.varient || 'N/A'}</span>
                     </div>
 
-                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
-                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">Fuel Type</span>
-                      <span className="font-bold text-blue-900 text-xs sm:text-sm mt-0.5 uppercase block">{v.fuel_type || 'Petrol / Diesel / EV'}</span>
+                    <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Fuel Type</span>
+                      <span className="font-bold text-blue-900 text-xs mt-0.5 uppercase block leading-snug">{v.fuel_type || 'Petrol / Diesel / EV'}</span>
                     </div>
 
-                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
-                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">Firm Name</span>
-                      <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{v.firm_name || v.firm || customer.firm || 'N/A'}</span>
+                    <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Firm Name</span>
+                      <span className="font-bold text-slate-900 text-xs mt-0.5 block break-words leading-snug">{v.firm_name || v.firm || customer.firm || 'N/A'}</span>
                     </div>
 
-                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 min-w-0">
-                      <span className="text-slate-500 block text-[10px] sm:text-xs uppercase font-extrabold">DMS Invoice Date</span>
-                      <span className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words">{v.dms_invoice_date || customer.dms_invoice_date || 'N/A'}</span>
+                    <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">DMS Invoice Date</span>
+                      <span className="font-bold text-slate-900 text-xs mt-0.5 block break-words leading-snug">{v.dms_invoice_date || customer.dms_invoice_date || 'N/A'}</span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block text-[11px] sm:text-xs uppercase font-extrabold">Ex-Showroom Price (Gross)</span>
-                      <span className="font-extrabold text-slate-800 text-sm sm:text-base">{grossPrice > 0 ? `₹${grossPrice.toLocaleString('en-IN')}` : 'N/A'}</span>
+                    <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 min-w-0">
+                      <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Gross Ex-Showroom</span>
+                      <span className="font-extrabold text-slate-800 text-xs mt-0.5 block leading-snug">{grossPrice > 0 ? `₹${grossPrice.toLocaleString('en-IN')}` : 'N/A'}</span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-lg border border-rose-200 bg-rose-50/40">
-                      <span className="text-rose-700 block text-[11px] sm:text-xs uppercase font-extrabold">Offers &amp; Discounts</span>
-                      <span className="font-extrabold text-rose-700 text-sm sm:text-base">
+                    <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-rose-200 bg-rose-50/40 min-w-0">
+                      <span className="text-rose-700 block text-[10px] uppercase font-bold tracking-wider">Discounts</span>
+                      <span className="font-extrabold text-rose-700 text-xs mt-0.5 block leading-snug">
                         {grossPrice - netPrice > 0 ? `−₹${(grossPrice - netPrice).toLocaleString('en-IN')}` : '₹0'}
                       </span>
                     </div>
 
-                    <div className="bg-white p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50/60 sm:col-span-2">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="bg-white p-2.5 sm:p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50/60 col-span-2 sm:col-span-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                         <div>
-                          <span className="text-emerald-900 block text-[11px] sm:text-xs uppercase font-extrabold">
+                          <span className="text-emerald-900 block text-[10px] uppercase font-extrabold tracking-wider">
                             Net Ex-Showroom (After Discount)
                           </span>
-                          <span className="font-black text-emerald-800 text-lg sm:text-xl">
+                          <span className="font-black text-emerald-800 text-base sm:text-lg">
                             {netPrice > 0 ? `₹${netPrice.toLocaleString('en-IN')}` : 'N/A'}
                           </span>
                         </div>
-                        <span className="self-start sm:self-auto text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">
+                        <span className="self-start sm:self-auto text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300">
                           Points Base: +{Math.floor(netPrice / 100).toLocaleString('en-IN')} PTS
                         </span>
                       </div>

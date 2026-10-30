@@ -19,15 +19,15 @@ export const StatCard = ({
   };
 
   return (
-    <div className={`p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border ${variantStyles[variant] || variantStyles.default} shadow-xs transition-all hover:shadow-md ${className}`}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>
-        {Icon && <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" />}
+    <div className={`p-3 sm:p-4.5 rounded-xl sm:rounded-2xl border ${variantStyles[variant] || variantStyles.default} shadow-xs transition-all hover:shadow-md ${className}`}>
+      <div className="flex items-center justify-between gap-1.5">
+        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 leading-snug">{label}</span>
+        {Icon && <Icon className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-slate-400 shrink-0" />}
       </div>
-      <div className="mt-1 sm:mt-1.5 text-lg sm:text-xl font-bold tracking-tight text-slate-900 tabular-nums break-words">
+      <div className="mt-1 text-base sm:text-lg lg:text-xl font-black tracking-tight text-slate-900 tabular-nums break-words leading-tight">
         {value}
       </div>
-      {subtext && <div className="mt-0.5 text-[11px] sm:text-xs font-medium text-slate-500">{subtext}</div>}
+      {subtext && <div className="mt-0.5 text-[10px] sm:text-xs font-medium text-slate-500 leading-snug">{subtext}</div>}
     </div>
   );
 };

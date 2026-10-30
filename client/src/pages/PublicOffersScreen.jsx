@@ -922,31 +922,31 @@ export default function PublicOffersScreen() {
         </div>
       )}
 
-      {/* ─── Staff Create / Edit Modal (Never Cut Off - Fixed Header & Footer with Scrollable Body) ─── */}
+      {/* ─── Staff Create / Edit Modal (100% Fully Visible - Pinned Header & Footer with Scrollable Body) ─── */}
       {showManageModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-2xl w-full my-auto max-h-[92vh] flex flex-col text-slate-800 shadow-2xl overflow-hidden relative animate-fadeIn">
-            {/* Pinned Modal Header (Always 100% visible) */}
-            <div className="sticky top-0 z-10 flex items-start justify-between p-4 sm:p-6 pb-3 sm:pb-4 border-b border-slate-100 flex-shrink-0 bg-white">
-              <div className="pr-2">
-                <h3 className="text-sm sm:text-base font-black text-slate-900">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-2xl w-full max-h-[92dvh] sm:max-h-[88vh] flex flex-col text-slate-800 shadow-2xl overflow-hidden relative animate-fadeIn">
+            {/* Pinned Modal Header (Always 100% visible, never scrolled off) */}
+            <div className="flex items-start justify-between p-3.5 sm:p-5 border-b border-slate-100 flex-shrink-0 bg-white select-none">
+              <div className="pr-2 min-w-0">
+                <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
                   {editingOffer ? 'Edit Monthly Offer' : 'Create New Monthly Offer'}
                 </h3>
-                <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-tight mt-0.5">
+                <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-snug mt-0.5">
                   Update model discounts, exchange benefits &amp; branch coverage. Updates take effect immediately.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowManageModal(false)}
-                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 transition shrink-0"
+                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition shrink-0 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Scrollable Form Body */}
-            <form id="manageOfferForm" onSubmit={handleSaveOffer} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 text-xs font-medium">
+            <form id="manageOfferForm" onSubmit={handleSaveOffer} className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-6 space-y-3 sm:space-y-4 text-xs font-medium">
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 {/* Brand */}
@@ -1164,11 +1164,11 @@ export default function PublicOffersScreen() {
             </form>
 
             {/* Pinned Modal Footer (Always 100% visible) */}
-            <div className="sticky bottom-0 z-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 p-3.5 sm:p-5 border-t border-slate-100 flex-shrink-0 bg-slate-50/90">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 p-3 sm:p-4 border-t border-slate-100 flex-shrink-0 bg-slate-50">
               <button
                 type="button"
                 onClick={() => setShowManageModal(false)}
-                className="w-full sm:w-auto px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition text-center"
+                className="w-full sm:w-auto px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition text-center text-xs"
               >
                 Cancel
               </button>
@@ -1176,7 +1176,7 @@ export default function PublicOffersScreen() {
                 type="submit"
                 form="manageOfferForm"
                 disabled={savingOffer}
-                className="w-full sm:w-auto px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-slate-900/10 cursor-pointer"
+                className="w-full sm:w-auto px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-slate-900/10 cursor-pointer text-xs"
               >
                 {savingOffer ? (
                   <>

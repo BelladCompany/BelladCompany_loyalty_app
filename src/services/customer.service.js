@@ -318,11 +318,14 @@ class CustomerService {
         vehicleRow = vehRes.rows[0];
       }
 
-      // 4. Record vehicle sales points automatically ONLY IF award_auto_sales_points is true (e.g. from VIN Order Form pull job)
+      // 4. Record vehicle sales points automatically ONLY IF award_auto_sales_points is true AND purchase_date >= 2026-04-01
+      const rawPurchaseDate = vehicle?.purchase_date || vehicle?.dms_invoice_date || null;
+      const isPurchasePriorToProgram = rawPurchaseDate && new Date(rawPurchaseDate) < new Date('2026-04-01');
+
       const explicitOpeningPts = parseInt(opening_points || '0', 10);
       let calculatedSalesPoints = 0;
 
-      if (award_auto_sales_points) {
+      if (award_auto_sales_points && !isPurchasePriorToProgram) {
         if (vehicleRow && vehicleRow.ex_showroom_price) {
           const exRupees = Math.floor(Number(vehicleRow.ex_showroom_price) / 100);
           const totalDiscounts = Number(vehicle.dealer_cash_discount || 0) + Number(vehicle.emps_discount || 0) + Number(vehicle.oem_offers_amount || 0);

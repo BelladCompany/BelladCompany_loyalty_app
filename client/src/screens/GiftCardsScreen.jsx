@@ -127,12 +127,12 @@ export const GiftCardsScreen = ({ user }) => {
         <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
           <div className="flex items-start justify-between gap-1.5">
             <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">Total Money Sent</span>
-            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
               <IndianRupee className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div className="mt-1.5 sm:mt-3">
-            <span className="text-base sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight tabular-nums block break-words">
+            <span className="text-sm sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight tabular-nums block break-words leading-tight">
               ₹{Number(totals.total_amount_inr || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
           </div>
@@ -145,12 +145,12 @@ export const GiftCardsScreen = ({ user }) => {
         <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
           <div className="flex items-start justify-between gap-1.5">
             <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">Total Cards Shared</span>
-            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
               <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div className="mt-1.5 sm:mt-3">
-            <span className="text-base sm:text-2xl font-black text-slate-900 tracking-tight tabular-nums block">
+            <span className="text-sm sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight tabular-nums block leading-tight">
               {totals.total_cards.toLocaleString()}
             </span>
           </div>
@@ -163,12 +163,12 @@ export const GiftCardsScreen = ({ user }) => {
         <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
           <div className="flex items-start justify-between gap-1.5">
             <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">Unclaimed / Active</span>
-            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
               <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div className="mt-1.5 sm:mt-3">
-            <span className="text-base sm:text-2xl font-black text-amber-600 tracking-tight tabular-nums block">
+            <span className="text-sm sm:text-xl md:text-2xl font-black text-amber-600 tracking-tight tabular-nums block leading-tight">
               {totals.total_unclaimed.toLocaleString()}
             </span>
           </div>
@@ -181,12 +181,12 @@ export const GiftCardsScreen = ({ user }) => {
         <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
           <div className="flex items-start justify-between gap-1.5">
             <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider leading-snug">Claimed Cards</span>
-            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
               <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
           <div className="mt-1.5 sm:mt-3">
-            <span className="text-base sm:text-2xl font-black text-blue-600 tracking-tight tabular-nums block">
+            <span className="text-sm sm:text-xl md:text-2xl font-black text-blue-600 tracking-tight tabular-nums block leading-tight">
               {totals.total_claimed.toLocaleString()}
             </span>
           </div>
@@ -330,7 +330,7 @@ export const GiftCardsScreen = ({ user }) => {
                       </div>
                       <div className="min-w-0">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Recipient</span>
-                        <span className="font-semibold text-slate-800 block truncate">{card.receiver_name || 'Shared via WhatsApp'}</span>
+                        <span className="font-semibold text-slate-800 block break-words leading-tight">{card.receiver_name || 'Shared via WhatsApp'}</span>
                         <span className="text-[10px] text-slate-500 block truncate">
                           {card.receiver_phone && card.receiver_phone !== '—' ? `📱 ${card.receiver_phone}` : 'Shared via Claim Link'}
                         </span>
@@ -414,8 +414,8 @@ export const GiftCardsScreen = ({ user }) => {
 
                         {/* Gift Code */}
                         <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
-                          <div className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-mono text-xs px-2 sm:px-2.5 py-1 rounded-lg transition border border-slate-200">
-                            <span>{card.gift_code}</span>
+                          <div className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-mono text-xs px-2 sm:px-2.5 py-1 rounded-lg transition border border-slate-200 whitespace-nowrap">
+                            <span className="whitespace-nowrap font-bold">{card.gift_code}</span>
                             <button
                               type="button"
                               title="Copy Code"
@@ -434,7 +434,7 @@ export const GiftCardsScreen = ({ user }) => {
                         {/* Recipient Details */}
                         <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
                           <div>
-                            <span className="font-semibold text-slate-800 block whitespace-nowrap">
+                            <span className="font-semibold text-slate-800 block break-words max-w-[200px] leading-snug">
                               {card.receiver_name || 'Shared via WhatsApp'}
                             </span>
                             <span className="text-[10px] sm:text-[11px] text-slate-500 block">
