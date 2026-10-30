@@ -1,7 +1,7 @@
 # Multi-Stage Dockerfile for Dealership Loyalty Program (Fullstack + Production)
 
 # Stage 1: Build React Frontend
-FROM node:20-alpine AS client-builder
+FROM node:22-alpine AS client-builder
 WORKDIR /app/client
 
 COPY client/package*.json ./
@@ -15,7 +15,7 @@ ENV VITE_TENANT_ID=$VITE_TENANT_ID
 RUN npm run build
 
 # Stage 2: Production Backend & Fullstack Service
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 # Install backend production dependencies

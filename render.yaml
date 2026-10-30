@@ -8,6 +8,8 @@ services:
     startCommand: node src/db/migrate.js && node src/index.js
     healthCheckPath: /health
     envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
       - key: NODE_ENV
         value: production
       - key: PORT
@@ -24,8 +26,9 @@ services:
         value: https://bellad-company-loyalty.vercel.app
 
 databases:
-  # Managed PostgreSQL Database on Render
+  # Managed PostgreSQL Database on Render (PostgreSQL 16 LTS)
   - name: bellad-loyalty-db
     databaseName: loyalty_db
     user: loyalty_user
     plan: free
+    postgresMajorVersion: "16"
