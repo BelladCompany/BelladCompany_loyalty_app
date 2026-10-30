@@ -6,7 +6,6 @@ import {
   AlertCircle,
   Car,
   Coins,
-  Gift,
   Lock,
   Sparkles,
   Building,
@@ -151,10 +150,8 @@ export const AddReceiptModal = ({
   // Categories configuration (Clean categories without rate percentages)
   const CATEGORIES = [
     { id: 'service', label: 'Service' },
-    { id: 'sale', label: 'Sale' },
     { id: 'bodyshop', label: 'Bodyshop' },
     { id: 'accessories', label: 'Accessories' },
-    { id: 'gift_cards', label: 'Gift Cards' },
   ];
 
   // Calculations: Auto-calculate everything
@@ -387,20 +384,18 @@ export const AddReceiptModal = ({
               </div>
             )}
 
-            {/* 1. Category Selector Buttons (Clean: Service, Sale, Bodyshop, Accessories, Gift Cards) */}
+            {/* 1. Category Selector Buttons (Service, Bodyshop, Accessories) */}
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
                 Operation / Department Category *
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {CATEGORIES.map((cat, idx) => (
+              <div className="grid grid-cols-3 gap-2">
+                {CATEGORIES.map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => setCategory(cat.id)}
                     className={`py-2.5 sm:py-3 px-2 rounded-xl sm:rounded-2xl text-center border font-extrabold text-xs transition-all cursor-pointer ${
-                      idx === 4 ? 'col-span-2 sm:col-span-1' : ''
-                    } ${
                       category === cat.id
                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
                         : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
