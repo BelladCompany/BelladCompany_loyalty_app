@@ -301,6 +301,7 @@ class GiftEngineService {
     const amountPaise = Math.round(numAmount * 100);
 
     const giftCode = this.generateGiftCode('BLD');
+    const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
     const claimToken = this.generateClaimToken();
     const claimTokenHash = this.hashClaimToken(claimToken);
 
@@ -332,14 +333,15 @@ class GiftEngineService {
     // Save pending gift record
     const giftRes = await pool.query(
       `INSERT INTO customer_gifts (
-        gift_code, claim_token_hash, funding_source, sender_customer_id, sender_phone, sender_name,
+        gift_code, pin_code, claim_token_hash, funding_source, sender_customer_id, sender_phone, sender_name,
         amount_inr, points_equivalent, points_deducted, razorpay_order_id, payment_status, claim_status,
         expires_at, card_theme, custom_message, tenant_id
       )
-      VALUES ($1, $2, 'razorpay', $3, $4, $5, $6, $7, 0, $8, 'pending', 'unclaimed', $9, $10, $11, $12)
+      VALUES ($1, $2, $3, 'razorpay', $4, $5, $6, $7, $8, 0, $9, 'pending', 'unclaimed', $10, $11, $12, $13)
       RETURNING *;`,
       [
         giftCode,
+        pinCode,
         claimTokenHash,
         sender_customer_id || null,
         cleanSenderPhone,
@@ -355,15 +357,21 @@ class GiftEngineService {
     );
     const gift = giftRes.rows[0];
 
+    const vpa = process.env.RAZORPAY_UPI_VPA || 'belladandcompany@icici';
+    const upiUrl = `upi://pay?pa=${vpa}&pn=${encodeURIComponent('Bellad & Company')}&am=${numAmount.toFixed(2)}&cu=INR&tn=${encodeURIComponent('Gift Card ' + giftCode)}`;
+
     return {
       gift_id: gift.gift_id,
       gift_code: gift.gift_code,
+      pin_code: pinCode,
       claim_token: claimToken,
       razorpay_order_id: razorpayOrderId,
       amount_inr: numAmount,
       points_equivalent: pointsEquivalent,
       currency: 'INR',
       key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock_mode',
+      upi_vpa: vpa,
+      upi_url: upiUrl,
       expires_at: gift.expires_at,
     };
   }
@@ -413,20 +421,51 @@ class GiftEngineService {
     }
 
     const gift = updateRes.rows[0];
+    const pin = gift.pin_code || '4821';
+    const amountPaise = Math.round(Number(gift.amount_inr) * 100);
+
+    // Also activate in gift_cards registry so recipient can claim via Code + PIN in portal
+    await pool.query(
+      `INSERT INTO gift_cards (
+        card_number, pin_code, initial_amount_paise, balance_amount_paise, currency,
+        sender_name, sender_phone, recipient_name, custom_message, card_theme,
+        status, expires_at, tenant_id
+      )
+      VALUES ($1, $2, $3, $4, 'INR', $5, $6, 'Gift Recipient', $7, $8, 'active', $9, $10)
+      ON CONFLICT (card_number) DO UPDATE
+      SET pin_code = EXCLUDED.pin_code,
+          balance_amount_paise = EXCLUDED.balance_amount_paise,
+          status = 'active';`,
+      [
+        gift.gift_code,
+        pin,
+        amountPaise,
+        amountPaise,
+        gift.sender_name || 'Generous Friend',
+        gift.sender_phone,
+        gift.custom_message,
+        gift.card_theme,
+        gift.expires_at,
+        tenant_id,
+      ]
+    );
 
     const shareUrl = `${process.env.APP_BASE_URL || 'http://localhost:5173'}/gift/${claim_token || 'active'}`;
     const whatsappText = encodeURIComponent(
-      `🎁 *You received a ₹${Number(gift.amount_inr).toLocaleString('en-IN')} Gift from ${gift.sender_name || 'a friend'}!*\n\n` +
+      `🎁 *You received a ₹${Number(gift.amount_inr).toLocaleString('en-IN')} Bellad & Co Gift Card from ${gift.sender_name || 'a friend'}!*\n\n` +
       `"${gift.custom_message}"\n\n` +
-      `Use it to get points towards vehicle service, accessories, or your first purchase at Bellad & Company.\n\n` +
-      `👉 *Claim your gift here:* ${shareUrl}\n\n` +
-      `*(Valid for new customers who have not previously purchased a vehicle. Terms apply).*`
+      `💳 *Card Code:* ${gift.gift_code}\n` +
+      `🔐 *Security PIN:* ${pin}\n` +
+      `💰 *Value:* ₹${Number(gift.amount_inr).toLocaleString('en-IN')} (+${Number(gift.points_equivalent).toLocaleString('en-IN')} PTS)\n\n` +
+      `👉 *Claim your gift in 1 tap here:* ${shareUrl}\n\n` +
+      `*(Claim directly with the link above, or paste the Card Code & PIN in your Bellad Customer Portal to add points instantly!)*`
     );
 
     return {
       success: true,
       gift_id: gift.gift_id,
       gift_code: gift.gift_code,
+      pin_code: pin,
       amount_inr: Number(gift.amount_inr),
       points_equivalent: gift.points_equivalent,
       payment_status: 'paid',

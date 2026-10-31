@@ -212,6 +212,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [sendGiftModalOpen, setSendGiftModalOpen] = useState(false);
+  const [selectedGiftAmount, setSelectedGiftAmount] = useState(1000);
 
   // Gift Cards State
   const [myGiftCards, setMyGiftCards] = useState([]);
@@ -835,69 +836,83 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <span className="text-[11px] font-black uppercase tracking-wider text-amber-800 font-mono block">
-                      Loyalty Value Available to Send as Gifts
+                      Buy &amp; Share Gift Cards (Powered by Razorpay UPI)
                     </span>
                     <div className="flex flex-wrap items-baseline gap-2 mt-1">
-                      <span className="text-3xl sm:text-4xl font-black font-mono text-slate-900">
-                        {Number(currentBalance).toLocaleString('en-IN')}
+                      <span className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
+                        Instant e-Gift Passes
                       </span>
-                      <span className="text-sm font-bold text-amber-700 font-mono">PTS</span>
-                      <span className="text-sm font-bold text-slate-600">
-                        (≈ ₹{cashValue} Cash Value)
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                        Scan QR &amp; Pay
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      You can create instant e-gift cards for friends &amp; family directly from your loyalty points without paying cash! (4 PTS = ₹1).
+                      Select price, scan the Razorpay UPI QR code from Google Pay, PhonePe, or Paytm, and instantly share the gift voucher on WhatsApp (Amazon style)!
                     </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => setSendGiftModalOpen(true)}
+                    onClick={() => {
+                      setSelectedGiftAmount(1000);
+                      setSendGiftModalOpen(true);
+                    }}
                     className="px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs transition shadow-md shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer shrink-0"
                   >
                     <Gift className="w-4 h-4" />
-                    <span>Create &amp; Send Gift Voucher</span>
+                    <span>Buy &amp; Send Gift Pass</span>
                   </button>
                 </div>
 
-                {/* Quick Points Preset Tiers */}
+                {/* Quick Preset Price Tiers */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t border-amber-200/60">
                   <button
                     type="button"
-                    onClick={() => setSendGiftModalOpen(true)}
+                    onClick={() => {
+                      setSelectedGiftAmount(250);
+                      setSendGiftModalOpen(true);
+                    }}
                     className="p-3 rounded-2xl bg-white border border-amber-200 hover:border-amber-400 text-left transition hover:shadow-xs cursor-pointer"
                   >
-                    <span className="text-[10px] font-bold text-amber-700 block font-mono">1,000 PTS</span>
-                    <span className="text-xs font-black text-slate-900 block mt-0.5">₹250 Gift Voucher</span>
-                    <span className="text-[10px] text-slate-400">Tap to create</span>
+                    <span className="text-[10px] font-bold text-emerald-700 block font-mono">+1,000 PTS</span>
+                    <span className="text-xs font-black text-slate-900 block mt-0.5">₹250 Gift Pass</span>
+                    <span className="text-[10px] text-slate-400">Scan to pay &amp; share</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSendGiftModalOpen(true)}
+                    onClick={() => {
+                      setSelectedGiftAmount(500);
+                      setSendGiftModalOpen(true);
+                    }}
                     className="p-3 rounded-2xl bg-white border border-amber-200 hover:border-amber-400 text-left transition hover:shadow-xs cursor-pointer"
                   >
-                    <span className="text-[10px] font-bold text-amber-700 block font-mono">2,000 PTS</span>
-                    <span className="text-xs font-black text-slate-900 block mt-0.5">₹500 Gift Voucher</span>
-                    <span className="text-[10px] text-slate-400">Tap to create</span>
+                    <span className="text-[10px] font-bold text-emerald-700 block font-mono">+2,000 PTS</span>
+                    <span className="text-xs font-black text-slate-900 block mt-0.5">₹500 Gift Pass</span>
+                    <span className="text-[10px] text-slate-400">Scan to pay &amp; share</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSendGiftModalOpen(true)}
+                    onClick={() => {
+                      setSelectedGiftAmount(1000);
+                      setSendGiftModalOpen(true);
+                    }}
                     className="p-3 rounded-2xl bg-white border border-amber-200 hover:border-amber-400 text-left transition hover:shadow-xs cursor-pointer"
                   >
-                    <span className="text-[10px] font-bold text-amber-700 block font-mono">4,000 PTS</span>
-                    <span className="text-xs font-black text-slate-900 block mt-0.5">₹1,000 Gift Voucher</span>
-                    <span className="text-[10px] text-slate-400">Tap to create</span>
+                    <span className="text-[10px] font-bold text-emerald-700 block font-mono">+4,000 PTS</span>
+                    <span className="text-xs font-black text-slate-900 block mt-0.5">₹1,000 Gift Pass</span>
+                    <span className="text-[10px] text-slate-400">Scan to pay &amp; share</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSendGiftModalOpen(true)}
+                    onClick={() => {
+                      setSelectedGiftAmount(2000);
+                      setSendGiftModalOpen(true);
+                    }}
                     className="p-3 rounded-2xl bg-white border border-amber-200 hover:border-amber-400 text-left transition hover:shadow-xs cursor-pointer"
                   >
-                    <span className="text-[10px] font-bold text-amber-700 block font-mono">Custom Amount</span>
-                    <span className="text-xs font-black text-slate-900 block mt-0.5">Up to ₹{cashValue}</span>
-                    <span className="text-[10px] text-slate-400">Any multiple of 4 pts</span>
+                    <span className="text-[10px] font-bold text-emerald-700 block font-mono">+8,000 PTS</span>
+                    <span className="text-xs font-black text-slate-900 block mt-0.5">₹2,000 Gift Pass</span>
+                    <span className="text-[10px] text-slate-400">Scan to pay &amp; share</span>
                   </button>
                 </div>
               </div>
@@ -1620,11 +1635,12 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         onClose={() => setSendGiftModalOpen(false)}
         customer={profile || customerInfo}
         currentBalance={currentBalance}
+        initialAmount={selectedGiftAmount}
         onGiftSent={() => {
           loadProfile();
           loadLedger();
           loadGiftCards();
-          setSuccessMsg('Gift card generated and points debited! Share the WhatsApp claim link with your recipient.');
+          setSuccessMsg('Gift card payment confirmed and voucher activated! Share the WhatsApp claim link with your recipient.');
         }}
       />
 
