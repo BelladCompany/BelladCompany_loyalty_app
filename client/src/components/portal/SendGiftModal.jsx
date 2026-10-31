@@ -28,8 +28,8 @@ const PRESET_AMOUNTS = [
 
 const CARD_THEMES = [
   { id: 'celebration', label: 'Celebration', color: 'bg-indigo-600', gradient: 'from-indigo-600 to-purple-600' },
-  { id: 'festival', label: 'Festive Gold', color: 'bg-amber-500', gradient: 'from-amber-500 to-yellow-600' },
-  { id: 'service', label: 'Service Care', color: 'bg-emerald-600', gradient: 'from-emerald-600 to-teal-600' },
+  { id: 'festival', label: 'Festive', color: 'bg-amber-500', gradient: 'from-amber-500 to-yellow-600' },
+  { id: 'service', label: 'Service', color: 'bg-emerald-600', gradient: 'from-emerald-600 to-teal-600' },
   { id: 'special', label: 'VIP Drive', color: 'bg-slate-900', gradient: 'from-slate-900 to-slate-800' },
 ];
 
@@ -414,7 +414,7 @@ export const SendGiftModal = ({
 
             {/* ── MODE A: RAZORPAY SCANNER / CASH PAYMENT ── */}
             {fundingMode === 'razorpay' ? (
-              <form onSubmit={handleProceedToPayment} className="space-y-4">
+              <form onSubmit={handleProceedToPayment} noValidate className="space-y-4">
                 
                 {/* 1. Preset Price Grid (Clean, No Overlapping Badges) */}
                 <div>
@@ -469,7 +469,7 @@ export const SendGiftModal = ({
                     <input
                       type="number"
                       min="1"
-                      step="50"
+                      step="1"
                       max="25000"
                       required
                       value={amountInput}
@@ -504,14 +504,14 @@ export const SendGiftModal = ({
                           key={theme.id}
                           type="button"
                           onClick={() => setCardTheme(theme.id)}
-                          className={`p-2 rounded-xl border flex items-center gap-2 transition cursor-pointer ${
+                          className={`p-2 rounded-xl border flex items-center justify-center sm:justify-start gap-1.5 transition cursor-pointer min-w-0 ${
                             isSelected
                               ? 'border-indigo-600 bg-indigo-50/60 ring-1 ring-indigo-400'
                               : 'border-slate-200 hover:border-slate-300 bg-white'
                           }`}
                         >
-                          <div className={`w-4 h-4 rounded-full ${theme.color} shrink-0`} />
-                          <span className="text-xs font-bold text-slate-800 truncate">
+                          <div className={`w-3.5 h-3.5 rounded-full ${theme.color} shrink-0`} />
+                          <span className="text-xs font-bold text-slate-800 whitespace-nowrap">
                             {theme.label}
                           </span>
                         </button>
@@ -629,7 +629,7 @@ export const SendGiftModal = ({
               </form>
             ) : (
               /* ── MODE B: POINTS BALANCE GIFTING ── */
-              <form onSubmit={handleSendFromPoints} className="space-y-4">
+              <form onSubmit={handleSendFromPoints} noValidate className="space-y-4">
                 
                 {/* Available Balance Box */}
                 <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-950">
@@ -675,7 +675,7 @@ export const SendGiftModal = ({
                   <input
                     type="number"
                     min="4"
-                    step="4"
+                    step="1"
                     max={currentBalance > 0 ? currentBalance : undefined}
                     required
                     value={pointsInput}
