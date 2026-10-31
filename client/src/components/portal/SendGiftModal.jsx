@@ -143,7 +143,7 @@ export const SendGiftModal = ({
         card_theme: cardTheme,
       });
 
-      const data = res.data;
+      const data = res.data || res;
       setOrderData(data);
       setCountdown(600);
       setCurrentStep('scanner');
@@ -168,14 +168,14 @@ export const SendGiftModal = ({
       // 1. Create order
       const res = await ApiService.createGiftFromRazorpay({
         sender_customer_id: customer?.customer_id || customer?.id,
-        sender_phone: senderPhone || customer?.phone || '9999999999',
+        sender_phone: senderPhone || customer?.phone || customer?.phones?.[0] || '9999999999',
         sender_name: senderName || 'Generous Friend',
         amount_inr: testAmount,
         custom_message: customMessage,
         card_theme: cardTheme,
       });
 
-      const order = res.data;
+      const order = res.data || res;
       setOrderData(order);
 
       // 2. Immediately verify payment with simulated bypass
@@ -192,10 +192,17 @@ export const SendGiftModal = ({
         claim_token: order.claim_token,
         claim_url: giftResult.claim_url || `${window.location.origin}/gift/${order.claim_token}`,
         pin_code: giftResult.pin_code || order.pin_code || '4821',
+        whatsapp_share_url: giftResult.whatsapp_share_url,
       };
 
       setCreatedGift(finalGift);
       setCurrentStep('success');
+
+      // Auto-open WhatsApp link in a new tab/app immediately
+      if (finalGift.whatsapp_share_url) {
+        window.open(finalGift.whatsapp_share_url, '_blank', 'noopener,noreferrer');
+      }
+
       if (onGiftSent) onGiftSent(finalGift);
     } catch (err) {
       setErrorMessage(err.message || 'Failed to generate test gift card. Please try again.');
@@ -230,10 +237,16 @@ export const SendGiftModal = ({
         claim_token: orderData.claim_token,
         claim_url: giftResult.claim_url || `${window.location.origin}/gift/${orderData.claim_token}`,
         pin_code: giftResult.pin_code || orderData.pin_code || '4821',
+        whatsapp_share_url: giftResult.whatsapp_share_url,
       };
 
       setCreatedGift(finalGift);
       setCurrentStep('success');
+
+      // Auto-open WhatsApp link in a new tab/app immediately
+      if (finalGift.whatsapp_share_url) {
+        window.open(finalGift.whatsapp_share_url, '_blank', 'noopener,noreferrer');
+      }
 
       if (onGiftSent) onGiftSent(finalGift);
     } catch (err) {
@@ -267,16 +280,22 @@ export const SendGiftModal = ({
     try {
       const res = await ApiService.createGiftFromPoints({
         sender_customer_id: customer?.customer_id || customer?.id,
-        sender_phone: senderPhone || customer?.phone || '9999999999',
+        sender_phone: senderPhone || customer?.phone || customer?.phones?.[0] || '9999999999',
         sender_name: senderName || 'Generous Friend',
         points_to_share: pointsNum,
         custom_message: customMessage,
         card_theme: cardTheme,
       });
 
-      const data = res.data;
+      const data = res.data || res;
       setCreatedGift(data);
       setCurrentStep('success');
+
+      // Auto-open WhatsApp link in a new tab/app immediately
+      if (data.whatsapp_share_url) {
+        window.open(data.whatsapp_share_url, '_blank', 'noopener,noreferrer');
+      }
+
       if (onGiftSent) onGiftSent(data);
     } catch (err) {
       setErrorMessage(err.message || 'Failed to create gift from points.');
