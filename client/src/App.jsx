@@ -18,6 +18,7 @@ import CustomerPortalScreen from './pages/CustomerPortalScreen';
 import PublicOffersScreen from './pages/PublicOffersScreen';
 import PublicGiftClaimScreen from './screens/PublicGiftClaimScreen';
 import CustomerRedemptionsScreen from './screens/CustomerRedemptionsScreen';
+import DirectorCommandCenter from './screens/DirectorCommandCenter';
 import ApiService from './services/api';
 
 class BuilderErrorBoundary extends React.Component {
@@ -149,7 +150,17 @@ export function App() {
 
   const handleLoginSuccess = (loggedInUser) => {
     setUser(loggedInUser);
-    setActiveTab('dashboard');
+    if (
+      loggedInUser?.role === 'director' ||
+      loggedInUser?.role === 'management' ||
+      loggedInUser?.username?.toLowerCase() === 'director' ||
+      loggedInUser?.username?.toLowerCase() === 'agstya' ||
+      loggedInUser?.username?.toLowerCase() === 'agastya'
+    ) {
+      setActiveTab('director_command_center');
+    } else {
+      setActiveTab('dashboard');
+    }
   };
 
   const handleTabChange = (newTab) => {
@@ -251,7 +262,12 @@ export function App() {
         setIsBuilderMode(true);
       }}
     >
-      {activeTab === 'dashboard' || activeTab === 'search' || activeTab === 'redemptions' ? (
+      {activeTab === 'director_command_center' ? (
+        <DirectorCommandCenter
+          user={user}
+          onSwitchToStaffView={() => setActiveTab('dashboard')}
+        />
+      ) : activeTab === 'dashboard' || activeTab === 'search' || activeTab === 'redemptions' ? (
         <CashierDashboard
           user={user}
           activeTab={activeTab}

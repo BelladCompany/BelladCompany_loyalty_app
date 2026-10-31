@@ -99,7 +99,13 @@ export const SidebarLayout = ({
         },
       ]
     : [
-        // Admin / Director role has full access
+        // Executive Director / Admin full hierarchy
+        {
+          group: 'Executive Suite',
+          items: [
+            { id: 'director_command_center', label: 'Director Command Center', icon: Crown },
+          ],
+        },
         {
           group: 'Counter POS',
           items: [
@@ -302,12 +308,41 @@ export const SidebarLayout = ({
               <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 truncate tracking-tight">
-              Dashboard
+              {activeTab === 'director_command_center'
+                ? 'Director Command Center'
+                : activeTab === 'reports'
+                ? 'Reports & Analytics'
+                : activeTab === 'gift_cards'
+                ? 'Gift Card Rewards'
+                : activeTab === 'referrals'
+                ? 'Referral Rewards'
+                : 'Dashboard'}
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {/* Crown Persona Button for Director / Executive Access */}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onTabChange) {
+                    onTabChange(activeTab === 'director_command_center' ? 'dashboard' : 'director_command_center');
+                  }
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-bold text-xs transition-all shadow-xs cursor-pointer ${
+                  activeTab === 'director_command_center'
+                    ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300'
+                    : 'bg-white border border-slate-200 text-slate-800 hover:border-slate-300'
+                }`}
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                <span className="hidden sm:inline">
+                  {activeTab === 'director_command_center' ? 'Director Mode Active' : 'Director Command Center'}
+                </span>
+                <span className="sm:hidden">Director</span>
+              </button>
+            )}
 
             {/* Black Pill CTA (Only visible for Admin/Director on tablet/desktop) */}
             {isAdmin && (
@@ -317,9 +352,9 @@ export const SidebarLayout = ({
                   if (onOpenStudio) onOpenStudio();
                   else window.location.href = '/editor';
                 }}
-                className="hidden sm:inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold shadow-md shadow-slate-900/10 transition-all hover:scale-[1.02]"
+                className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-md shadow-slate-900/10 transition-all hover:scale-[1.02]"
               >
-                <Sparkles className="w-4 h-4 text-amber-400" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 <span>+ Master Brain Editor</span>
               </button>
             )}

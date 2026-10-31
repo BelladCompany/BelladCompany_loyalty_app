@@ -29,6 +29,7 @@ const masterEditorRoutes = require('./routes/masterEditor.routes');
 const platformRulesRoutes = require('../platform/api/rules.routes');
 const giftRoutes = require('./routes/gift.routes');
 const offerRoutes = require('./routes/offer.routes');
+const directorRoutes = require('./routes/director.routes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -131,6 +132,7 @@ app.use('/api/v1/offers', offerRoutes);
 app.use('/api/tenants', tenantRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/tenants', tenantRoutes);
+app.use('/api/director', directorRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/appsheet', appsheetRoutes);
 app.use('/api/corrections', correctionRoutes);

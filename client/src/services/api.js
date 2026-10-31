@@ -459,6 +459,49 @@ export class ApiService {
     return this.request(`/public/balance/${encodeURIComponent(token)}`);
   }
 
+  // ─── Executive Director & Management Persona ──────────────────────────────
+  static async getDirectorOverview(params = {}) {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
+    );
+    const query = new URLSearchParams(cleanParams).toString();
+    return this.request(`/director/overview${query ? `?${query}` : ''}`);
+  }
+
+  static async getDirectorRecords(params = {}) {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
+    );
+    const query = new URLSearchParams(cleanParams).toString();
+    return this.request(`/director/records${query ? `?${query}` : ''}`);
+  }
+
+  static async downloadDirectorRecordsCsv(params = {}) {
+    const token = this.getToken();
+    const cleanParams = Object.fromEntries(
+      Object.entries({ ...params, format: 'csv' }).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
+    );
+    const queryParams = new URLSearchParams(cleanParams).toString();
+    const res = await fetch(`${API_BASE}/director/records?${queryParams}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'x-tenant-id': (import.meta.env.VITE_TENANT_ID || 'bellad_and_company').trim(),
+      },
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to export Director records CSV (HTTP ${res.status})`);
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Bellad_Director_Audit_Records_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
   // Reports
   static async getPointsSummaryReport(params = {}) {
     const query = new URLSearchParams(params).toString();

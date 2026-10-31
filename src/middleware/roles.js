@@ -17,14 +17,14 @@ const requireRole = (allowedRoles = []) => {
     }
 
     // Role inheritance hierarchy:
-    // super_admin > admin > regional_admin > branch_manager > cashier
+    // director / management / super_admin > admin > regional_admin > branch_manager > cashier
     const userRole = (req.user.role || '').toLowerCase();
     const effectiveRoles = [userRole];
 
-    if (userRole === 'super_admin') {
-      effectiveRoles.push('admin', 'regional_admin', 'branch_manager', 'cashier');
+    if (userRole === 'director' || userRole === 'management' || userRole === 'super_admin') {
+      effectiveRoles.push('director', 'management', 'super_admin', 'admin', 'regional_admin', 'branch_manager', 'cashier');
     } else if (userRole === 'admin') {
-      effectiveRoles.push('super_admin', 'regional_admin', 'branch_manager', 'cashier');
+      effectiveRoles.push('director', 'management', 'super_admin', 'regional_admin', 'branch_manager', 'cashier');
     } else if (userRole === 'regional_admin') {
       effectiveRoles.push('branch_manager', 'cashier');
     } else if (userRole === 'branch_manager' || userRole === 'manager') {

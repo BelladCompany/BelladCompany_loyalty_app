@@ -26,8 +26,8 @@ const authenticateToken = (req, res, next) => {
     }
 
     req.user = user;
-    // LOOP-06 & LOOP-20 Fix: Allow X-Tenant-ID header override ONLY for admin/super_admin roles.
-    const isAdmin = ['admin', 'super_admin', 'regional_admin'].includes(user.role);
+    // LOOP-06 & LOOP-20 Fix: Allow X-Tenant-ID header override ONLY for admin/super_admin/director/management roles.
+    const isAdmin = ['admin', 'super_admin', 'regional_admin', 'director', 'management'].includes(user.role);
     const tenantId = (isAdmin && req.headers['x-tenant-id']) 
       ? req.headers['x-tenant-id'] 
       : (user.tenant_id || req.headers['x-tenant-id'] || 'bellad_and_company');
