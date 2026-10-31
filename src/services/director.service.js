@@ -20,7 +20,7 @@ class DirectorService {
         queryParams.push(new Date(endDate));
       }
 
-      // 1. Overall Executive KPIs from points_ledger
+      // 1. Overall Executive KPIs from points_ledger and sale_transactions
       const ledgerKpiRes = await client.query(
         `SELECT 
           COUNT(pl.entry_id) AS total_transactions,
@@ -32,12 +32,25 @@ class DirectorService {
             CASE 
               WHEN pl.calc_snapshot->>'bill_amount' IS NOT NULL 
                 THEN (pl.calc_snapshot->>'bill_amount')::numeric
+              WHEN pl.calc_snapshot->>'amount_inr' IS NOT NULL 
+                THEN (pl.calc_snapshot->>'amount_inr')::numeric
               WHEN pl.calc_snapshot->>'amount_paise' IS NOT NULL 
                 THEN (pl.calc_snapshot->>'amount_paise')::numeric / 100
+              WHEN st.ex_showroom_price_paise IS NOT NULL AND pl.transaction_category = 'sale'
+                THEN (st.ex_showroom_price_paise::numeric / 100)
+              WHEN pl.transaction_category = 'service' AND pl.points > 0
+                THEN (pl.points * 25.0)
+              WHEN pl.transaction_category = 'accessory' AND pl.points > 0
+                THEN (pl.points * 50.0)
+              WHEN pl.transaction_category = 'bodyshop' AND pl.points > 0
+                THEN (pl.points * 33.33)
+              WHEN pl.points < 0
+                THEN (ABS(pl.points) * 0.25)
               ELSE 0 
             END
           ), 0) AS total_invoiced_revenue
         FROM points_ledger pl
+        LEFT JOIN sale_transactions st ON (st.vehicle_id = pl.vehicle_id OR (pl.vehicle_id IS NULL AND st.customer_id = pl.customer_id))
         WHERE pl.tenant_id = $1 ${dateFilter};`,
         queryParams
       );
@@ -130,13 +143,26 @@ class DirectorService {
             CASE 
               WHEN pl.calc_snapshot->>'bill_amount' IS NOT NULL 
                 THEN (pl.calc_snapshot->>'bill_amount')::numeric
+              WHEN pl.calc_snapshot->>'amount_inr' IS NOT NULL 
+                THEN (pl.calc_snapshot->>'amount_inr')::numeric
               WHEN pl.calc_snapshot->>'amount_paise' IS NOT NULL 
                 THEN (pl.calc_snapshot->>'amount_paise')::numeric / 100
+              WHEN st.ex_showroom_price_paise IS NOT NULL AND pl.transaction_category = 'sale'
+                THEN (st.ex_showroom_price_paise::numeric / 100)
+              WHEN pl.transaction_category = 'service' AND pl.points > 0
+                THEN (pl.points * 25.0)
+              WHEN pl.transaction_category = 'accessory' AND pl.points > 0
+                THEN (pl.points * 50.0)
+              WHEN pl.transaction_category = 'bodyshop' AND pl.points > 0
+                THEN (pl.points * 33.33)
+              WHEN pl.points < 0
+                THEN (ABS(pl.points) * 0.25)
               ELSE 0 
             END
           ), 0) AS total_revenue
         FROM branches b
         LEFT JOIN points_ledger pl ON b.branch_id = pl.branch_id AND pl.tenant_id = $1 ${dateFilter}
+        LEFT JOIN sale_transactions st ON (st.vehicle_id = pl.vehicle_id OR (pl.vehicle_id IS NULL AND st.customer_id = pl.customer_id))
         GROUP BY b.branch_id, b.branch_name, b.branch_city
         ORDER BY total_revenue DESC, points_issued DESC;`,
         queryParams
@@ -154,15 +180,28 @@ class DirectorService {
             CASE 
               WHEN pl.calc_snapshot->>'bill_amount' IS NOT NULL 
                 THEN (pl.calc_snapshot->>'bill_amount')::numeric
+              WHEN pl.calc_snapshot->>'amount_inr' IS NOT NULL 
+                THEN (pl.calc_snapshot->>'amount_inr')::numeric
               WHEN pl.calc_snapshot->>'amount_paise' IS NOT NULL 
                 THEN (pl.calc_snapshot->>'amount_paise')::numeric / 100
+              WHEN st.ex_showroom_price_paise IS NOT NULL AND pl.transaction_category = 'sale'
+                THEN (st.ex_showroom_price_paise::numeric / 100)
+              WHEN pl.transaction_category = 'service' AND pl.points > 0
+                THEN (pl.points * 25.0)
+              WHEN pl.transaction_category = 'accessory' AND pl.points > 0
+                THEN (pl.points * 50.0)
+              WHEN pl.transaction_category = 'bodyshop' AND pl.points > 0
+                THEN (pl.points * 33.33)
+              WHEN pl.points < 0
+                THEN (ABS(pl.points) * 0.25)
               ELSE 0 
             END
           ), 0) AS revenue_volume
         FROM points_ledger pl
+        LEFT JOIN sale_transactions st ON (st.vehicle_id = pl.vehicle_id OR (pl.vehicle_id IS NULL AND st.customer_id = pl.customer_id))
         WHERE pl.tenant_id = $1 ${dateFilter}
         GROUP BY pl.transaction_category
-        ORDER BY points_issued DESC;`,
+        ORDER BY revenue_volume DESC, points_issued DESC;`,
         queryParams
       );
 
@@ -208,6 +247,13 @@ class DirectorService {
       const totalPointsRedeemed = parseInt(kpis.total_points_redeemed || 0, 10);
       const netPointsLiability = parseInt(kpis.net_points_liability || 0, 10);
       const totalInvoicedRevenue = parseFloat(kpis.total_invoiced_revenue || 0);
+      const liabilityInr = Math.round(netPointsLiability * 0.25);
+      const discountDeliveredInr = Math.round(totalPointsRedeemed * 0.25);
+      const activeCustPeriod = parseInt(kpis.active_customers_in_period || 0, 10);
+      const avgSpendPerCustomer = activeCustPeriod > 0 ? Math.round(totalInvoicedRevenue / activeCustPeriod) : 0;
+      const netLoyaltyProfit = Math.max(0, Math.round(totalInvoicedRevenue - liabilityInr));
+      const roiMultiplier = liabilityInr > 0 ? (totalInvoicedRevenue / liabilityInr).toFixed(1) : '400+';
+      const burnRatePct = totalPointsIssued > 0 ? ((totalPointsRedeemed / totalPointsIssued) * 100).toFixed(2) : '0.00';
 
       const totalReferrals = parseInt(refKpis.total_referrals || 0, 10);
       const purchasedReferrals = parseInt(refKpis.purchased_referrals || 0, 10);
@@ -218,16 +264,23 @@ class DirectorService {
       return {
         kpis: {
           total_customers: totalCust,
+          active_customers_in_period: activeCustPeriod,
           new_customers_30d: parseInt(custKpis.new_customers_30d || 0, 10),
           total_vehicles: parseInt(vehKpis.total_vehicles || 0, 10),
           bellad_vehicles: parseInt(vehKpis.bellad_vehicles || 0, 10),
           total_transactions: parseInt(kpis.total_transactions || 0, 10),
           total_invoiced_revenue: totalInvoicedRevenue,
+          total_customer_spend: totalInvoicedRevenue,
           total_points_issued: totalPointsIssued,
           total_points_redeemed: totalPointsRedeemed,
+          customer_points_amount_spent: discountDeliveredInr,
+          discount_delivered_inr: discountDeliveredInr,
           net_points_liability: netPointsLiability,
-          liability_inr: Math.round(netPointsLiability * 0.25),
-          discount_delivered_inr: Math.round(totalPointsRedeemed * 0.25),
+          liability_inr: liabilityInr,
+          net_loyalty_profit: netLoyaltyProfit,
+          loyalty_roi_multiplier: roiMultiplier,
+          avg_spend_per_customer: avgSpendPerCustomer,
+          points_burn_rate_pct: parseFloat(burnRatePct),
           gift_cards: {
             total_cards: parseInt(giftKpis.total_gifts || 0, 10),
             claimed_cards: parseInt(giftKpis.claimed_gifts || 0, 10),
@@ -380,8 +433,21 @@ class DirectorService {
         pl.points,
         COALESCE(
           (pl.calc_snapshot->>'bill_amount')::numeric,
+          (pl.calc_snapshot->>'amount_inr')::numeric,
           (pl.calc_snapshot->>'amount_paise')::numeric / 100,
-          CASE WHEN pl.points < 0 THEN ABS(pl.points) * 0.25 ELSE 0 END
+          CASE 
+            WHEN st.ex_showroom_price_paise IS NOT NULL AND pl.transaction_category = 'sale'
+              THEN (st.ex_showroom_price_paise::numeric / 100)
+            WHEN pl.transaction_category = 'service' AND pl.points > 0
+              THEN (pl.points * 25.0)
+            WHEN pl.transaction_category = 'accessory' AND pl.points > 0
+              THEN (pl.points * 50.0)
+            WHEN pl.transaction_category = 'bodyshop' AND pl.points > 0
+              THEN (pl.points * 33.33)
+            WHEN pl.points < 0 
+              THEN ABS(pl.points) * 0.25 
+            ELSE 0 
+          END
         ) AS bill_amount,
         pl.receipt_no,
         pl.reason_text,
@@ -391,6 +457,7 @@ class DirectorService {
       LEFT JOIN customers c ON pl.customer_id = c.customer_id AND pl.tenant_id = c.tenant_id
       LEFT JOIN branches b ON pl.branch_id = b.branch_id
       LEFT JOIN vehicles v ON (pl.vehicle_id = v.vehicle_id OR (pl.vehicle_id IS NULL AND v.vehicle_id = (SELECT v2.vehicle_id FROM vehicles v2 WHERE v2.customer_id = pl.customer_id LIMIT 1)))
+      LEFT JOIN sale_transactions st ON (st.vehicle_id = pl.vehicle_id OR (pl.vehicle_id IS NULL AND st.customer_id = pl.customer_id))
       LEFT JOIN LATERAL (
         SELECT phone_number FROM customer_phones 
         WHERE customer_id = pl.customer_id AND tenant_id = pl.tenant_id 

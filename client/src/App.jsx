@@ -77,7 +77,19 @@ class BuilderErrorBoundary extends React.Component {
 
 export function App() {
   const [user, setUser] = useState(ApiService.getUser());
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    const u = ApiService.getUser();
+    if (
+      u?.role === 'director' ||
+      u?.role === 'management' ||
+      u?.username?.toLowerCase() === 'director' ||
+      u?.username?.toLowerCase() === 'agstya' ||
+      u?.username?.toLowerCase() === 'agastya'
+    ) {
+      return 'director_command_center';
+    }
+    return 'dashboard';
+  });
   const [searchResetNonce, setSearchResetNonce] = useState(0);
 
   // Check public paths & portal path
@@ -104,6 +116,16 @@ export function App() {
           if (res.data?.user) {
             setUser(res.data.user);
             ApiService.setUser(res.data.user);
+            const u = res.data.user;
+            if (
+              u.role === 'director' ||
+              u.role === 'management' ||
+              u.username?.toLowerCase() === 'director' ||
+              u.username?.toLowerCase() === 'agstya' ||
+              u.username?.toLowerCase() === 'agastya'
+            ) {
+              setActiveTab((prev) => (prev === 'dashboard' ? 'director_command_center' : prev));
+            }
           }
         })
         .catch(() => {

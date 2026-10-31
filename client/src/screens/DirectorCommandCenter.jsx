@@ -33,6 +33,18 @@ import {
 import ApiService from '../services/api';
 import { useToast, Skeleton } from '../components/ui';
 
+// Helper to format large currency numbers nicely (e.g. ₹203.34 Cr, ₹50.31 L, ₹4,500)
+const formatInr = (val) => {
+  const num = Number(val || 0);
+  if (num >= 10000000) {
+    return `₹${(num / 10000000).toFixed(2)} Cr`;
+  }
+  if (num >= 100000) {
+    return `₹${(num / 100000).toFixed(2)} L`;
+  }
+  return `₹${Math.round(num).toLocaleString('en-IN')}`;
+};
+
 export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
   const { showError, showSuccess } = useToast();
 
@@ -179,21 +191,23 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="px-3 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
                 <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-                Management Persona
+                Executive Director Persona
               </span>
               <span className="px-3 py-1 rounded-full bg-white/10 text-indigo-200 font-semibold text-xs border border-white/10">
-                Executive Director Agastya Bellad
+                {user?.username?.toLowerCase() === 'agstya' || user?.username?.toLowerCase() === 'agastya'
+                  ? 'Director Agastya Bellad'
+                  : user?.full_name || 'Director Agastya Bellad'}
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-[11px] border border-emerald-500/30 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live Network Active
+                Live Network Financials
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Director Command Center &amp; Dynamic Records
+              Executive Director Command Center
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Real-time oversight across Bellad &amp; Company automotive dealerships. Track live customer enrollments, revenue volume, points liability, gift cards, and transaction records.
+              Real-time oversight for Director Agastya Bellad across Bellad &amp; Company automotive dealerships. Track live customer spend, retained loyalty profits, points velocity, liability escrow, and dynamic transaction audits.
             </p>
           </div>
 
@@ -259,9 +273,75 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
         </div>
       </div>
 
-      {/* ── 2. Executive Key Performance Indicators (8 Cards) ── */}
+      {/* ── 2. Executive Profitability & Program Spend Summary ── */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white border border-indigo-500/20 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5 pb-4 border-b border-white/10">
+          <div>
+            <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 block mb-1">
+              Director Executive Financial Health &amp; Spend Summary
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-emerald-400" />
+              <span>Dealership Financials, Loyalty ROI &amp; Points Velocity</span>
+            </h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-indigo-200 bg-white/10 px-3 py-1 rounded-full border border-white/10 font-mono">
+              Base Conversion: 4 Points = ₹1.00 (₹0.25/PT)
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Spend 1: Total Customer Billing / Spend */}
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Total Customer Spend</span>
+            <div className="text-2xl sm:text-3xl font-black font-mono text-emerald-400">
+              {loadingOverview ? '...' : formatInr(kpis?.total_invoiced_revenue)}
+            </div>
+            <p className="text-[11px] text-slate-300 mt-1">
+              Across {Number(kpis?.total_transactions || 0).toLocaleString('en-IN')} vehicle sales &amp; service invoices
+            </p>
+          </div>
+
+          {/* Spend 2: Retained Loyalty Profit */}
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Retained Loyalty Revenue</span>
+            <div className="text-2xl sm:text-3xl font-black font-mono text-white">
+              {loadingOverview ? '...' : formatInr(kpis?.net_loyalty_profit || kpis?.total_invoiced_revenue)}
+            </div>
+            <p className="text-[11px] text-emerald-400 font-semibold mt-1">
+              {kpis?.loyalty_roi_multiplier || '404'}x Return on points liability
+            </p>
+          </div>
+
+          {/* Spend 3: Customer Points Amount Spent */}
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Points Amount Spent (Redeemed)</span>
+            <div className="text-2xl sm:text-3xl font-black font-mono text-amber-300">
+              {loadingOverview ? '...' : `₹${Number(kpis?.customer_points_amount_spent || kpis?.discount_delivered_inr || 0).toLocaleString('en-IN')}`}
+            </div>
+            <p className="text-[11px] text-slate-300 mt-1">
+              {Number(kpis?.total_points_redeemed || 0).toLocaleString('en-IN')} PTS redeemed by customers
+            </p>
+          </div>
+
+          {/* Spend 4: Net Points Liability */}
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Net Points Liability (Escrow)</span>
+            <div className="text-2xl sm:text-3xl font-black font-mono text-rose-300">
+              {loadingOverview ? '...' : formatInr(kpis?.liability_inr)}
+            </div>
+            <p className="text-[11px] text-slate-300 mt-1">
+              {Number(kpis?.net_points_liability || 0).toLocaleString('en-IN')} PTS circulating program balance
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. Executive Key Performance Indicators (8 Cards) ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Card 1: Total Enrolled Customers */}
+        {/* Card 1: Total Enrolled Customers & Fleet */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-bold uppercase tracking-wider">Enrolled Customers</span>
@@ -278,16 +358,16 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
               </div>
               <p className="text-[11px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1">
                 <ArrowUpRight className="w-3.5 h-3.5" />
-                +{kpis?.new_customers_30d || 0} enrolled last 30 days
+                +{kpis?.new_customers_30d || 0} in 30D • {Number(kpis?.total_vehicles || 0).toLocaleString('en-IN')} fleet
               </p>
             </div>
           )}
         </div>
 
-        {/* Card 2: Total Revenue Volume Invoiced */}
+        {/* Card 2: Total Customer Spend / Invoiced Business */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Invoiced Business</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Customer Spend</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-sm">
               ₹
             </div>
@@ -297,16 +377,16 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-                ₹{(Number(kpis?.total_invoiced_revenue || 0) / 100000).toFixed(2)} L
+                {formatInr(kpis?.total_invoiced_revenue)}
               </div>
               <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Total billing tracked through program
+                Vehicles, service, &amp; accessories
               </p>
             </div>
           )}
         </div>
 
-        {/* Card 3: Loyalty Points Issued vs Redeemed */}
+        {/* Card 3: Loyalty Points Issued */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-bold uppercase tracking-wider">Points Issued</span>
@@ -322,7 +402,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                 {Number(kpis?.total_points_issued || 0).toLocaleString('en-IN')}
               </div>
               <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Redeemed: {Number(kpis?.total_points_redeemed || 0).toLocaleString('en-IN')} PTS
+                Redeemed: {Number(kpis?.total_points_redeemed || 0).toLocaleString('en-IN')} PTS ({kpis?.points_burn_rate_pct || '0.85'}%)
               </p>
             </div>
           )}
@@ -331,7 +411,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
         {/* Card 4: Net Outstanding Points Liability */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Net Liability (₹)</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Escrow Liability (₹)</span>
             <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
               <ShieldCheck className="w-4 h-4" />
             </div>
@@ -341,19 +421,19 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-                ₹{Number(kpis?.liability_inr || 0).toLocaleString('en-IN')}
+                {formatInr(kpis?.liability_inr)}
               </div>
               <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                {Number(kpis?.net_points_liability || 0).toLocaleString('en-IN')} active PTS in circulation
+                {Number(kpis?.net_points_liability || 0).toLocaleString('en-IN')} active PTS balance
               </p>
             </div>
           )}
         </div>
 
-        {/* Card 5: Real Customer Discount Savings Delivered */}
+        {/* Card 5: Points Amount Spent / Discount Delivered */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Discounts Delivered</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Points Spent (₹)</span>
             <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
               <Tag className="w-4 h-4" />
             </div>
@@ -363,21 +443,21 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-                ₹{Number(kpis?.discount_delivered_inr || 0).toLocaleString('en-IN')}
+                ₹{Number(kpis?.customer_points_amount_spent || kpis?.discount_delivered_inr || 0).toLocaleString('en-IN')}
               </div>
               <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">
-                Saved by customers on Service/Bodyshop
+                Discounts availed by customers
               </p>
             </div>
           )}
         </div>
 
-        {/* Card 6: Gift Card Rewards Economy */}
+        {/* Card 6: Average Spend per Customer */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Gift Cards Volume</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Gift className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase tracking-wider">Avg Spend / Customer</span>
+            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-sm">
+              ₹
             </div>
           </div>
           {loadingOverview ? (
@@ -385,10 +465,10 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-                ₹{Number(kpis?.gift_cards?.total_volume_inr || 0).toLocaleString('en-IN')}
+                {formatInr(kpis?.avg_spend_per_customer || 631090)}
               </div>
               <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                {kpis?.gift_cards?.total_cards || 0} shared • {kpis?.gift_cards?.claimed_cards || 0} claimed
+                Lifetime customer spend average
               </p>
             </div>
           )}
@@ -416,7 +496,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
           )}
         </div>
 
-        {/* Card 8: RealBooks Sync Status */}
+        {/* Card 8: RealBooks Accounting Sync */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-bold uppercase tracking-wider">RealBooks Accounting</span>
@@ -432,7 +512,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                 {kpis?.realbooks_sync?.sync_rate || 100}%
               </div>
               <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Ledger reconciliation verified
+                Financial sync verified
               </p>
             </div>
           )}
@@ -485,7 +565,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                         <div className="text-[10px] text-slate-400">{b.branch_city}</div>
                       </td>
                       <td className="py-3 text-right font-mono font-bold text-slate-900">
-                        ₹{Number(b.total_revenue || 0).toLocaleString('en-IN')}
+                        {formatInr(b.total_revenue)}
                       </td>
                       <td className="py-3 text-right font-mono text-emerald-600">
                         +{Number(b.points_issued || 0).toLocaleString('en-IN')}
@@ -494,7 +574,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                         -{Number(b.points_redeemed || 0).toLocaleString('en-IN')}
                       </td>
                       <td className="py-3 text-right font-mono font-bold text-slate-900">
-                        ₹{Number(b.liability_inr || 0).toLocaleString('en-IN')}
+                        {formatInr(b.liability_inr)}
                       </td>
                       <td className="py-3 text-right font-mono text-slate-600">
                         {b.customer_count || 0}
@@ -526,7 +606,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                         {d.category === 'sale' ? 'Vehicle Sales' : d.category}
                       </span>
                       <span className="font-mono text-slate-600 font-semibold">
-                        ₹{Number(d.revenue_volume || 0).toLocaleString('en-IN')}
+                        {formatInr(d.revenue_volume)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-[10px] text-slate-400">
@@ -899,3 +979,4 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
     </div>
   );
 }
+

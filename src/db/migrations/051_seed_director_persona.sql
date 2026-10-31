@@ -13,26 +13,26 @@ BEGIN
 END $$;
 
 -- Seed director user: username 'director' (Password: Admin@123)
--- bcrypt hash for 'Admin@123': $2b$10$WqB3p2mPz7v0l1q0k8u7t.e/XyZ1W2V3U4T5S6R7Q8P9O0N1M2L3K
 INSERT INTO users (username, password_hash, role, branch_id, tenant_id)
 VALUES (
   'director',
-  '$2a$10$b52Dov.q4W6Lw7h/GtzhROs5q0g.V2v8tX8b3K0j6i1w2p4f5q6re',
+  '$2a$10$vKCJPAiahRiL8.0l9XbB6.lKtmRq6NsoNxeos2XV8XURoKGV.3WDK',
   'director',
   1,
   'bellad_and_company'
 )
 ON CONFLICT (username) DO UPDATE 
-SET role = 'director', tenant_id = 'bellad_and_company';
+SET password_hash = EXCLUDED.password_hash, role = 'director', tenant_id = 'bellad_and_company';
 
--- Also ensure username 'agstya' is recognized with role 'director'
+-- Also ensure username 'agstya' is recognized with role 'director' (Password: Admin@123)
 INSERT INTO users (username, password_hash, role, branch_id, tenant_id)
 VALUES (
   'agstya',
-  '$2a$10$b52Dov.q4W6Lw7h/GtzhROs5q0g.V2v8tX8b3K0j6i1w2p4f5q6re',
+  '$2a$10$vKCJPAiahRiL8.0l9XbB6.lKtmRq6NsoNxeos2XV8XURoKGV.3WDK',
   'director',
   1,
   'bellad_and_company'
 )
 ON CONFLICT (username) DO UPDATE 
-SET role = 'director', tenant_id = 'bellad_and_company';
+SET password_hash = EXCLUDED.password_hash, role = 'director', tenant_id = 'bellad_and_company';
+
