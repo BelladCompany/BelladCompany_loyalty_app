@@ -83,8 +83,8 @@ class GiftEngineService {
     }
 
     const amountInr = points / 4;
-    if (amountInr < 100) {
-      throw { statusCode: 400, message: 'Minimum gift value is ₹100 (400 Loyalty Points).' };
+    if (amountInr < 1) {
+      throw { statusCode: 400, message: 'Minimum gift value is ₹1 (4 Loyalty Points).' };
     }
     if (amountInr > 25000) {
       throw { statusCode: 400, message: 'Maximum gift value per transaction is ₹25,000 (100,000 Loyalty Points).' };
@@ -135,12 +135,13 @@ class GiftEngineService {
          WHERE sender_customer_id = $1 AND claim_status = 'unclaimed' AND created_at >= NOW() - INTERVAL '24 hours' AND tenant_id = $2;`,
         [resolvedCustomerId, tenant_id]
       );
-      if (parseInt(rateCheck.rows[0]?.active_gifts || 0, 10) >= 5) {
-        throw { statusCode: 429, message: 'Daily gifting limit reached. You can have at most 5 active unclaimed gifts per day.' };
+      if (parseInt(rateCheck.rows[0]?.active_gifts || 0, 10) >= 50) {
+        throw { statusCode: 429, message: 'Daily gifting limit reached. You can have at most 50 active unclaimed gifts per day.' };
       }
 
-      // 4. Generate unique tokens
+      // 4. Generate unique tokens & 4-digit PIN
       const giftCode = this.generateGiftCode('BLD');
+      const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
       const claimToken = this.generateClaimToken();
       const claimTokenHash = this.hashClaimToken(claimToken);
 
@@ -169,14 +170,15 @@ class GiftEngineService {
       // 6. Create gift record
       const giftRes = await client.query(
         `INSERT INTO customer_gifts (
-          gift_code, claim_token_hash, funding_source, sender_customer_id, sender_phone, sender_name,
+          gift_code, pin_code, claim_token_hash, funding_source, sender_customer_id, sender_phone, sender_name,
           amount_inr, points_equivalent, points_deducted, payment_status, claim_status, expires_at,
           sender_ledger_id, card_theme, custom_message, tenant_id
         )
-        VALUES ($1, $2, 'points', $3, $4, $5, $6, $7, $8, 'paid', 'unclaimed', $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, 'points', $4, $5, $6, $7, $8, $9, 'paid', 'unclaimed', $10, $11, $12, $13, $14)
         RETURNING *;`,
         [
           giftCode,
+          pinCode,
           claimTokenHash,
           resolvedCustomerId,
           cleanSenderPhone,
@@ -193,8 +195,7 @@ class GiftEngineService {
       );
       const gift = giftRes.rows[0];
 
-      // 6b. Generate 4-digit PIN and register in gift_cards registry so recipient can claim via Code + PIN in portal
-      const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
+      // 6b. Register in gift_cards registry so recipient can claim via Code + PIN in portal
       const amountPaise = Math.round(amountInr * 100);
 
       await client.query(

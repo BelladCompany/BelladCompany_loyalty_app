@@ -9,3 +9,4 @@ SET pin_code = gc.pin_code
 FROM gift_cards gc
 WHERE cg.gift_code = gc.card_number
   AND cg.pin_code IS NULL;
+
