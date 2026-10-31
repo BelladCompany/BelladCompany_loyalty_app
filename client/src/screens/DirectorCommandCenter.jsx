@@ -31,7 +31,7 @@ import {
   Check,
 } from 'lucide-react';
 import ApiService from '../services/api';
-import { useToast, Skeleton } from '../components/ui';
+import { useToast } from '../components/ui';
 
 // Helper to format large currency numbers nicely (e.g. ₹203.34 Cr, ₹50.31 L, ₹4,500)
 const formatInr = (val) => {
@@ -350,7 +350,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             </div>
           </div>
           {loadingOverview ? (
-            <Skeleton className="h-8 w-24 rounded-lg" />
+            <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
@@ -373,7 +373,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             </div>
           </div>
           {loadingOverview ? (
-            <Skeleton className="h-8 w-28 rounded-lg" />
+            <div className="h-8 w-28 bg-slate-100 animate-pulse rounded-lg" />
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
@@ -395,7 +395,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             </div>
           </div>
           {loadingOverview ? (
-            <Skeleton className="h-8 w-28 rounded-lg" />
+            <div className="h-8 w-28 bg-slate-100 animate-pulse rounded-lg" />
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
@@ -417,7 +417,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             </div>
           </div>
           {loadingOverview ? (
-            <Skeleton className="h-8 w-28 rounded-lg" />
+            <div className="h-8 w-28 bg-slate-100 animate-pulse rounded-lg" />
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
@@ -439,7 +439,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             </div>
           </div>
           {loadingOverview ? (
-            <Skeleton className="h-8 w-24 rounded-lg" />
+            <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
@@ -461,7 +461,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             </div>
           </div>
           {loadingOverview ? (
-            <Skeleton className="h-8 w-24 rounded-lg" />
+            <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
@@ -483,7 +483,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             </div>
           </div>
           {loadingOverview ? (
-            <Skeleton className="h-8 w-24 rounded-lg" />
+            <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
@@ -505,7 +505,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             </div>
           </div>
           {loadingOverview ? (
-            <Skeleton className="h-8 w-24 rounded-lg" />
+            <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
           ) : (
             <div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-emerald-600">
