@@ -180,8 +180,8 @@ const LedgerRow = memo(({ item }) => {
       <div className="shrink-0 text-right">
         <span
           className={`text-[11px] sm:text-xs font-bold font-mono px-2 sm:px-3 py-0.5 sm:py-1 rounded-full whitespace-nowrap inline-block ${isPositive
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              : 'bg-rose-50 text-rose-700 border border-rose-200'
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+            : 'bg-rose-50 text-rose-700 border border-rose-200'
             }`}
         >
           {formattedPoints} PTS
@@ -581,7 +581,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-xs font-bold text-white self-start sm:self-auto shadow-xs">
                 <IndianRupee className="w-3.5 h-3.5 text-amber-200" />
                 <span>≈ ₹{cashValue} Cash Discount</span>
-                <span className="text-[10px] text-amber-200 font-mono">(4 pts = ₹1)</span>
+                <span className="text-[10px] text-amber-200 font-mono"></span>
               </div>
             </div>
           </div>
@@ -594,8 +594,8 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
             type="button"
             onClick={() => setActiveTab('gift_cards')}
             className={`px-1 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'gift_cards'
-                ? 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-500/20'
-                : 'bg-white border-slate-200/80 text-slate-700 hover:border-amber-300 hover:bg-amber-50/40 shadow-2xs'
+              ? 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-500/20'
+              : 'bg-white border-slate-200/80 text-slate-700 hover:border-amber-300 hover:bg-amber-50/40 shadow-2xs'
               }`}
           >
             <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'gift_cards' ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'
@@ -612,8 +612,8 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
             type="button"
             onClick={() => setActiveTab('referrals')}
             className={`px-1 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'referrals'
-                ? 'bg-indigo-600 text-white border-indigo-700 shadow-md shadow-indigo-600/20'
-                : 'bg-white border-slate-200/80 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 shadow-2xs'
+              ? 'bg-indigo-600 text-white border-indigo-700 shadow-md shadow-indigo-600/20'
+              : 'bg-white border-slate-200/80 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 shadow-2xs'
               }`}
           >
             <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'referrals' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'
@@ -647,8 +647,8 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
             type="button"
             onClick={() => setActiveTab('benefits')}
             className={`px-1 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'benefits'
-                ? 'bg-purple-600 text-white border-purple-700 shadow-md shadow-purple-600/20'
-                : 'bg-white border-slate-200/80 text-slate-700 hover:border-purple-300 hover:bg-purple-50/40 shadow-2xs'
+              ? 'bg-purple-600 text-white border-purple-700 shadow-md shadow-purple-600/20'
+              : 'bg-white border-slate-200/80 text-slate-700 hover:border-purple-300 hover:bg-purple-50/40 shadow-2xs'
               }`}
           >
             <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'benefits' ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-600'
@@ -677,8 +677,8 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                   key={t.id}
                   onClick={() => setActiveTab(t.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${isActive
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
                     }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -998,30 +998,25 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                 </div>
 
                 {/* 2. Ready to Claim Card */}
-                <div className={`p-4 rounded-2xl border flex flex-col justify-between ${
-                  (referralsSummary.ready_to_claim_count || 0) > 0
+                <div className={`p-4 rounded-2xl border flex flex-col justify-between ${(referralsSummary.ready_to_claim_count || 0) > 0
                     ? 'bg-emerald-50 border-emerald-300 shadow-xs ring-2 ring-emerald-500/20'
                     : 'bg-slate-50/80 border-slate-200'
-                }`}>
+                  }`}>
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className={`text-[10px] font-black uppercase tracking-wider ${
-                        (referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-800' : 'text-slate-600'
-                      }`}>
+                      <span className={`text-[10px] font-black uppercase tracking-wider ${(referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-800' : 'text-slate-600'
+                        }`}>
                         Ready to Claim
                       </span>
-                      <Sparkles className={`w-3.5 h-3.5 ${
-                        (referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-600 animate-spin' : 'text-slate-400'
-                      }`} />
+                      <Sparkles className={`w-3.5 h-3.5 ${(referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-600 animate-spin' : 'text-slate-400'
+                        }`} />
                     </div>
-                    <div className={`text-xl sm:text-2xl font-black mt-1 ${
-                      (referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-950' : 'text-slate-900'
-                    }`}>
+                    <div className={`text-xl sm:text-2xl font-black mt-1 ${(referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-950' : 'text-slate-900'
+                      }`}>
                       {(referralsSummary.ready_to_claim_points || 0).toLocaleString()} <span className="text-xs font-bold text-slate-500">PTS</span>
                     </div>
-                    <p className={`text-[11px] font-bold ${
-                      (referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-700' : 'text-slate-500'
-                    }`}>
+                    <p className={`text-[11px] font-bold ${(referralsSummary.ready_to_claim_count || 0) > 0 ? 'text-emerald-700' : 'text-slate-500'
+                      }`}>
                       {referralsSummary.ready_to_claim_count || 0} referral(s) verified &amp; ready
                     </p>
                   </div>
@@ -1136,24 +1131,22 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                     {referralsList.map((ref, idx) => (
                       <div
                         key={idx}
-                        className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                          ref.can_claim
+                        className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${ref.can_claim
                             ? 'bg-gradient-to-r from-emerald-50/90 to-teal-50/90 border-emerald-300 shadow-sm'
                             : ref.is_claimed
-                            ? 'bg-white border-slate-200'
-                            : 'bg-white border-amber-200/80'
-                        }`}
+                              ? 'bg-white border-slate-200'
+                              : 'bg-white border-amber-200/80'
+                          }`}
                       >
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-slate-900 text-sm">
                               {ref.friend_name || 'Friend'}
                             </span>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              ref.role === 'referee'
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ref.role === 'referee'
                                 ? 'bg-purple-100 text-purple-800'
                                 : 'bg-slate-100 text-slate-700'
-                            }`}>
+                              }`}>
                               {ref.role_label || 'Friend Referral'}
                             </span>
                           </div>
@@ -1308,8 +1301,8 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                     <div
                       key={t.tier}
                       className={`rounded-3xl border p-5 sm:p-6 space-y-4 flex flex-col justify-between transition relative ${isCurrent
-                          ? 'border-amber-400 shadow-md bg-amber-50/20 ring-2 ring-amber-400/30'
-                          : 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs'
+                        ? 'border-amber-400 shadow-md bg-amber-50/20 ring-2 ring-amber-400/30'
+                        : 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs'
                         }`}
                     >
                       {isCurrent && (
@@ -1574,10 +1567,10 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                           <span className="text-[11px] text-slate-500">Reason: {req.reason}</span>
                         </div>
                         <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${req.status === 'approved'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : req.status === 'rejected'
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : req.status === 'rejected'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}>
                           {req.status}
                         </span>

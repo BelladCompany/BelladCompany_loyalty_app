@@ -4,15 +4,19 @@ import {
   FileText,
   CheckCircle2,
   AlertCircle,
-  Car,
   Coins,
   Lock,
   Sparkles,
-  Building,
   BadgeCheck,
-  PlusCircle,
 } from 'lucide-react';
 import ApiService from '../../services/api';
+
+// Categories configuration (Clean categories: Service, Bodyshop, Accessories)
+const CATEGORIES = [
+  { id: 'service', label: 'Service' },
+  { id: 'bodyshop', label: 'Bodyshop' },
+  { id: 'accessories', label: 'Accessories' },
+];
 
 /**
  * AddReceiptModal
@@ -20,7 +24,7 @@ import ApiService from '../../services/api';
  * Combined Receipt Entry Modal (Auto Loyalty Points Calculation & Redemption).
  * Cashier enters Bill Amount, Receipt No, Account Ledger No, Category, and Branch.
  * Everything is automatically calculated:
- * - If customer is eligible (Accessories anytime; Service/Sale/Bodyshop after 12 months lock),
+ * - If customer is eligible (Accessories anytime; Service/Bodyshop after 12 months lock),
  *   eligible loyalty points are automatically redeemed for an instant bill discount.
  * - Remaining cash balance automatically earns new loyalty points.
  * - No manual points edit or checkbox toggle required.
@@ -45,7 +49,6 @@ export const AddReceiptModal = ({
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
 
   // Live vehicle eligibility
-  const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [eligibilityData, setEligibilityData] = useState(null);
 
   // Status
@@ -83,20 +86,15 @@ export const AddReceiptModal = ({
     if (!isOpen) return;
 
     if (selectedVehicleId) {
-      setEligibilityLoading(true);
       ApiService.getVehicleRedemptionStatus(selectedVehicleId, category)
         .then((res) => {
           setEligibilityData(res.data || null);
         })
         .catch(() => {
           setEligibilityData(null);
-        })
-        .finally(() => {
-          setEligibilityLoading(false);
         });
     } else {
       setEligibilityData(null);
-      setEligibilityLoading(false);
     }
   }, [isOpen, selectedVehicleId, category]);
 
@@ -146,13 +144,6 @@ export const AddReceiptModal = ({
       isEligible = true;
     }
   }
-
-  // Categories configuration (Clean categories without rate percentages)
-  const CATEGORIES = [
-    { id: 'service', label: 'Service' },
-    { id: 'bodyshop', label: 'Bodyshop' },
-    { id: 'accessories', label: 'Accessories' },
-  ];
 
   // Calculations: Auto-calculate everything
   const numAmount = parseFloat(billAmount || '0') || 0;
