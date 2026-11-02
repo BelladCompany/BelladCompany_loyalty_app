@@ -37,8 +37,18 @@ const env = {
   jwtSecret,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
   defaultTenantId: process.env.DEFAULT_TENANT_ID || 'bellad_and_company',
-  realbooksApiUrl: process.env.REALBOOKS_API_URL || 'https://api.realbooks.in/v1/redemptions',
+  realbooksApiUrl: process.env.REALBOOKS_API_URL || 'https://api.realbooks.in/AMSSERVICE/api',
   realbooksApiKey,
+  realbooks: {
+    mode: process.env.REALBOOKS_MODE || 'test', // 'test' = safe testing sandbox; 'live' = real accounting push
+    baseUrl: process.env.REALBOOKS_BASE_URL || 'https://api.realbooks.in',
+    domain: process.env.REALBOOKS_DOMAIN || 'bellad',
+    accessKey: process.env.REALBOOKS_ACCESS_KEY || realbooksApiKey || 'rb_access_test_key',
+    secretKey: process.env.REALBOOKS_SECRET_KEY || 'rb_secret_test_key',
+    emailId: process.env.REALBOOKS_EMAIL || 'accounts@bellad.in',
+    cid: process.env.REALBOOKS_CID || '1001',
+    segid: process.env.REALBOOKS_SEGID || '1',
+  },
   db: {
     connectionString: process.env.DATABASE_URL,
     host: process.env.DB_HOST || 'localhost',

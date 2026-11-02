@@ -135,6 +135,33 @@ class IntegrationService {
         },
         {
           method: 'POST',
+          path: `${baseUrl}/realbooks/push-ledger`,
+          description: 'Push customer profile to RealBooks as Sundry Debtors ledger (Official RealBooks API /AMSSERVICE/api/ledger/update/ledgerdetails/{cid}/{segid}).',
+          body: {
+            customer_id: 'BAC-613E43F4',
+          },
+        },
+        {
+          method: 'POST',
+          path: `${baseUrl}/realbooks/push-receipt`,
+          description: 'Push receipt transaction to RealBooks: auto-creates Customer Ledger + balanced double-entry Account Voucher (Cash DR + Discount DR = Total CR) (Official RealBooks API /AMSSERVICE/api/accv/v2/vcreate/{cid}/{segid}).',
+          body: {
+            receipt_no: 'REC-2026-0042',
+            customer_id: 'BAC-613E43F4',
+            bill_amount: 1500,
+            discount_amount: 250,
+            points_redeemed: 1000,
+            category: 'service',
+            job_card: 'JC-9941',
+          },
+        },
+        {
+          method: 'GET',
+          path: `${baseUrl}/realbooks/status`,
+          description: 'Check RealBooks connection parameters, safe test mode status, and sync audit stats.',
+        },
+        {
+          method: 'POST',
           path: `${baseUrl}/appsheet/webhook`,
           description: 'Bidirectional AppSheet webhook endpoint for live AppSheet row triggers.',
         },

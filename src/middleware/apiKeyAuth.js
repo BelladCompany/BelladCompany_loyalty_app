@@ -95,7 +95,7 @@ async function authenticateApiKey(req, res, next) {
 
 /**
  * Middleware factory to enforce required scope(s)
- * e.g. requireScope('write'), requireScope('sync'), requireScope('redeem')
+ * Accepts a string (e.g. 'write') or array of accepted scopes (e.g. ['sync', 'write'])
  */
 function requireScope(requiredScope) {
   return (req, res, next) => {
@@ -104,13 +104,15 @@ function requireScope(requiredScope) {
     }
 
     const scopes = req.apiClient.scopes || [];
-    if (scopes.includes('admin') || scopes.includes(requiredScope)) {
+    const required = Array.isArray(requiredScope) ? requiredScope : [requiredScope];
+
+    if (scopes.includes('admin') || required.some((s) => scopes.includes(s))) {
       return next();
     }
 
     return res.status(403).json({
       status: 'fail',
-      error: `Forbidden: API key '${req.apiClient.name}' lacks the required '${requiredScope}' permission scope. Active scopes: [${scopes.join(', ')}]`,
+      error: `Forbidden: API key '${req.apiClient.name}' lacks the required '${required.join(' or ')}' permission scope. Active scopes: [${scopes.join(', ')}]`,
     });
   };
 }
@@ -119,4 +121,3 @@ module.exports = {
   authenticateApiKey,
   requireScope,
 };
-

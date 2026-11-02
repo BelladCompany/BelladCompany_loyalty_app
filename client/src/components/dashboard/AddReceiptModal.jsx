@@ -205,6 +205,7 @@ export const AddReceiptModal = ({
           receiptNo: receiptNo.trim(),
           category,
           branchId: branchId ? parseInt(branchId, 10) : 1,
+          jobCard: notes.trim(),
         });
       } else {
         // Standard Points Earning Flow (NO OTP)
@@ -236,6 +237,7 @@ export const AddReceiptModal = ({
           receiptNo: receiptNo.trim(),
           category,
           branchId: branchId ? parseInt(branchId, 10) : 1,
+          jobCard: notes.trim(),
         });
       }
     } catch (err) {
@@ -258,6 +260,7 @@ export const AddReceiptModal = ({
         points_redeemed: successData.pointsRedeemed,
         category: successData.category,
         branch_id: successData.branchId || branchId || 1,
+        job_card: successData.jobCard || notes.trim() || '',
       });
       setRealbooksSynced(res.data || { voucher_id: 'RB-' + Date.now() });
     } catch (err) {
@@ -391,8 +394,7 @@ export const AddReceiptModal = ({
                       successData.billAmount
                     ).toLocaleString('en-IN')}\nDiscount Applied: ₹${Number(successData.discountAmount).toLocaleString(
                       'en-IN'
-                    )}\nPoints Earned: +${successData.pointsEarned} PTS\nNew Balance: ${
-                      successData.newBalance
+                    )}\nPoints Earned: +${successData.pointsEarned} PTS\nNew Balance: ${successData.newBalance
                     } PTS (≈ ₹${(successData.newBalance * 0.25).toFixed(2)})`
                   )}`}
                   target="_blank"
@@ -418,7 +420,10 @@ export const AddReceiptModal = ({
                   </>
                 ) : realbooksSynced ? (
                   <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-300" /> Pushed to RealBooks ({realbooksSynced.voucher_id || 'Synced'})
+                    <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                    <span>
+                      Pushed to RealBooks {realbooksSynced.mode === 'test' ? '[Test Sandbox]' : ''} ({realbooksSynced.voucher_id || 'Synced'})
+                    </span>
                   </>
                 ) : (
                   <>
@@ -456,11 +461,10 @@ export const AddReceiptModal = ({
                     key={cat.id}
                     type="button"
                     onClick={() => setCategory(cat.id)}
-                    className={`py-3 px-3 rounded-xl border text-xs sm:text-sm font-black transition text-center cursor-pointer ${
-                      category === cat.id
+                    className={`py-3 px-3 rounded-xl border text-xs sm:text-sm font-black transition text-center cursor-pointer ${category === cat.id
                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
+                      }`}
                   >
                     {cat.label}
                   </button>
@@ -522,7 +526,7 @@ export const AddReceiptModal = ({
                     placeholder="Enter total invoice amount e.g. 1500"
                     value={billAmount}
                     onChange={(e) => setBillAmount(e.target.value)}
-                    className="w-full h-13 pl-9 pr-4 text-base sm:text-lg font-black font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                    className="w-full h-13 pl-9 pr-4 py-3 text-base sm:text-sm font-black font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
                   />
                 </div>
               </div>

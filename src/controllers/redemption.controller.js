@@ -142,6 +142,7 @@ class RedemptionController {
         points_redeemed,
         category,
         branch_id,
+        job_card,
       } = req.body;
       const tenantId = req.tenantId || 'bellad_and_company';
 
@@ -153,6 +154,7 @@ class RedemptionController {
         points_redeemed: Number(points_redeemed || 0),
         category: category || 'service',
         branch_id: branch_id || req.user?.branch_id || 1,
+        job_card: job_card || '',
         tenant_id: tenantId,
       });
 

@@ -181,6 +181,107 @@ class IntegrationController {
   }
 
   /**
+   * POST /api/v1/integration/realbooks/push-ledger
+   * Pushes/syncs a customer ledger to RealBooks Sundry Debtors
+   * Uses official RealBooks API /AMSSERVICE/api/ledger/update/ledgerdetails/{cid}/{segid}
+   */
+  static async pushRealBooksLedger(req, res, next) {
+    try {
+      const tenantId = req.tenantId || 'bellad_and_company';
+      const { customer_id } = req.body;
+
+      if (!customer_id) {
+        return res.status(400).json({
+          status: 'fail',
+          error: 'customer_id is required',
+        });
+      }
+
+      const RealBooksService = require('../services/realbooks/realbooks.service');
+      const result = await RealBooksService.pushCustomerLedger({
+        customer_id,
+        tenant_id: tenantId,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: result.message || 'Customer ledger pushed to RealBooks successfully.',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * POST /api/v1/integration/realbooks/push-receipt
+   * Pushes customer ledger & double-entry account voucher to RealBooks
+   * Uses official RealBooks API /AMSSERVICE/api/accv/v2/vcreate/{cid}/{segid}
+   */
+  static async pushRealBooksReceipt(req, res, next) {
+    try {
+      const tenantId = req.tenantId || 'bellad_and_company';
+      const {
+        receipt_no,
+        customer_id,
+        bill_amount,
+        discount_amount,
+        points_redeemed,
+        category,
+        branch_id,
+        job_card,
+      } = req.body;
+
+      if (!customer_id || bill_amount === undefined) {
+        return res.status(400).json({
+          status: 'fail',
+          error: 'customer_id and bill_amount are required',
+        });
+      }
+
+      const RealBooksService = require('../services/realbooks/realbooks.service');
+      const result = await RealBooksService.pushReceiptTransaction({
+        receipt_no,
+        customer_id,
+        bill_amount: Number(bill_amount),
+        discount_amount: Number(discount_amount || 0),
+        points_redeemed: Number(points_redeemed || 0),
+        category: category || 'service',
+        branch_id: branch_id || 1,
+        job_card: job_card || '',
+        tenant_id: tenantId,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: result.message || 'Receipt voucher pushed to RealBooks successfully.',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * GET /api/v1/integration/realbooks/status
+   * RealBooks connection & sync audit status
+   */
+  static async getRealBooksStatus(req, res, next) {
+    try {
+      const tenantId = req.tenantId || 'bellad_and_company';
+      const RealBooksService = require('../services/realbooks/realbooks.service');
+      const result = await RealBooksService.getConnectionStatus(tenantId);
+
+      res.status(200).json({
+        status: 'success',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * POST /api/v1/integration/appsheet/webhook
    */
   static async appsheetWebhook(req, res, next) {
@@ -278,4 +379,3 @@ class IntegrationController {
 }
 
 module.exports = IntegrationController;
-

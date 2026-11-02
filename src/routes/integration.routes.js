@@ -19,8 +19,11 @@ router.post('/transactions/invoice', authenticateApiKey, requireScope('write'), 
 router.post('/transactions/redeem', authenticateApiKey, requireScope('redeem'), IntegrationController.redeemPoints);
 
 // ── RealBooks Accounting Sync Endpoints ──
-router.get('/realbooks/feed', authenticateApiKey, requireScope('sync'), IntegrationController.getRealBooksFeed);
+router.get('/realbooks/feed', authenticateApiKey, requireScope(['sync', 'read']), IntegrationController.getRealBooksFeed);
 router.post('/realbooks/ack', authenticateApiKey, requireScope('sync'), IntegrationController.ackRealBooks);
+router.post('/realbooks/push-ledger', authenticateApiKey, requireScope(['sync', 'write']), IntegrationController.pushRealBooksLedger);
+router.post('/realbooks/push-receipt', authenticateApiKey, requireScope(['sync', 'write']), IntegrationController.pushRealBooksReceipt);
+router.get('/realbooks/status', authenticateApiKey, requireScope(['sync', 'read']), IntegrationController.getRealBooksStatus);
 
 // ── AppSheet Direct Webhook ──
 router.post('/appsheet/webhook', authenticateApiKey, requireScope('write'), IntegrationController.appsheetWebhook);
@@ -31,4 +34,3 @@ router.post('/keys', authenticateApiKey, requireScope('admin'), IntegrationContr
 router.delete('/keys/:id', authenticateApiKey, requireScope('admin'), IntegrationController.revokeKey);
 
 module.exports = router;
-
