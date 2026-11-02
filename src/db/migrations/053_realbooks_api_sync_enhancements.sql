@@ -7,3 +7,4 @@ ALTER TABLE realbooks_sync_log
   ADD COLUMN IF NOT EXISTS response_payload JSONB;
 
 CREATE INDEX IF NOT EXISTS idx_realbooks_sync_log_created_at ON realbooks_sync_log (created_at DESC);
+

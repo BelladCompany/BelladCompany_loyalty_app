@@ -102,6 +102,9 @@ export const AddReceiptModal = ({
 
   if (!isOpen || !customer) return null;
 
+  // Selected vehicle context
+  const selectedVeh = vehicles.find((v) => String(v.id || v.vehicle_id) === String(selectedVehicleId)) || vehicles[0];
+
   // Determine eligibility status
   const isAccessories = category === 'accessories';
   let isEligible = false;
@@ -124,7 +127,6 @@ export const AddReceiptModal = ({
     }
   } else {
     // Client-side fallback check on purchase date
-    const selectedVeh = vehicles.find((v) => String(v.id || v.vehicle_id) === String(selectedVehicleId)) || vehicles[0];
     const rawDate = selectedVeh?.purchase_date || selectedVeh?.dms_invoice_date || customer?.purchase_date || customer?.dms_invoice_date;
 
     if (rawDate) {
@@ -206,6 +208,10 @@ export const AddReceiptModal = ({
           category,
           branchId: branchId ? parseInt(branchId, 10) : 1,
           jobCard: notes.trim(),
+          vehicleId: selectedVehicleId ? parseInt(selectedVehicleId, 10) : null,
+          model: selectedVeh?.model || null,
+          brandName: selectedVeh?.brand_name || null,
+          firmName: selectedVeh?.firm_name || null,
         });
       } else {
         // Standard Points Earning Flow (NO OTP)
@@ -238,6 +244,10 @@ export const AddReceiptModal = ({
           category,
           branchId: branchId ? parseInt(branchId, 10) : 1,
           jobCard: notes.trim(),
+          vehicleId: selectedVehicleId ? parseInt(selectedVehicleId, 10) : null,
+          model: selectedVeh?.model || null,
+          brandName: selectedVeh?.brand_name || null,
+          firmName: selectedVeh?.firm_name || null,
         });
       }
     } catch (err) {
@@ -255,6 +265,10 @@ export const AddReceiptModal = ({
       const res = await ApiService.pushRealbooksSync({
         receipt_no: successData.receiptNo,
         customer_id: customer.customer_id,
+        vehicle_id: successData.vehicleId || (selectedVehicleId ? parseInt(selectedVehicleId, 10) : null),
+        model: successData.model || selectedVeh?.model || null,
+        brand_name: successData.brandName || selectedVeh?.brand_name || null,
+        firm_name: successData.firmName || selectedVeh?.firm_name || null,
         bill_amount: successData.billAmount,
         discount_amount: successData.discountAmount,
         points_redeemed: successData.pointsRedeemed,
@@ -439,6 +453,30 @@ export const AddReceiptModal = ({
                 Done
               </button>
             </div>
+
+            {/* RealBooks Dynamic Model & Segment Routing Info */}
+            {realbooksSynced && (
+              <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="text-indigo-950 font-bold">RealBooks Accounting Segment:</span>
+                  <span className="font-mono text-indigo-800 bg-white px-2 py-0.5 rounded border border-indigo-200 font-bold">
+                    {realbooksSynced.segment_name || `Segment #${realbooksSynced.segid}`}
+                  </span>
+                </div>
+                <div className="text-[11px] font-mono text-indigo-700 font-semibold flex items-center gap-2">
+                  <span>CID: <strong>{realbooksSynced.cid || '6460'}</strong></span>
+                  <span>•</span>
+                  <span>SEGID: <strong>{realbooksSynced.segid || '6476'}</strong></span>
+                  {realbooksSynced.brand && (
+                    <>
+                      <span>•</span>
+                      <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded font-bold">{realbooksSynced.brand}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* ── Main Receipt Form ── */

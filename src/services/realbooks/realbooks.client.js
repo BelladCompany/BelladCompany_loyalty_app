@@ -7,18 +7,19 @@ const env = require('../../config/env');
  * - Mandatory Header: Content-Type: application/json
  * - Mandatory Header: accountName: <domainName>
  * - Supports safe test sandbox mode (default: REALBOOKS_MODE=test) & live production HTTP mode
+ * - Dynamic CID & SEGID routing per Model / Brand / Firm / Branch / Category
  */
 class RealBooksClient {
   constructor() {
     const rb = env.realbooks || {};
     this.mode = rb.mode || 'test';
     this.baseUrl = rb.baseUrl || 'https://api.realbooks.in';
-    this.domain = rb.domain || 'bellad';
+    this.domain = rb.domain || 'bellad group';
     this.accessKey = rb.accessKey || 'rb_access_test_key';
     this.secretKey = rb.secretKey || 'rb_secret_test_key';
     this.emailId = rb.emailId || 'accounts@bellad.in';
-    this.cid = rb.cid || '1001';
-    this.segid = rb.segid || '1';
+    this.cid = rb.cid || '6460';
+    this.segid = rb.segid || '6476';
   }
 
   /**
@@ -35,16 +36,20 @@ class RealBooksClient {
   /**
    * Generic API caller with built-in test sandbox safety
    */
-  async execute(endpoint, payload, actionName = 'Action') {
+  async execute(endpoint, payload, actionName = 'Action', meta = {}) {
     const fullUrl = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
       accountName: this.domain,
     };
 
+    const targetCid = meta.cid || this.cid;
+    const targetSegid = meta.segid || this.segid;
+
     console.log(`\n==================================================`);
     console.log(`📚 [RealBooks API Request] Action: ${actionName} [Mode: ${this.mode.toUpperCase()}]`);
     console.log(`URL: ${fullUrl}`);
+    console.log(`Routing: CID=${targetCid}, SEGID=${targetSegid} (${meta.segment_name || 'Segment'})`);
     console.log(`Headers:`, JSON.stringify(headers));
     console.log(`Payload:`, JSON.stringify(payload, null, 2));
     console.log(`==================================================\n`);
@@ -60,6 +65,9 @@ class RealBooksClient {
         message: `RealBooks ${actionName} simulated successfully in sandbox mode. (Live accounting data unaffected).`,
         realbooks_voucher_id: mockVoucherId,
         realbooks_ledger_id: mockLedgerId,
+        cid: targetCid,
+        segid: targetSegid,
+        segment_name: meta.segment_name,
         status: 'synced',
         synced_at: new Date().toISOString(),
         request_payload: payload,
@@ -67,18 +75,26 @@ class RealBooksClient {
           status: 'success',
           id: mockVoucherId,
           ledgerId: mockLedgerId,
+          cid: targetCid,
+          segid: targetSegid,
           mode: 'test_sandbox',
         },
       };
     }
 
-    // Live mode: Perform real HTTPS request
+    // Live mode: Perform real HTTPS request with timeout
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
       const response = await fetch(fullUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       const json = await response.json().catch(() => ({ status: response.status, text: response.statusText }));
 
@@ -93,6 +109,9 @@ class RealBooksClient {
         message: `RealBooks ${actionName} posted successfully.`,
         realbooks_voucher_id: json.id || json.vid || `RB-LIVE-${Date.now()}`,
         realbooks_ledger_id: json.lid || json.ledgerId,
+        cid: targetCid,
+        segid: targetSegid,
+        segment_name: meta.segment_name,
         status: 'synced',
         synced_at: new Date().toISOString(),
         request_payload: payload,
@@ -104,6 +123,9 @@ class RealBooksClient {
         success: false,
         mode: 'live',
         simulated: false,
+        cid: targetCid,
+        segid: targetSegid,
+        segment_name: meta.segment_name,
         error: err.message,
         status: 'failed',
         synced_at: new Date().toISOString(),
@@ -118,8 +140,10 @@ class RealBooksClient {
    * Documented in API PDF: Section 3 / Page 48-50
    * url: /AMSSERVICE/api/ledger/update/ledgerdetails/{cid}/{segid}
    */
-  async createOrUpdateCustomerLedger(customer) {
-    const endpoint = `/AMSSERVICE/api/ledger/update/ledgerdetails/${this.cid}/${this.segid}`;
+  async createOrUpdateCustomerLedger(customer, segmentOptions = {}) {
+    const targetCid = segmentOptions.cid || this.cid;
+    const targetSegid = segmentOptions.segid || this.segid;
+    const endpoint = `/AMSSERVICE/api/ledger/update/ledgerdetails/${targetCid}/${targetSegid}`;
 
     const partyDet = {
       contactPerson: customer.name || customer.customer_name || 'Customer',
@@ -152,7 +176,11 @@ class RealBooksClient {
       },
     };
 
-    return this.execute(endpoint, payload, 'Customer Ledger Creation / Sync');
+    return this.execute(endpoint, payload, 'Customer Ledger Creation / Sync', {
+      cid: targetCid,
+      segid: targetSegid,
+      segment_name: segmentOptions.segment_name,
+    });
   }
 
   /**
@@ -171,8 +199,13 @@ class RealBooksClient {
     jobCard = '',
     branchName = 'Bellad Hubli',
     date = new Date(),
+    cid,
+    segid,
+    segment_name,
   }) {
-    const endpoint = `/AMSSERVICE/api/accv/v2/vcreate/${this.cid}/${this.segid}`;
+    const targetCid = cid || this.cid;
+    const targetSegid = segid || this.segid;
+    const endpoint = `/AMSSERVICE/api/accv/v2/vcreate/${targetCid}/${targetSegid}`;
     const dateStr = this.formatDate(date);
 
     const numBill = Number(billAmount || 0);
@@ -243,13 +276,17 @@ class RealBooksClient {
       },
     };
 
-    return this.execute(endpoint, payload, 'Receipt Voucher Creation (Double Entry)');
+    return this.execute(endpoint, payload, 'Receipt Voucher Creation (Double Entry)', {
+      cid: targetCid,
+      segid: targetSegid,
+      segment_name,
+    });
   }
 
   /**
    * Backwards-compatible pushRedemption
    */
-  async pushRedemption(payload) {
+  async pushRedemption(payload, segmentOptions = {}) {
     return this.createAccountVoucher({
       receiptNo: payload.receipt_no || payload.redemption_code,
       customerName: payload.customer_name || 'Loyalty Customer',
@@ -259,6 +296,9 @@ class RealBooksClient {
       cashPaid: Math.max(0, (payload.bill_amount || 0) - (payload.discount_amount_rupees || 0)),
       category: payload.category || 'service',
       date: payload.timestamp ? new Date(payload.timestamp) : new Date(),
+      cid: segmentOptions.cid || this.cid,
+      segid: segmentOptions.segid || this.segid,
+      segment_name: segmentOptions.segment_name,
     });
   }
 }

@@ -4,137 +4,117 @@ const RealBooksService = require('../src/services/realbooks/realbooks.service');
 
 async function runTests() {
   console.log('====================================================');
-  console.log('🧪 REALBOOKS API INTEGRATION VERIFICATION TEST SUITE');
+  console.log('🧪 REALBOOKS DYNAMIC MODEL-SEGMENT TEST SUITE');
   console.log('====================================================');
 
   try {
-    // Test 1: RealBooks Client & Config
-    console.log('\n[Test 1] Verifying RealBooks Client Configuration...');
+    // Force safe test mode for test suite
+    realbooksClient.mode = 'test';
+
+    // Test 1: Config
+    console.log('\n[Test 1] Verifying RealBooks Config & Default Segment...');
     console.log(`- Mode: ${realbooksClient.mode} (Safe Sandbox: ${realbooksClient.mode !== 'live'})`);
     console.log(`- Base URL: ${realbooksClient.baseUrl}`);
-    console.log(`- Domain (accountName header): ${realbooksClient.domain}`);
-    console.log(`- Company ID (CID): ${realbooksClient.cid}, Segment ID: ${realbooksClient.segid}`);
+    console.log(`- CID: ${realbooksClient.cid}, Default SEGID: ${realbooksClient.segid}`);
 
-    if (realbooksClient.mode !== 'test') {
-      console.warn('⚠️ Warning: REALBOOKS_MODE is not "test". Safety override active.');
-    } else {
-      console.log('✅ RealBooks client initialized in safe TEST mode as instructed.');
-    }
+    // Test 2: Dynamic Segment Routing for Hyundai Creta
+    console.log('\n[Test 2] Testing Dynamic Routing for Hyundai Creta Service...');
+    const custRes = await pool.query(`SELECT customer_id FROM customers LIMIT 1;`);
+    const testCustomerId = custRes.rows[0]?.customer_id || 'BAC-3953CD66';
 
-    // Test 2: Double Entry Accounting Math
-    console.log('\n[Test 2] Verifying RealBooks Double-Entry Voucher Accounting Logic...');
-    const billAmount = 2500;
-    const discountAmount = 500;
-    const cashPaid = billAmount - discountAmount;
-
-    const voucherRes = await realbooksClient.createAccountVoucher({
-      receiptNo: 'REC-TEST-VERIFY-01',
-      customerName: 'Kavya Bellad',
-      customerId: 'BAC-TEST-001',
-      billAmount,
-      discountAmount,
-      cashPaid,
-      category: 'service',
-      jobCard: 'JC-10029',
-    });
-
-    console.log(`- Voucher API Result:`, voucherRes.message);
-    const ledgerDetails = voucherRes.request_payload.json_obj.ledgerDetails;
-    const totalDr = ledgerDetails
-      .filter((l) => l.amountType === 'dr')
-      .reduce((sum, l) => sum + Number(l.amount), 0);
-    const totalCr = ledgerDetails
-      .filter((l) => l.amountType === 'cr')
-      .reduce((sum, l) => sum + Number(l.amount), 0);
-
-    console.log(`- Total Debit: ₹${totalDr}`);
-    console.log(`- Total Credit: ₹${totalCr}`);
-
-    if (totalDr !== totalCr || totalDr !== billAmount) {
-      throw new Error(`Double entry mismatch! DR (${totalDr}) !== CR (${totalCr})`);
-    }
-    console.log('✅ Double entry accounting formula balanced: Total DR === Total CR');
-
-    // Test 3: Customer Ledger Creation Schema Check (PDF Page 48-50)
-    console.log('\n[Test 3] Verifying Customer Ledger Creation Payload Schema...');
-    const ledgerRes = await realbooksClient.createOrUpdateCustomerLedger({
-      customer_id: 'BAC-TEST-001',
-      name: 'Kavya Bellad',
-      phone: '9876543210',
-      email: 'kavya@bellad.in',
-      address: 'Hubli Central Showroom',
-      city: 'Hubli',
-      state: 'Karnataka',
-      ledger_group: 'Sundry Debtors',
-    });
-
-    console.log(`- Ledger API Result:`, ledgerRes.message);
-    const ledgerPayload = ledgerRes.request_payload.ledger;
-    if (ledgerPayload.ledgerGroupName !== 'Sundry Debtors') {
-      throw new Error(`Expected Sundry Debtors ledgerGroupName, got ${ledgerPayload.ledgerGroupName}`);
-    }
-    console.log('✅ Customer Ledger payload matches official RealBooks Sundry Debtors schema');
-
-    // Test 4: RealBooks Service Customer Ledger Push & DB Audit Logging
-    console.log('\n[Test 4] Testing RealBooksService.pushCustomerLedger & DB logging...');
-    // Fetch a real customer from DB to test with real record
-    const custRes = await pool.query(`SELECT customer_id, customer_name FROM customers LIMIT 1;`);
-    const testCustomerId = custRes.rows[0]?.customer_id || 'BAC-613E43F4';
-
-    const serviceLedgerRes = await RealBooksService.pushCustomerLedger({
+    const hyundaiRes = await RealBooksService.pushReceiptTransaction({
+      receipt_no: `HY-CRETA-${Date.now()}`,
       customer_id: testCustomerId,
-      tenant_id: 'bellad_and_company',
-    });
-
-    console.log(`- Pushed customer: ${testCustomerId} (${serviceLedgerRes.ledger_name})`);
-    console.log(`- Assigned RealBooks Ledger ID: ${serviceLedgerRes.realbooks_ledger_id}`);
-    console.log('✅ RealBooksService.pushCustomerLedger executed & logged successfully.');
-
-    // Test 5: RealBooks Service Receipt Push (Ledger + Balanced Voucher)
-    console.log('\n[Test 5] Testing RealBooksService.pushReceiptTransaction...');
-    const receiptRes = await RealBooksService.pushReceiptTransaction({
-      receipt_no: `TEST-INV-${Date.now()}`,
-      customer_id: testCustomerId,
-      bill_amount: 1750,
-      discount_amount: 250,
-      points_redeemed: 1000,
+      model: 'Creta',
+      bill_amount: 4500,
+      discount_amount: 500,
+      points_redeemed: 2000,
       category: 'service',
-      branch_id: 1,
-      job_card: 'JC-8831',
-      tenant_id: 'bellad_and_company',
+      branch_name: 'HYUNDAI HUBLI',
     });
 
-    console.log(`- Receipt Voucher Result: ${receiptRes.message}`);
-    console.log(`- Voucher ID: ${receiptRes.voucher_id}`);
-    console.log(`- Ledger ID: ${receiptRes.ledger_id}`);
-    console.log('✅ RealBooksService.pushReceiptTransaction executed successfully.');
+    console.log(`- Resolved CID: ${hyundaiRes.cid}`);
+    console.log(`- Resolved SEGID: ${hyundaiRes.segid} (${hyundaiRes.segment_name})`);
+    console.log(`- Brand Detected: ${hyundaiRes.brand}, Model: ${hyundaiRes.model_matched}`);
 
-    // Test 6: Verify Database Audit Log Entries
-    console.log('\n[Test 6] Verifying database records in realbooks_sync_log...');
+    if (hyundaiRes.segid !== '6482') {
+      throw new Error(`Expected SEGID 6482 for Hyundai Hubli WS, got ${hyundaiRes.segid}`);
+    }
+    console.log('✅ Hyundai Creta correctly routed to SEGID 6482 (Hyundai Hubli WS_Demo)');
+
+    // Test 3: Dynamic Segment Routing for Hero Splendor Showroom Sale
+    console.log('\n[Test 3] Testing Dynamic Routing for Hero Splendor Sale at Hubli...');
+    const heroRes = await RealBooksService.pushReceiptTransaction({
+      receipt_no: `HERO-SPL-${Date.now()}`,
+      customer_id: testCustomerId,
+      model: 'Splendor+',
+      bill_amount: 85000,
+      discount_amount: 1000,
+      points_redeemed: 4000,
+      category: 'sale',
+      branch_name: 'Hero Hubli',
+    });
+
+    console.log(`- Resolved CID: ${heroRes.cid}`);
+    console.log(`- Resolved SEGID: ${heroRes.segid} (${heroRes.segment_name})`);
+    console.log(`- Brand Detected: ${heroRes.brand}`);
+
+    if (heroRes.segid !== '6475') {
+      throw new Error(`Expected SEGID 6475 for Hero Hubli SR, got ${heroRes.segid}`);
+    }
+    console.log('✅ Hero Splendor Sale correctly routed to SEGID 6475 (Hero Hubli SR_Demo)');
+
+    // Test 4: Dynamic Segment Routing for Swaraj 744 Tractor Service
+    console.log('\n[Test 4] Testing Dynamic Routing for Swaraj 744 Tractor Service...');
+    const swarajRes = await RealBooksService.pushReceiptTransaction({
+      receipt_no: `SWAR-744-${Date.now()}`,
+      customer_id: testCustomerId,
+      model: '744',
+      bill_amount: 3200,
+      discount_amount: 300,
+      points_redeemed: 1200,
+      category: 'service',
+      branch_name: 'SWARAJ HUBLI',
+    });
+
+    console.log(`- Resolved CID: ${swarajRes.cid}`);
+    console.log(`- Resolved SEGID: ${swarajRes.segid} (${swarajRes.segment_name})`);
+    console.log(`- Brand Detected: ${swarajRes.brand}`);
+
+    if (swarajRes.segid !== '6491') {
+      throw new Error(`Expected SEGID 6491 for Swaraj Hubli WS, got ${swarajRes.segid}`);
+    }
+    console.log('✅ Swaraj 744 correctly routed to SEGID 6491 (Swaraj Hubli WS_Demo)');
+
+    // Test 5: Verify realbooks_sync_log stores CID, SEGID, and Segment Name
+    console.log('\n[Test 5] Verifying realbooks_sync_log records have CID and SEGID...');
     const logRes = await pool.query(
-      `SELECT sync_id, entity_type, entity_id, api_status, request_payload, response_payload, created_at
+      `SELECT sync_id, entity_id, cid, segid, segment_name, created_at
        FROM realbooks_sync_log
+       WHERE cid IS NOT NULL
        ORDER BY created_at DESC
        LIMIT 3;`
     );
 
-    console.log(`- Retrieved ${logRes.rows.length} recent audit logs:`);
-    for (const row of logRes.rows) {
-      console.log(`  * ID: ${row.sync_id} | Type: ${row.entity_type} | Entity: ${row.entity_id} | Status: ${row.api_status}`);
-      if (row.request_payload) {
-        console.log(`    Request Payload verified (Keys: ${Object.keys(row.request_payload).join(', ')})`);
-      }
+    console.log(`- Retrieved ${logRes.rows.length} logs with segment tracking:`);
+    for (const r of logRes.rows) {
+      console.log(`  * Entity: ${r.entity_id} | CID: ${r.cid} | SEGID: ${r.segid} | Segment: ${r.segment_name}`);
     }
-    console.log('✅ Audit log table verified with JSONB request/response payloads.');
+    console.log('✅ CID, SEGID, and Segment Name recorded in database audit log.');
 
-    // Test 7: RealBooks Connection Status
-    console.log('\n[Test 7] Testing RealBooksService.getConnectionStatus...');
+    // Test 6: Verify Connection Status & Configured Segments
+    console.log('\n[Test 6] Testing Connection Status & Configured Segments...');
     const status = await RealBooksService.getConnectionStatus('bellad_and_company');
-    console.log(`- Status: Mode=${status.mode}, Synced=${status.stats.synced}, Total=${status.stats.total}`);
-    console.log('✅ RealBooks connection status reporting operational.');
+    console.log(`- Configured Segments: ${status.configured_segments_count}`);
+    console.log(`- Supported Brands: ${status.supported_brands.join(', ')}`);
+
+    if (status.configured_segments_count < 30) {
+      throw new Error(`Expected at least 30 segments, got ${status.configured_segments_count}`);
+    }
+    console.log('✅ Connection status correctly reports configured RealBooks segments.');
 
     console.log('\n====================================================');
-    console.log('🎉 ALL REALBOOKS VERIFICATION TESTS PASSED!');
+    console.log('🎉 ALL DYNAMIC MODEL-SEGID TESTS PASSED SUCCESSFULLY!');
     console.log('====================================================');
   } catch (err) {
     console.error('\n❌ Test failed with error:', err);

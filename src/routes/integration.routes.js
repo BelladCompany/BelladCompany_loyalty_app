@@ -24,6 +24,7 @@ router.post('/realbooks/ack', authenticateApiKey, requireScope('sync'), Integrat
 router.post('/realbooks/push-ledger', authenticateApiKey, requireScope(['sync', 'write']), IntegrationController.pushRealBooksLedger);
 router.post('/realbooks/push-receipt', authenticateApiKey, requireScope(['sync', 'write']), IntegrationController.pushRealBooksReceipt);
 router.get('/realbooks/status', authenticateApiKey, requireScope(['sync', 'read']), IntegrationController.getRealBooksStatus);
+router.get('/realbooks/segments', authenticateApiKey, requireScope(['sync', 'read']), IntegrationController.getRealBooksSegments);
 
 // ── AppSheet Direct Webhook ──
 router.post('/appsheet/webhook', authenticateApiKey, requireScope('write'), IntegrationController.appsheetWebhook);

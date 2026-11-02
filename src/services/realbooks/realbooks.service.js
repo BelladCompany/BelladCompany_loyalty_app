@@ -1,5 +1,6 @@
 const { pool } = require('../../config/db');
 const realbooksClient = require('./realbooks.client');
+const RealBooksSegmentResolver = require('./realbooks.segment_resolver');
 
 class RealBooksService {
   /**
@@ -41,24 +42,47 @@ class RealBooksService {
   /**
    * 2. Push / Sync Customer Ledger to RealBooks
    * Documented in PDF: Section 3 / Page 48-50
+   * Dynamically routes to the right CID and SEGID based on Model / Brand / Firm / Branch
    */
-  static async pushCustomerLedger({ customer_id, tenant_id = 'bellad_and_company' }) {
+  static async pushCustomerLedger({
+    customer_id,
+    model = null,
+    brand = null,
+    firm = null,
+    branch_id = null,
+    branch_name = null,
+    tenant_id = 'bellad_and_company',
+  }) {
     const customer = await this.resolveCustomerProfile(customer_id, tenant_id);
 
-    const clientRes = await realbooksClient.createOrUpdateCustomerLedger(customer);
+    // Dynamically resolve CID and SEGID for customer ledger
+    const segmentInfo = await RealBooksSegmentResolver.resolveSegment({
+      model,
+      brand,
+      firm,
+      branch_id,
+      branch_name,
+      customer_id,
+      tenant_id,
+    });
+
+    const clientRes = await realbooksClient.createOrUpdateCustomerLedger(customer, segmentInfo);
 
     try {
       await pool.query(
         `INSERT INTO realbooks_sync_log (
-           entity_type, entity_id, api_status, retry_count, tenant_id, request_payload, response_payload
+           entity_type, entity_id, api_status, retry_count, tenant_id, request_payload, response_payload, cid, segid, segment_name
          )
-         VALUES ('customer_ledger', $1, $2, 0, $3, $4, $5);`,
+         VALUES ('customer_ledger', $1, $2, 0, $3, $4, $5, $6, $7, $8);`,
         [
           customer_id,
           clientRes.status,
           tenant_id,
           JSON.stringify(clientRes.request_payload || {}),
           JSON.stringify(clientRes.response_payload || {}),
+          segmentInfo.cid,
+          segmentInfo.segid,
+          segmentInfo.segment_name,
         ]
       );
     } catch (e) {
@@ -71,6 +95,10 @@ class RealBooksService {
       customer_id,
       ledger_name: `${customer.name} (${customer_id})`,
       realbooks_ledger_id: clientRes.realbooks_ledger_id,
+      cid: segmentInfo.cid,
+      segid: segmentInfo.segid,
+      segment_name: segmentInfo.segment_name,
+      brand: segmentInfo.brand,
       message: clientRes.message,
       data: clientRes,
     };
@@ -79,26 +107,47 @@ class RealBooksService {
   /**
    * 3. Push Receipt Transaction / Double Entry Voucher to RealBooks
    * Documented in PDF: Section 2 / Page 39-44
-   * Synchronously or asynchronously pushes:
-   *   1. Customer Ledger
-   *   2. Balanced Double-Entry Account Voucher
+   * Dynamically checks model and routes segid properly for that firm and model:
+   *   - Hero models -> Hero Segments (SR or WS)
+   *   - Hyundai models -> Hyundai Segments (SR or WS)
+   *   - Swaraj models -> Swaraj Segments (SR or WS)
    */
   static async pushReceiptTransaction({
     receipt_no,
     customer_id,
+    vehicle_id = null,
+    model = null,
+    brand_name = null,
+    firm_name = null,
     bill_amount,
     discount_amount = 0,
     points_redeemed = 0,
     category = 'service',
     branch_id = 1,
+    branch_name = null,
     job_card = '',
     tenant_id = 'bellad_and_company',
   }) {
     const code = receipt_no || `REC-${Date.now()}`;
     const customer = await this.resolveCustomerProfile(customer_id, tenant_id);
 
-    // 1. Ensure Customer Ledger is Synced/Pushed
-    const ledgerSync = await realbooksClient.createOrUpdateCustomerLedger(customer);
+    // Dynamically resolve CID and SEGID based on Model / Brand / Firm / Branch / Category
+    const segmentInfo = await RealBooksSegmentResolver.resolveSegment({
+      model: model || brand_name,
+      brand: brand_name,
+      firm: firm_name,
+      branch_id,
+      branch_name,
+      category,
+      vehicle_id,
+      customer_id,
+      tenant_id,
+    });
+
+    console.log(`📌 [RealBooks Routing] Receipt #${code} -> Model: "${model || segmentInfo.model_matched || 'N/A'}" | Brand: ${segmentInfo.brand} | CID: ${segmentInfo.cid} | SEGID: ${segmentInfo.segid} (${segmentInfo.segment_name})`);
+
+    // 1. Ensure Customer Ledger is Synced/Pushed to this segment
+    const ledgerSync = await realbooksClient.createOrUpdateCustomerLedger(customer, segmentInfo);
 
     // 2. Push Double-Entry Account Voucher
     const voucherSync = await realbooksClient.createAccountVoucher({
@@ -110,22 +159,28 @@ class RealBooksService {
       cashPaid: Math.max(0, bill_amount - discount_amount),
       category,
       jobCard: job_card,
-      branchName: 'Bellad Hubli',
+      branchName: segmentInfo.city ? `Bellad ${segmentInfo.city}` : 'Bellad Hubli',
       date: new Date(),
+      cid: segmentInfo.cid,
+      segid: segmentInfo.segid,
+      segment_name: segmentInfo.segment_name,
     });
 
     try {
       await pool.query(
         `INSERT INTO realbooks_sync_log (
-           entity_type, entity_id, api_status, retry_count, tenant_id, request_payload, response_payload
+           entity_type, entity_id, api_status, retry_count, tenant_id, request_payload, response_payload, cid, segid, segment_name
          )
-         VALUES ('receipt_voucher', $1, $2, 0, $3, $4, $5);`,
+         VALUES ('receipt_voucher', $1, $2, 0, $3, $4, $5, $6, $7, $8);`,
         [
           code,
           voucherSync.status,
           tenant_id,
           JSON.stringify(voucherSync.request_payload || {}),
           JSON.stringify(voucherSync.response_payload || {}),
+          segmentInfo.cid,
+          segmentInfo.segid,
+          segmentInfo.segment_name,
         ]
       );
     } catch (e) {
@@ -140,6 +195,12 @@ class RealBooksService {
       receipt_no: code,
       voucher_id: voucherSync.realbooks_voucher_id,
       ledger_id: ledgerSync.realbooks_ledger_id,
+      cid: segmentInfo.cid,
+      segid: segmentInfo.segid,
+      segment_name: segmentInfo.segment_name,
+      brand: segmentInfo.brand,
+      model_matched: segmentInfo.model_matched,
+      resolution_source: segmentInfo.resolution_source,
       customer_id,
       customer_name: customer.name,
       bill_amount: Number(bill_amount),
@@ -175,11 +236,11 @@ class RealBooksService {
 
     const logRes = await pool.query(
       `INSERT INTO realbooks_sync_log (
-         entity_type, entity_id, api_status, retry_count, tenant_id
+         entity_type, entity_id, api_status, retry_count, tenant_id, last_error
        )
-       VALUES ('redemption', $1, 'pending', 0, $2)
-       RETURNING sync_id AS id, entity_type, entity_id AS redemption_code, api_status AS status, retry_count, tenant_id;`,
-      [redemption.redemption_code, tenant_id]
+       VALUES ('redemption', $1, 'pending', 0, $2, $3)
+       RETURNING sync_id AS id, entity_id AS redemption_code, api_status AS status, retry_count;`,
+      [redemption.redemption_code, tenant_id, simulate_fail ? 'Simulated initial network failure' : null]
     );
 
     const syncLog = logRes.rows[0];
@@ -195,11 +256,11 @@ class RealBooksService {
   }
 
   /**
-   * Attempts to push a sync log to RealBooks API with exponential backoff on failure
+   * Attempts an API push for an existing sync log record
    */
   static async attemptSyncLog(syncLogId, payload = null) {
     const logRes = await pool.query(
-      `SELECT sync_id AS id, entity_type, entity_id AS redemption_code, api_status AS status, retry_count, tenant_id
+      `SELECT sync_id, entity_id, entity_type, api_status, retry_count, tenant_id
        FROM realbooks_sync_log
        WHERE sync_id = $1;`,
       [syncLogId]
@@ -209,7 +270,7 @@ class RealBooksService {
     const log = logRes.rows[0];
 
     const syncPayload = payload || {
-      receipt_no: log.redemption_code,
+      receipt_no: log.entity_id,
       entity_type: log.entity_type,
     };
 
@@ -226,7 +287,7 @@ class RealBooksService {
         [syncLogId]
       );
 
-      console.log(`✅ [RealBooks Sync Success] Log ID: ${syncLogId}, Code: ${log.redemption_code}`);
+      console.log(`✅ [RealBooks Sync Success] Log ID: ${syncLogId}, Code: ${log.entity_id}`);
       return updatedRes.rows[0];
     } catch (error) {
       const nextRetryCount = log.retry_count + 1;
@@ -262,8 +323,10 @@ class RealBooksService {
       [tenantId]
     );
 
+    const segmentsCount = await pool.query(`SELECT COUNT(*) FROM realbooks_segments;`);
+
     const recentLogs = await pool.query(
-      `SELECT sync_id AS id, entity_type, entity_id, api_status, created_at
+      `SELECT sync_id AS id, entity_type, entity_id, api_status, cid, segid, segment_name, created_at
        FROM realbooks_sync_log
        WHERE tenant_id = $1
        ORDER BY created_at DESC
@@ -276,9 +339,11 @@ class RealBooksService {
       is_test_mode: realbooksClient.mode !== 'live',
       base_url: realbooksClient.baseUrl,
       domain: realbooksClient.domain,
-      cid: realbooksClient.cid,
-      segid: realbooksClient.segid,
+      default_cid: realbooksClient.cid,
+      default_segid: realbooksClient.segid,
       email_id: realbooksClient.emailId,
+      configured_segments_count: parseInt(segmentsCount.rows[0]?.count || 0, 10),
+      supported_brands: ['Hero', 'Hyundai', 'Swaraj', 'Claas', 'Sony', 'Used Cars', 'Corporate Sales'],
       stats: {
         synced: parseInt(countRes.rows[0]?.synced_count || 0, 10),
         failed: parseInt(countRes.rows[0]?.failed_count || 0, 10),
@@ -290,12 +355,19 @@ class RealBooksService {
   }
 
   /**
+   * 5. Get All Configured Segments
+   */
+  static async getAllSegments(tenantId = 'bellad_and_company') {
+    return RealBooksSegmentResolver.getAllSegments(tenantId);
+  }
+
+  /**
    * Background retry worker
    */
   static async processPendingRetryQueue() {
     try {
       const pendingLogsRes = await pool.query(
-        `SELECT sync_id AS id, entity_id AS redemption_code, retry_count
+        `SELECT sync_id AS id, entity_id, retry_count
          FROM realbooks_sync_log
          WHERE api_status = 'failed'
            AND retry_count < 5
@@ -321,6 +393,7 @@ class RealBooksService {
     const res = await pool.query(
       `SELECT rsl.sync_id AS id, rsl.entity_id AS redemption_id, rsl.entity_id AS redemption_code,
               rsl.api_status AS status, rsl.retry_count, rsl.last_error,
+              rsl.cid, rsl.segid, rsl.segment_name,
               rsl.created_at, rsl.updated_at
        FROM realbooks_sync_log rsl
        WHERE rsl.tenant_id = $1 AND rsl.api_status = 'failed'

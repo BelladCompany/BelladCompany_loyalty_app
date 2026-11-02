@@ -137,11 +137,16 @@ class RedemptionController {
       const {
         receipt_no,
         customer_id,
+        vehicle_id,
+        model,
+        brand_name,
+        firm_name,
         bill_amount,
         discount_amount,
         points_redeemed,
         category,
         branch_id,
+        branch_name,
         job_card,
       } = req.body;
       const tenantId = req.tenantId || 'bellad_and_company';
@@ -149,11 +154,16 @@ class RedemptionController {
       const syncResult = await RealBooksService.syncReceiptDirect({
         receipt_no,
         customer_id,
+        vehicle_id,
+        model,
+        brand_name,
+        firm_name,
         bill_amount: Number(bill_amount || 0),
         discount_amount: Number(discount_amount || 0),
         points_redeemed: Number(points_redeemed || 0),
         category: category || 'service',
         branch_id: branch_id || req.user?.branch_id || 1,
+        branch_name: branch_name || req.user?.branch_name,
         job_card: job_card || '',
         tenant_id: tenantId,
       });

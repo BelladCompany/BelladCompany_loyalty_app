@@ -184,11 +184,12 @@ class IntegrationController {
    * POST /api/v1/integration/realbooks/push-ledger
    * Pushes/syncs a customer ledger to RealBooks Sundry Debtors
    * Uses official RealBooks API /AMSSERVICE/api/ledger/update/ledgerdetails/{cid}/{segid}
+   * Dynamically routes CID and SEGID based on Model / Brand / Firm / Branch
    */
   static async pushRealBooksLedger(req, res, next) {
     try {
       const tenantId = req.tenantId || 'bellad_and_company';
-      const { customer_id } = req.body;
+      const { customer_id, model, brand, firm, branch_id, branch_name } = req.body;
 
       if (!customer_id) {
         return res.status(400).json({
@@ -200,6 +201,11 @@ class IntegrationController {
       const RealBooksService = require('../services/realbooks/realbooks.service');
       const result = await RealBooksService.pushCustomerLedger({
         customer_id,
+        model,
+        brand,
+        firm,
+        branch_id,
+        branch_name,
         tenant_id: tenantId,
       });
 
@@ -217,6 +223,7 @@ class IntegrationController {
    * POST /api/v1/integration/realbooks/push-receipt
    * Pushes customer ledger & double-entry account voucher to RealBooks
    * Uses official RealBooks API /AMSSERVICE/api/accv/v2/vcreate/{cid}/{segid}
+   * Dynamically routes CID and SEGID based on Model / Brand / Firm / Branch / Category
    */
   static async pushRealBooksReceipt(req, res, next) {
     try {
@@ -224,11 +231,16 @@ class IntegrationController {
       const {
         receipt_no,
         customer_id,
+        vehicle_id,
+        model,
+        brand_name,
+        firm_name,
         bill_amount,
         discount_amount,
         points_redeemed,
         category,
         branch_id,
+        branch_name,
         job_card,
       } = req.body;
 
@@ -243,11 +255,16 @@ class IntegrationController {
       const result = await RealBooksService.pushReceiptTransaction({
         receipt_no,
         customer_id,
+        vehicle_id,
+        model,
+        brand_name,
+        firm_name,
         bill_amount: Number(bill_amount),
         discount_amount: Number(discount_amount || 0),
         points_redeemed: Number(points_redeemed || 0),
         category: category || 'service',
         branch_id: branch_id || 1,
+        branch_name,
         job_card: job_card || '',
         tenant_id: tenantId,
       });
@@ -275,6 +292,26 @@ class IntegrationController {
       res.status(200).json({
         status: 'success',
         data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * GET /api/v1/integration/realbooks/segments
+   * Lists all configured RealBooks segments with Model & Brand mappings
+   */
+  static async getRealBooksSegments(req, res, next) {
+    try {
+      const tenantId = req.tenantId || 'bellad_and_company';
+      const RealBooksService = require('../services/realbooks/realbooks.service');
+      const segments = await RealBooksService.getAllSegments(tenantId);
+
+      res.status(200).json({
+        status: 'success',
+        count: segments.length,
+        data: segments,
       });
     } catch (err) {
       next(err);

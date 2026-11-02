@@ -43,7 +43,7 @@ async function authenticateApiKey(req, res, next) {
     if (keyRes.rows.length > 0) {
       clientInfo = keyRes.rows[0];
       // Async update last_used_at without awaiting
-      pool.query(`UPDATE integration_api_keys SET last_used_at = NOW() WHERE key_id = $1`, [clientInfo.key_id]).catch(() => {});
+      pool.query(`UPDATE integration_api_keys SET last_used_at = NOW() WHERE key_id = $1`, [clientInfo.key_id]).catch(() => { });
     } else {
       // 2. Check environment fallback keys (for backward compatibility & zero-config local testing)
       const masterKey = process.env.BELLAD_API_KEY || 'bac_live_master_bellad_loyalty_2026';
