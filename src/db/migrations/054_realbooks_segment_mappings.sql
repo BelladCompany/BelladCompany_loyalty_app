@@ -93,3 +93,4 @@ INSERT INTO realbooks_segments (
 ALTER TABLE realbooks_sync_log ADD COLUMN IF NOT EXISTS cid VARCHAR(50);
 ALTER TABLE realbooks_sync_log ADD COLUMN IF NOT EXISTS segid VARCHAR(50);
 ALTER TABLE realbooks_sync_log ADD COLUMN IF NOT EXISTS segment_name VARCHAR(255);
+

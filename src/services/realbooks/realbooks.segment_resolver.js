@@ -200,7 +200,7 @@ class RealBooksSegmentResolver {
         if (bRes.rows.length > 0) {
           resolvedCity = this.inferCity(bRes.rows[0].branch_city || bRes.rows[0].branch_name);
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // 4. Infer brand from model name if brand is not directly identified
@@ -221,7 +221,7 @@ class RealBooksSegmentResolver {
           if (dbBrand.rows.length > 0) {
             resolvedBrand = dbBrand.rows[0].brand_name;
           }
-        } catch (_) {}
+        } catch (_) { }
       }
     }
 
