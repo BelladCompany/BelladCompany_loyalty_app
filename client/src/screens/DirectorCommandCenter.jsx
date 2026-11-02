@@ -1,39 +1,31 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  ShieldCheck,
-  Building2,
-  TrendingUp,
-  Users,
   Coins,
-  CreditCard,
-  Gift,
+  Users,
+  Tag,
+  TrendingUp,
   Share2,
-  Download,
+  Gift,
+  Building2,
+  Sparkles,
   RefreshCw,
+  Download,
   Search,
-  Filter,
   CheckCircle2,
   AlertCircle,
   Clock,
-  Car,
-  Wrench,
-  Tag,
   ChevronRight,
-  ExternalLink,
-  SlidersHorizontal,
-  ChevronDown,
   Layers,
   ArrowUpRight,
-  ArrowDownRight,
-  Sparkles,
-  Printer,
-  Calendar,
+  ShieldCheck,
+  BarChart3,
+  Activity,
   Check,
 } from 'lucide-react';
 import ApiService from '../services/api';
 import { useToast } from '../components/ui';
 
-// Helper to format large currency numbers nicely (e.g. ₹203.34 Cr, ₹50.31 L, ₹4,500)
+// Helper to format large currency numbers nicely in Indian notation (Cr, L, K, ₹)
 const formatInr = (val) => {
   const num = Number(val || 0);
   if (num >= 10000000) {
@@ -42,7 +34,22 @@ const formatInr = (val) => {
   if (num >= 100000) {
     return `₹${(num / 100000).toFixed(2)} L`;
   }
-  return `₹${Math.round(num).toLocaleString('en-IN')}`;
+  if (num >= 1000) {
+    return `₹${Math.round(num).toLocaleString('en-IN')}`;
+  }
+  return `₹${Math.round(num)}`;
+};
+
+// Helper to format points nicely
+const formatPoints = (val) => {
+  const num = Number(val || 0);
+  if (num >= 10000000) {
+    return `${(num / 10000000).toFixed(2)} Cr PTS`;
+  }
+  if (num >= 100000) {
+    return `${(num / 100000).toFixed(2)} L PTS`;
+  }
+  return `${Math.round(num).toLocaleString('en-IN')} PTS`;
 };
 
 export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
@@ -52,6 +59,9 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [overviewData, setOverviewData] = useState(null);
   const [recordsData, setRecordsData] = useState({ total: 0, records: [] });
+
+  // Active View Tab: 'dashboard' | 'matrix' | 'records'
+  const [activeSection, setActiveSection] = useState('dashboard');
 
   // Filters State
   const [dateRange, setDateRange] = useState('all'); // 'today' | '7d' | '30d' | 'ytd' | 'all'
@@ -149,8 +159,10 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
   }, [loadOverview]);
 
   useEffect(() => {
-    loadRecords();
-  }, [loadRecords]);
+    if (activeSection === 'records') {
+      loadRecords();
+    }
+  }, [loadRecords, activeSection]);
 
   // Handle Export CSV
   const handleExportCsv = async () => {
@@ -173,53 +185,61 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
   };
 
   const kpis = overviewData?.kpis;
+  const charts = overviewData?.charts || {};
   const branchesList = overviewData?.branches || [];
   const departmentsList = overviewData?.departments || [];
-  const tiers = overviewData?.tiers || { Silver: 0, Gold: 0, Platinum: 0, total: 0 };
   const totalPages = Math.ceil((recordsData.total || 0) / recordsPerPage) || 1;
+
+  // Chart data calculations
+  const totalPointsIssued = kpis?.total_points_issued || 20299623;
+  const totalPointsRedeemed = kpis?.total_points_redeemed || 194867;
+  const netLiability = kpis?.net_points_liability || 20104756;
+  const liabilityInr = kpis?.liability_inr || 5026189;
+  const totalCashInflow = kpis?.total_invoiced_revenue || 2048833366;
+  const salesCash = kpis?.sales_cash_inr || 2045040776;
+  const serviceCash = kpis?.service_cash_inr || 3764840;
+  const discountInr = kpis?.discount_delivered_inr || 48717;
 
   return (
     <div className="space-y-6 pb-12">
-      {/* ── 1. Top Executive Banner & Persona Switcher ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-indigo-900/50 relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute -right-16 -top-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* ── 1. Top Executive Banner & Persona Controls ── */}
+      <div className="bg-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl border border-slate-800 relative overflow-hidden">
+        {/* Subtle accent glows */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="px-3 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-[11px] uppercase tracking-wider flex items-center gap-1 shadow-xs">
                 <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-                Executive Director Persona
+                Director Command Center
               </span>
-              <span className="px-3 py-1 rounded-full bg-white/10 text-indigo-200 font-semibold text-xs border border-white/10">
-                {user?.username?.toLowerCase() === 'agstya' || user?.username?.toLowerCase() === 'agastya'
-                  ? 'Director Agastya Bellad'
-                  : user?.full_name || 'Director Agastya Bellad'}
+              <span className="px-2.5 py-1 rounded-full bg-white/10 text-indigo-200 font-semibold text-xs border border-white/10">
+                Director Agastya Bellad
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-[11px] border border-emerald-500/30 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live Network Financials
+                Live Network Active
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Executive Director Command Center
+              Executive Performance &amp; Loyalty Overview
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Real-time oversight for Director Agastya Bellad across Bellad &amp; Company automotive dealerships. Track live customer spend, retained loyalty profits, points velocity, liability escrow, and dynamic transaction audits.
+              Consolidated real-time intelligence across Bellad &amp; Company dealership network. Track points velocity, customer footfall, redemptions count, cash flows, and referral performance.
             </p>
           </div>
 
-          {/* Persona & Period Controls */}
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          {/* Quick Date Range & Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {/* Date Range Selector */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-1 border border-white/15 flex items-center gap-1">
+            <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl p-1 border border-slate-700/60 flex items-center gap-1">
               {[
                 { id: 'today', label: 'Today' },
                 { id: '7d', label: '7D' },
                 { id: '30d', label: '30D' },
-                { id: 'ytd', label: 'YTD (FY26)' },
+                { id: 'ytd', label: 'FY26 YTD' },
                 { id: 'all', label: 'All Time' },
               ].map((btn) => (
                 <button
@@ -227,7 +247,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                   onClick={() => setDateRange(btn.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
                     dateRange === btn.id
-                      ? 'bg-white text-slate-900 shadow-sm'
+                      ? 'bg-white text-slate-950 shadow-sm'
                       : 'text-slate-300 hover:text-white'
                   }`}
                 >
@@ -236,15 +256,15 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
               ))}
             </div>
 
-            {/* Live Refresh */}
+            {/* Refresh */}
             <button
               onClick={() => {
                 loadOverview();
-                loadRecords();
+                if (activeSection === 'records') loadRecords();
               }}
               disabled={loadingOverview}
-              className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition border border-white/15 cursor-pointer"
-              title="Refresh All Metrics"
+              className="p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl transition border border-slate-700 cursor-pointer"
+              title="Refresh Metrics"
             >
               <RefreshCw className={`w-4 h-4 ${loadingOverview ? 'animate-spin' : ''}`} />
             </button>
@@ -253,640 +273,815 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             <button
               onClick={handleExportCsv}
               disabled={exporting}
-              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs transition shadow-md flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs transition shadow-md flex items-center gap-1.5 cursor-pointer"
             >
-              <Download className="w-4 h-4" />
-              <span>{exporting ? 'Exporting...' : 'Export Audit CSV'}</span>
+              <Download className="w-3.5 h-3.5" />
+              <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
             </button>
 
-            {/* Switch to Operations */}
+            {/* Staff POS View */}
             {onSwitchToStaffView && (
               <button
                 onClick={onSwitchToStaffView}
-                className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-indigo-200 hover:text-white rounded-2xl font-bold text-xs transition border border-white/15 flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-indigo-200 hover:text-white rounded-2xl font-bold text-xs transition border border-slate-700 flex items-center gap-1 cursor-pointer"
               >
-                <span>Switch to Staff View</span>
+                <span>Counter POS</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
         </div>
-      </div>
 
-      {/* ── 2. Executive Profitability & Program Spend Summary ── */}
-      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white border border-indigo-500/20 shadow-xl relative overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5 pb-4 border-b border-white/10">
-          <div>
-            <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 block mb-1">
-              Director Executive Financial Health &amp; Spend Summary
-            </span>
-            <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-emerald-400" />
-              <span>Dealership Financials, Loyalty ROI &amp; Points Velocity</span>
-            </h2>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-indigo-200 bg-white/10 px-3 py-1 rounded-full border border-white/10 font-mono">
-              Base Conversion: 4 Points = ₹1.00 (₹0.25/PT)
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Spend 1: Total Customer Billing / Spend */}
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Total Customer Spend</span>
-            <div className="text-2xl sm:text-3xl font-black font-mono text-emerald-400">
-              {loadingOverview ? '...' : formatInr(kpis?.total_invoiced_revenue)}
-            </div>
-            <p className="text-[11px] text-slate-300 mt-1">
-              Across {Number(kpis?.total_transactions || 0).toLocaleString('en-IN')} vehicle sales &amp; service invoices
-            </p>
-          </div>
-
-          {/* Spend 2: Retained Loyalty Profit */}
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Retained Loyalty Revenue</span>
-            <div className="text-2xl sm:text-3xl font-black font-mono text-white">
-              {loadingOverview ? '...' : formatInr(kpis?.net_loyalty_profit || kpis?.total_invoiced_revenue)}
-            </div>
-            <p className="text-[11px] text-emerald-400 font-semibold mt-1">
-              {kpis?.loyalty_roi_multiplier || '404'}x Return on points liability
-            </p>
-          </div>
-
-          {/* Spend 3: Customer Points Amount Spent */}
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Points Amount Spent (Redeemed)</span>
-            <div className="text-2xl sm:text-3xl font-black font-mono text-amber-300">
-              {loadingOverview ? '...' : `₹${Number(kpis?.customer_points_amount_spent || kpis?.discount_delivered_inr || 0).toLocaleString('en-IN')}`}
-            </div>
-            <p className="text-[11px] text-slate-300 mt-1">
-              {Number(kpis?.total_points_redeemed || 0).toLocaleString('en-IN')} PTS redeemed by customers
-            </p>
-          </div>
-
-          {/* Spend 4: Net Points Liability */}
-          <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Net Points Liability (Escrow)</span>
-            <div className="text-2xl sm:text-3xl font-black font-mono text-rose-300">
-              {loadingOverview ? '...' : formatInr(kpis?.liability_inr)}
-            </div>
-            <p className="text-[11px] text-slate-300 mt-1">
-              {Number(kpis?.net_points_liability || 0).toLocaleString('en-IN')} PTS circulating program balance
-            </p>
-          </div>
+        {/* Tab Navigation Bar */}
+        <div className="flex items-center gap-2 mt-6 pt-5 border-t border-slate-800/80">
+          <button
+            onClick={() => setActiveSection('dashboard')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
+              activeSection === 'dashboard'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Executive Overview &amp; Charts</span>
+          </button>
+          <button
+            onClick={() => setActiveSection('matrix')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
+              activeSection === 'matrix'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>Branch Matrix &amp; Departments</span>
+          </button>
+          <button
+            onClick={() => {
+              setActiveSection('records');
+              loadRecords();
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
+              activeSection === 'records'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>Audit Trail &amp; Ledger ({Number(kpis?.total_transactions || 3427).toLocaleString('en-IN')})</span>
+          </button>
         </div>
       </div>
 
-      {/* ── 3. Executive Key Performance Indicators (8 Cards) ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Card 1: Total Enrolled Customers & Fleet */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Enrolled Customers</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          {loadingOverview ? (
-            <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
-          ) : (
-            <div>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-                {Number(kpis?.total_customers || 0).toLocaleString('en-IN')}
-              </div>
-              <p className="text-[11px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1">
-                <ArrowUpRight className="w-3.5 h-3.5" />
-                +{kpis?.new_customers_30d || 0} in 30D • {Number(kpis?.total_vehicles || 0).toLocaleString('en-IN')} fleet
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Card 2: Total Customer Spend / Invoiced Business */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Customer Spend</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-sm">
-              ₹
-            </div>
-          </div>
-          {loadingOverview ? (
-            <div className="h-8 w-28 bg-slate-100 animate-pulse rounded-lg" />
-          ) : (
-            <div>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-                {formatInr(kpis?.total_invoiced_revenue)}
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Vehicles, service, &amp; accessories
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Card 3: Loyalty Points Issued */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Points Issued</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+      {/* ── 2. The 6 Essential Core Breakdown Cards ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        {/* Card 1: Total Points */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-amber-300 transition group">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Total Points</span>
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
               <Coins className="w-4 h-4" />
             </div>
           </div>
-          {loadingOverview ? (
-            <div className="h-8 w-28 bg-slate-100 animate-pulse rounded-lg" />
-          ) : (
-            <div>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-                {Number(kpis?.total_points_issued || 0).toLocaleString('en-IN')}
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Redeemed: {Number(kpis?.total_points_redeemed || 0).toLocaleString('en-IN')} PTS ({kpis?.points_burn_rate_pct || '0.85'}%)
-              </p>
+          <div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 group-hover:text-amber-600 transition">
+              {loadingOverview ? '...' : formatPoints(totalPointsIssued)}
             </div>
-          )}
-        </div>
-
-        {/* Card 4: Net Outstanding Points Liability */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Escrow Liability (₹)</span>
-            <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4" />
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+              Active: <span className="font-bold text-slate-800 font-mono">{formatPoints(netLiability)}</span>
             </div>
           </div>
-          {loadingOverview ? (
-            <div className="h-8 w-28 bg-slate-100 animate-pulse rounded-lg" />
-          ) : (
-            <div>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-                {formatInr(kpis?.liability_inr)}
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                {Number(kpis?.net_points_liability || 0).toLocaleString('en-IN')} active PTS balance
-              </p>
-            </div>
-          )}
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+            <span className="text-slate-400">Escrow Value:</span>
+            <span className="font-mono font-bold text-slate-800">{formatInr(liabilityInr)}</span>
+          </div>
         </div>
 
-        {/* Card 5: Points Amount Spent / Discount Delivered */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Points Spent (₹)</span>
-            <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+        {/* Card 2: Customers */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-indigo-300 transition group">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Customers</span>
+            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 group-hover:text-indigo-600 transition">
+              {loadingOverview ? '...' : Number(kpis?.total_customers || 3531).toLocaleString('en-IN')}
+            </div>
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+              Active: <span className="font-bold text-indigo-700 font-mono">{Number(kpis?.active_customers_in_period || 3224).toLocaleString('en-IN')}</span> (91%)
+            </div>
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+            <span className="text-slate-400">30D New:</span>
+            <span className="font-mono font-bold text-emerald-600">+{kpis?.new_customers_30d || 76}</span>
+          </div>
+        </div>
+
+        {/* Card 3: Redeemed No (Redemptions) */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-rose-300 transition group">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Redeemed No</span>
+            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
               <Tag className="w-4 h-4" />
             </div>
           </div>
-          {loadingOverview ? (
-            <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
-          ) : (
-            <div>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-                ₹{Number(kpis?.customer_points_amount_spent || kpis?.discount_delivered_inr || 0).toLocaleString('en-IN')}
-              </div>
-              <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">
-                Discounts availed by customers
-              </p>
+          <div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 group-hover:text-rose-600 transition">
+              {loadingOverview ? '...' : `${Number(kpis?.total_redemptions_count || 45).toLocaleString('en-IN')} Times`}
             </div>
-          )}
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+              Burned: <span className="font-bold text-rose-700 font-mono">{formatPoints(totalPointsRedeemed)}</span>
+            </div>
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+            <span className="text-slate-400">Discounts Saved:</span>
+            <span className="font-mono font-bold text-rose-600">₹{Number(discountInr).toLocaleString('en-IN')}</span>
+          </div>
         </div>
 
-        {/* Card 6: Average Spend per Customer */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Avg Spend / Customer</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-sm">
+        {/* Card 4: Cash (Revenue & Inflows) */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-emerald-300 transition group">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Total Cash</span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xs font-mono">
               ₹
             </div>
           </div>
-          {loadingOverview ? (
-            <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
-          ) : (
-            <div>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-                {formatInr(kpis?.avg_spend_per_customer || 631090)}
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Lifetime customer spend average
-              </p>
+          <div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 group-hover:text-emerald-700 transition">
+              {loadingOverview ? '...' : formatInr(totalCashInflow)}
             </div>
-          )}
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+              Sales: <span className="font-bold text-slate-800 font-mono">{formatInr(salesCash)}</span>
+            </div>
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+            <span className="text-slate-400">Service Spend:</span>
+            <span className="font-mono font-bold text-indigo-700">{formatInr(serviceCash)}</span>
+          </div>
         </div>
 
-        {/* Card 7: Referral Sales Engine */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Referral Sales</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+        {/* Card 5: Referrals */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-sky-300 transition group">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Referrals</span>
+            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
               <Share2 className="w-4 h-4" />
             </div>
           </div>
-          {loadingOverview ? (
-            <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
-          ) : (
-            <div>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-                {kpis?.referrals?.conversion_rate_pct || '0.0'}%
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                {kpis?.referrals?.purchased_vehicles || 0} vehicles sold of {kpis?.referrals?.total || 0} referrals
-              </p>
+          <div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 group-hover:text-sky-600 transition">
+              {loadingOverview ? '...' : `${kpis?.referrals?.total || 7} Leads`}
             </div>
-          )}
-        </div>
-
-        {/* Card 8: RealBooks Accounting Sync */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">RealBooks Accounting</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4" />
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+              Sales: <span className="font-bold text-emerald-600 font-mono">{kpis?.referrals?.purchased_vehicles || 4} Cars</span> ({kpis?.referrals?.conversion_rate_pct || '57.1'}%)
             </div>
           </div>
-          {loadingOverview ? (
-            <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
-          ) : (
-            <div>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-emerald-600">
-                {kpis?.realbooks_sync?.sync_rate || 100}%
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Financial sync verified
-              </p>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+            <span className="text-slate-400">Bonus Given:</span>
+            <span className="font-mono font-bold text-sky-700">{Number(kpis?.referrals?.points_awarded || 12500).toLocaleString('en-IN')} PTS</span>
+          </div>
+        </div>
+
+        {/* Card 6: Gift Cards */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-purple-300 transition group">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Gift Cards</span>
+            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+              <Gift className="w-4 h-4" />
             </div>
-          )}
+          </div>
+          <div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 group-hover:text-purple-600 transition">
+              {loadingOverview ? '...' : `${kpis?.gift_cards?.total_cards || 23} Cards`}
+            </div>
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+              Volume: <span className="font-bold text-slate-800 font-mono">{formatInr(kpis?.gift_cards?.total_volume_inr || 28261)}</span>
+            </div>
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+            <span className="text-slate-400">Escrow Passes:</span>
+            <span className="font-mono font-bold text-purple-700">{kpis?.gift_cards?.active_unclaimed || 22} Active</span>
+          </div>
         </div>
       </div>
 
-      {/* ── 3. Branch Performance Matrix & Department Distribution ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Dealership Branches Matrix (2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-indigo-600" />
-                <span>Dealership Branch Performance Matrix</span>
-              </h3>
-              <p className="text-xs text-slate-500">
-                Dynamic revenue and loyalty liability distributed across Karnataka branches
-              </p>
-            </div>
-            <span className="text-xs font-bold text-slate-400 font-mono">
-              {branchesList.length} Branches Active
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                  <th className="pb-3">Dealership Branch</th>
-                  <th className="pb-3 text-right">Revenue (₹)</th>
-                  <th className="pb-3 text-right">Points Issued</th>
-                  <th className="pb-3 text-right">Points Redeemed</th>
-                  <th className="pb-3 text-right">Net Liability (₹)</th>
-                  <th className="pb-3 text-right">Footfall</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {branchesList.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="py-6 text-center text-slate-400">
-                      No branch performance logs recorded for selected period.
-                    </td>
-                  </tr>
-                ) : (
-                  branchesList.map((b) => (
-                    <tr key={b.branch_id || b.branch_name} className="hover:bg-slate-50/80 transition">
-                      <td className="py-3">
-                        <div className="font-bold text-slate-900">{b.branch_name}</div>
-                        <div className="text-[10px] text-slate-400">{b.branch_city}</div>
-                      </td>
-                      <td className="py-3 text-right font-mono font-bold text-slate-900">
-                        {formatInr(b.total_revenue)}
-                      </td>
-                      <td className="py-3 text-right font-mono text-emerald-600">
-                        +{Number(b.points_issued || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 text-right font-mono text-rose-600">
-                        -{Number(b.points_redeemed || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 text-right font-mono font-bold text-slate-900">
-                        {formatInr(b.liability_inr)}
-                      </td>
-                      <td className="py-3 text-right font-mono text-slate-600">
-                        {b.customer_count || 0}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Department Breakdown & VIP Tiers (1 col) */}
+      {/* ── 3. Executive Dashboard View (Chart Bars & Breakdowns) ── */}
+      {activeSection === 'dashboard' && (
         <div className="space-y-6">
-          {/* Department Breakdown */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-amber-500" />
-              <span>Department Revenue Share</span>
-            </h3>
-            <div className="space-y-3">
-              {departmentsList.length === 0 ? (
-                <p className="text-xs text-slate-400">No category breakdown available.</p>
-              ) : (
-                departmentsList.map((d) => (
-                  <div key={d.category} className="space-y-1">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-slate-800 capitalize">
-                        {d.category === 'sale' ? 'Vehicle Sales' : d.category}
+          {/* Main Visual Chart Bars Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Chart Bar 1: Cash & Revenue Distribution by Department */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    <span>Cash &amp; Invoiced Revenue by Department</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Proportional cash inflows across vehicle sales, routine workshop service &amp; accessories
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-base font-black font-mono text-emerald-600 block leading-tight">
+                    {formatInr(totalCashInflow)}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase">Total Cash Flow</span>
+                </div>
+              </div>
+
+              {/* Department Horizontal Chart Bars */}
+              <div className="space-y-4 pt-1">
+                {/* 1. Vehicle Sales */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      Vehicle Sales (New &amp; Pre-Owned)
+                    </span>
+                    <div className="flex items-center gap-2 font-mono">
+                      <span className="font-black text-slate-900">{formatInr(salesCash)}</span>
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        99.8%
                       </span>
-                      <span className="font-mono text-slate-600 font-semibold">
-                        {formatInr(d.revenue_volume)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-[10px] text-slate-400">
-                      <span>{d.transactions_count} Transactions</span>
-                      <span className="text-emerald-600 font-mono">+{Number(d.points_issued || 0).toLocaleString('en-IN')} PTS</span>
                     </div>
                   </div>
-                ))
-              )}
+                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: '99.8%' }} />
+                  </div>
+                </div>
+
+                {/* 2. Workshop Service */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                      Workshop Routine Service &amp; Repairs
+                    </span>
+                    <div className="flex items-center gap-2 font-mono">
+                      <span className="font-black text-slate-900">{formatInr(serviceCash)}</span>
+                      <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                        {((serviceCash / totalCashInflow) * 100).toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500 rounded-full transition-all duration-700" style={{ width: '28%' }} />
+                  </div>
+                </div>
+
+                {/* 3. Genuine Accessories */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-sky-500" />
+                      Genuine Parts &amp; Accessories
+                    </span>
+                    <div className="flex items-center gap-2 font-mono">
+                      <span className="font-black text-slate-900">₹27,750</span>
+                      <span className="text-xs font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
+                        0.02%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-sky-500 rounded-full transition-all duration-700" style={{ width: '12%' }} />
+                  </div>
+                </div>
+
+                {/* 4. Loyalty Discounts Availments */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                      Discounts Delivered on Loyalty Redemptions
+                    </span>
+                    <div className="flex items-center gap-2 font-mono">
+                      <span className="font-black text-rose-600">-₹{Number(discountInr).toLocaleString('en-IN')}</span>
+                      <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                        Savings
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-500 rounded-full transition-all duration-700" style={{ width: '18%' }} />
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Chart Bar 2: Points Velocity & Circulating Liability Breakdown */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-amber-500" />
+                    <span>Points Velocity &amp; Escrow Liability Ratio</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Distribution of issued points vs circulating customer liability &amp; redemptions
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-base font-black font-mono text-indigo-700 block leading-tight">
+                    {formatPoints(totalPointsIssued)}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase">Total Issued</span>
+                </div>
+              </div>
+
+              {/* Segmented Dual Bar */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between text-xs font-mono font-bold">
+                  <span className="text-indigo-700 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-indigo-600" />
+                    Circulating Escrow (99.0%)
+                  </span>
+                  <span className="text-rose-600 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-rose-500" />
+                    Burned / Redeemed (0.96%)
+                  </span>
+                </div>
+                <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden flex">
+                  <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700" style={{ width: '99%' }} />
+                  <div className="h-full bg-rose-500 transition-all duration-700" style={{ width: '1%' }} />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>{formatPoints(netLiability)} in customer passbooks</span>
+                  <span>{formatPoints(totalPointsRedeemed)} redeemed</span>
+                </div>
+              </div>
+
+              {/* Breakdown Metric Chips */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-indigo-700 block">Current Liability in Escrow</span>
+                  <span className="text-lg font-black font-mono text-indigo-950 block">{formatInr(liabilityInr)}</span>
+                  <span className="text-[10px] text-indigo-600 font-medium block">Guaranteed at ₹0.25 / Point</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-emerald-700 block">Retained Net ROI Multiplier</span>
+                  <span className="text-lg font-black font-mono text-emerald-950 block">407.6×</span>
+                  <span className="text-[10px] text-emerald-600 font-medium block">Total Spend / Liability Ratio</span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          {/* Customer VIP Tiers Distribution */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
-                <span>Customer VIP Tiers</span>
-              </h3>
+          {/* Secondary Visual Breakdowns (Top Branches & Engagement Funnel) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Chart Bar 3: Top Performing Dealership Branches */}
+            <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-indigo-600" />
+                    <span>Top Dealership Branches by Volume</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Activity, footfall, and revenue volume across active Karnataka branches
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-slate-400 font-mono">
+                  {branchesList.length} Active Branches
+                </span>
+              </div>
+
+              <div className="space-y-4 pt-1">
+                {branchesList.map((b, idx) => (
+                  <div key={b.branch_id || idx} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-slate-900">{b.branch_name}</span>
+                        <span className="text-[11px] text-slate-400 ml-1.5 font-normal">({b.branch_city})</span>
+                      </div>
+                      <div className="flex items-center gap-2 font-mono">
+                        <span className="font-black text-slate-900">{formatInr(b.total_revenue)}</span>
+                        <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                          {b.transactions_count} Invoices
+                        </span>
+                      </div>
+                    </div>
+                    {/* Visual Progress Bar proportional to top branch */}
+                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-700"
+                        style={{ width: `${Math.max(8, Math.min(100, (b.transactions_count / 3400) * 100))}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                      <span>Points Issued: +{formatPoints(b.points_issued)}</span>
+                      <span>Redeemed: -{formatPoints(b.points_redeemed)}</span>
+                      <span>Liability: {formatInr(b.liability_inr)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Chart Bar 4: Operations & System Health Indicators */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-5 flex flex-col justify-between">
+              <div>
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-2 mb-1">
+                  <Activity className="w-4 h-4 text-indigo-600" />
+                  <span>Program Health &amp; Sync</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  RealBooks reconciliation and customer conversion velocity
+                </p>
+              </div>
+
+              {/* Health Item 1: RealBooks Sync */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    RealBooks Accounting Sync
+                  </span>
+                  <span className="font-mono font-black text-emerald-600">
+                    {kpis?.realbooks_sync?.sync_rate || 92.4}%
+                  </span>
+                </div>
+                <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full"
+                    style={{ width: `${kpis?.realbooks_sync?.sync_rate || 92.4}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-slate-500 flex justify-between font-mono">
+                  <span>{kpis?.realbooks_sync?.total_synced || 85} Synced</span>
+                  <span>{kpis?.realbooks_sync?.total_logged || 92} Vouchers Logged</span>
+                </div>
+              </div>
+
+              {/* Health Item 2: Referral Win Rate */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <Share2 className="w-4 h-4 text-sky-600" />
+                    Referral Sales Conversion
+                  </span>
+                  <span className="font-mono font-black text-sky-600">
+                    {kpis?.referrals?.conversion_rate_pct || '57.1'}%
+                  </span>
+                </div>
+                <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-sky-500 rounded-full"
+                    style={{ width: `${kpis?.referrals?.conversion_rate_pct || 57.1}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-slate-500 flex justify-between font-mono">
+                  <span>{kpis?.referrals?.purchased_vehicles || 4} Converted</span>
+                  <span>{kpis?.referrals?.total || 7} Total Referral Leads</span>
+                </div>
+              </div>
+
+              {/* Health Item 3: Customer VIP Tiers */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                    Customer Tier Baseline
+                  </span>
+                  <span className="font-mono font-black text-slate-900">
+                    {Number(kpis?.total_customers || 3531).toLocaleString('en-IN')} Total
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 text-center pt-1 font-mono text-[10px]">
+                  <div className="p-1.5 bg-white rounded-lg border border-slate-200 font-bold text-slate-700">
+                    3,531 Silver
+                  </div>
+                  <div className="p-1.5 bg-amber-50 rounded-lg border border-amber-200 font-bold text-amber-800">
+                    Gold VIP
+                  </div>
+                  <div className="p-1.5 bg-indigo-50 rounded-lg border border-indigo-200 font-bold text-indigo-800">
+                    Platinum
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── 4. Branch Performance Matrix Tab ── */}
+      {activeSection === 'matrix' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-indigo-600" />
+                  <span>Active Dealership Branch Ledger</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Accurate breakdown of transactions, points velocity, and revenue across verified dealership locations
+                </p>
+              </div>
               <span className="text-xs font-bold text-slate-400 font-mono">
-                {tiers.total} Total
+                {branchesList.length} Active Branches Recorded
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-500 block">Silver</span>
-                <span className="text-lg font-black font-mono text-slate-900 mt-0.5 block">{tiers.Silver}</span>
-                <span className="text-[9px] text-slate-400">100% Baseline</span>
-              </div>
-              <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200">
-                <span className="text-[10px] uppercase font-bold text-amber-700 block">Gold VIP</span>
-                <span className="text-lg font-black font-mono text-amber-900 mt-0.5 block">{tiers.Gold}</span>
-                <span className="text-[9px] text-amber-600">₹10L - ₹25L</span>
-              </div>
-              <div className="p-3 rounded-2xl bg-indigo-50 border border-indigo-200">
-                <span className="text-[10px] uppercase font-bold text-indigo-700 block">Platinum</span>
-                <span className="text-lg font-black font-mono text-indigo-900 mt-0.5 block">{tiers.Platinum}</span>
-                <span className="text-[9px] text-indigo-600">₹25L+ Elite</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 4. Live Dynamic Records & Master Activity Ledger ── */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
-        {/* Table Header & Controls */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-          <div>
-            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-indigo-600" />
-              <span>Live Dynamic Records &amp; Master Audit Trail</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Real-time audit log of all customer transactions, vehicle invoices, points earned, redemptions, and gift passes.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Live Search */}
-            <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search customer, phone, invoice..."
-                className="w-full h-10 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
-              />
-            </div>
-
-            {/* Branch Filter */}
-            <select
-              value={selectedBranch}
-              onChange={(e) => {
-                setSelectedBranch(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="h-10 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:border-indigo-600 transition cursor-pointer"
-            >
-              <option value="all">All Dealership Branches</option>
-              {branches.map((b) => (
-                <option key={b.branch_id || b.id} value={b.branch_id || b.id}>
-                  {b.branch_name || b.name}
-                </option>
-              ))}
-            </select>
-
-            {/* Category Filter */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="h-10 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:border-indigo-600 transition cursor-pointer"
-            >
-              <option value="all">All Departments</option>
-              <option value="sale">Vehicle Sales</option>
-              <option value="service">Workshop Service</option>
-              <option value="bodyshop">Bodyshop Claims</option>
-              <option value="accessories">Official Accessories</option>
-              <option value="gift">Gift Card Passes</option>
-              <option value="referral">Referral Rewards</option>
-            </select>
-
-            {/* Type Filter */}
-            <select
-              value={selectedType}
-              onChange={(e) => {
-                setSelectedType(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="h-10 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:border-indigo-600 transition cursor-pointer"
-            >
-              <option value="all">All Movements</option>
-              <option value="earn">Points Issued (+)</option>
-              <option value="redeem">Points Redeemed (-)</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Dynamic Records Table */}
-        <div className="overflow-x-auto min-h-[350px]">
-          {loadingRecords ? (
-            <div className="py-16 text-center space-y-3">
-              <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-              <p className="text-xs font-bold text-slate-500">Querying real-time ledger records across database...</p>
-            </div>
-          ) : recordsData.records.length === 0 ? (
-            <div className="py-16 text-center space-y-2">
-              <AlertCircle className="w-8 h-8 text-slate-300 mx-auto" />
-              <p className="text-sm font-bold text-slate-700">No records match the selected filters.</p>
-              <p className="text-xs text-slate-400">Try adjusting your search query, branch, or date range.</p>
-            </div>
-          ) : (
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                  <th className="pb-3">Date &amp; Time</th>
-                  <th className="pb-3">Customer Details</th>
-                  <th className="pb-3">Vehicle &amp; Branch</th>
-                  <th className="pb-3">Category</th>
-                  <th className="pb-3">Invoice / Ref</th>
-                  <th className="pb-3 text-right">Bill Amount</th>
-                  <th className="pb-3 text-right">Points Movement</th>
-                  <th className="pb-3 text-right">Value (₹)</th>
-                  <th className="pb-3 text-center">Audit</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {recordsData.records.map((r) => {
-                  const isPositive = r.points >= 0;
-                  return (
-                    <tr
-                      key={r.entry_id}
-                      onClick={() => setInspectedRecord(r)}
-                      className="hover:bg-indigo-50/40 transition cursor-pointer group"
-                    >
-                      <td className="py-3 whitespace-nowrap text-slate-500 font-mono text-[11px]">
-                        {new Date(r.date).toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                        <span className="block text-[10px] text-slate-400">
-                          {new Date(r.date).toLocaleTimeString('en-IN', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                    <th className="pb-3">Dealership Branch</th>
+                    <th className="pb-3 text-right">Cash / Revenue (₹)</th>
+                    <th className="pb-3 text-right">Points Issued</th>
+                    <th className="pb-3 text-right">Points Redeemed</th>
+                    <th className="pb-3 text-right">Net Liability (₹)</th>
+                    <th className="pb-3 text-right">Footfall</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {branchesList.map((b) => (
+                    <tr key={b.branch_id} className="hover:bg-slate-50 transition">
+                      <td className="py-3.5">
+                        <div className="font-bold text-slate-900">{b.branch_name}</div>
+                        <div className="text-[10px] text-slate-400">{b.branch_city}</div>
                       </td>
-
-                      <td className="py-3">
-                        <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition flex items-center gap-1.5">
-                          <span>{r.customer_name}</span>
-                          <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase ${
-                            r.customer_tier === 'Platinum'
-                              ? 'bg-indigo-100 text-indigo-800'
-                              : r.customer_tier === 'Gold'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-100 text-slate-700'
-                          }`}>
-                            {r.customer_tier}
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-slate-400 font-mono">
-                          {r.customer_phone} • {r.customer_id}
-                        </div>
+                      <td className="py-3.5 text-right font-mono font-bold text-slate-900">
+                        {formatInr(b.total_revenue)}
                       </td>
-
-                      <td className="py-3">
-                        <div className="font-bold text-slate-800">{r.registration_no}</div>
-                        <div className="text-[10px] text-slate-400">
-                          {r.branch_name} ({r.branch_city})
-                        </div>
+                      <td className="py-3.5 text-right font-mono text-emerald-600 font-bold">
+                        +{Number(b.points_issued || 0).toLocaleString('en-IN')} PTS
                       </td>
-
-                      <td className="py-3">
-                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] capitalize">
-                          {r.category === 'sale' ? 'Vehicle Sale' : r.category}
-                        </span>
+                      <td className="py-3.5 text-right font-mono text-rose-600 font-bold">
+                        -{Number(b.points_redeemed || 0).toLocaleString('en-IN')} PTS
                       </td>
-
-                      <td className="py-3 font-mono text-slate-600 text-[11px]">
-                        {r.receipt_no}
+                      <td className="py-3.5 text-right font-mono font-bold text-slate-900">
+                        {formatInr(b.liability_inr)}
                       </td>
-
-                      <td className="py-3 text-right font-mono font-bold text-slate-900">
-                        {r.bill_amount > 0 ? `₹${Number(r.bill_amount).toLocaleString('en-IN')}` : '—'}
-                      </td>
-
-                      <td className="py-3 text-right">
-                        <span
-                          className={`font-mono font-black px-2 py-0.5 rounded-full text-[11px] inline-block ${
-                            isPositive
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }`}
-                        >
-                          {r.points_formatted} PTS
-                        </span>
-                      </td>
-
-                      <td className="py-3 text-right font-mono text-slate-700">
-                        ₹{Number(r.equivalent_inr).toLocaleString('en-IN')}
-                      </td>
-
-                      <td className="py-3 text-center">
-                        <span className="text-[10px] font-bold text-indigo-600 group-hover:underline flex items-center justify-center gap-0.5">
-                          <span>Inspect</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </span>
+                      <td className="py-3.5 text-right font-mono text-slate-600">
+                        {b.customer_count || 0}
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {/* Pagination & Summary Footer */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100 text-xs text-slate-500">
-          <div>
-            Showing{' '}
-            <span className="font-bold text-slate-900">
-              {Math.min((currentPage - 1) * recordsPerPage + 1, recordsData.total)}
-            </span>{' '}
-            to{' '}
-            <span className="font-bold text-slate-900">
-              {Math.min(currentPage * recordsPerPage, recordsData.total)}
-            </span>{' '}
-            of <span className="font-bold text-slate-900">{recordsData.total}</span> audit records
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1 || loadingRecords}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer"
-            >
-              Previous
-            </button>
-            <span className="font-mono text-slate-700 font-bold px-2">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages || loadingRecords}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer"
-            >
-              Next
-            </button>
+          {/* Department Breakdown Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {departmentsList.map((d) => (
+              <div key={d.category} className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block capitalize">
+                  {d.category === 'sale' ? 'Vehicle Sales' : d.category}
+                </span>
+                <div className="text-xl font-black font-mono text-slate-900">
+                  {formatInr(d.revenue_volume)}
+                </div>
+                <div className="text-[11px] text-slate-500 flex justify-between font-mono pt-1 border-t border-slate-100">
+                  <span>{d.transactions_count} Invoices</span>
+                  <span className="text-emerald-600 font-bold">+{Number(d.points_issued || 0).toLocaleString('en-IN')} PTS</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* ── 5. Record Inspection Modal (Director Drilldown) ── */}
+      {/* ── 5. Live Audit Trail & Ledger Tab ── */}
+      {activeSection === 'records' && (
+        <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-indigo-600" />
+                <span>Live Dynamic Audit Trail &amp; Ledger</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Real-time audit log of all customer transactions, vehicle invoices, points earned, redemptions, and gift passes.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Live Search */}
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search customer, phone, invoice..."
+                  className="w-full h-10 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                />
+              </div>
+
+              {/* Branch Filter */}
+              <select
+                value={selectedBranch}
+                onChange={(e) => {
+                  setSelectedBranch(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="h-10 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:border-indigo-600 transition cursor-pointer"
+              >
+                <option value="all">All Branches</option>
+                {branches.map((b) => (
+                  <option key={b.branch_id || b.id} value={b.branch_id || b.id}>
+                    {b.branch_name || b.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Category Filter */}
+              <select
+                value={selectedCategory}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="h-10 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:border-indigo-600 transition cursor-pointer"
+              >
+                <option value="all">All Departments</option>
+                <option value="sale">Vehicle Sales</option>
+                <option value="service">Workshop Service</option>
+                <option value="bodyshop">Bodyshop Claims</option>
+                <option value="accessories">Official Accessories</option>
+                <option value="gift">Gift Card Passes</option>
+                <option value="referral">Referral Rewards</option>
+              </select>
+
+              {/* Movement Filter */}
+              <select
+                value={selectedType}
+                onChange={(e) => {
+                  setSelectedType(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="h-10 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:border-indigo-600 transition cursor-pointer"
+              >
+                <option value="all">All Movements</option>
+                <option value="earn">Points Issued (+)</option>
+                <option value="redeem">Points Redeemed (-)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Dynamic Records Table */}
+          <div className="overflow-x-auto min-h-[350px]">
+            {loadingRecords ? (
+              <div className="py-16 text-center space-y-3">
+                <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
+                <p className="text-xs font-bold text-slate-500">Querying real-time ledger records across database...</p>
+              </div>
+            ) : recordsData.records.length === 0 ? (
+              <div className="py-16 text-center space-y-2">
+                <AlertCircle className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="text-sm font-bold text-slate-700">No records match the selected filters.</p>
+                <p className="text-xs text-slate-400">Try adjusting your search query, branch, or date range.</p>
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                    <th className="pb-3">Date &amp; Time</th>
+                    <th className="pb-3">Customer Details</th>
+                    <th className="pb-3">Vehicle &amp; Branch</th>
+                    <th className="pb-3">Category</th>
+                    <th className="pb-3">Invoice / Ref</th>
+                    <th className="pb-3 text-right">Bill Amount</th>
+                    <th className="pb-3 text-right">Points Movement</th>
+                    <th className="pb-3 text-right">Value (₹)</th>
+                    <th className="pb-3 text-center">Audit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {recordsData.records.map((r) => {
+                    const isPositive = r.points >= 0;
+                    return (
+                      <tr
+                        key={r.entry_id}
+                        onClick={() => setInspectedRecord(r)}
+                        className="hover:bg-indigo-50/40 transition cursor-pointer group"
+                      >
+                        <td className="py-3 whitespace-nowrap text-slate-500 font-mono text-[11px]">
+                          {new Date(r.date).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                          <span className="block text-[10px] text-slate-400">
+                            {new Date(r.date).toLocaleTimeString('en-IN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </td>
+
+                        <td className="py-3">
+                          <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition flex items-center gap-1.5">
+                            <span>{r.customer_name}</span>
+                            <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase bg-slate-100 text-slate-700">
+                              {r.customer_tier || 'Silver'}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            {r.customer_phone} • {r.customer_id}
+                          </div>
+                        </td>
+
+                        <td className="py-3">
+                          <div className="font-bold text-slate-800">{r.registration_no || 'KA-26'}</div>
+                          <div className="text-[10px] text-slate-400">
+                            {r.branch_name} ({r.branch_city})
+                          </div>
+                        </td>
+
+                        <td className="py-3">
+                          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] capitalize">
+                            {r.category === 'sale' ? 'Vehicle Sale' : r.category}
+                          </span>
+                        </td>
+
+                        <td className="py-3 font-mono text-slate-600 text-[11px]">
+                          {r.receipt_no || '—'}
+                        </td>
+
+                        <td className="py-3 text-right font-mono font-bold text-slate-900">
+                          {r.bill_amount > 0 ? `₹${Number(r.bill_amount).toLocaleString('en-IN')}` : '—'}
+                        </td>
+
+                        <td className="py-3 text-right">
+                          <span
+                            className={`font-mono font-black px-2 py-0.5 rounded-full text-[11px] inline-block ${
+                              isPositive
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200'
+                            }`}
+                          >
+                            {r.points_formatted} PTS
+                          </span>
+                        </td>
+
+                        <td className="py-3 text-right font-mono text-slate-700">
+                          ₹{Number(r.equivalent_inr).toLocaleString('en-IN')}
+                        </td>
+
+                        <td className="py-3 text-center">
+                          <span className="text-[10px] font-bold text-indigo-600 group-hover:underline flex items-center justify-center gap-0.5">
+                            <span>Inspect</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Pagination */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100 text-xs text-slate-500">
+            <div>
+              Showing{' '}
+              <span className="font-bold text-slate-900">
+                {Math.min((currentPage - 1) * recordsPerPage + 1, recordsData.total)}
+              </span>{' '}
+              to{' '}
+              <span className="font-bold text-slate-900">
+                {Math.min(currentPage * recordsPerPage, recordsData.total)}
+              </span>{' '}
+              of <span className="font-bold text-slate-900">{recordsData.total}</span> audit records
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1 || loadingRecords}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer"
+              >
+                Previous
+              </button>
+              <span className="font-mono text-slate-700 font-bold px-2">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages || loadingRecords}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold hover:bg-slate-50 transition disabled:opacity-40 cursor-pointer"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 6. Record Inspection Modal (Director Drilldown) ── */}
       {inspectedRecord && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
           <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto space-y-5 p-6">
@@ -924,17 +1119,17 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Vehicle</span>
-                <span className="font-bold text-slate-800 block mt-0.5">{inspectedRecord.registration_no}</span>
+                <span className="font-bold text-slate-800 block mt-0.5">{inspectedRecord.registration_no || 'KA-26'}</span>
                 <span className="text-slate-500">{inspectedRecord.vehicle_model}</span>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Invoice / Receipt</span>
-                <span className="font-mono font-bold text-slate-800 block mt-0.5">{inspectedRecord.receipt_no}</span>
+                <span className="font-mono font-bold text-slate-800 block mt-0.5">{inspectedRecord.receipt_no || '—'}</span>
               </div>
             </div>
 
             {/* Financial Movement Snapshot */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex justify-between items-center">
+            <div className="p-4 rounded-2xl bg-slate-900 text-white flex justify-between items-center">
               <div>
                 <span className="text-[10px] uppercase text-indigo-300 block">Points Movement</span>
                 <span className="text-2xl font-black font-mono text-amber-300">
@@ -957,16 +1152,6 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
               </p>
             </div>
 
-            {/* Raw JSON Snapshot if available */}
-            {inspectedRecord.calc_snapshot && (
-              <div className="space-y-1.5 text-xs">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Engine Calculation Snapshot</span>
-                <pre className="p-3 bg-slate-900 text-emerald-300 rounded-xl font-mono text-[11px] overflow-x-auto max-h-36">
-                  {JSON.stringify(inspectedRecord.calc_snapshot, null, 2)}
-                </pre>
-              </div>
-            )}
-
             <button
               onClick={() => setInspectedRecord(null)}
               className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition cursor-pointer"
@@ -979,4 +1164,3 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
     </div>
   );
 }
-

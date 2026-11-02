@@ -219,3 +219,4 @@ In your `.env` configuration file, there is a setting called `REALBOOKS_MODE`:
 2. **Audit Ready**: Every single request and response is stored in PostgreSQL table `realbooks_sync_log` with the exact timestamp, payload, and RealBooks voucher number.
 3. **Double-Entry Compliant**: Debit always equals Credit, preventing tax and accounting book mismatch.
 4. **Instant Transparency**: The cashier sees the exact segment name right on screen immediately after pushing.
+
