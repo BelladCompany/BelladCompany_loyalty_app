@@ -9,6 +9,7 @@ import {
   RefreshCw,
   UploadCloud,
   MessageSquare,
+  Lock,
 } from 'lucide-react';
 import ApiService from '../../services/api';
 
