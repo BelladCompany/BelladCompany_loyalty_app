@@ -56,3 +56,4 @@ VALUES
   )
 ON CONFLICT (api_key) DO UPDATE
 SET is_active = true, scopes = EXCLUDED.scopes;
+

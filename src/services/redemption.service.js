@@ -310,7 +310,19 @@ class RedemptionService {
         discount_applied = Math.min(redeemable_rupees, billAmt);
         points_redeemed = Math.min(currentPointBalance, Math.round(discount_applied / POINTS_PER_RUPEE_REDEMPTION));
         cash_paid = billAmt - discount_applied;
-        new_points_earned = Math.floor((cash_paid / 100) * POINTS_PER_100_RUPEES_EARNED);
+
+        // Apply category specific points earning rate
+        const normCategory = (category || 'service').toLowerCase();
+        let earnRate = POINTS_PER_100_RUPEES_EARNED; // 4% default
+        if (normCategory === 'accessories' || normCategory === 'accessory') {
+          earnRate = 2; // 2%
+        } else if (normCategory === 'bodyshop') {
+          earnRate = 3; // 3%
+        } else if (normCategory === 'service') {
+          earnRate = 4; // 4%
+        }
+
+        new_points_earned = Math.floor((cash_paid / 100) * earnRate);
       } else if (points && parseInt(points, 10) > 0) {
         points_redeemed = parseInt(points, 10);
         if (points_redeemed > currentPointBalance) {
@@ -477,6 +489,7 @@ class RedemptionService {
         cash_paid,
         new_points_earned,
         updated_total_balance,
+        remaining_balance: updated_total_balance,
         previous_balance: currentPointBalance,
         redemption_code: redemptionCode,
         receipt_no,

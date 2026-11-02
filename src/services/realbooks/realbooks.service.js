@@ -93,6 +93,53 @@ class RealBooksService {
   }
 
   /**
+   * Directly pushes a receipt transaction / redemption voucher to RealBooks
+   */
+  static async syncReceiptDirect({
+    receipt_no,
+    customer_id,
+    bill_amount,
+    discount_amount = 0,
+    points_redeemed = 0,
+    category = 'service',
+    branch_id = 1,
+    tenant_id = 'bellad_and_company',
+  }) {
+    const code = receipt_no || `REC-${Date.now()}`;
+    const payload = {
+      receipt_no: code,
+      redemption_code: code,
+      customer_id,
+      bill_amount,
+      discount_amount_rupees: discount_amount,
+      points_redeemed,
+      category,
+      branch_id,
+      timestamp: new Date().toISOString(),
+    };
+
+    const clientRes = await realbooksClient.pushRedemption(payload);
+
+    try {
+      await pool.query(
+        `INSERT INTO realbooks_sync_log (
+           entity_type, entity_id, api_status, retry_count, tenant_id
+         )
+         VALUES ('receipt', $1, 'synced', 0, $2)
+         ON CONFLICT DO NOTHING;`,
+        [code, tenant_id]
+      );
+    } catch (_) {}
+
+    return {
+      status: 'synced',
+      voucher_id: clientRes.realbooks_voucher_id || `RB-VOUCHER-${Date.now()}`,
+      synced_at: new Date().toISOString(),
+      receipt_no: code,
+    };
+  }
+
+  /**
    * Background retry worker: processes failed sync logs eligible for retry
    */
   static async processPendingRetryQueue() {

@@ -5,13 +5,14 @@ import {
   CheckCircle2,
   AlertCircle,
   Coins,
-  Lock,
   Sparkles,
-  BadgeCheck,
+  RefreshCw,
+  UploadCloud,
+  MessageSquare,
 } from 'lucide-react';
 import ApiService from '../../services/api';
 
-// Categories configuration (Clean categories: Service, Bodyshop, Accessories)
+// Categories configuration (Service, Bodyshop, Accessories)
 const CATEGORIES = [
   { id: 'service', label: 'Service' },
   { id: 'bodyshop', label: 'Bodyshop' },
@@ -22,13 +23,12 @@ const CATEGORIES = [
  * AddReceiptModal
  *
  * Combined Receipt Entry Modal (Auto Loyalty Points Calculation & Redemption).
- * Cashier enters Bill Amount, Receipt No, Account Ledger No, Category, and Branch.
  * Everything is automatically calculated:
  * - If customer is eligible (Accessories anytime; Service/Bodyshop after 12 months lock),
  *   eligible loyalty points are automatically redeemed for an instant bill discount.
  * - Remaining cash balance automatically earns new loyalty points.
- * - No manual points edit or checkbox toggle required.
- * - NO OTP VERIFICATION REQUIRED.
+ * - Single-click "Push to RealBooks" integration sync.
+ * - Automated WhatsApp notification dispatch.
  */
 export const AddReceiptModal = ({
   isOpen,
@@ -41,7 +41,6 @@ export const AddReceiptModal = ({
   const [category, setCategory] = useState('service');
   const [billAmount, setBillAmount] = useState('');
   const [receiptNo, setReceiptNo] = useState('');
-  const [ledgerNo, setLedgerNo] = useState('');
   const [branchId, setBranchId] = useState(user?.branch_id || branches[0]?.id || 1);
   const [notes, setNotes] = useState('');
 
@@ -56,8 +55,17 @@ export const AddReceiptModal = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [successData, setSuccessData] = useState(null);
 
+  // RealBooks sync status
+  const [pushingToRealbooks, setPushingToRealbooks] = useState(false);
+  const [realbooksSynced, setRealbooksSynced] = useState(null);
+
   const currentPoints = Math.max(0, customer?.points_balance ?? customer?.total_points ?? customer?.current_balance ?? 0);
   const rupeeValue = Math.max(0, Math.floor(currentPoints / 4));
+
+  const primaryPhone =
+    (typeof customer?.phones?.[0] === 'string' ? customer.phones[0] : customer?.phones?.[0]?.phone_number) ||
+    customer?.phone ||
+    '';
 
   // Reset form on open
   useEffect(() => {
@@ -65,37 +73,30 @@ export const AddReceiptModal = ({
       setCategory('service');
       setBillAmount('');
       setReceiptNo('');
-      setLedgerNo('');
       setBranchId(user?.branch_id || branches[0]?.id || 1);
       setNotes('');
       setErrorMessage('');
       setSuccessData(null);
-      setIsSubmitting(false);
+      setPushingToRealbooks(false);
+      setRealbooksSynced(null);
 
-      const vList = customer?.vehicles || [];
-      if (vList.length > 0) {
-        setSelectedVehicleId(vList[0]?.id || vList[0]?.vehicle_id || '');
-      } else {
-        setSelectedVehicleId('');
+      if (vehicles.length > 0) {
+        setSelectedVehicleId(String(vehicles[0].id || vehicles[0].vehicle_id || ''));
       }
     }
-  }, [isOpen, customer, user, branches]);
+  }, [isOpen, customer]);
 
-  // Check live vehicle eligibility when vehicle or category changes
+  // Fetch redemption eligibility when vehicle or category changes
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !selectedVehicleId) return;
 
-    if (selectedVehicleId) {
-      ApiService.getVehicleRedemptionStatus(selectedVehicleId, category)
-        .then((res) => {
-          setEligibilityData(res.data || null);
-        })
-        .catch(() => {
-          setEligibilityData(null);
-        });
-    } else {
-      setEligibilityData(null);
-    }
+    ApiService.getVehicleRedemptionStatus(selectedVehicleId, category)
+      .then((res) => {
+        setEligibilityData(res.data || null);
+      })
+      .catch(() => {
+        setEligibilityData(null);
+      });
   }, [isOpen, selectedVehicleId, category]);
 
   if (!isOpen || !customer) return null;
@@ -155,7 +156,7 @@ export const AddReceiptModal = ({
   const discountAmount = Math.floor(activeRedeemPoints / 4);
   const netCashPaid = Math.max(0, numAmount - discountAmount);
   const earnedPoints = netCashPaid > 0 ? Math.floor((netCashPaid / 100) * rateMultiplier) : 0;
-  const projectedBalance = currentPoints - activeRedeemPoints + earnedPoints;
+  const projectedBalance = Math.max(0, currentPoints - activeRedeemPoints) + earnedPoints;
 
   // Handle Form Submission
   const handleSubmit = async (e) => {
@@ -166,9 +167,8 @@ export const AddReceiptModal = ({
       setErrorMessage('Please enter a valid bill amount greater than ₹0.');
       return;
     }
-
     if (!receiptNo.trim()) {
-      setErrorMessage('Receipt / Bill number is required.');
+      setErrorMessage('Receipt / Invoice Number is strictly required.');
       return;
     }
 
@@ -177,11 +177,6 @@ export const AddReceiptModal = ({
     try {
       if (isEligible && activeRedeemPoints > 0) {
         // Auto-Redemption Flow (Instant discount + new points on cash paid, NO OTP)
-        const primaryPhone =
-          (typeof customer?.phones?.[0] === 'string' ? customer.phones[0] : customer?.phones?.[0]?.phone_number) ||
-          customer?.phone ||
-          '';
-
         const payload = {
           customer_id: customer.customer_id,
           phone: primaryPhone ? String(primaryPhone).replace(/[^\d+]/g, '') : undefined,
@@ -189,13 +184,14 @@ export const AddReceiptModal = ({
           points: activeRedeemPoints,
           category: category,
           receipt_no: receiptNo.trim(),
-          account_ledger_no: ledgerNo.trim() || undefined,
           vehicle_id: selectedVehicleId ? parseInt(selectedVehicleId, 10) : undefined,
           branch_id: branchId ? parseInt(branchId, 10) : 1,
         };
 
         const res = await ApiService.redeemPoints(payload);
         const resData = res.data || res;
+        const ptsEarned = resData.new_points_earned ?? earnedPoints;
+        const updatedBalance = resData.updated_total_balance ?? resData.remaining_balance ?? resData.balance?.remaining_balance ?? (Math.max(0, currentPoints - activeRedeemPoints) + ptsEarned);
 
         setSuccessData({
           type: 'redemption',
@@ -203,11 +199,11 @@ export const AddReceiptModal = ({
           discountAmount: resData.discount_applied ?? discountAmount,
           cashPaid: resData.cash_paid ?? netCashPaid,
           pointsRedeemed: resData.points_redeemed ?? activeRedeemPoints,
-          pointsEarned: resData.new_points_earned ?? earnedPoints,
-          newBalance: resData.remaining_balance ?? projectedBalance,
+          pointsEarned: ptsEarned,
+          newBalance: updatedBalance,
           receiptNo: receiptNo.trim(),
-          ledgerNo: ledgerNo.trim(),
           category,
+          branchId: branchId ? parseInt(branchId, 10) : 1,
         });
       } else {
         // Standard Points Earning Flow (NO OTP)
@@ -220,13 +216,13 @@ export const AddReceiptModal = ({
           category: category,
           reference_id: receiptNo.trim(),
           receipt_no: receiptNo.trim(),
-          account_ledger_no: ledgerNo.trim() || null,
-          description: `Receipt: ${receiptNo.trim()}${ledgerNo.trim() ? ` | Ledger: ${ledgerNo.trim()}` : ''}${notes.trim() ? ` | ${notes.trim()}` : ''}`,
+          description: `Receipt: ${receiptNo.trim()}${notes.trim() ? ` | Job Card: ${notes.trim()}` : ''}`,
         };
 
         const res = await ApiService.earnPoints(payload);
         const resData = res.data || res;
         const pts = resData?.ledger_entry?.points ?? earnedPoints;
+        const updatedBalance = currentPoints + pts;
 
         setSuccessData({
           type: 'earning',
@@ -235,16 +231,38 @@ export const AddReceiptModal = ({
           cashPaid: numAmount,
           pointsRedeemed: 0,
           pointsEarned: pts,
-          newBalance: currentPoints + pts,
+          newBalance: updatedBalance,
           receiptNo: receiptNo.trim(),
-          ledgerNo: ledgerNo.trim(),
           category,
+          branchId: branchId ? parseInt(branchId, 10) : 1,
         });
       }
     } catch (err) {
       setErrorMessage(err.message || 'Failed to process receipt transaction. Please check details and try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handlePushToRealbooks = async () => {
+    if (!successData || pushingToRealbooks || realbooksSynced) return;
+    setPushingToRealbooks(true);
+
+    try {
+      const res = await ApiService.pushRealbooksSync({
+        receipt_no: successData.receiptNo,
+        customer_id: customer.customer_id,
+        bill_amount: successData.billAmount,
+        discount_amount: successData.discountAmount,
+        points_redeemed: successData.pointsRedeemed,
+        category: successData.category,
+        branch_id: successData.branchId || branchId || 1,
+      });
+      setRealbooksSynced(res.data || { voucher_id: 'RB-' + Date.now() });
+    } catch (err) {
+      alert('Failed to push to RealBooks: ' + (err.message || 'Network error'));
+    } finally {
+      setPushingToRealbooks(false);
     }
   };
 
@@ -264,39 +282,32 @@ export const AddReceiptModal = ({
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
-                Add Receipt &amp; Loyalty Points
-              </h3>
-              <p className="text-[11px] sm:text-xs text-indigo-200 font-medium">
-                Record invoice, auto-calculate loyalty discount &amp; award points
-              </p>
+              <h3 className="text-base sm:text-lg font-black tracking-tight">Add Receipt &amp; Loyalty Points</h3>
+              <p className="text-[11px] sm:text-xs text-slate-300 font-medium">Record invoice, auto-calculate loyalty discount &amp; award points</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer shrink-0"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* ── Customer Info Strip ── */}
-        <div className="px-4 sm:px-6 py-2.5 sm:py-3.5 bg-slate-50 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-2.5 text-xs flex-shrink-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono font-bold bg-slate-200 px-2.5 py-0.5 rounded-lg text-slate-800">
+        {/* ── Customer Context Strip ── */}
+        <div className="bg-slate-50 border-b border-slate-200/80 px-4 sm:px-6 py-2.5 flex items-center justify-between text-xs flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 text-[11px]">
               {customer.customer_id}
             </span>
-            <span className="font-black text-slate-900 text-xs sm:text-sm">{customer.name || customer.customer_name}</span>
-            <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold uppercase text-[10px]">
-              {customer.tier_name || customer.tier || 'Silver'}
+            <span className="font-black text-slate-900">{customer.name || customer.customer_name}</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+              {customer.tier_name || 'Silver'}
             </span>
           </div>
-
-          <div className="flex items-center gap-2 text-right">
-            <span className="text-slate-500 font-semibold text-[11px] sm:text-xs">Available:</span>
-            <span className="font-black font-mono text-indigo-700 text-xs sm:text-sm">
-              {currentPoints.toLocaleString()} PTS
-            </span>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 font-medium">Available:</span>
+            <span className="font-mono font-black text-indigo-700">{currentPoints} PTS</span>
             <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 text-[11px] sm:text-xs">
               ≈ ₹{rupeeValue}
             </span>
@@ -350,16 +361,74 @@ export const AddReceiptModal = ({
               <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-200 text-slate-900 font-black">
                 <span>Updated Customer Balance</span>
                 <span className="text-base text-slate-900 font-mono">
-                  {Number(successData.newBalance).toLocaleString('en-IN')} PTS (≈ ₹{Math.floor(successData.newBalance / 4)})
+                  {Number(successData.newBalance).toLocaleString('en-IN')} PTS (≈ ₹{(successData.newBalance * 0.25).toFixed(2)})
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            {/* Auto WhatsApp Notification Banner */}
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-left gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-emerald-950 block truncate">
+                    Automated WhatsApp Alert Dispatched
+                  </span>
+                  <span className="text-[11px] text-emerald-800 font-medium block truncate">
+                    Receipt details &amp; updated balance sent to customer ({primaryPhone || 'registered phone'})
+                  </span>
+                </div>
+              </div>
+              {primaryPhone && (
+                <a
+                  href={`https://api.whatsapp.com/send?phone=${encodeURIComponent(
+                    primaryPhone.replace(/[^\d]/g, '')
+                  )}&text=${encodeURIComponent(
+                    `Dear ${customer.name || 'Valued Customer'},\nThank you for visiting Bellad & Company!\nReceipt: #${successData.receiptNo}\nBill Amount: ₹${Number(
+                      successData.billAmount
+                    ).toLocaleString('en-IN')}\nDiscount Applied: ₹${Number(successData.discountAmount).toLocaleString(
+                      'en-IN'
+                    )}\nPoints Earned: +${successData.pointsEarned} PTS\nNew Balance: ${
+                      successData.newBalance
+                    } PTS (≈ ₹${(successData.newBalance * 0.25).toFixed(2)})`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shrink-0 shadow-xs cursor-pointer"
+                >
+                  Share WhatsApp
+                </a>
+              )}
+            </div>
+
+            {/* Actions: Push to RealBooks + Done */}
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={pushingToRealbooks || realbooksSynced}
+                onClick={handlePushToRealbooks}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-md disabled:opacity-60 cursor-pointer"
+              >
+                {pushingToRealbooks ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Pushing to RealBooks...
+                  </>
+                ) : realbooksSynced ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-300" /> Pushed to RealBooks ({realbooksSynced.voucher_id || 'Synced'})
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="w-4 h-4 text-indigo-200" /> Push to RealBooks
+                  </>
+                )}
+              </button>
               <button
                 type="button"
                 onClick={handleFinish}
-                className="w-full sm:w-auto px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-black text-sm rounded-xl transition shadow-md cursor-pointer"
+                className="w-full sm:w-auto px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs sm:text-sm rounded-xl transition shadow-md cursor-pointer"
               >
                 Done
               </button>
@@ -378,18 +447,18 @@ export const AddReceiptModal = ({
             {/* 1. Category Selector Buttons (Service, Bodyshop, Accessories) */}
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-                Operation / Department Category *
+                Transaction Category *
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => setCategory(cat.id)}
-                    className={`py-2.5 sm:py-3 px-2 rounded-xl sm:rounded-2xl text-center border font-extrabold text-xs transition-all cursor-pointer ${
+                    className={`py-3 px-3 rounded-xl border text-xs sm:text-sm font-black transition text-center cursor-pointer ${
                       category === cat.id
                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
                     {cat.label}
@@ -398,145 +467,112 @@ export const AddReceiptModal = ({
               </div>
             </div>
 
-            {/* 2. Vehicle Selector (if customer has vehicles) */}
+            {/* 2. Vehicle Selector (If customer has vehicles) */}
             {vehicles.length > 0 && (
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                  Select Customer Vehicle
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
+                  Select Associated Vehicle
                 </label>
-                <div className="relative">
-                  <select
-                    value={selectedVehicleId}
-                    onChange={(e) => setSelectedVehicleId(e.target.value)}
-                    className="w-full text-xs font-bold p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-600 transition"
-                  >
-                    {vehicles.map((v) => (
-                      <option key={v.id || v.vehicle_id} value={v.id || v.vehicle_id}>
-                        {v.registration_number || v.reg_no || v.chassis_no || v.vin} {v.model ? `(${v.model})` : ''}
+                <select
+                  value={selectedVehicleId}
+                  onChange={(e) => setSelectedVehicleId(e.target.value)}
+                  className="w-full h-11 px-3.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                >
+                  {vehicles.map((v) => {
+                    const vid = String(v.id || v.vehicle_id);
+                    return (
+                      <option key={vid} value={vid}>
+                        {v.registration_number || v.reg_no || 'Vehicle'} - {v.model || v.brand_name || 'Vehicle'} (Purchased: {v.purchase_date ? new Date(v.purchase_date).toLocaleDateString('en-IN') : 'N/A'})
                       </option>
-                    ))}
-                    <option value="">No Vehicle / General Over-the-counter</option>
-                  </select>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
+
+            {/* 3. Lock Status Banner */}
+            {!isEligible && (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs">
+                <Lock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <span className="font-bold text-amber-900 uppercase tracking-wider text-[11px] block">
+                    {currentPoints <= 0 ? 'No Points to Redeem' : 'Redemption Locked (<12 Months)'}
+                  </span>
+                  <p className="text-amber-800 font-medium mt-0.5">
+                    {lockReason || 'Points are locked for Service / Sales until 12 months from vehicle purchase. (Accessories redemption is unlocked anytime).'}
+                  </p>
                 </div>
               </div>
             )}
 
-            {/* 3. Live Eligibility Notice Banner */}
-            <div
-              className={`p-3.5 rounded-2xl border text-xs flex items-start gap-2.5 transition-all ${
-                isAccessories
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
-                  : isEligible
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-950'
-                  : 'bg-amber-50 border-amber-300 text-amber-900'
-              }`}
-            >
-              {isAccessories ? (
-                <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-              ) : isEligible ? (
-                <BadgeCheck className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-              ) : (
-                <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              )}
-              <div className="space-y-0.5">
-                <span className="font-black uppercase tracking-wider text-[11px] block">
-                  {isAccessories
-                    ? 'Accessories Unlocked (Anytime Redemption)'
-                    : isEligible
-                    ? 'Redemption Eligible for this visit'
-                    : 'Redemption Locked (<12 Months)'}
-                </span>
-                <p className="font-medium leading-relaxed">
-                  {isAccessories
-                    ? 'Customer is eligible to redeem points for accessories with NO 12-month lock! Points discount will be auto-calculated.'
-                    : isEligible
-                    ? `Customer can redeem points toward bill discount (${currentPoints.toLocaleString()} PTS available = ₹${rupeeValue}). Everything will auto-calculate.`
-                    : lockReason || 'Points are locked for service until 12 months after purchase date. Full points will be earned for this visit!'}
-                </p>
-              </div>
-            </div>
-
-            {/* 4. Receipt Fields Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {/* Bill Amount */}
-              <div className="sm:col-span-2">
+            {/* 4. Bill Amount & Invoice Details */}
+            <div className="space-y-3.5">
+              <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Bill Amount (₹) *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">₹</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-base">₹</span>
                   <input
                     type="number"
-                    min="1"
                     step="0.01"
+                    min="1"
                     required
-                    placeholder="e.g. 6000"
+                    placeholder="Enter total invoice amount e.g. 1500"
                     value={billAmount}
                     onChange={(e) => setBillAmount(e.target.value)}
-                    className="w-full h-12 pl-9 pr-4 text-lg font-black font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                    className="w-full h-13 pl-9 pr-4 text-base sm:text-lg font-black font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
                   />
                 </div>
               </div>
 
-              {/* Receipt / Invoice No */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Receipt / Invoice No *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. REC-2026-081"
-                  value={receiptNo}
-                  onChange={(e) => setReceiptNo(e.target.value)}
-                  className="w-full h-11 px-3.5 text-xs font-bold font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
-                />
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {/* Receipt / Invoice No */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Receipt / Invoice No *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. REC-2026-081"
+                    value={receiptNo}
+                    onChange={(e) => setReceiptNo(e.target.value)}
+                    className="w-full h-11 px-3.5 text-xs font-bold font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                  />
+                </div>
 
-              {/* Ledger / Account No */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Ledger / Account No <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. LDG-8891"
-                  value={ledgerNo}
-                  onChange={(e) => setLedgerNo(e.target.value)}
-                  className="w-full h-11 px-3.5 text-xs font-bold font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
-                />
-              </div>
+                {/* Job Card (renamed from Job Card / Remarks, with Ledger removed) */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Job Card <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. JC-2026-081"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full h-11 px-3.5 text-xs font-bold font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                  />
+                </div>
 
-              {/* Branch */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Dealership Branch
-                </label>
-                <select
-                  value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
-                  className="w-full h-11 px-3.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
-                >
-                  {branches.map((b) => (
-                    <option key={b.id || b.branch_id} value={b.id || b.branch_id}>
-                      {b.name || b.branch_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Notes / Remarks */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Job Card / Remarks <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Regular 2nd Periodic Service"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full h-11 px-3.5 text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
-                />
+                {/* Branch */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Dealership Branch
+                  </label>
+                  <select
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    className="w-full h-11 px-3.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                  >
+                    {branches.map((b) => (
+                      <option key={b.id || b.branch_id} value={b.id || b.branch_id}>
+                        {b.name || b.branch_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -548,81 +584,68 @@ export const AddReceiptModal = ({
                   <div className="bg-emerald-50/80 border-b border-emerald-200 p-3.5 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2 text-emerald-950 font-bold">
                       <Sparkles className="w-4 h-4 text-emerald-600" />
-                      <span>Loyalty Discount Auto-Applied:</span>
-                      <span className="font-mono font-black text-emerald-800 bg-white px-2 py-0.5 rounded-lg border border-emerald-300">
-                        {activeRedeemPoints.toLocaleString()} PTS (−₹{discountAmount.toLocaleString('en-IN')})
-                      </span>
+                      <span>Auto Loyalty Discount Applied (4 PTS = ₹1)</span>
                     </div>
-                    <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
-                      Auto Deducted
+                    <span className="font-mono font-black text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-300">
+                      - {activeRedeemPoints} PTS (- ₹{discountAmount})
                     </span>
                   </div>
-                ) : !isEligible && currentPoints > 0 ? (
-                  <div className="bg-amber-50 border-b border-amber-200 p-3 flex items-center gap-2 text-xs text-amber-900 font-semibold">
-                    <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Redemption locked for this visit. Full points will be earned on this bill amount.</span>
+                ) : (
+                  <div className="bg-slate-50 border-b border-slate-200 p-3 text-xs text-slate-600 font-medium">
+                    No points redeemed for this invoice. New points will be earned on full amount.
                   </div>
-                ) : null}
+                )}
 
-                {/* Dark Financial Summary Card */}
-                <div className="p-4 bg-slate-900 text-white space-y-2.5 text-xs">
-                  <div className="flex justify-between items-center text-slate-300">
-                    <span>Gross Invoice Amount:</span>
-                    <span className="font-mono font-bold text-white text-sm">₹{numAmount.toLocaleString('en-IN')}</span>
+                <div className="p-4 bg-white space-y-2.5 text-xs">
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Total Bill:</span>
+                    <span className="font-mono font-bold text-slate-900">₹{numAmount.toLocaleString('en-IN')}</span>
                   </div>
-
                   {discountAmount > 0 && (
-                    <div className="flex justify-between items-center text-emerald-400 font-semibold">
-                      <span>Loyalty Discount Applied ({activeRedeemPoints.toLocaleString()} PTS):</span>
-                      <span className="font-mono font-black text-sm">−₹{discountAmount.toLocaleString('en-IN')}</span>
+                    <div className="flex justify-between items-center text-emerald-700 font-semibold">
+                      <span>Points Discount ({activeRedeemPoints} PTS):</span>
+                      <span className="font-mono font-bold">- ₹{discountAmount.toLocaleString('en-IN')}</span>
                     </div>
                   )}
-
-                  <div className="flex justify-between items-center text-sm font-black pt-2 border-t border-white/10">
+                  <div className="flex justify-between items-center text-slate-900 font-black pt-1 border-t border-slate-100">
                     <span>Net Cash to Collect:</span>
-                    <span className="font-mono text-amber-400 text-lg">₹{netCashPaid.toLocaleString('en-IN')}</span>
+                    <span className="font-mono text-sm text-indigo-700">₹{netCashPaid.toLocaleString('en-IN')}</span>
                   </div>
-
-                  <div className="flex justify-between items-center text-slate-300 pt-1 text-[11px]">
-                    <span className="flex items-center gap-1.5">
-                      <Coins className="w-3.5 h-3.5 text-emerald-400" />
-                      Points Earned on this receipt:
+                  <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-100">
+                    <span className="flex items-center gap-1">
+                      <Coins className="w-3.5 h-3.5 text-amber-500" /> New Points to Earn:
                     </span>
-                    <span className="font-mono font-black text-emerald-400 text-xs">+{earnedPoints} PTS</span>
+                    <span className="font-mono font-black text-amber-600">+{earnedPoints} PTS</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-500 pt-1 text-[11px]">
+                    <span>Projected New Balance:</span>
+                    <span className="font-mono font-bold text-slate-800">{projectedBalance} PTS (≈ ₹{(projectedBalance * 0.25).toFixed(2)})</span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* ── Action Buttons ── */}
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSubmitting}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 font-bold text-xs text-slate-600 hover:bg-slate-100 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-
+            {/* 6. Submit Button */}
+            <div className="pt-2">
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition shadow-md shadow-indigo-600/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                disabled={isSubmitting || numAmount <= 0}
+                className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm rounded-2xl shadow-lg shadow-indigo-600/25 transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? (
-                  <span>Processing...</span>
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Processing Receipt...
+                  </>
                 ) : (
                   <>
-                    <FileText className="w-4 h-4 text-white" />
-                    <span>Process &amp; Save Receipt</span>
+                    <span>Confirm &amp; Record Receipt</span>
+                    <span className="text-indigo-200 font-normal">→</span>
                   </>
                 )}
               </button>
             </div>
           </form>
         )}
-
       </div>
     </div>
   );

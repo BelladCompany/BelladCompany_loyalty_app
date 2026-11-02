@@ -127,6 +127,44 @@ class RedemptionController {
       next(error);
     }
   }
+
+  /**
+   * Push receipt discount / redemption voucher to RealBooks
+   */
+  static async pushToRealBooks(req, res, next) {
+    try {
+      const RealBooksService = require('../services/realbooks/realbooks.service');
+      const {
+        receipt_no,
+        customer_id,
+        bill_amount,
+        discount_amount,
+        points_redeemed,
+        category,
+        branch_id,
+      } = req.body;
+      const tenantId = req.tenantId || 'bellad_and_company';
+
+      const syncResult = await RealBooksService.syncReceiptDirect({
+        receipt_no,
+        customer_id,
+        bill_amount: Number(bill_amount || 0),
+        discount_amount: Number(discount_amount || 0),
+        points_redeemed: Number(points_redeemed || 0),
+        category: category || 'service',
+        branch_id: branch_id || req.user?.branch_id || 1,
+        tenant_id: tenantId,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Receipt and discount voucher pushed to RealBooks successfully.',
+        data: syncResult,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = RedemptionController;

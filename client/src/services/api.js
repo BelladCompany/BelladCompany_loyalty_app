@@ -245,6 +245,13 @@ export class ApiService {
     });
   }
 
+  static async pushRealbooksSync(payload) {
+    return this.request('/redemptions/realbooks/push', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
   /**
    * Returns locked/eligible/expired status for a vehicle before the cashier initiates OTP.
    * @param {number} vehicleId

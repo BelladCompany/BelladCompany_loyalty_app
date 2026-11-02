@@ -38,7 +38,14 @@ router.get(
   RedemptionController.getVehicleRedemptionStatus
 );
 
-// 4. Get redemption details by unique redemption code (Cashier or Admin)
+// 4. Push receipt transaction voucher to RealBooks (Cashier or Admin)
+router.post(
+  '/realbooks/push',
+  requireRole(['cashier', 'admin']),
+  RedemptionController.pushToRealBooks
+);
+
+// 5. Get redemption details by unique redemption code (Cashier or Admin)
 router.get(
   '/:code',
   requireRole(['cashier', 'admin']),

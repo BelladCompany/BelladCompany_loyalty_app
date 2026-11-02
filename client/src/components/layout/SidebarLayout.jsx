@@ -149,8 +149,8 @@ export const SidebarLayout = ({
       <div className="flex flex-col min-h-0 flex-1 overflow-y-auto">
         <div className="h-16 sm:h-20 px-5 sm:px-6 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/20 shrink-0">
-              <Crown className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 p-1 flex items-center justify-center shadow-xs shrink-0 overflow-hidden">
+              <img src="/bellad-logo.png" alt="Bellad & Company" className="w-full h-full object-contain" />
             </div>
             <div>
               <span className="font-black text-base sm:text-lg text-slate-900 tracking-tight block leading-tight">Bellad CRM</span>

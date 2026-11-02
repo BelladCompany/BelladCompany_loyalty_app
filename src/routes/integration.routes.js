@@ -31,3 +31,4 @@ router.post('/keys', authenticateApiKey, requireScope('admin'), IntegrationContr
 router.delete('/keys/:id', authenticateApiKey, requireScope('admin'), IntegrationController.revokeKey);
 
 module.exports = router;
+

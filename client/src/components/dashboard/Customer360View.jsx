@@ -22,7 +22,6 @@ import {
 import EarnPointsModal from './EarnPointsModal';
 import RedemptionModal from './RedemptionModal';
 import AddReceiptModal from './AddReceiptModal';
-import RaiseCorrectionModal from './RaiseCorrectionModal';
 import ApiService from '../../services/api';
 
 export const Customer360View = ({
@@ -36,22 +35,7 @@ export const Customer360View = ({
   const [addReceiptModalOpen, setAddReceiptModalOpen] = useState(false);
   const [earnModalOpen, setEarnModalOpen] = useState(false);
   const [redeemModalOpen, setRedeemModalOpen] = useState(false);
-  const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
-  const [selectedCorrectionRef, setSelectedCorrectionRef] = useState('');
   const [vehicleStatuses, setVehicleStatuses] = useState({});
-  const [pendingCorrections, setPendingCorrections] = useState([]);
-
-  // Fetch pending correction requests for customer
-  useEffect(() => {
-    if (!customer?.customer_id) return;
-    ApiService.getCorrectionRequests('pending')
-      .then((res) => {
-        const list = res.data || [];
-        const userPending = list.filter((r) => r.customer_id === customer.customer_id);
-        setPendingCorrections(userPending);
-      })
-      .catch(() => setPendingCorrections([]));
-  }, [customer?.customer_id, ledgerData]);
 
   // Fetch redemption status for every vehicle when customer profile loads
   useEffect(() => {
@@ -240,39 +224,6 @@ export const Customer360View = ({
           })}
         </span>
       ),
-    },
-    {
-      field: 'actions',
-      header: 'Action',
-      render: (_, row) => {
-        if (row.type === 'expire' || row.type === 'correction_reversal' || row.type === 'correction_applied') return null;
-
-        const refCode = String(row.receipt_no || row.reference_id || row.id || '').trim();
-        const isThisRowPending = pendingCorrections.some(
-          (pc) => String(pc.points_ledger_reference).trim() === refCode || String(pc.points_ledger_reference).trim() === String(row.id)
-        );
-
-        if (isThisRowPending) {
-          return (
-            <span className="px-2.5 py-1 text-xs font-bold text-amber-900 bg-amber-100 rounded border border-amber-300 shadow-2xs">
-              Correction Pending
-            </span>
-          );
-        }
-
-        return (
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCorrectionRef(row.receipt_no || row.reference_id || row.entry_id || customer.vehicles?.[0]?.registration_number || customer.customer_id);
-              setCorrectionModalOpen(true);
-            }}
-            className="px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded border border-indigo-200 shadow-xs"
-          >
-            Correct
-          </button>
-        );
-      },
     },
   ];
 
@@ -560,19 +511,10 @@ export const Customer360View = ({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setAddReceiptModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition shadow-xs cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5 text-white" />
                   Add Receipt
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedCorrectionRef('');
-                    setCorrectionModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition shadow-xs"
-                >
-                  <FileText className="w-3.5 h-3.5" /> Raise Billing Correction
                 </button>
               </div>
             </div>
@@ -635,14 +577,6 @@ export const Customer360View = ({
         }}
         branches={branches}
         onClose={() => setAddReceiptModalOpen(false)}
-        onSuccess={() => onRefresh && onRefresh()}
-      />
-
-      <RaiseCorrectionModal
-        isOpen={correctionModalOpen}
-        initialCustomerId={customer?.customer_id}
-        initialReference={selectedCorrectionRef}
-        onClose={() => setCorrectionModalOpen(false)}
         onSuccess={() => onRefresh && onRefresh()}
       />
     </div>
