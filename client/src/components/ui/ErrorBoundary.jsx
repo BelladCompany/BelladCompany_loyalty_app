@@ -1,10 +1,10 @@
 import React from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, showDetails: false };
   }
 
   static getDerivedStateFromError(error) {
@@ -18,6 +18,10 @@ export class ErrorBoundary extends React.Component {
   handleReset = () => {
     localStorage.removeItem('bac_loyalty_token');
     localStorage.removeItem('bac_loyalty_user');
+    window.location.href = '/';
+  };
+
+  handleReturnHome = () => {
     window.location.href = '/';
   };
 
@@ -35,12 +39,20 @@ export class ErrorBoundary extends React.Component {
                 {this.state.error?.message || 'An unexpected rendering error occurred.'}
               </p>
             </div>
-            <button
-              onClick={this.handleReset}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg transition"
-            >
-              <RefreshCw className="w-4 h-4" /> Clear Session & Reload App
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-1">
+              <button
+                onClick={this.handleReset}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg transition cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" /> Clear Session &amp; Reload App
+              </button>
+              <button
+                onClick={this.handleReturnHome}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition cursor-pointer"
+              >
+                <Home className="w-4 h-4" /> Home
+              </button>
+            </div>
           </div>
         </div>
       );

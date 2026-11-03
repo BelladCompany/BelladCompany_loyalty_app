@@ -1164,3 +1164,5 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
     </div>
   );
 }
+
+export { DirectorCommandCenter };

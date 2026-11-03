@@ -146,14 +146,16 @@ function SkeletonKycQueue({ items = 3, className = '' }) {
   );
 }
 
-// ── Named export namespace ───────────────────────────────────────────────────
-export const Skeleton = {
-  Line: SkeletonLine,
-  Card: SkeletonCard,
-  StatCard: SkeletonStatCard,
-  Table: SkeletonTable,
-  CustomerProfile: SkeletonCustomerProfile,
-  KycQueue: SkeletonKycQueue,
-};
+// ── Standalone callable component + named export namespace ────────────────────
+export function Skeleton({ className = '', ...props }) {
+  return <ShimmerBar className={className} {...props} />;
+}
+
+Skeleton.Line = SkeletonLine;
+Skeleton.Card = SkeletonCard;
+Skeleton.StatCard = SkeletonStatCard;
+Skeleton.Table = SkeletonTable;
+Skeleton.CustomerProfile = SkeletonCustomerProfile;
+Skeleton.KycQueue = SkeletonKycQueue;
 
 export default Skeleton;
