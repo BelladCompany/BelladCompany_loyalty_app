@@ -102,9 +102,21 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// Health check endpoint (lightweight check without DB contact)
+// Health check endpoints for Kubernetes
+// 1. Liveness Probe (process is alive and responding)
 app.get('/health', (req, res) => {
-  res.status(200).json({ ok: true });
+  res.status(200).json({ ok: true, timestamp: new Date().toISOString() });
+});
+
+// 2. Readiness Probe (checks DB connectivity before routing traffic)
+app.get('/health/ready', async (req, res) => {
+  try {
+    const { pool } = require('./config/db');
+    await pool.query('SELECT 1;');
+    res.status(200).json({ status: 'ready', database: 'connected', timestamp: new Date().toISOString() });
+  } catch (err) {
+    res.status(503).json({ status: 'not_ready', database: err.message, timestamp: new Date().toISOString() });
+  }
 });
 
 // API Routes

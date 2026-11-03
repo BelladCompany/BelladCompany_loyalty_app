@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loyalty-config
+  namespace: loyalty-system
+  labels:
+    app.kubernetes.io/name: bellad-loyalty
+    app.kubernetes.io/component: configuration
+data:
+  NODE_ENV: "production"
+  PORT: "5000"
+  DEFAULT_TENANT_ID: "bellad_and_company"
+  
+  # RealBooks Accounting ERP Integration
+  REALBOOKS_DOMAIN: "bellad group"
+  REALBOOKS_CID: "6460"
+  REALBOOKS_BASE_URL: "https://api.realbooks.in"
+  REALBOOKS_MODE: "live"
+  
+  # CORS and Security
+  FRONTEND_URL: "https://loyalty.belladandcompany.com,http://localhost:3000"
+  ENABLE_DEBUG_OTP: "false"
+  USE_DUMMY_OTP: "false"
+  LOG_LEVEL: "info"
+  
+  # Cache & Rate Limiting
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"

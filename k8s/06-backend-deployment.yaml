@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: loyalty-system
+  labels:
+    app: backend
+    app.kubernetes.io/name: bellad-loyalty
+    app.kubernetes.io/component: api-backend
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        app.kubernetes.io/name: bellad-loyalty
+        app.kubernetes.io/component: api-backend
+    spec:
+      initContainers:
+        # Guarantee PostgreSQL is ready before starting the Express server
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z -w 2 postgres-service 5432; do
+                echo "Waiting for postgres-service:5432..."
+                sleep 2
+              done
+              echo "Database is ready!"
+      containers:
+        - name: loyalty-backend
+          image: belladcompany/loyalty-backend:latest
+          imagePullPolicy: IfNotPresent
+          command: ["node", "src/index.js"]
+          ports:
+            - containerPort: 5000
+              name: http-api
+          envFrom:
+            - configMapRef:
+                name: loyalty-config
+            - secretRef:
+                name: loyalty-secrets
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          # Startup probe allows initial boot time
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            failureThreshold: 30
+            periodSeconds: 5
+          # Liveness probe monitors process responsiveness
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # Readiness probe confirms database connectivity before traffic is routed
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]
+          volumeMounts:
+            - name: uploads-storage
+              mountPath: /app/uploads
+      volumes:
+        - name: uploads-storage
+          emptyDir: {}
