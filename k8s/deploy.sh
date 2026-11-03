@@ -60,3 +60,4 @@ echo "=========================================================="
 echo "✅ Deployment Succeeded! Cluster Status:"
 echo "=========================================================="
 kubectl get pods,svc,ingress,hpa -n "$NAMESPACE"
+

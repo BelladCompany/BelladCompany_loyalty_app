@@ -215,3 +215,4 @@ kubectl exec -it -n loyalty-system deploy/backend-deployment -- sh
 # Test database readiness probe manually from inside cluster
 kubectl run probe-test --rm -i --tty --image=curlimages/curl -- curl -i http://backend-service.loyalty-system:5000/health/ready
 ```
+

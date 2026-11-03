@@ -18,10 +18,10 @@ VALUES (
   'director',
   '$2a$10$vKCJPAiahRiL8.0l9XbB6.lKtmRq6NsoNxeos2XV8XURoKGV.3WDK',
   'director',
-  1,
+  (SELECT id FROM branches LIMIT 1),
   'bellad_and_company'
 )
-ON CONFLICT (username) DO UPDATE 
+ON CONFLICT (tenant_id, username) DO UPDATE 
 SET password_hash = EXCLUDED.password_hash, role = 'director', tenant_id = 'bellad_and_company';
 
 -- Also ensure username 'agstya' is recognized with role 'director' (Password: Admin@123)
@@ -30,9 +30,9 @@ VALUES (
   'agstya',
   '$2a$10$vKCJPAiahRiL8.0l9XbB6.lKtmRq6NsoNxeos2XV8XURoKGV.3WDK',
   'director',
-  1,
+  (SELECT id FROM branches LIMIT 1),
   'bellad_and_company'
 )
-ON CONFLICT (username) DO UPDATE 
+ON CONFLICT (tenant_id, username) DO UPDATE 
 SET password_hash = EXCLUDED.password_hash, role = 'director', tenant_id = 'bellad_and_company';
 

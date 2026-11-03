@@ -23,3 +23,4 @@ commonLabels:
   app.kubernetes.io/name: bellad-loyalty
   app.kubernetes.io/part-of: dealership-crm
   app.kubernetes.io/managed-by: kustomize
+

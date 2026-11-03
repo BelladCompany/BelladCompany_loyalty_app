@@ -23,6 +23,10 @@ data:
   USE_DUMMY_OTP: "false"
   LOG_LEVEL: "info"
   
+  # Database SSL Configuration
+  DB_SSL: "false"
+
   # Cache & Rate Limiting
   REDIS_HOST: "redis-service"
   REDIS_PORT: "6379"
+

@@ -165,9 +165,9 @@ class DirectorService {
       // 6. Branch-by-Branch Performance Breakdown
       const branchRes = await client.query(
         `SELECT 
-          b.branch_id,
-          COALESCE(b.branch_name, 'Central Hubballi') AS branch_name,
-          COALESCE(b.branch_city, 'Hubballi') AS branch_city,
+          b.id AS branch_id,
+          COALESCE(b.name, 'Central Hubballi') AS branch_name,
+          COALESCE(b.code, 'Hubballi') AS branch_city,
           COUNT(pl.entry_id) AS transactions_count,
           COUNT(DISTINCT pl.customer_id) AS customer_count,
           COALESCE(SUM(CASE WHEN pl.points > 0 THEN pl.points ELSE 0 END), 0) AS points_issued,
@@ -195,9 +195,9 @@ class DirectorService {
             END
           ), 0) AS total_revenue
         FROM branches b
-        LEFT JOIN points_ledger pl ON b.branch_id = pl.branch_id AND pl.tenant_id = $1 ${dateFilter}
+        LEFT JOIN points_ledger pl ON b.id = pl.branch_id AND pl.tenant_id = $1 ${dateFilter}
         LEFT JOIN sale_transactions st ON (st.vehicle_id = pl.vehicle_id OR (pl.vehicle_id IS NULL AND st.customer_id = pl.customer_id))
-        GROUP BY b.branch_id, b.branch_name, b.branch_city
+        GROUP BY b.id, b.name, b.code
         ORDER BY total_revenue DESC, points_issued DESC;`,
         queryParams
       );
@@ -251,7 +251,7 @@ class DirectorService {
           pl.customer_id,
           COALESCE(c.customer_name, 'Valued Member') AS customer_name,
           COALESCE(cp.phone_number, 'N/A') AS customer_phone,
-          COALESCE(b.branch_name, 'Central Hubballi') AS branch_name,
+          COALESCE(b.name, 'Central Hubballi') AS branch_name,
           COALESCE(pl.transaction_category, 'other') AS category,
           pl.type,
           pl.points,
@@ -265,7 +265,7 @@ class DirectorService {
           pl.created_at
         FROM points_ledger pl
         LEFT JOIN customers c ON pl.customer_id = c.customer_id AND pl.tenant_id = c.tenant_id
-        LEFT JOIN branches b ON pl.branch_id = b.branch_id
+        LEFT JOIN branches b ON pl.branch_id = b.id
         LEFT JOIN LATERAL (
           SELECT phone_number FROM customer_phones 
           WHERE customer_id = pl.customer_id AND tenant_id = pl.tenant_id 
@@ -527,8 +527,8 @@ class DirectorService {
         COALESCE(c.customer_name, 'Valued Member') AS customer_name,
         COALESCE(cp.phone_number, 'N/A') AS customer_phone,
         'Silver' AS customer_tier,
-        COALESCE(b.branch_name, 'Central Hubballi') AS branch_name,
-        COALESCE(b.branch_city, 'Hubballi') AS branch_city,
+        COALESCE(b.name, 'Central Hubballi') AS branch_name,
+        COALESCE(b.code, 'Hubballi') AS branch_city,
         COALESCE(v.registration_number, v.chassis_no, v.vin, 'Registered Vehicle') AS registration_no,
         COALESCE(v.model, 'Vehicle') AS vehicle_model,
         COALESCE(pl.transaction_category, 'other') AS category,
@@ -558,7 +558,7 @@ class DirectorService {
         pl.calc_snapshot
       FROM points_ledger pl
       LEFT JOIN customers c ON pl.customer_id = c.customer_id AND pl.tenant_id = c.tenant_id
-      LEFT JOIN branches b ON pl.branch_id = b.branch_id
+      LEFT JOIN branches b ON pl.branch_id = b.id
       LEFT JOIN vehicles v ON (pl.vehicle_id = v.vehicle_id OR (pl.vehicle_id IS NULL AND v.vehicle_id = (SELECT v2.vehicle_id FROM vehicles v2 WHERE v2.customer_id = pl.customer_id LIMIT 1)))
       LEFT JOIN sale_transactions st ON (st.vehicle_id = pl.vehicle_id OR (pl.vehicle_id IS NULL AND st.customer_id = pl.customer_id))
       LEFT JOIN LATERAL (

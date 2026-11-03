@@ -24,30 +24,30 @@ async function seed() {
 
     // 2. Seed Brands
     let brandRow = (await client.query(
-      `SELECT brand_id AS id, brand_name AS name FROM brands WHERE tenant_id = $1 AND brand_name = $2;`,
+      `SELECT id, name FROM brands WHERE tenant_id = $1 AND name = $2;`,
       [tenantId, 'Hyundai']
     )).rows[0];
     if (!brandRow) {
       brandRow = (await client.query(
-        `INSERT INTO brands (brand_name, tenant_id)
-         VALUES ($1, $2)
-         RETURNING brand_id AS id, brand_name AS name;`,
-        ['Hyundai', tenantId]
+        `INSERT INTO brands (name, code, tenant_id)
+         VALUES ($1, $2, $3)
+         RETURNING id, name;`,
+        ['Hyundai', 'HYUNDAI', tenantId]
       )).rows[0];
     }
     const brandId = brandRow ? brandRow.id : 1;
 
     // 3. Seed Branches
     let branchRow = (await client.query(
-      `SELECT branch_id AS id, branch_name AS name FROM branches WHERE tenant_id = $1 AND branch_name = $2;`,
+      `SELECT id, name FROM branches WHERE tenant_id = $1 AND name = $2;`,
       [tenantId, 'Central Showroom - Bangalore']
     )).rows[0];
     if (!branchRow) {
       branchRow = (await client.query(
-        `INSERT INTO branches (branch_name, branch_city, tenant_id)
-         VALUES ($1, $2, $3)
-         RETURNING branch_id AS id, branch_name AS name;`,
-        ['Central Showroom - Bangalore', 'Bangalore', tenantId]
+        `INSERT INTO branches (name, code, address, tenant_id)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, name;`,
+        ['Central Showroom - Bangalore', 'BLR-01', 'Bangalore', tenantId]
       )).rows[0];
     }
     const branchId = branchRow ? branchRow.id : 1;
@@ -59,14 +59,14 @@ async function seed() {
     await client.query(
       `INSERT INTO users (username, password_hash, role, branch_id, tenant_id)
        VALUES ($1, $2, 'admin', $3, $4)
-       ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, tenant_id = EXCLUDED.tenant_id;`,
+       ON CONFLICT (tenant_id, username) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, tenant_id = EXCLUDED.tenant_id;`,
       ['admin', adminPasswordHash, branchId, tenantId]
     );
 
     await client.query(
       `INSERT INTO users (username, password_hash, role, branch_id, tenant_id)
        VALUES ($1, $2, 'cashier', $3, $4)
-       ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, tenant_id = EXCLUDED.tenant_id;`,
+       ON CONFLICT (tenant_id, username) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, tenant_id = EXCLUDED.tenant_id;`,
       ['cashier', cashierPasswordHash, branchId, tenantId]
     );
 
@@ -80,13 +80,14 @@ async function seed() {
 
     for (const tier of tiers) {
       const existingTier = (await client.query(
-        `SELECT tier_rule_id FROM tier_rules WHERE tenant_id = $1 AND tier_name = $2;`,
+        `SELECT id FROM tier_rules WHERE tenant_id = $1 AND tier_name = $2;`,
         [tenantId, tier.name]
       )).rows[0];
       if (!existingTier) {
         await client.query(
-          `INSERT INTO tier_rules (tenant_id, tier_name, min_lifetime_points)
-           VALUES ($1, $2, $3);`,
+          `INSERT INTO tier_rules (tenant_id, tier_name, min_points, multiplier)
+           VALUES ($1, $2, $3, 100)
+           ON CONFLICT (tenant_id, tier_name) DO UPDATE SET min_points = EXCLUDED.min_points;`,
           [tenantId, tier.name, tier.minPoints]
         );
       }
@@ -215,10 +216,10 @@ async function seed() {
 
     // Update Customer 1 Tier Snapshot (14,350 points -> Platinum Tier)
     await client.query(
-      `INSERT INTO customer_tier_snapshot (customer_id, current_tier, lifetime_points, tenant_id, updated_at)
-       VALUES ($1, 'Platinum', 14350, $2, NOW())
+      `INSERT INTO customer_tier_snapshot (customer_id, tier_name, current_tier, lifetime_points, current_balance, tenant_id, updated_at)
+       VALUES ($1, 'Platinum', 'Platinum', 14350, 14350, $2, NOW())
        ON CONFLICT (customer_id) DO UPDATE
-       SET current_tier = 'Platinum', lifetime_points = 14350, updated_at = NOW();`,
+       SET tier_name = 'Platinum', current_tier = 'Platinum', lifetime_points = 14350, current_balance = 14350, updated_at = NOW();`,
       [cust1Id, tenantId]
     );
 
@@ -287,10 +288,10 @@ async function seed() {
     );
 
     await client.query(
-      `INSERT INTO customer_tier_snapshot (customer_id, current_tier, lifetime_points, tenant_id, updated_at)
-       VALUES ($1, 'Silver', 1020, $2, NOW())
+      `INSERT INTO customer_tier_snapshot (customer_id, tier_name, current_tier, lifetime_points, current_balance, tenant_id, updated_at)
+       VALUES ($1, 'Silver', 'Silver', 1020, 1020, $2, NOW())
        ON CONFLICT (customer_id) DO UPDATE
-       SET current_tier = 'Silver', lifetime_points = 1020, updated_at = NOW();`,
+       SET tier_name = 'Silver', current_tier = 'Silver', lifetime_points = 1020, current_balance = 1020, updated_at = NOW();`,
       [cust2Id, tenantId]
     );
 

@@ -19,3 +19,4 @@ spec:
   selector:
     matchLabels:
       app: frontend
+

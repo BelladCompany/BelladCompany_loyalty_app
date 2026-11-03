@@ -6,3 +6,4 @@ metadata:
     app.kubernetes.io/name: bellad-loyalty
     app.kubernetes.io/part-of: dealership-crm
     environment: production
+
