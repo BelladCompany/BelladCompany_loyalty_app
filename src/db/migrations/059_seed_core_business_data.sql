@@ -21,24 +21,28 @@ BEGIN
   SET firm_name = EXCLUDED.firm_name,
       point_to_rupee_rate = EXCLUDED.point_to_rupee_rate;
 
-  -- 2. Harmonize & Ensure Brands (support both brand_name and name schemas)
+  -- 2. Harmonize & Ensure Brands (support both brand_name and name schemas without NOT NULL constraint violations)
+  ALTER TABLE brands ALTER COLUMN name DROP NOT NULL;
+  ALTER TABLE brands ALTER COLUMN code DROP NOT NULL;
   ALTER TABLE brands ADD COLUMN IF NOT EXISTS brand_id SERIAL;
   ALTER TABLE brands ADD COLUMN IF NOT EXISTS id INTEGER;
   ALTER TABLE brands ADD COLUMN IF NOT EXISTS brand_name VARCHAR(255);
   ALTER TABLE brands ADD COLUMN IF NOT EXISTS name VARCHAR(255);
   ALTER TABLE brands ADD COLUMN IF NOT EXISTS code VARCHAR(50);
 
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'brands' AND column_name = 'brand_name') THEN
-    INSERT INTO brands (brand_name, tenant_id)
-    VALUES ('Hyundai', v_tenant), ('Hero', v_tenant), ('Tata', v_tenant), ('Swaraj', v_tenant)
-    ON CONFLICT DO NOTHING;
-    UPDATE brands SET name = brand_name WHERE name IS NULL;
-    UPDATE brands SET code = UPPER(SUBSTRING(brand_name FROM 1 FOR 4)) WHERE code IS NULL;
-  ELSE
-    INSERT INTO brands (name, code, tenant_id)
-    VALUES ('Hyundai', 'HYUNDAI', v_tenant), ('Hero', 'HERO', v_tenant), ('Tata', 'TATA', v_tenant), ('Swaraj', 'SWARAJ', v_tenant)
-    ON CONFLICT DO NOTHING;
-  END IF;
+  INSERT INTO brands (name, brand_name, code, tenant_id)
+  VALUES
+    ('Hyundai', 'Hyundai', 'HYUN', v_tenant),
+    ('Hero', 'Hero', 'HERO', v_tenant),
+    ('Tata', 'Tata', 'TATA', v_tenant),
+    ('Swaraj', 'Swaraj', 'SWAR', v_tenant)
+  ON CONFLICT DO NOTHING;
+
+  UPDATE brands SET name = brand_name WHERE name IS NULL AND brand_name IS NOT NULL;
+  UPDATE brands SET brand_name = name WHERE brand_name IS NULL AND name IS NOT NULL;
+  UPDATE brands SET code = UPPER(SUBSTRING(COALESCE(brand_name, name) FROM 1 FOR 4)) WHERE code IS NULL;
+  UPDATE brands SET id = brand_id WHERE id IS NULL AND brand_id IS NOT NULL;
+  UPDATE brands SET brand_id = id WHERE brand_id IS NULL AND id IS NOT NULL;
 
   -- 3. Ensure Branches
   IF NOT EXISTS (SELECT 1 FROM branches WHERE tenant_id = v_tenant) THEN
@@ -53,6 +57,13 @@ BEGIN
   ) INTO v_branch_id;
 
   -- 4. Ensure Point Rules
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'multiplier_numerator') THEN
+    ALTER TABLE point_rules ALTER COLUMN multiplier_numerator DROP NOT NULL;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'multiplier_denominator') THEN
+    ALTER TABLE point_rules ALTER COLUMN multiplier_denominator DROP NOT NULL;
+  END IF;
+
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'rate_type') THEN
     INSERT INTO point_rules (tenant_id, rate_type, points_per_100)
     VALUES
@@ -60,26 +71,31 @@ BEGIN
       (v_tenant, 'service', 1.00)
     ON CONFLICT DO NOTHING;
   ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'rule_type') THEN
-    INSERT INTO point_rules (tenant_id, rule_type, points_per_100)
+    INSERT INTO point_rules (tenant_id, rule_type, multiplier_numerator, multiplier_denominator, points_per_100, description)
     VALUES
-      (v_tenant, 'sale', 1.00),
-      (v_tenant, 'service', 1.00)
+      (v_tenant, 'sale', 1, 100, 1.00, 'Sale 1 pt per 100'),
+      (v_tenant, 'service', 1, 100, 1.00, 'Service 1 pt per 100')
     ON CONFLICT DO NOTHING;
   END IF;
 
   -- 5. Customer 1: Rajesh Kumar Sharma (BAC-9001, Phone: 9845012345, Creta SX)
+  ALTER TABLE customers ALTER COLUMN customer_name DROP NOT NULL;
+  ALTER TABLE customers ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+
   INSERT INTO customers (
-    customer_id, customer_name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
+    customer_id, customer_name, name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
     age, firm_name, branch_name, address, is_first_time_visitor, tenant_id
   )
   VALUES (
-    'BAC-9001', 'Rajesh Kumar Sharma', '543287651092',
+    'BAC-9001', 'Rajesh Kumar Sharma', 'Rajesh Kumar Sharma', '543287651092',
     '5e404c2f450c742b0179881d5b786238b00c8ba2eb36dc2066ad063abffaee8f',
     '869653a6ff1fab2dc3f91a2a:6b77d79822e9a1c675da5ed1e7d98d00:05ce92ef',
     38, 'Bellad & Company', 'Central Showroom - Hubli', '#42, Indiranagar, Bangalore', FALSE, v_tenant
   )
   ON CONFLICT (customer_id) DO UPDATE
-  SET customer_name = EXCLUDED.customer_name, tenant_id = EXCLUDED.tenant_id;
+  SET customer_name = EXCLUDED.customer_name,
+      name = EXCLUDED.customer_name,
+      tenant_id = EXCLUDED.tenant_id;
 
   INSERT INTO customer_phones (customer_id, phone_number, is_verified, tenant_id)
   VALUES ('BAC-9001', '9845012345', TRUE, v_tenant)
@@ -114,17 +130,19 @@ BEGIN
 
   -- 6. Customer 2: Prajwal Wadekar (BAC-100005, Phone: 9876543210, Harrier Dark)
   INSERT INTO customers (
-    customer_id, customer_name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
+    customer_id, customer_name, name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
     age, firm_name, branch_name, address, is_first_time_visitor, tenant_id
   )
   VALUES (
-    'BAC-100005', 'Prajwal Wadekar', '901234567890',
+    'BAC-100005', 'Prajwal Wadekar', 'Prajwal Wadekar', '901234567890',
     '048234c6082378c10fc012055fd192a6cfd52ea3ac852034cc0e2588afc8cca8',
     '9cacb2ec66af139e0850f067:35640d9dbb0dee4d831aa6de6c7bf3fb:5d150b30',
     32, 'Bellad & Company', 'Central Showroom - Hubli', 'Keshwapur, Hubli, Karnataka', FALSE, v_tenant
   )
   ON CONFLICT (customer_id) DO UPDATE
-  SET customer_name = EXCLUDED.customer_name, tenant_id = EXCLUDED.tenant_id;
+  SET customer_name = EXCLUDED.customer_name,
+      name = EXCLUDED.customer_name,
+      tenant_id = EXCLUDED.tenant_id;
 
   INSERT INTO customer_phones (customer_id, phone_number, is_verified, tenant_id)
   VALUES ('BAC-100005', '9876543210', TRUE, v_tenant)
@@ -157,17 +175,19 @@ BEGIN
 
   -- 7. Customer 3: Pooja Bellad (BAC-9002, Phone: 9886054321, Splendor)
   INSERT INTO customers (
-    customer_id, customer_name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
+    customer_id, customer_name, name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
     age, firm_name, branch_name, address, is_first_time_visitor, tenant_id
   )
   VALUES (
-    'BAC-9002', 'Pooja Bellad', '789012345678',
+    'BAC-9002', 'Pooja Bellad', 'Pooja Bellad', '789012345678',
     '233cafe0a0f8438816e7be59cb1859f078cb5458c0a3ca271b0ccc9969c10288',
     '189257c71081d17101197e52:407da955c451263ed634b16375bedfdc:40ac56a8',
     29, 'Bellad & Company', 'Central Showroom - Hubli', 'Malleshwaram, Bangalore', FALSE, v_tenant
   )
   ON CONFLICT (customer_id) DO UPDATE
-  SET customer_name = EXCLUDED.customer_name, tenant_id = EXCLUDED.tenant_id;
+  SET customer_name = EXCLUDED.customer_name,
+      name = EXCLUDED.customer_name,
+      tenant_id = EXCLUDED.tenant_id;
 
   INSERT INTO customer_phones (customer_id, phone_number, is_verified, tenant_id)
   VALUES ('BAC-9002', '9886054321', TRUE, v_tenant)
@@ -200,17 +220,19 @@ BEGIN
 
   -- 8. Customer 4: Rahul Sharma (BAC-9821, Phone: 9845098210, Safari Dark)
   INSERT INTO customers (
-    customer_id, customer_name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
+    customer_id, customer_name, name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
     age, firm_name, branch_name, address, is_first_time_visitor, tenant_id
   )
   VALUES (
-    'BAC-9821', 'Rahul Sharma', '123456789012',
+    'BAC-9821', 'Rahul Sharma', 'Rahul Sharma', '123456789012',
     '33a4f61f7d23588df8516d7734bbd12975949d0362241cf775d7b53ea5d81a8b',
     '869653a6ff1fab2dc3f91a2a:6b77d79822e9a1c675da5ed1e7d98d00:05ce92ef',
     35, 'Bellad & Company', 'Central Showroom - Hubli', 'Vidyanagar, Hubli, Karnataka', FALSE, v_tenant
   )
   ON CONFLICT (customer_id) DO UPDATE
-  SET customer_name = EXCLUDED.customer_name, tenant_id = EXCLUDED.tenant_id;
+  SET customer_name = EXCLUDED.customer_name,
+      name = EXCLUDED.customer_name,
+      tenant_id = EXCLUDED.tenant_id;
 
   INSERT INTO customer_phones (customer_id, phone_number, is_verified, tenant_id)
   VALUES ('BAC-9821', '9845098210', TRUE, v_tenant)
@@ -243,17 +265,19 @@ BEGIN
 
   -- 9. Customer 5: Suresh Patil (BAC-100006, Phone: 9845112233, Swaraj Tractor)
   INSERT INTO customers (
-    customer_id, customer_name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
+    customer_id, customer_name, name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
     age, firm_name, branch_name, address, is_first_time_visitor, tenant_id
   )
   VALUES (
-    'BAC-100006', 'Suresh Patil', '234567890123',
+    'BAC-100006', 'Suresh Patil', 'Suresh Patil', '234567890123',
     '71b56a42a0b1bc85d985223a3d2e1b93f218bbad5f6bca50186937c53641c88a',
     '9cacb2ec66af139e0850f067:35640d9dbb0dee4d831aa6de6c7bf3fb:5d150b30',
     42, 'Bellad & Company', 'Central Showroom - Hubli', 'Gokul Road, Hubli, Karnataka', FALSE, v_tenant
   )
   ON CONFLICT (customer_id) DO UPDATE
-  SET customer_name = EXCLUDED.customer_name, tenant_id = EXCLUDED.tenant_id;
+  SET customer_name = EXCLUDED.customer_name,
+      name = EXCLUDED.customer_name,
+      tenant_id = EXCLUDED.tenant_id;
 
   INSERT INTO customer_phones (customer_id, phone_number, is_verified, tenant_id)
   VALUES ('BAC-100006', '9845112233', TRUE, v_tenant)
@@ -370,5 +394,9 @@ BEGIN
       ('BAC-9821', 'Shared via WhatsApp', NULL, 'REF-BELL-9821-4321', 'whatsapp', NOW() - INTERVAL '6 hours', 'shared', 0, 2500, 2500, 2500, 0, 'WhatsApp Friend Referral', v_tenant)
     ON CONFLICT DO NOTHING;
   END IF;
+
+  -- Synchronize alias columns on customers
+  UPDATE customers SET name = customer_name WHERE name IS NULL AND customer_name IS NOT NULL;
+  UPDATE customers SET customer_name = name WHERE customer_name IS NULL AND name IS NOT NULL;
 
 END $$;
