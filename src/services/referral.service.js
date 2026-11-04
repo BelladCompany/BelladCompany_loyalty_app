@@ -1199,7 +1199,13 @@ class ReferralService {
         referee_phone ? referee_phone.trim() : null,
         referralCode,
         share_channel || 'whatsapp',
-        vehicle_model ? `WhatsApp Referral for ${vehicle_model}` : 'WhatsApp Friend Referral',
+        vehicle_model
+          ? `Referral for ${vehicle_model}`
+          : share_channel === 'link_copy'
+            ? 'Friend Referral (Link Shared)'
+            : share_channel === 'code_copy'
+              ? 'Friend Referral (Code Shared)'
+              : 'WhatsApp Friend Referral',
         tenant_id,
       ]
     );
@@ -1211,8 +1217,7 @@ class ReferralService {
     const claimUrl = `${baseUrl}/portal?ref=${referralCode}`;
     const shareMessage = `🎁 *Bellad & Company Loyalty Referral Rewards*\n\n` +
       `Hey! You have been invited by *${referrer.customer_name}* to join Bellad & Co Loyalty Rewards.\n\n` +
-      `🌟 *Your Referral Code:* ${referralCode}\n` +
-      +
+      `🌟 *Your Referral Code:* ${referralCode}\n\n` +
       `Get Bonus Points on your new vehicle purchase at Bellad and Company \n\n` +
       `👉 Click here to claim & register:\n${claimUrl}`;
 

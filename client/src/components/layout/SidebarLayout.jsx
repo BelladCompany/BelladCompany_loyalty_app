@@ -43,8 +43,8 @@ export const SidebarLayout = ({
   const isManager = ['branch_manager', 'manager'].includes(user?.role);
   const isAccountsHead = ['accounts_head', 'account_head'].includes(user?.role);
   const isAdmin = ['admin', 'super_admin', 'regional_admin', 'director'].includes(user?.role) ||
-                  user?.username?.toLowerCase() === 'agstya' ||
-                  user?.username?.toLowerCase() === 'agastya';
+    user?.username?.toLowerCase() === 'agstya' ||
+    user?.username?.toLowerCase() === 'agastya';
 
   const closeMobileNav = () => setMobileNavOpen(false);
 
@@ -54,22 +54,22 @@ export const SidebarLayout = ({
   // Smart CRM Grouped Categories based on staff role
   const navSections = isAccountsHead
     ? [
-        {
-          group: 'Counter POS',
-          items: [
-            { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
-          ],
-        },
-        {
-          group: 'Accounts Approvals',
-          items: [
-            { id: 'kyc_approvals', label: 'KYC Approvals', icon: ShieldCheck },
-            { id: 'corrections_queue', label: 'Queue Approvals', icon: FileText },
-          ],
-        },
-      ]
+      {
+        group: 'Counter POS',
+        items: [
+          { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
+        ],
+      },
+      {
+        group: 'Accounts Approvals',
+        items: [
+          { id: 'kyc_approvals', label: 'KYC Approvals', icon: ShieldCheck },
+          { id: 'corrections_queue', label: 'Queue Approvals', icon: FileText },
+        ],
+      },
+    ]
     : isManager
-    ? [
+      ? [
         {
           group: 'Counter POS',
           items: [
@@ -89,59 +89,59 @@ export const SidebarLayout = ({
           ],
         },
       ]
-    : isCashier
-    ? [
-        {
-          group: 'Counter POS',
-          items: [
-            { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
-          ],
-        },
-      ]
-    : [
-        // Executive Director / Admin full hierarchy
-        {
-          group: 'Executive Suite',
-          items: [
-            { id: 'director_command_center', label: 'Director Command Center', icon: Crown },
-          ],
-        },
-        {
-          group: 'Counter POS',
-          items: [
-            { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
-          ],
-        },
-        {
-          group: 'Rewards & Referrals',
-          items: [
-            { id: 'gift_cards', label: 'Gift Card Rewards', icon: Gift },
-            { id: 'referrals', label: 'Referral Rewards', icon: Users },
-            { id: 'monthly_offers', label: 'Monthly Brand Offers', icon: Tag, isExternalOffers: true },
-          ],
-        },
-        {
-          group: 'Loyalty Rewards',
-          items: [
-            { id: 'customer_redemptions', label: 'Customer Redemptions', icon: Sparkles },
-            { id: 'kyc_approvals', label: 'KYC Approvals', icon: ShieldCheck },
-            { id: 'corrections_queue', label: 'Queue Approvals', icon: FileText },
-          ],
-        },
-        {
-          group: 'Loyalty App Studio',
-          items: [
-            { id: 'app_builder', label: 'App Builder (WordPress Mode)', icon: Sparkles, isBuilder: true },
-            { id: 'master_editor', label: 'Rules & Logic Studio', icon: SlidersHorizontal, isStudio: true },
-          ],
-        },
-        {
-          group: 'Analytics',
-          items: [
-            { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
-          ],
-        },
-      ];
+      : isCashier
+        ? [
+          {
+            group: 'Counter POS',
+            items: [
+              { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
+            ],
+          },
+        ]
+        : [
+          // Executive Director / Admin full hierarchy
+          {
+            group: 'Executive Suite',
+            items: [
+              { id: 'director_command_center', label: 'Director Command Center', icon: Crown },
+            ],
+          },
+          {
+            group: 'Counter POS',
+            items: [
+              { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
+            ],
+          },
+          {
+            group: 'Rewards & Referrals',
+            items: [
+              { id: 'gift_cards', label: 'Gift Card Rewards', icon: Gift },
+              { id: 'referrals', label: 'Referral Rewards', icon: Users },
+              { id: 'monthly_offers', label: 'Monthly Brand Offers', icon: Tag, isExternalOffers: true },
+            ],
+          },
+          {
+            group: 'Loyalty Rewards',
+            items: [
+              { id: 'customer_redemptions', label: 'Customer Redemptions', icon: Sparkles },
+              { id: 'kyc_approvals', label: 'KYC Approvals', icon: ShieldCheck },
+              { id: 'corrections_queue', label: 'Queue Approvals', icon: FileText },
+            ],
+          },
+          {
+            group: 'Loyalty App Studio',
+            items: [
+              { id: 'app_builder', label: 'App Builder (WordPress Mode)', icon: Sparkles, isBuilder: true },
+              { id: 'master_editor', label: 'Rules & Logic Studio', icon: SlidersHorizontal, isStudio: true },
+            ],
+          },
+          {
+            group: 'Analytics',
+            items: [
+              { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
+            ],
+          },
+        ];
 
   const SidebarContent = ({ handleNavigate, handleLogout, isMobile = false }) => (
     <div className="flex flex-col h-full justify-between bg-white border-r border-slate-200/80">
@@ -149,7 +149,7 @@ export const SidebarLayout = ({
       <div className="flex flex-col min-h-0 flex-1 overflow-y-auto">
         <div className="h-16 sm:h-20 px-5 sm:px-6 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 p-1 flex items-center justify-center shadow-xs shrink-0 overflow-hidden">
+            <div className="w-14 h-14 items-center justify-center">
               <img src="/bellad-logo.png" alt="Bellad & Company" className="w-full h-full object-contain" />
             </div>
             <div>
@@ -311,12 +311,12 @@ export const SidebarLayout = ({
               {activeTab === 'director_command_center'
                 ? 'Director Command Center'
                 : activeTab === 'reports'
-                ? 'Reports & Analytics'
-                : activeTab === 'gift_cards'
-                ? 'Gift Card Rewards'
-                : activeTab === 'referrals'
-                ? 'Referral Rewards'
-                : 'Dashboard'}
+                  ? 'Reports & Analytics'
+                  : activeTab === 'gift_cards'
+                    ? 'Gift Card Rewards'
+                    : activeTab === 'referrals'
+                      ? 'Referral Rewards'
+                      : 'Dashboard'}
             </h1>
           </div>
 
@@ -330,11 +330,10 @@ export const SidebarLayout = ({
                     onTabChange(activeTab === 'director_command_center' ? 'dashboard' : 'director_command_center');
                   }
                 }}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-bold text-xs transition-all shadow-xs cursor-pointer ${
-                  activeTab === 'director_command_center'
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-bold text-xs transition-all shadow-xs cursor-pointer ${activeTab === 'director_command_center'
                     ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300'
                     : 'bg-white border border-slate-200 text-slate-800 hover:border-slate-300'
-                }`}
+                  }`}
               >
                 <Crown className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
                 <span className="hidden sm:inline">

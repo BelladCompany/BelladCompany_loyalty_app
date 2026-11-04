@@ -395,16 +395,16 @@ export default function PublicOffersScreen() {
             <div className="h-5 w-px bg-slate-200 hidden md:block" />
 
             <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shadow-xs shrink-0">
+              <div className="">
                 <img
                   src="/bellad-logo.png"
                   alt="Bellad Logo"
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
+                  className="w-6 h-6 sm:w-12 sm:h-12 object-contain"
                   onError={(e) => {
                     e.target.style.display = 'none';
                   }}
                 />
-                <Car className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+
               </div>
               <div className="min-w-0">
                 <h1 className="text-xs sm:text-base font-black text-slate-900 tracking-tight flex items-center gap-1.5 truncate">
@@ -413,7 +413,7 @@ export default function PublicOffersScreen() {
                     Offers
                   </span>
                 </h1>
-                <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium hidden sm:block truncate">Dealership Model Benefits &amp; Schemes</p>
+
               </div>
             </div>
           </div>

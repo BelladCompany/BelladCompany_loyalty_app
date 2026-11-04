@@ -193,7 +193,7 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
 
   // ─── 7. Branding & Module Toggles ─────────────────────────────────────────
   const [branding, setBranding] = useState({
-    appName: 'Bellad & Co Loyalty Pass',
+    appName: 'Bellad & Company Loyalty',
     tagline: "Karnataka's Premier Automotive Rewards",
     primaryColor: '#4f46e5',
     cardGradient: 'gold',
@@ -403,11 +403,10 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
           <button
             type="button"
             onClick={() => setViewMode('mobile')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              viewMode === 'mobile'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'mobile'
                 ? 'bg-white text-purple-700 shadow-2xs'
                 : 'text-slate-500 hover:text-slate-800'
-            }`}
+              }`}
           >
             <Smartphone className="w-3.5 h-3.5" />
             <span>Mobile</span>
@@ -415,11 +414,10 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
           <button
             type="button"
             onClick={() => setViewMode('tablet')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              viewMode === 'tablet'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'tablet'
                 ? 'bg-white text-purple-700 shadow-2xs'
                 : 'text-slate-500 hover:text-slate-800'
-            }`}
+              }`}
           >
             <Tablet className="w-3.5 h-3.5" />
             <span>Tablet</span>
@@ -427,11 +425,10 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
           <button
             type="button"
             onClick={() => setViewMode('desktop')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              viewMode === 'desktop'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'desktop'
                 ? 'bg-white text-purple-700 shadow-2xs'
                 : 'text-slate-500 hover:text-slate-800'
-            }`}
+              }`}
           >
             <Monitor className="w-3.5 h-3.5" />
             <span>Desktop</span>
@@ -456,9 +453,8 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
           </div>
 
           {toastMsg && (
-            <span className={`text-xs font-bold px-3 py-1 rounded-xl flex items-center gap-1 animate-fadeIn ${
-              toastError ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-            }`}>
+            <span className={`text-xs font-bold px-3 py-1 rounded-xl flex items-center gap-1 animate-fadeIn ${toastError ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              }`}>
               {toastError ? <AlertCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
               <span>{toastMsg}</span>
             </span>
@@ -503,11 +499,10 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-3 py-2 border-b-2 text-xs font-bold whitespace-nowrap transition ${
-                    activeTab === tab.id
+                  className={`flex items-center gap-1.5 px-3 py-2 border-b-2 text-xs font-bold whitespace-nowrap transition ${activeTab === tab.id
                       ? 'border-purple-600 text-purple-700 bg-white rounded-t-lg'
                       : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
                   <span>{tab.label}</span>
@@ -612,9 +607,8 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
                       return (
                         <div
                           key={r.rule_id}
-                          className={`p-3.5 rounded-xl border transition flex items-center justify-between ${
-                            isActive ? 'bg-white border-slate-200 hover:border-purple-300 shadow-2xs' : 'bg-slate-50/70 border-slate-200 opacity-60'
-                          }`}
+                          className={`p-3.5 rounded-xl border transition flex items-center justify-between ${isActive ? 'bg-white border-slate-200 hover:border-purple-300 shadow-2xs' : 'bg-slate-50/70 border-slate-200 opacity-60'
+                            }`}
                         >
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
@@ -656,13 +650,11 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
                             <button
                               type="button"
                               onClick={() => handleToggleRuleActive(r.rule_id)}
-                              className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${
-                                isActive ? 'bg-purple-600' : 'bg-slate-300'
-                              }`}
+                              className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isActive ? 'bg-purple-600' : 'bg-slate-300'
+                                }`}
                             >
-                              <div className={`w-4 h-4 rounded-full bg-white shadow-xs transform transition-transform ${
-                                isActive ? 'translate-x-4' : 'translate-x-0'
-                              }`} />
+                              <div className={`w-4 h-4 rounded-full bg-white shadow-xs transform transition-transform ${isActive ? 'translate-x-4' : 'translate-x-0'
+                                }`} />
                             </button>
 
                             {/* Delete */}
@@ -850,11 +842,10 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
                         key={r}
                         type="button"
                         onClick={() => setRedemptionPolicy({ ...redemptionPolicy, pointsPerRupee: r })}
-                        className={`p-2.5 rounded-xl border text-center transition ${
-                          redemptionPolicy.pointsPerRupee === r
+                        className={`p-2.5 rounded-xl border text-center transition ${redemptionPolicy.pointsPerRupee === r
                             ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
+                          }`}
                       >
                         <strong className="font-mono block text-xs">{r} Pts</strong>
                         <span className="text-[10px] opacity-90 block">= ₹1.00</span>
@@ -892,13 +883,11 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
                     <button
                       type="button"
                       onClick={() => setRedemptionPolicy({ ...redemptionPolicy, accessoriesExemption: !redemptionPolicy.accessoriesExemption })}
-                      className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ml-3 ${
-                        redemptionPolicy.accessoriesExemption ? 'bg-emerald-600' : 'bg-slate-300'
-                      }`}
+                      className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ml-3 ${redemptionPolicy.accessoriesExemption ? 'bg-emerald-600' : 'bg-slate-300'
+                        }`}
                     >
-                      <div className={`w-4 h-4 rounded-full bg-white shadow-xs transform transition-transform ${
-                        redemptionPolicy.accessoriesExemption ? 'translate-x-4' : 'translate-x-0'
-                      }`} />
+                      <div className={`w-4 h-4 rounded-full bg-white shadow-xs transform transition-transform ${redemptionPolicy.accessoriesExemption ? 'translate-x-4' : 'translate-x-0'
+                        }`} />
                     </button>
                   </div>
                 </div>
@@ -962,11 +951,10 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
                       key={m.id}
                       type="button"
                       onClick={() => setTierModel(m.id)}
-                      className={`p-3 rounded-xl border text-left transition ${
-                        tierModel === m.id
+                      className={`p-3 rounded-xl border text-left transition ${tierModel === m.id
                           ? 'border-purple-600 bg-purple-50/70 ring-1 ring-purple-500'
                           : 'border-slate-200 bg-slate-50 hover:bg-white'
-                      }`}
+                        }`}
                     >
                       <strong className="text-xs font-bold text-slate-900 block">{m.title}</strong>
                       <span className="text-[10px] text-slate-500 block mt-0.5">{m.desc}</span>
@@ -1160,9 +1148,8 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
                           key={c.color}
                           type="button"
                           onClick={() => setBranding({ ...branding, primaryColor: c.color })}
-                          className={`w-7 h-7 rounded-full border-2 transition ${
-                            branding.primaryColor === c.color ? 'border-slate-900 scale-110 shadow-sm' : 'border-transparent'
-                          }`}
+                          className={`w-7 h-7 rounded-full border-2 transition ${branding.primaryColor === c.color ? 'border-slate-900 scale-110 shadow-sm' : 'border-transparent'
+                            }`}
                           style={{ backgroundColor: c.color }}
                         />
                       ))}
@@ -1208,13 +1195,12 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
 
           {/* DYNAMIC DEVICE VIEWPORT CONTAINER */}
           <div
-            className={`transition-all duration-300 ease-in-out bg-white flex flex-col shadow-2xl overflow-hidden mt-6 ${
-              viewMode === 'mobile'
+            className={`transition-all duration-300 ease-in-out bg-white flex flex-col shadow-2xl overflow-hidden mt-6 ${viewMode === 'mobile'
                 ? 'w-[375px] h-[670px] rounded-[44px] border-[10px] border-slate-900'
                 : viewMode === 'tablet'
-                ? 'w-[560px] h-[670px] rounded-[36px] border-[12px] border-slate-900'
-                : 'w-full max-w-[800px] h-[670px] rounded-2xl border border-slate-300'
-            }`}
+                  ? 'w-[560px] h-[670px] rounded-[36px] border-[12px] border-slate-900'
+                  : 'w-full max-w-[800px] h-[670px] rounded-2xl border border-slate-300'
+              }`}
           >
             {/* Mobile Notch */}
             {viewMode === 'mobile' && (
@@ -1255,11 +1241,10 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
                 {/* DIGITAL MEMBER PASS CARD */}
                 {modules.digitalCard && (
                   <div
-                    className={`rounded-2xl p-5 text-white shadow-lg relative overflow-hidden bg-gradient-to-tr ${
-                      branding.cardGradient === 'gold'
+                    className={`rounded-2xl p-5 text-white shadow-lg relative overflow-hidden bg-gradient-to-tr ${branding.cardGradient === 'gold'
                         ? 'from-amber-600 via-amber-500 to-yellow-600'
                         : 'from-purple-700 via-indigo-600 to-indigo-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start justify-between">
                       <div>

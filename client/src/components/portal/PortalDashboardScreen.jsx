@@ -386,17 +386,49 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   );
   const whatsappReferralUrl = `https://wa.me/?text=${whatsappReferralText}`;
 
-  const handleCopyReferral = () => {
+  const handleCopyReferral = async () => {
     navigator.clipboard.writeText(referralLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+
+    // Auto-record share event in database so referral tab and admin audit update immediately
+    try {
+      const res = await ApiService.portalShareReferral({
+        referee_name: friendNameInput.trim() || 'Friend Referral (Link Shared)',
+        referee_phone: friendPhoneInput.trim() || undefined,
+        share_channel: 'link_copy',
+      });
+      if (res?.referral_code) {
+        setPortalReferralCode(res.referral_code);
+      }
+      setSuccessMsg(`Referral link copied! Share logged in your referral reward tab.`);
+      await loadReferrals();
+    } catch (err) {
+      console.warn('Could not auto-log referral copy:', err);
+    }
   };
 
-  const handleCopyRefCode = (code) => {
+  const handleCopyRefCode = async (code) => {
     if (!code) return;
     navigator.clipboard.writeText(code);
     setCopiedRefCode(true);
     setTimeout(() => setCopiedRefCode(false), 2000);
+
+    // Auto-record share event in database so referral tab and admin audit update immediately
+    try {
+      const res = await ApiService.portalShareReferral({
+        referee_name: friendNameInput.trim() || 'Friend Referral (Code Shared)',
+        referee_phone: friendPhoneInput.trim() || undefined,
+        share_channel: 'code_copy',
+      });
+      if (res?.referral_code) {
+        setPortalReferralCode(res.referral_code);
+      }
+      setSuccessMsg(`Referral code copied! Share logged in your referral reward tab.`);
+      await loadReferrals();
+    } catch (err) {
+      console.warn('Could not auto-log code copy:', err);
+    }
   };
 
   const handleShareWhatsApp = async () => {
@@ -1109,73 +1141,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               </div>
 
               {/* Branded Unique Referral Code Showcase (NO PIN NEEDED) */}
-              <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-900 text-white shadow-xl border border-indigo-500/30 relative overflow-hidden space-y-4">
-                <div className="absolute -right-8 -top-8 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
-                      <Sparkles className="w-3 h-3" />
-                      Code Only • No Security PIN Required
-                    </div>
-                    <h3 className="text-base sm:text-lg font-black text-white">Your Official Referral Code</h3>
-                    <p className="text-xs text-indigo-200/80">
-                      Share this code with friends or family. They simply quote it during purchase or service booking.
-                    </p>
-                  </div>
 
-                  {/* Dual Reward Badge */}
-                  <div className="px-3.5 py-2 rounded-2xl bg-white/10 border border-white/10 text-right backdrop-blur-sm self-start sm:self-auto">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 block">Dual Reward</span>
-                    <span className="text-sm font-black text-emerald-400 font-mono">Bonus Points for Both</span>
-                    <span className="text-[10px] text-slate-300 block font-medium">Earn loyalty points together</span>
-                  </div>
-                </div>
-
-                {/* Big Code Pill with Copy Buttons */}
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 relative z-10 backdrop-blur-md">
-                  <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <div className="px-4 py-2.5 rounded-xl bg-slate-950/80 border border-indigo-400/40 font-mono font-black text-base sm:text-xl text-indigo-300 tracking-wider select-all shadow-inner">
-                      {activeReferralCode}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyRefCode(activeReferralCode)}
-                      className="px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md shrink-0"
-                    >
-                      {copiedRefCode ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                      <span>{copiedRefCode ? 'Code Copied!' : 'Copy Code'}</span>
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleCopyReferral}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-indigo-100 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border border-white/10 shrink-0"
-                  >
-                    {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                    <span>{copied ? 'Link Copied!' : 'Copy Full Invite Link'}</span>
-                  </button>
-                </div>
-
-                {/* Dual Reward Split Indicators */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 relative z-10">
-                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <span className="text-[10px] text-indigo-200 block uppercase font-bold">You (Referrer) Get</span>
-                    <span className="text-sm font-black text-emerald-400">Bonus Points</span>
-                    <span className="text-[10px] text-slate-400 block">Credited to wallet</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <span className="text-[10px] text-indigo-200 block uppercase font-bold">Friend (Buyer) Gets</span>
-                    <span className="text-sm font-black text-emerald-400">Bonus Points</span>
-                    <span className="text-[10px] text-slate-400 block">Welcome loyalty reward</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <span className="text-[10px] text-indigo-200 block uppercase font-bold">Security & PIN</span>
-                    <span className="text-sm font-black text-indigo-300">NO PIN Needed</span>
-                    <span className="text-[10px] text-slate-400 block">Instant Code Sharing</span>
-                  </div>
-                </div>
-              </div>
 
               {/* WhatsApp Direct Share & Tracking Card */}
               <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/90 border border-emerald-200 space-y-3.5 shadow-xs">

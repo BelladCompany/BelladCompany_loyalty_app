@@ -389,8 +389,7 @@ class CustomerService {
   }
 
   /**
-  /**
-   * Look up referring customer profile by referral code (customer_id or phone)
+   * Look up referring customer profile by referral code (referral code, customer_id, or phone)
    */
   static async getCustomerByReferralCode(code, tenantId) {
     if (!code || typeof code !== 'string') {
@@ -400,17 +399,59 @@ class CustomerService {
     const cleanCode = code.trim();
     const phoneDigits = cleanCode.replace(/\D/g, '');
 
-    // 1. Search by customer_id (e.g. BAC-100001, BAC-API2)
+    // 1. Search by referrals table referral_code (e.g. REF-BELL-CHRM-KT7W, REF-BELL-0005-9000)
     let res = await pool.query(
-      `SELECT c.customer_id, c.customer_name AS name, c.aadhaar_number, p.phone_number
-       FROM customers c
+      `SELECT r.referrer_customer_id AS customer_id, c.customer_name AS name, c.aadhaar_number, p.phone_number
+       FROM referrals r
+       JOIN customers c ON r.referrer_customer_id = c.customer_id AND r.tenant_id = c.tenant_id
        LEFT JOIN customer_phones p ON c.customer_id = p.customer_id AND p.is_verified = TRUE
-       WHERE c.tenant_id = $1 AND (c.customer_id ILIKE $2 OR c.customer_id ILIKE ('BAC-' || $2))
+       WHERE r.tenant_id = $1 AND r.referral_code ILIKE $2
        LIMIT 1;`,
       [tenantId, cleanCode]
     );
 
-    // 2. If not found by customer_id, search by phone number
+    // 2. Search by referral_leads generated_code
+    if (res.rows.length === 0) {
+      res = await pool.query(
+        `SELECT rl.referrer_customer_id AS customer_id, c.customer_name AS name, c.aadhaar_number, p.phone_number
+         FROM referral_leads rl
+         JOIN customers c ON rl.referrer_customer_id = c.customer_id AND rl.tenant_id = c.tenant_id
+         LEFT JOIN customer_phones p ON c.customer_id = p.customer_id AND p.is_verified = TRUE
+         WHERE rl.tenant_id = $1 AND rl.generated_code ILIKE $2
+         LIMIT 1;`,
+        [tenantId, cleanCode]
+      );
+    }
+
+    // 3. Search by customer_id (e.g. BAC-100001, BAC-API2)
+    if (res.rows.length === 0) {
+      res = await pool.query(
+        `SELECT c.customer_id, c.customer_name AS name, c.aadhaar_number, p.phone_number
+         FROM customers c
+         LEFT JOIN customer_phones p ON c.customer_id = p.customer_id AND p.is_verified = TRUE
+         WHERE c.tenant_id = $1 AND (c.customer_id ILIKE $2 OR c.customer_id ILIKE ('BAC-' || $2))
+         LIMIT 1;`,
+        [tenantId, cleanCode]
+      );
+    }
+
+    // 4. Pattern match REF-BELL-{ID_digits}-... or REF-BELL-{digits}
+    if (res.rows.length === 0) {
+      const match = cleanCode.match(/REF-BELL-(\d{4,8})/i);
+      if (match) {
+        const idFragment = match[1];
+        res = await pool.query(
+          `SELECT c.customer_id, c.customer_name AS name, c.aadhaar_number, p.phone_number
+           FROM customers c
+           LEFT JOIN customer_phones p ON c.customer_id = p.customer_id AND p.is_verified = TRUE
+           WHERE c.tenant_id = $1 AND c.customer_id ILIKE $2
+           LIMIT 1;`,
+          [tenantId, `%${idFragment}`]
+        );
+      }
+    }
+
+    // 5. If not found by customer_id, search by phone number
     if (res.rows.length === 0 && phoneDigits.length >= 8) {
       res = await pool.query(
         `SELECT c.customer_id, c.customer_name AS name, c.aadhaar_number, p.phone_number

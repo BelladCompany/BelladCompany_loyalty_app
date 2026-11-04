@@ -76,7 +76,11 @@ async function runMigrations(options = {}) {
       await client.query('ROLLBACK');
     }
     console.error('❌ Migration failed:', error);
-    process.exit(1);
+    if (require.main === module) {
+      process.exit(1);
+    } else {
+      throw error;
+    }
   } finally {
     client.release();
     if (require.main === module) {
