@@ -18,6 +18,7 @@ const { uploadKycProof } = require('../middleware/upload');
 router.get('/me', authenticateToken, CustomerPortalController.getMe);
 router.get('/me/ledger', authenticateToken, CustomerPortalController.getLedger);
 router.get('/me/referrals', authenticateToken, CustomerPortalController.getReferrals);
+router.post('/me/referrals/share', authenticateToken, CustomerPortalController.shareReferral);
 router.post('/me/referrals/submit', authenticateToken, CustomerPortalController.submitReferral);
 router.post('/me/referrals/claim', authenticateToken, CustomerPortalController.claimReferral);
 router.get('/me/gift-cards', authenticateToken, CustomerPortalController.getMyGiftCards);

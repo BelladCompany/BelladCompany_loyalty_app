@@ -601,7 +601,7 @@ class CustomerPortalController {
 
       res.status(200).json({
         status: 'success',
-        referral_code: customerId,
+        referral_code: summary.referral_code || customerId,
         ...summary,
       });
     } catch (error) {
@@ -667,6 +667,39 @@ class CustomerPortalController {
         status: 'success',
         message: 'Referral submitted successfully! You will earn bonus points once your friend completes purchase.',
         data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /me/referrals/share — Customer shares referral link via WhatsApp
+   * Logs share event with date & time, generates unique REF-BELL-XXXX-XXXX code (NO PIN),
+   * returns WhatsApp share message & URL, and tracks dual-reward eligibility.
+   */
+  static async shareReferral(req, res, next) {
+    try {
+      const customerId = req.user.customer_id;
+      const tenantId = req.tenantId || env.defaultTenantId;
+      const { referee_name, referee_phone, vehicle_model, share_channel } = req.body || {};
+
+      if (!customerId) {
+        return res.status(403).json({ status: 'fail', error: 'Customer token required.' });
+      }
+
+      const result = await ReferralService.recordReferralShare({
+        referrer_customer_id: customerId,
+        referee_name: referee_name || 'Friend / WhatsApp Contact',
+        referee_phone: referee_phone || null,
+        vehicle_model: vehicle_model || null,
+        share_channel: share_channel || 'whatsapp',
+        tenant_id: tenantId,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        ...result,
       });
     } catch (error) {
       next(error);

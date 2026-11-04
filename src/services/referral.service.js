@@ -315,7 +315,7 @@ class ReferralService {
 
       const referral = refRes.rows[0];
 
-      if (referral.status !== 'pending') {
+      if (referral.status !== 'pending' && referral.status !== 'shared') {
         throw { statusCode: 400, message: `Referral '${referral_id}' is already ${referral.status} and cannot be modified.` };
       }
 
@@ -379,12 +379,13 @@ class ReferralService {
         `UPDATE referrals
          SET status = 'approved',
              points_credited = $1,
+             referee_points_credited = $1,
              reason = $2,
              approved_by = $3,
              approved_at = NOW()
          WHERE referral_id = $4 AND tenant_id = $5
          RETURNING referral_id AS id, referral_id, referrer_customer_id, referred_customer_id, status,
-                   points_credited AS points_awarded, COALESCE(suggested_points, 0) AS suggested_points,
+                   points_credited AS points_awarded, referee_points_credited, COALESCE(suggested_points, 0) AS suggested_points,
                    reason AS approval_reason, approved_by, approved_at;`,
         [points, reason.trim(), approver.id, referral_id, tenant_id]
       );
@@ -469,15 +470,29 @@ class ReferralService {
         client,
       });
 
+      // Also update tier snapshot for referee/buyer if customer_id is present
+      if (referral.referred_customer_id) {
+        await TierService.updateCustomerTier(referral.referred_customer_id, tenant_id, client);
+      }
+
       await client.query('COMMIT');
 
-      // 6. Queue non-blocking WhatsApp notification (does not block HTTP response)
+      // 6. Queue non-blocking WhatsApp notifications for BOTH Referrer and Referee
       NotificationService.queuePointsEarnedNotification({
         customer_id: referral.referrer_customer_id,
         points,
         transaction_type: 'referral',
         tenant_id,
       });
+
+      if (referral.referred_customer_id) {
+        NotificationService.queuePointsEarnedNotification({
+          customer_id: referral.referred_customer_id,
+          points,
+          transaction_type: 'referral',
+          tenant_id,
+        });
+      }
 
       return {
         referral: {
@@ -1076,25 +1091,143 @@ class ReferralService {
       }
     }
 
-    // Record into referral_leads table
-    const crypto = require('crypto');
-    const randomHex = crypto.randomBytes(3).toString('hex').toUpperCase();
-    const generatedCode = `RF${randomHex}`;
+    // Generate unique branded referral code (NO PIN, like gift cards)
+    const referralCode = ReferralService.generateReferralCode();
 
+    // Insert into referrals table with WhatsApp tracking and referee details
+    await pool.query(
+      `INSERT INTO referrals (
+         referrer_customer_id, referred_customer_id, referee_name, referee_phone,
+         referral_code, share_channel, shared_at, status, points_credited,
+         suggested_points, referrer_points_awarded, referee_points_awarded, referee_points_credited,
+         reason, tenant_id
+       )
+       VALUES ($1, $2, $3, $4, $5, 'whatsapp', NOW(), 'shared', 0, 2500, 2500, 2500, 0, $6, $7)
+       ON CONFLICT DO NOTHING;`,
+      [
+        referrer_customer_id,
+        referredCustomerId || null,
+        referee_name ? referee_name.trim() : 'Friend Referral',
+        phoneToUse,
+        referralCode,
+        `Portal Friend Referral: ${vehicle_model ? `Interested in ${vehicle_model}` : 'Vehicle referral'}${notes ? ` - ${notes}` : ''}`,
+        tenant_id,
+      ]
+    );
+
+    // Record into referral_leads table
     const leadInsert = await pool.query(
       `INSERT INTO referral_leads (
          referrer_customer_id, lead_name, lead_phone, generated_code, phone_verified, status, tenant_id
        )
        VALUES ($1, $2, $3, $4, false, 'pending', $5)
        RETURNING id, referrer_customer_id, lead_name, lead_phone, generated_code, status, created_at;`,
-      [referrer_customer_id, referee_name.trim(), phoneToUse, generatedCode, tenant_id]
+      [referrer_customer_id, referee_name.trim(), phoneToUse, referralCode, tenant_id]
     );
 
     return {
       success: true,
       lead: leadInsert.rows[0],
+      referral_code: referralCode,
       referred_customer_id: referredCustomerId,
-      message: 'Friend referral invite recorded! 2,500 points will be unlocked once friend purchases a vehicle at Bellad dealerships.',
+      message: 'Friend referral invite recorded! 2,500 points each will be unlocked once friend purchases a vehicle at Bellad dealerships.',
+    };
+  }
+
+  /**
+   * Generates a branded unique referral code (Format: REF-BELL-XXXX-XXXX, NO PIN like Gift Card)
+   */
+  static generateReferralCode() {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let p1 = '';
+    let p2 = '';
+    for (let i = 0; i < 4; i++) {
+      p1 += chars.charAt(Math.floor(Math.random() * chars.length));
+      p2 += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `REF-BELL-${p1}-${p2}`;
+  }
+
+  /**
+   * Records a referral share event (e.g. via WhatsApp) with a branded unique code (NO PIN)
+   * Tracks who shared, which code was sent, date & time, and sets up dual reward points.
+   */
+  static async recordReferralShare({
+    referrer_customer_id,
+    referee_name = 'Friend / WhatsApp Contact',
+    referee_phone = null,
+    vehicle_model = null,
+    share_channel = 'whatsapp',
+    tenant_id = 'bellad_and_company',
+  }) {
+    // 1. Fetch referrer customer details
+    const refCheck = await pool.query(
+      `SELECT customer_id, customer_name FROM customers WHERE customer_id = $1 AND tenant_id = $2;`,
+      [referrer_customer_id, tenant_id]
+    );
+    if (refCheck.rows.length === 0) {
+      throw { statusCode: 404, message: `Referrer customer '${referrer_customer_id}' not found.` };
+    }
+    const referrer = refCheck.rows[0];
+
+    // 2. Generate unique referral code (REF-BELL-XXXX-XXXX, NO PIN)
+    let referralCode = '';
+    let isUnique = false;
+    for (let attempt = 0; attempt < 5 && !isUnique; attempt++) {
+      referralCode = ReferralService.generateReferralCode();
+      const exist = await pool.query(
+        `SELECT referral_id FROM referrals WHERE referral_code = $1 LIMIT 1;`,
+        [referralCode]
+      );
+      if (exist.rows.length === 0) isUnique = true;
+    }
+
+    // 3. Insert record into referrals
+    const insertRes = await pool.query(
+      `INSERT INTO referrals (
+         referrer_customer_id, referee_name, referee_phone, referral_code,
+         share_channel, shared_at, status, points_credited, suggested_points,
+         referrer_points_awarded, referee_points_awarded, referee_points_credited,
+         reason, tenant_id
+       )
+       VALUES ($1, $2, $3, $4, $5, NOW(), 'shared', 0, 2500, 2500, 2500, 0, $6, $7)
+       RETURNING referral_id AS id, referral_id, referral_code, referrer_customer_id, referee_name, referee_phone,
+                 share_channel, shared_at, status, referrer_points_awarded, referee_points_awarded, created_at;`,
+      [
+        referrer_customer_id,
+        referee_name ? referee_name.trim() : 'Friend / WhatsApp Contact',
+        referee_phone ? referee_phone.trim() : null,
+        referralCode,
+        share_channel || 'whatsapp',
+        vehicle_model ? `WhatsApp Referral for ${vehicle_model}` : 'WhatsApp Friend Referral',
+        tenant_id,
+      ]
+    );
+
+    const record = insertRes.rows[0];
+
+    // Build the share message and link
+    const baseUrl = process.env.APP_BASE_URL || 'https://loyalty.bellad.in';
+    const claimUrl = `${baseUrl}/portal?ref=${referralCode}`;
+    const shareMessage = `🎁 *Bellad & Company Loyalty Referral Rewards*\n\n` +
+      `Hey! You have been invited by *${referrer.customer_name}* to join Bellad & Co Loyalty Rewards.\n\n` +
+      `🌟 *Your Referral Code:* ${referralCode}\n` +
+      `*(No PIN required — simply show this code or register via the link)*\n\n` +
+      `Both of us will receive *+2,500 Bonus Points (₹625 Value)* on your new vehicle purchase or workshop service visit!\n\n` +
+      `👉 Click here to claim & register:\n${claimUrl}`;
+
+    const cleanPhone = referee_phone ? referee_phone.replace(/\D/g, '') : '';
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(shareMessage)}`;
+
+    return {
+      success: true,
+      referral: record,
+      referral_code: referralCode,
+      share_channel: share_channel || 'whatsapp',
+      shared_at: record.shared_at,
+      whatsapp_url: whatsappUrl,
+      claim_url: claimUrl,
+      share_message: shareMessage,
     };
   }
 
@@ -1124,6 +1257,11 @@ class ReferralService {
     const query = `
       SELECT 
         r.referral_id,
+        COALESCE(r.referral_code, 'REF-BELL-' || LPAD(r.referral_id::text, 4, '0')) AS referral_code,
+        COALESCE(r.share_channel, 'whatsapp') AS share_channel,
+        COALESCE(r.shared_at, r.created_at) AS shared_at,
+        r.referee_name,
+        r.referee_phone,
         r.referrer_customer_id,
         c1.customer_name AS referrer_name,
         COALESCE(cp1.phone_number, '—') AS referrer_phone,
@@ -1132,8 +1270,9 @@ class ReferralService {
         COALESCE(cp2.phone_number, '—') AS referred_phone,
         r.status,
         COALESCE(r.points_credited, 0) AS points_credited,
+        COALESCE(r.referee_points_credited, r.points_credited, 0) AS referee_points_credited,
         COALESCE(r.suggested_points, 2500) AS suggested_points,
-        COALESCE(r.points_awarded, 0) AS points_awarded,
+        COALESCE(r.points_awarded, 2500) AS points_awarded,
         r.reason,
         r.created_at,
         r.approved_at,
@@ -1165,7 +1304,7 @@ class ReferralService {
         SELECT * FROM vehicles WHERE customer_id = r.referred_customer_id AND tenant_id = r.tenant_id ORDER BY purchase_date DESC NULLS LAST, vehicle_id DESC LIMIT 1
       ) v ON true
       WHERE r.tenant_id = $1 AND (r.referrer_customer_id = $2 OR r.referred_customer_id = $2)
-      ORDER BY r.created_at DESC;
+      ORDER BY COALESCE(r.shared_at, r.created_at) DESC;
     `;
 
     const res = await pool.query(query, [tenant_id, customer_id]);
@@ -1212,6 +1351,11 @@ class ReferralService {
         canClaim = true;
         readyToClaimPoints += points;
         readyToClaimCount += 1;
+      } else if (row.status === 'shared') {
+        status = 'shared';
+        statusLabel = 'Shared via WhatsApp — Awaiting Friend Purchase';
+        canClaim = false;
+        lockedPoints += points;
       } else {
         status = 'pending_purchase';
         statusLabel = 'Points Locked — Pending Vehicle Purchase & PR';
@@ -1221,15 +1365,21 @@ class ReferralService {
 
       processedReferrals.push({
         referral_id: row.referral_id,
+        referral_code: row.referral_code,
+        share_channel: row.share_channel || 'whatsapp',
+        shared_at: row.shared_at,
         role: isReferrer ? 'referrer' : 'referee',
         role_label: isReferrer ? 'Friend You Referred' : 'Referral Welcome Bonus',
-        friend_name: isReferrer ? (row.referred_name || 'Friend') : (row.referrer_name || 'Referrer'),
-        friend_phone: isReferrer ? row.referred_phone : row.referrer_phone,
+        friend_name: row.referee_name || (isReferrer ? (row.referred_name || 'Friend') : (row.referrer_name || 'Referrer')),
+        friend_phone: row.referee_phone || (isReferrer ? row.referred_phone : row.referrer_phone),
         vehicle_model: row.vehicle_model || 'Vehicle Purchase',
         is_vehicle_purchased: isPurchased,
         is_pr_done: isPrDone,
         points,
         points_value_inr: pointsValueInr,
+        referrer_points: 2500,
+        referee_points: 2500,
+        both_points_total: 5000,
         status,
         status_label: statusLabel,
         can_claim: canClaim,
@@ -1241,7 +1391,7 @@ class ReferralService {
 
     // Also include any pending referral leads created by user that haven't enrolled yet
     const leadsRes = await pool.query(
-      `SELECT rl.id, rl.lead_name, rl.lead_phone, rl.status, rl.created_at
+      `SELECT rl.id, rl.lead_name, rl.lead_phone, rl.generated_code, rl.status, rl.created_at
        FROM referral_leads rl
        WHERE rl.referrer_customer_id = $1 AND rl.tenant_id = $2
          AND rl.lead_phone NOT IN (
@@ -1257,6 +1407,9 @@ class ReferralService {
       lockedPoints += 2500;
       processedReferrals.push({
         referral_id: null,
+        referral_code: lead.generated_code || ReferralService.generateReferralCode(),
+        share_channel: 'whatsapp',
+        shared_at: lead.created_at,
         lead_id: lead.id,
         role: 'referrer',
         role_label: 'Friend Referral Invite',
@@ -1267,15 +1420,23 @@ class ReferralService {
         is_pr_done: false,
         points: 2500,
         points_value_inr: 625,
-        status: 'pending_purchase',
-        status_label: 'Invite Sent — Friend has not purchased vehicle yet',
+        referrer_points: 2500,
+        referee_points: 2500,
+        both_points_total: 5000,
+        status: 'shared',
+        status_label: 'Shared via WhatsApp — Awaiting Friend Purchase',
         can_claim: false,
         is_claimed: false,
         created_at: lead.created_at,
       });
     }
 
+    // Determine the primary customer referral code (e.g. from existing referral or consistent code)
+    const existingCodeRow = processedReferrals.find(p => p.referral_code && p.role === 'referrer');
+    const primaryReferralCode = existingCodeRow?.referral_code || `REF-BELL-${customer_id.replace(/\D/g, '').slice(-4).padStart(4, '8')}-9000`;
+
     return {
+      referral_code: primaryReferralCode,
       referrals: processedReferrals,
       locked_points: lockedPoints,
       locked_value_inr: lockedPoints * 0.25,
@@ -1405,6 +1566,7 @@ class ReferralService {
         `UPDATE referrals
          SET status = 'approved',
              points_credited = $1::integer,
+             referee_points_credited = $1::bigint,
              points_awarded = $2::bigint,
              approved_at = NOW(),
              reason = $3

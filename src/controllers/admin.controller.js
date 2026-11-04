@@ -479,19 +479,30 @@ class AdminController {
       let paramIdx = 2;
 
       if (status && status !== 'all') {
-        whereConditions.push(`r.status = $${paramIdx++}`);
-        queryParams.push(status.toLowerCase());
+        if (status === 'whatsapp') {
+          whereConditions.push(`(r.share_channel = 'whatsapp' OR r.referral_code IS NOT NULL)`);
+        } else if (status === 'approved') {
+          whereConditions.push(`(r.status = 'approved' OR r.status = 'claimed')`);
+        } else if (status === 'pending') {
+          whereConditions.push(`(r.status = 'pending' OR r.status = 'shared')`);
+        } else {
+          whereConditions.push(`r.status = $${paramIdx++}`);
+          queryParams.push(status.toLowerCase());
+        }
       }
 
       if (search && search.trim()) {
         const term = `%${search.trim()}%`;
         whereConditions.push(`(
+          r.referral_code ILIKE $${paramIdx} OR
           r.referrer_customer_id ILIKE $${paramIdx} OR
           rc.customer_name ILIKE $${paramIdx} OR
           rcp.phone_number ILIKE $${paramIdx} OR
           r.referred_customer_id ILIKE $${paramIdx} OR
           refc.customer_name ILIKE $${paramIdx} OR
-          refcp.phone_number ILIKE $${paramIdx}
+          refcp.phone_number ILIKE $${paramIdx} OR
+          r.referee_name ILIKE $${paramIdx} OR
+          r.referee_phone ILIKE $${paramIdx}
         )`);
         queryParams.push(term);
         paramIdx++;
@@ -507,16 +518,23 @@ class AdminController {
         SELECT 
           r.referral_id AS id,
           r.referral_id,
+          COALESCE(r.referral_code, 'REF-BELL-' || LPAD(r.referral_id::text, 4, '0')) AS referral_code,
+          COALESCE(r.share_channel, 'whatsapp') AS share_channel,
+          COALESCE(r.shared_at, r.created_at) AS shared_at,
           r.referrer_customer_id,
-          rc.customer_name AS referrer_name,
+          COALESCE(rc.customer_name, 'Valued Referrer') AS referrer_name,
           COALESCE(rcp.phone_number, '—') AS referrer_phone,
           r.referred_customer_id,
-          refc.customer_name AS referred_name,
-          COALESCE(refcp.phone_number, '—') AS referred_phone,
+          COALESCE(r.referee_name, refc.customer_name, 'Shared via WhatsApp') AS referred_name,
+          COALESCE(r.referee_phone, refcp.phone_number, '—') AS referred_phone,
           r.status,
-          r.points_credited,
-          r.suggested_points,
-          r.points_awarded,
+          COALESCE(r.points_credited, 0) AS points_credited,
+          COALESCE(r.referee_points_credited, r.points_credited, 0) AS referee_points_credited,
+          (COALESCE(r.points_credited, 0) + COALESCE(r.referee_points_credited, r.points_credited, 0)) AS total_dual_points_credited,
+          COALESCE(r.referrer_points_awarded, 2500) AS referrer_points_awarded,
+          COALESCE(r.referee_points_awarded, 2500) AS referee_points_awarded,
+          COALESCE(r.suggested_points, 2500) AS suggested_points,
+          COALESCE(r.points_awarded, 2500) AS points_awarded,
           r.reason AS approval_reason,
           r.approved_at,
           r.created_at,
@@ -527,7 +545,7 @@ class AdminController {
           v.dms_invoice_number,
           v.dms_invoice_date,
           v.purchase_date,
-          COALESCE(b.branch_name, v.branch_name, 'Central Dealership') AS branch_name,
+          COALESCE(b.name, v.branch_name, 'Central Dealership') AS branch_name,
           -- Whether purchased from our dealers:
           CASE 
             WHEN v.vehicle_id IS NOT NULL AND (v.branch_id IS NOT NULL OR v.dms_invoice_number IS NOT NULL OR v.branch_name IS NOT NULL) THEN true
@@ -556,9 +574,9 @@ class AdminController {
           WHERE customer_id = r.referred_customer_id AND tenant_id = r.tenant_id 
           ORDER BY purchase_date DESC NULLS LAST, vehicle_id DESC LIMIT 1
         ) v ON true
-        LEFT JOIN branches b ON v.branch_id = b.branch_id
+        LEFT JOIN branches b ON v.branch_id = b.id
         WHERE ${whereSql}
-        ORDER BY r.created_at DESC
+        ORDER BY COALESCE(r.shared_at, r.created_at) DESC
         LIMIT $${paramIdx++} OFFSET $${paramIdx++};
       `;
       queryParams.push(parsedLimit, parsedOffset);
@@ -569,9 +587,10 @@ class AdminController {
       const totalsRes = await pool.query(`
         SELECT 
           COUNT(*)::int AS total_referrals,
-          COUNT(CASE WHEN r.status = 'approved' THEN 1 END)::int AS total_approved,
-          COUNT(CASE WHEN r.status = 'pending' THEN 1 END)::int AS total_pending,
-          COALESCE(SUM(CASE WHEN r.status = 'approved' THEN r.points_credited ELSE 0 END), 0)::bigint AS total_points_credited
+          COUNT(CASE WHEN r.share_channel = 'whatsapp' OR r.referral_code IS NOT NULL THEN 1 END)::int AS total_whatsapp_shared,
+          COUNT(CASE WHEN r.status = 'approved' OR r.status = 'claimed' THEN 1 END)::int AS total_approved,
+          COUNT(CASE WHEN r.status = 'pending' OR r.status = 'shared' THEN 1 END)::int AS total_pending,
+          COALESCE(SUM(CASE WHEN r.status = 'approved' OR r.status = 'claimed' THEN (COALESCE(r.points_credited, 0) + COALESCE(r.referee_points_credited, r.points_credited, 0)) ELSE 0 END), 0)::bigint AS total_points_credited
         FROM referrals r
         WHERE r.tenant_id = $1;
       `, [tenantId]);
@@ -583,6 +602,7 @@ class AdminController {
         count: resReferrals.rows.length,
         totals: {
           total_referrals: parseInt(totals.total_referrals || 0, 10),
+          total_whatsapp_shared: parseInt(totals.total_whatsapp_shared || 0, 10),
           total_approved: parseInt(totals.total_approved || 0, 10),
           total_pending: parseInt(totals.total_pending || 0, 10),
           total_points_credited: parseInt(totals.total_points_credited || 0, 10),

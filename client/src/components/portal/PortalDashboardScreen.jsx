@@ -221,6 +221,11 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
 
   // Referrals State
   const [referralsList, setReferralsList] = useState([]);
+  const [portalReferralCode, setPortalReferralCode] = useState('');
+  const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
+  const [copiedRefCode, setCopiedRefCode] = useState(false);
+  const [friendNameInput, setFriendNameInput] = useState('');
+  const [friendPhoneInput, setFriendPhoneInput] = useState('');
   const [referralsSummary, setReferralsSummary] = useState({
     locked_points: 0,
     locked_value_inr: 0,
@@ -311,6 +316,9 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
       setLoadingReferrals(true);
       const res = await ApiService.portalGetReferrals();
       setReferralsList(res.referrals || []);
+      if (res.referral_code) {
+        setPortalReferralCode(res.referral_code);
+      }
       setReferralsSummary({
         locked_points: res.locked_points || 0,
         locked_value_inr: res.locked_value_inr || 0,
@@ -369,12 +377,12 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
     ? `${profile.vehicles[0].brand_name || 'Tata'} ${profile.vehicles[0].model || 'Motors'}`
     : 'Tata Safari Dark Edition';
 
-  const referralLink = profile?.referralCode
-    ? `${window.location.origin}/portal?ref=${profile.referralCode}`
-    : `${window.location.origin}/portal`;
+  const activeReferralCode = portalReferralCode || profile?.referralCode || `REF-BELL-${customerId.replace(/\D/g, '').slice(-4).padStart(4, '8')}-9000`;
+
+  const referralLink = `${window.location.origin}/portal?ref=${activeReferralCode}`;
 
   const whatsappReferralText = encodeURIComponent(
-    `Hey! Join Bellad & Co Loyalty Rewards using my referral link and earn exclusive bonus points on your new vehicle purchase or workshop service: ${referralLink}`
+    `🎁 *Bellad & Company Loyalty Referral Rewards*\n\nHey! Use my referral code *${activeReferralCode}* (No PIN required) when booking your new vehicle or workshop service at Bellad & Co dealerships. We will BOTH receive +2,500 Bonus Points (₹625 Value each)!\n\n👉 Claim & register here:\n${referralLink}`
   );
   const whatsappReferralUrl = `https://wa.me/?text=${whatsappReferralText}`;
 
@@ -382,6 +390,42 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
     navigator.clipboard.writeText(referralLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleCopyRefCode = (code) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopiedRefCode(true);
+    setTimeout(() => setCopiedRefCode(false), 2000);
+  };
+
+  const handleShareWhatsApp = async () => {
+    if (sharingWhatsApp) return;
+    setSharingWhatsApp(true);
+    try {
+      const res = await ApiService.portalShareReferral({
+        referee_name: friendNameInput.trim() || undefined,
+        referee_phone: friendPhoneInput.trim() || undefined,
+        share_channel: 'whatsapp',
+      });
+      if (res.referral_code) {
+        setPortalReferralCode(res.referral_code);
+      }
+      setSuccessMsg(`Referral code ${res.referral_code || activeReferralCode} tracked & logged! WhatsApp opened.`);
+      await loadReferrals();
+      if (res.whatsapp_url) {
+        window.open(res.whatsapp_url, '_blank', 'noopener,noreferrer');
+      } else {
+        window.open(whatsappReferralUrl, '_blank', 'noopener,noreferrer');
+      }
+      setFriendNameInput('');
+      setFriendPhoneInput('');
+    } catch (err) {
+      console.error('Error logging WhatsApp share:', err);
+      window.open(whatsappReferralUrl, '_blank', 'noopener,noreferrer');
+    } finally {
+      setSharingWhatsApp(false);
+    }
   };
 
   const handleCopyCard = (code) => {
@@ -1064,28 +1108,137 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                 </div>
               </div>
 
-              {/* WhatsApp Direct Share Card */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#25D366] text-white">
-                      <Share2 className="w-3.5 h-3.5" />
-                    </span>
-                    <h4 className="text-xs font-black text-slate-900">Send Referral Directly via WhatsApp</h4>
+              {/* Branded Unique Referral Code Showcase (NO PIN NEEDED) */}
+              <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-900 text-white shadow-xl border border-indigo-500/30 relative overflow-hidden space-y-4">
+                <div className="absolute -right-8 -top-8 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
+                      <Sparkles className="w-3 h-3" />
+                      Code Only • No Security PIN Required
+                    </div>
+                    <h3 className="text-base sm:text-lg font-black text-white">Your Official Referral Code</h3>
+                    <p className="text-xs text-indigo-200/80">
+                      Share this code with friends or family. They simply quote it during purchase or service booking.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-slate-600">
-                    Share your invite link with friends. When they register and purchase a vehicle from our Bellad dealerships, you both get 2,500 points!
-                  </p>
+
+                  {/* Dual Reward Badge */}
+                  <div className="px-3.5 py-2 rounded-2xl bg-white/10 border border-white/10 text-right backdrop-blur-sm self-start sm:self-auto">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 block">Dual Bonus Points</span>
+                    <span className="text-sm font-black text-emerald-400 font-mono">+2,500 PTS Each</span>
+                    <span className="text-[10px] text-slate-300 block font-medium">5,000 PTS Total for Both</span>
+                  </div>
                 </div>
-                <a
-                  href={whatsappReferralUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition shrink-0 cursor-pointer"
-                >
-                  <Share2 className="w-4 h-4" />
-                  <span>Share on WhatsApp</span>
-                </a>
+
+                {/* Big Code Pill with Copy Buttons */}
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 relative z-10 backdrop-blur-md">
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="px-4 py-2.5 rounded-xl bg-slate-950/80 border border-indigo-400/40 font-mono font-black text-base sm:text-xl text-indigo-300 tracking-wider select-all shadow-inner">
+                      {activeReferralCode}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyRefCode(activeReferralCode)}
+                      className="px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md shrink-0"
+                    >
+                      {copiedRefCode ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      <span>{copiedRefCode ? 'Code Copied!' : 'Copy Code'}</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyReferral}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-indigo-100 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border border-white/10 shrink-0"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    <span>{copied ? 'Link Copied!' : 'Copy Full Invite Link'}</span>
+                  </button>
+                </div>
+
+                {/* Dual Reward Split Indicators */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 relative z-10">
+                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-center">
+                    <span className="text-[10px] text-indigo-200 block uppercase font-bold">You (Referrer) Get</span>
+                    <span className="text-sm font-black text-emerald-400">+2,500 PTS</span>
+                    <span className="text-[10px] text-slate-400 block">₹625 Service Value</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-center">
+                    <span className="text-[10px] text-indigo-200 block uppercase font-bold">Friend (Buyer) Gets</span>
+                    <span className="text-sm font-black text-emerald-400">+2,500 PTS</span>
+                    <span className="text-[10px] text-slate-400 block">₹625 Welcome Bonus</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-center">
+                    <span className="text-[10px] text-indigo-200 block uppercase font-bold">Security & PIN</span>
+                    <span className="text-sm font-black text-indigo-300">NO PIN Needed</span>
+                    <span className="text-[10px] text-slate-400 block">Instant Code Sharing</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* WhatsApp Direct Share & Tracking Card */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/90 border border-emerald-200 space-y-3.5 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#25D366] text-white shadow-sm">
+                      <Share2 className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900">Share Code via WhatsApp & Auto-Track</h4>
+                      <p className="text-[11px] text-slate-600">
+                        Tracks who you shared with, log exact date & time, and unlocks +2,500 PTS for both upon vehicle purchase!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Optional Quick Friend Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                      Friend / Contact Name (Optional):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ramesh Kumar"
+                      value={friendNameInput}
+                      onChange={(e) => setFriendNameInput(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#25D366]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                      Friend Phone Number (Optional):
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 9845012345"
+                      value={friendPhoneInput}
+                      onChange={(e) => setFriendPhoneInput(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#25D366]"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-1 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <p className="text-[11px] text-emerald-800 font-medium">
+                    📱 Code will be sent directly via WhatsApp with one-tap registration link.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleShareWhatsApp}
+                    disabled={sharingWhatsApp}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-black text-xs flex items-center justify-center gap-2 shadow-md transition shrink-0 cursor-pointer disabled:opacity-50"
+                  >
+                    {sharingWhatsApp ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    ) : (
+                      <Share2 className="w-4 h-4" />
+                    )}
+                    <span>{sharingWhatsApp ? 'Tracking & Opening...' : 'Share on WhatsApp'}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Dealership Policy Rule Reminder */}
@@ -1095,37 +1248,21 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                   Vehicle Purchase &amp; PR Verification Rule:
                 </div>
                 <p className="text-[11px] leading-relaxed">
-                  Both accounts will see <strong>+2,500 PTS (₹625 Value)</strong> in locked status. Points cannot be claimed or spent until your friend completes their vehicle purchase and Permanent Registration (PR) at Bellad dealerships. Once verified, tap <strong>Claim Points</strong> to credit the bonus directly into your loyalty wallet.
+                  Both accounts will see <strong>+2,500 PTS (₹625 Value each = 5,000 PTS total)</strong> in locked status. Points cannot be claimed or spent until your friend completes their vehicle purchase and Permanent Registration (PR) at Bellad dealerships. Once verified, tap <strong>Claim Points</strong> to credit the bonus directly into your loyalty wallet.
                 </p>
-              </div>
-
-              {/* Share Referral Link Box */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
-                <span className="text-xs font-bold text-slate-700 block">Your Exclusive Referral Link:</span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={referralLink}
-                    className="flex-1 px-3.5 py-2.5 bg-white border border-indigo-200 rounded-xl text-xs font-mono text-slate-700 select-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCopyReferral}
-                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    {copied ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
-                    <span>{copied ? 'Copied!' : 'Copy'}</span>
-                  </button>
-                </div>
               </div>
 
               {/* Referrals Status List */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Your Referral Pipeline ({referralsList.length})
-                  </h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Your Referral Pipeline ({referralsList.length})
+                    </h4>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      Auto-Logged via WhatsApp
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={loadReferrals}
@@ -1139,7 +1276,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                   <div className="p-8 text-center text-xs text-slate-400">Loading referrals...</div>
                 ) : referralsList.length === 0 ? (
                   <div className="p-8 text-center text-xs text-slate-400 bg-slate-50/50 rounded-2xl border border-slate-100">
-                    No referrals registered yet. Share your referral link above!
+                    No referrals registered yet. Share your referral code above via WhatsApp!
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -1153,8 +1290,22 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                               : 'bg-white border-amber-200/80'
                           }`}
                       >
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
+                          {/* Code + Role Badge */}
                           <div className="flex items-center gap-2 flex-wrap">
+                            {ref.referral_code && (
+                              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 font-mono text-xs font-bold">
+                                <span>{ref.referral_code}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyRefCode(ref.referral_code)}
+                                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                                  title="Copy Code"
+                                >
+                                  {copiedRefCode ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                                </button>
+                              </div>
+                            )}
                             <span className="font-bold text-slate-900 text-sm">
                               {ref.friend_name || 'Friend'}
                             </span>
@@ -1164,18 +1315,39 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                               }`}>
                               {ref.role_label || 'Friend Referral'}
                             </span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              📱 Shared via WhatsApp
+                            </span>
                           </div>
 
+                          {/* Details Row: Mobile, Model, Date & Time */}
                           <div className="flex items-center gap-2 text-[11px] text-slate-500 flex-wrap">
                             {ref.friend_phone && <span>Mobile: {ref.friend_phone}</span>}
                             <span>&bull;</span>
                             <span>Vehicle: {ref.vehicle_model || 'Automobile'}</span>
-                            {ref.created_at && (
+                            {(ref.shared_at || ref.created_at) && (
                               <>
                                 <span>&bull;</span>
-                                <span>{new Date(ref.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                                <span className="flex items-center gap-1 text-slate-600 font-medium">
+                                  <Clock className="w-3 h-3 text-slate-400" />
+                                  Sent: {new Date(ref.shared_at || ref.created_at).toLocaleString('en-IN', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
                               </>
                             )}
+                          </div>
+
+                          {/* Dual Reward Breakdown */}
+                          <div className="flex items-center gap-2 text-[11px]">
+                            <span className="font-bold text-indigo-700">
+                              +2,500 PTS for you | +2,500 PTS for friend
+                            </span>
+                            <span className="text-slate-400 font-medium">(₹1,250 Dual Value)</span>
                           </div>
 
                           {/* Status Description */}

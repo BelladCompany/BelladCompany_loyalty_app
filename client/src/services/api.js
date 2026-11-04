@@ -606,6 +606,13 @@ export class ApiService {
     return this.request('/v1/me/referrals');
   }
 
+  static async portalShareReferral(payload = {}) {
+    return this.request('/v1/me/referrals/share', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
   static async portalSubmitReferral(payload) {
     return this.request('/v1/me/referrals/submit', {
       method: 'POST',
