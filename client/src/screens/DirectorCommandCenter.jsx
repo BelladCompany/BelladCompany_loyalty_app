@@ -29,6 +29,7 @@ import {
   Pause,
   ArrowRight,
   Zap,
+  Sparkles,
 } from 'lucide-react';
 import ApiService from '../services/api';
 import { useToast } from '../components/ui';
