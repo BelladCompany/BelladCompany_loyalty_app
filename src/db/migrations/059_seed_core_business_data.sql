@@ -147,6 +147,8 @@ DECLARE
   v_veh3_id INTEGER;
   v_veh4_id INTEGER;
   v_veh5_id INTEGER;
+  v_veh6_id INTEGER;
+  v_veh7_id INTEGER;
   v_exp_date TIMESTAMPTZ := NOW() + INTERVAL '1 year';
 BEGIN
   -- Temporarily disable ledger append trigger if present and permitted
@@ -440,6 +442,96 @@ BEGIN
     VALUES ('BAC-100006', 'Gold', 'Gold', 8200, 8200, 820000.00, v_tenant, NOW())
     ON CONFLICT (customer_id) DO UPDATE
     SET tier_name = 'Gold', current_tier = 'Gold', lifetime_points = 8200, current_balance = 8200, total_expense_amount = 820000.00, updated_at = NOW();
+  END IF;
+
+  -- 10. Customer 6: testing k (BAC-99981188, Phone: 8197348730, Hero Destini 125)
+  INSERT INTO customers (
+    customer_id, customer_name, name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
+    age, firm_name, branch_name, address, is_first_time_visitor, tenant_id
+  )
+  VALUES (
+    'BAC-99981188', 'testing k', 'testing k', '569916101912',
+    'dea5021ed86b224d89801c73cdeac8b4f4002ce27ee9c8b0949ec197a02ad5bb',
+    '5d88e89bce0c5b2b354839ea:1061c01b784cf0f912a4a7c45d1a6051:8099fdb3',
+    28, 'Bellad & Company', 'Central Showroom - Hubli', 'Keshwapur, Hubballi, Karnataka', TRUE, v_tenant
+  )
+  ON CONFLICT (customer_id) DO UPDATE
+  SET customer_name = EXCLUDED.customer_name,
+      name = EXCLUDED.name,
+      tenant_id = EXCLUDED.tenant_id;
+
+  INSERT INTO customer_phones (customer_id, phone_number, is_verified, tenant_id)
+  VALUES ('BAC-99981188', '8197348730', TRUE, v_tenant)
+  ON CONFLICT DO NOTHING;
+
+  IF NOT EXISTS (SELECT 1 FROM vehicles WHERE tenant_id = v_tenant AND chassis_no = 'MBLHA10EN99981188') THEN
+    INSERT INTO vehicles (
+      customer_id, brand_name, chassis_no, vin, registration_number, model, variant,
+      fuel_type, branch_name, firm_name, ex_showroom_price, purchase_date, tenant_id, vehicle_type
+    )
+    VALUES (
+      'BAC-99981188', 'Hero', 'MBLHA10EN99981188', 'MBLHA10EN99981188', 'KA-25-MP-2026', 'Destini 125', 'XTEC Drum',
+      'Petrol', 'Central Showroom - Hubli', 'Bellad & Company', 8500000, '2024-08-10', v_tenant, '2W'
+    );
+  END IF;
+
+  SELECT vehicle_id INTO v_veh6_id FROM vehicles WHERE tenant_id = v_tenant AND chassis_no = 'MBLHA10EN99981188' LIMIT 1;
+
+  INSERT INTO points_ledger (customer_id, vehicle_id, branch_id, type, transaction_type, transaction_category, points, amount_paise, source_ref, reason_type, reason_text, tenant_id)
+  VALUES
+    ('BAC-99981188', v_veh6_id, v_branch_id, 'earn_sale', 'sale', 'sale', 1020, 8500000, 'INV-2024-DEST-1188', 'purchase', 'Two-wheeler purchase — Hero Destini 125 → +1,020 pts', v_tenant)
+  ON CONFLICT DO NOTHING;
+
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'customer_tier_snapshot') THEN
+    INSERT INTO customer_tier_snapshot (customer_id, tier_name, current_tier, lifetime_points, current_balance, total_expense_amount, tenant_id, updated_at)
+    VALUES ('BAC-99981188', 'Silver', 'Silver', 1020, 1020, 85000.00, v_tenant, NOW())
+    ON CONFLICT (customer_id) DO UPDATE
+    SET tier_name = 'Silver', current_tier = 'Silver', lifetime_points = 1020, current_balance = 1020, total_expense_amount = 85000.00, updated_at = NOW();
+  END IF;
+
+  -- 11. Customer 7: Kavya Bellad (BAC-100007, Phone: 9886011223, Hyundai Verna)
+  INSERT INTO customers (
+    customer_id, customer_name, name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
+    age, firm_name, branch_name, address, is_first_time_visitor, tenant_id
+  )
+  VALUES (
+    'BAC-100007', 'Kavya Bellad', 'Kavya Bellad', '890123456789',
+    '819203a98f1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d',
+    '33a4f61f7d23588df8516d7734bbd12975949d0362241cf775d7b53ea5d81a8b',
+    30, 'Bellad & Company', 'Central Showroom - Hubli', 'Keshwapur, Hubballi, Karnataka', FALSE, v_tenant
+  )
+  ON CONFLICT (customer_id) DO UPDATE
+  SET customer_name = EXCLUDED.customer_name,
+      name = EXCLUDED.name,
+      tenant_id = EXCLUDED.tenant_id;
+
+  INSERT INTO customer_phones (customer_id, phone_number, is_verified, tenant_id)
+  VALUES ('BAC-100007', '9886011223', TRUE, v_tenant)
+  ON CONFLICT DO NOTHING;
+
+  IF NOT EXISTS (SELECT 1 FROM vehicles WHERE tenant_id = v_tenant AND chassis_no = 'MALCVRN48NP100007') THEN
+    INSERT INTO vehicles (
+      customer_id, brand_name, chassis_no, vin, registration_number, model, variant,
+      fuel_type, branch_name, firm_name, ex_showroom_price, purchase_date, tenant_id, vehicle_type
+    )
+    VALUES (
+      'BAC-100007', 'Hyundai', 'MALCVRN48NP100007', 'MALCVRN48NP100007', 'KA-25-MB-9900', 'Verna', 'SX Turbo 1.5 DCT',
+      'Petrol', 'Central Showroom - Hubli', 'Bellad & Company', 175000000, '2024-08-20', v_tenant, '4W'
+    );
+  END IF;
+
+  SELECT vehicle_id INTO v_veh7_id FROM vehicles WHERE tenant_id = v_tenant AND chassis_no = 'MALCVRN48NP100007' LIMIT 1;
+
+  INSERT INTO points_ledger (customer_id, vehicle_id, branch_id, type, transaction_type, transaction_category, points, amount_paise, source_ref, reason_type, reason_text, tenant_id)
+  VALUES
+    ('BAC-100007', v_veh7_id, v_branch_id, 'earn_sale', 'sale', 'sale', 17500, 175000000, 'INV-2024-VRN-1007', 'purchase', 'Vehicle purchase — Hyundai Verna SX Turbo → +17,500 pts', v_tenant)
+  ON CONFLICT DO NOTHING;
+
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'customer_tier_snapshot') THEN
+    INSERT INTO customer_tier_snapshot (customer_id, tier_name, current_tier, lifetime_points, current_balance, total_expense_amount, tenant_id, updated_at)
+    VALUES ('BAC-100007', 'Gold', 'Gold', 17500, 17500, 1750000.00, v_tenant, NOW())
+    ON CONFLICT (customer_id) DO UPDATE
+    SET tier_name = 'Gold', current_tier = 'Gold', lifetime_points = 17500, current_balance = 17500, total_expense_amount = 1750000.00, updated_at = NOW();
   END IF;
 
   -- Harmonize aliases dynamically

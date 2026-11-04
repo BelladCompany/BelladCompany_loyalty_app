@@ -9,7 +9,7 @@ class SearchController {
       let results = [];
       let searchType = '';
 
-      if (q) {
+      if (q !== undefined && q !== null) {
         searchType = 'unified_search';
         results = await SearchService.searchUnified(q, tenantId, limit, offset);
       } else if (phone) {
@@ -21,6 +21,9 @@ class SearchController {
       } else if (name) {
         searchType = 'name_fuzzy_trgm';
         results = await SearchService.searchByName(name, tenantId, limit, offset);
+      } else {
+        searchType = 'all_customers';
+        results = await SearchService.listAllPrDoneCustomers(tenantId, limit, offset);
       }
 
       res.status(200).json({
