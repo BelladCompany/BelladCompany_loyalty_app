@@ -94,12 +94,12 @@ export const ReferralsScreen = ({ user }) => {
     fetchApprovers();
   }, [fetchReferrals, fetchApprovers]);
 
-  // Live Auto-Refresh Polling (Every 10 seconds to auto-update when user shares on WhatsApp)
+  // Live Auto-Refresh Polling (Every 5 seconds to auto-update when user shares on WhatsApp)
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
       fetchReferrals(true);
-    }, 10000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [autoRefresh, fetchReferrals]);
 
@@ -205,10 +205,10 @@ export const ReferralsScreen = ({ user }) => {
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 shadow-xs'
                   : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
               }`}
-              title={autoRefresh ? 'Live auto-refresh is active (every 10s)' : 'Click to enable live auto-refresh'}
+              title={autoRefresh ? 'Live auto-refresh is active (every 5s)' : 'Click to enable live auto-refresh'}
             >
               <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
-              <span>{autoRefresh ? 'Live Feed (10s)' : 'Paused'}</span>
+              <span>{autoRefresh ? 'Live Feed (5s)' : 'Paused'}</span>
             </button>
 
             <button
@@ -435,14 +435,19 @@ export const ReferralsScreen = ({ user }) => {
                       </div>
 
                       {isApproved ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
-                          <CheckCircle2 className="w-3 h-3 text-blue-600" />
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                           Approved &amp; Credited
                         </span>
+                      ) : ref.status === 'shared' ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                          <Share2 className="w-3 h-3 text-[#25D366]" />
+                          Active (Shared on WhatsApp)
+                        </span>
                       ) : isEligible ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                          <Sparkles className="w-3 h-3 text-emerald-600" />
-                          Ready to Credit
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+                          <Sparkles className="w-3 h-3 text-purple-600" />
+                          PR Done (Ready to Credit)
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
@@ -536,14 +541,14 @@ export const ReferralsScreen = ({ user }) => {
             <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="py-3 px-4">Referral Code (No PIN)</th>
-                    <th className="py-3 px-4">Referrer (Who Sent)</th>
-                    <th className="py-3 px-4">Recipient / Share Channel</th>
-                    <th className="py-3 px-4">Sent Date &amp; Time</th>
-                    <th className="py-3 px-4">Dual Points Reward</th>
-                    <th className="py-3 px-4">Dealership Purchase &amp; PR</th>
-                    <th className="py-3 px-4 text-right">Action</th>
+                  <tr className="border-b border-slate-100 bg-slate-50/70 text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Referrer (Customer Details)</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Dual Reward (PTS)</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Referral Code</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Recipient Details</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Status</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5">Sent Date</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 sm:px-5 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
@@ -554,15 +559,52 @@ export const ReferralsScreen = ({ user }) => {
 
                     return (
                       <tr key={ref.referral_id || ref.id} className="hover:bg-slate-50/60 transition">
-                        {/* 1. Referral Code (NO PIN) */}
-                        <td className="py-3 px-4">
-                          <div className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 font-mono text-xs px-2.5 py-1 rounded-lg transition border border-slate-200">
-                            <span className="font-bold">{code}</span>
+                        {/* 1. Referrer (Customer Details) */}
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                          <div className="flex items-center gap-2.5 sm:gap-3">
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
+                              {ref.referrer_name?.charAt(0)?.toUpperCase() || 'R'}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-900 block whitespace-nowrap">
+                                {ref.referrer_name}
+                              </span>
+                              <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
+                                <span className="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
+                                  {ref.referrer_customer_id}
+                                </span>
+                                {ref.referrer_phone && ref.referrer_phone !== '—' && (
+                                  <span className="flex items-center gap-1 text-slate-500">
+                                    📱 {ref.referrer_phone}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 2. Dual Points Reward */}
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                          <div>
+                            <span className="font-black text-slate-900 text-xs sm:text-sm block">
+                              +2,500 PTS Each
+                            </span>
+                            <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-emerald-600 font-medium mt-0.5">
+                              <Coins className="w-3 h-3 text-amber-500" />
+                              <span>₹625 Value Each • 5,000 PTS Total</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 3. Referral Code (NO PIN) */}
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                          <div className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 font-mono text-xs px-2 sm:px-2.5 py-1 rounded-lg transition border border-slate-200 whitespace-nowrap">
+                            <span className="whitespace-nowrap font-bold">{code}</span>
                             <button
                               type="button"
                               title="Copy Referral Code"
                               onClick={() => handleCopyCode(code)}
-                              className="text-slate-400 hover:text-slate-700 ml-0.5 cursor-pointer"
+                              className="text-slate-400 hover:text-slate-700 ml-1 cursor-pointer"
                             >
                               {copiedCode === code ? (
                                 <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -576,150 +618,72 @@ export const ReferralsScreen = ({ user }) => {
                           </span>
                         </td>
 
-                        {/* 2. Referrer Details */}
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
-                              {ref.referrer_name?.charAt(0)?.toUpperCase() || 'R'}
-                            </div>
-                            <div>
-                              <span className="font-bold text-slate-900 block whitespace-nowrap">
-                                {ref.referrer_name}
+                        {/* 4. Recipient Details */}
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-slate-800 block break-words max-w-[200px] leading-snug">
+                                {ref.referred_name || 'Shared via WhatsApp'}
                               </span>
-                              <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                                <span className="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
-                                  {ref.referrer_customer_id}
-                                </span>
-                                {ref.referrer_phone && ref.referrer_phone !== '—' && (
-                                  <span>📱 {ref.referrer_phone}</span>
-                                )}
-                              </div>
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                📱 WhatsApp
+                              </span>
+                            </div>
+                            <div className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
+                              {ref.referred_phone && ref.referred_phone !== '—' ? (
+                                <span>📱 {ref.referred_phone}</span>
+                              ) : (
+                                <span className="text-slate-400">Via WhatsApp Invite Link</span>
+                              )}
+                              {ref.vehicle_model && (
+                                <span className="ml-2 text-slate-600 font-medium">({ref.vehicle_model})</span>
+                              )}
                             </div>
                           </div>
                         </td>
 
-                        {/* 3. Recipient / Share Channel Details */}
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-[#25D366] font-bold flex items-center justify-center text-xs flex-shrink-0">
-                              <Share2 className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-slate-900 block whitespace-nowrap">
-                                  {ref.referred_name || 'Friend Referral'}
-                                </span>
-                                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  📱 WhatsApp
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                                {ref.referred_customer_id && (
-                                  <span className="font-mono bg-slate-100 px-1.5 py-0.2 rounded text-slate-600">
-                                    {ref.referred_customer_id}
-                                  </span>
-                                )}
-                                {ref.referred_phone && ref.referred_phone !== '—' ? (
-                                  <span>📱 {ref.referred_phone}</span>
-                                ) : (
-                                  <span className="text-slate-400">Via WhatsApp Invite</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                        {/* 5. Status Badge */}
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
+                          {isApproved ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              Approved &amp; Credited
+                            </span>
+                          ) : ref.status === 'shared' ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                              <Share2 className="w-3.5 h-3.5 text-[#25D366]" />
+                              Active (Shared on WhatsApp)
+                            </span>
+                          ) : isEligible ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                              PR Done (Ready to Credit)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                              <Clock className="w-3.5 h-3.5 text-amber-600" />
+                              PR / Purchase Pending
+                            </span>
+                          )}
                         </td>
 
-                        {/* 4. Sent Date & Time */}
-                        <td className="py-3 px-4">
+                        {/* 6. Sent Date */}
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
                           <div className="flex items-center gap-1.5 text-slate-700 font-medium">
                             <Clock className="w-3.5 h-3.5 text-slate-400" />
                             <span>{formatDate(ref.shared_at || ref.created_at)}</span>
                           </div>
                           <span className="text-[10px] text-slate-400 block mt-0.5">
-                            WhatsApp share timestamp
+                            Auto-tracked share timestamp
                           </span>
                         </td>
 
-                        {/* 5. Dual Points Reward */}
-                        <td className="py-3 px-4">
-                          {isApproved ? (
-                            <div>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                <Award className="w-3 h-3 text-blue-600" />
-                                Credited: +{ref.points_credited || 2500} PTS Each
-                              </span>
-                              <span className="text-[10px] text-slate-400 block mt-0.5">
-                                Both Referrer &amp; Buyer (+5,000 PTS Total)
-                              </span>
-                            </div>
-                          ) : isEligible ? (
-                            <div>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <Sparkles className="w-3 h-3 text-emerald-600" />
-                                Eligible: Ready to Credit Both
-                              </span>
-                              <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">
-                                +2,500 PTS each (₹1,250 combined value)
-                              </span>
-                            </div>
-                          ) : (
-                            <div>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                                <Clock className="w-3 h-3 text-slate-400" />
-                                2,500 PTS Each Locked
-                              </span>
-                              <span className="text-[10px] text-slate-400 block mt-0.5">
-                                Pending friend vehicle purchase &amp; PR
-                              </span>
-                            </div>
-                          )}
-                        </td>
-
-                        {/* 6. Dealership Purchase & PR Status */}
-                        <td className="py-3 px-4">
-                          {ref.is_dealer_purchased ? (
-                            <div>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <Building2 className="w-3 h-3 text-emerald-600" />
-                                {ref.branch_name || 'Bellad Dealership'}
-                              </span>
-                              <div className="flex items-center gap-2 mt-1">
-                                {ref.vehicle_model && (
-                                  <span className="text-[11px] text-slate-700 font-semibold flex items-center gap-1">
-                                    <Car className="w-3 h-3 text-slate-400" />
-                                    {ref.vehicle_model}
-                                  </span>
-                                )}
-                                {ref.is_pr_done ? (
-                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/60 px-1.5 py-0.2 rounded">
-                                    ✓ PR Verified
-                                  </span>
-                                ) : (
-                                  <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded">
-                                    PR Pending
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                                <AlertCircle className="w-3 h-3 text-rose-500" />
-                                Not Purchased with Us
-                              </span>
-                              <span className="text-[10px] text-slate-400 block mt-0.5">
-                                Awaiting dealership booking
-                              </span>
-                            </div>
-                          )}
-                        </td>
-
                         {/* 7. Action Button */}
-                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5 text-right whitespace-nowrap">
                           {isApproved ? (
                             <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
                               <Check className="w-4 h-4" />
-                              Approved &amp; Credited
+                              Credited (+5,000 PTS)
                             </span>
                           ) : isEligible ? (
                             <button
@@ -735,7 +699,7 @@ export const ReferralsScreen = ({ user }) => {
                               title="Cannot approve: Vehicle must be purchased from our dealership with PR completed"
                               className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-400 text-xs font-semibold cursor-not-allowed border border-slate-200"
                             >
-                              PR / Purchase Pending
+                              Awaiting Purchase &amp; PR
                             </button>
                           )}
                         </td>

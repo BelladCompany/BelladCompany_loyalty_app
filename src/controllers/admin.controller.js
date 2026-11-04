@@ -479,8 +479,8 @@ class AdminController {
       let paramIdx = 2;
 
       if (status && status !== 'all') {
-        if (status === 'whatsapp') {
-          whereConditions.push(`(r.share_channel = 'whatsapp' OR r.referral_code IS NOT NULL)`);
+        if (status === 'whatsapp' || status === 'shared') {
+          whereConditions.push(`(r.share_channel = 'whatsapp' OR r.status = 'shared' OR r.referral_code IS NOT NULL)`);
         } else if (status === 'approved') {
           whereConditions.push(`(r.status = 'approved' OR r.status = 'claimed')`);
         } else if (status === 'pending') {
@@ -545,7 +545,7 @@ class AdminController {
           v.dms_invoice_number,
           v.dms_invoice_date,
           v.purchase_date,
-          COALESCE(b.name, v.branch_name, 'Central Dealership') AS branch_name,
+          COALESCE(b.branch_name, v.branch_name, 'Central Dealership') AS branch_name,
           -- Whether purchased from our dealers:
           CASE 
             WHEN v.vehicle_id IS NOT NULL AND (v.branch_id IS NOT NULL OR v.dms_invoice_number IS NOT NULL OR v.branch_name IS NOT NULL) THEN true
@@ -574,7 +574,7 @@ class AdminController {
           WHERE customer_id = r.referred_customer_id AND tenant_id = r.tenant_id 
           ORDER BY purchase_date DESC NULLS LAST, vehicle_id DESC LIMIT 1
         ) v ON true
-        LEFT JOIN branches b ON v.branch_id = b.id
+        LEFT JOIN branches b ON v.branch_id = b.branch_id
         WHERE ${whereSql}
         ORDER BY COALESCE(r.shared_at, r.created_at) DESC
         LIMIT $${paramIdx++} OFFSET $${paramIdx++};
