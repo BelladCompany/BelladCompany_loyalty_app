@@ -70,3 +70,35 @@ Loyalty program for an automobile dealership group (multiple brands, multiple br
    - **Resolved (placeholder):** `tenant_id` is a fixed constant for now (single tenant); branch/brand access enforced via `user.branch_id` and role instead.
 
 > **Placeholder notice:** The tier thresholds (question 1) and the RealBooks payload/protocol (question 4) are PLACEHOLDERS pending real input — NOT final specifications.
+
+
+
+┌────────────────────────────────────────────────────────────────────────┐
+│                        LOYALTY DATABASE ENGINE                         │
+├──────────────────────┬──────────────────────┬──────────────────────────┤
+│    1. IMMUTABILITY   │   2. CONCURRENCY &   │      3. DATA PRIVACY     │
+│   & FINANCIAL AUDIT  │     DOUBLE-SPEND     │         & SECURITY       │
+├──────────────────────┼──────────────────────┼──────────────────────────┤
+│ • Append-Only Ledger │ • Idempotency Keys   │ • PII Masking (Aadhaar)  │
+│ • No UPDATE / DELETE │ • Row-Level Locks    │ • SHA-256 Hash Lookups   │
+│ • Full Audit Logs    │ • Negative Checks    │ • Strict RBAC Scopes     │
+└──────────────────────┴──────────────────────┴──────────────────────────┘
+1. Immutability & Financial Audit (points_ledger)
+Append-Only Ledger: Points entries are never updated or deleted. Every transaction is an immutable record. If a cashier makes a correction, an offsetting adjustment record is appended.
+Triggers in Place:
+trg_prevent_points_ledger_modification: Automatically blocks any manual UPDATE or DELETE statements on the ledger.
+trg_prevent_negative_points_balance: Guarantees a customer's total points balance can never drop below zero, preventing accidental over-redemption.
+2. Concurrency & Double-Spend Protection
+Idempotency Keys (idempotency_key): Every earn or redemption transaction generates a unique UUID idempotency key. If a network blip or double-click occurs at the counter, the second request is recognized and safely ignored without deducting points twice.
+Transactional Row-Level Locking: During redemptions, PostgreSQL uses SELECT ... FOR UPDATE so concurrent actions on the same account are queued serially, eliminating race conditions.
+3. Optimized Indexing for Millions of Records
+
+Our local database currently has 64 tables and over 140 indexes, including:
+
+Composite Indexes: (tenant_id, customer_id, created_at DESC) on points_ledger and transactions so balance calculations and ledger pagination remain sub-millisecond even with 500,000+ entries.
+Search Indexes: Trigram (pg_trgm) and lower-case B-Tree indexes on customer names, phone numbers, and vehicle registration numbers for instant lookup.
+Filtered Partial Indexes: Indexes on status = 'pending' for redemptions and approvals, ensuring query speed doesn't degrade as approved records accumulate.
+4. Data Security & Regulatory Compliance (DPDP Act)
+Aadhaar Masking: Full 12-digit Aadhaar cards are never stored in raw readable format in logs or public responses. They are stored as masked strings (XXXX-XXXX-1912) and hashed (aadhaar_hash) for matching.
+Separation of Roles (RBAC): Cashiers, managers, and directors have isolated permissions. Cashiers cannot modify rules or issue manual points without supervisor approval.
+Customer Portal Isolation: Portal JWT tokens carry restricted customer roles and are prevented from calling internal staff or counter APIs.

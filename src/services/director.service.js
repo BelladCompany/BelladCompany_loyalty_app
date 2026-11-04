@@ -73,7 +73,24 @@ class DirectorService {
       );
       const vehKpis = vehTotRes.rows[0] || {};
 
-      // 3. Gift Card Performance Totals
+      // 3. Gift Card Performance Totals (Unified Counter Cards + Customer Peer Gifts)
+      let counterGiftCardsCount = 0;
+      let counterGiftCardsActive = 0;
+      let counterGiftCardsVolumeInr = 0;
+      try {
+        const gcRes = await client.query(
+          `SELECT 
+            COUNT(card_id) AS total_cards,
+            COUNT(CASE WHEN status = 'active' THEN 1 END) AS active_cards,
+            COALESCE(SUM(initial_amount_paise), 0) / 100.0 AS total_volume_inr
+          FROM gift_cards WHERE tenant_id = $1;`,
+          [tenantId]
+        );
+        counterGiftCardsCount = parseInt(gcRes.rows[0]?.total_cards || 0, 10);
+        counterGiftCardsActive = parseInt(gcRes.rows[0]?.active_cards || 0, 10);
+        counterGiftCardsVolumeInr = parseFloat(gcRes.rows[0]?.total_volume_inr || 0);
+      } catch (e) {}
+
       const giftRes = await client.query(
         `SELECT 
           COUNT(gift_id) AS total_gifts,
@@ -85,6 +102,9 @@ class DirectorService {
         [tenantId]
       );
       const giftKpis = giftRes.rows[0] || {};
+      const totalCombinedGiftCards = parseInt(giftKpis.total_gifts || 0, 10) + counterGiftCardsCount;
+      const totalCombinedGiftVolumeInr = parseFloat(giftKpis.total_gift_volume_inr || 0) + counterGiftCardsVolumeInr;
+      const totalCombinedActiveUnclaimed = parseInt(giftKpis.active_unclaimed_gifts || 0, 10) + counterGiftCardsActive;
 
       // 4. Referral Conversion Engine Totals
       let refKpis = { total_referrals: 0, purchased_referrals: 0, referral_points_awarded: 0 };
@@ -202,14 +222,18 @@ class DirectorService {
         queryParams
       );
 
-      // 7. Department / Category Performance
+      // 7. Department / Category Performance (Unified and normalized)
       const deptRes = await client.query(
         `SELECT 
-          COALESCE(pl.transaction_category, 'other') AS category,
+          CASE 
+            WHEN pl.transaction_category IN ('accessory', 'accessories') THEN 'accessory'
+            ELSE COALESCE(pl.transaction_category, 'other')
+          END AS category,
           COUNT(pl.entry_id) AS transactions_count,
           COUNT(DISTINCT pl.customer_id) AS customer_count,
-          COALESCE(SUM(CASE WHEN pl.points > 0 THEN pl.points ELSE 0 END), 0) AS points_issued,
-          COALESCE(SUM(CASE WHEN pl.points < 0 THEN ABS(pl.points) ELSE 0 END), 0) AS points_redeemed,
+          COALESCE(SUM(CASE WHEN pl.points > 0 THEN pl.points ELSE 0 END), 0)::bigint AS points_issued,
+          COALESCE(SUM(CASE WHEN pl.points < 0 THEN ABS(pl.points) ELSE 0 END), 0)::bigint AS points_redeemed,
+          COALESCE(SUM(pl.points), 0)::bigint AS net_points,
           COALESCE(SUM(
             CASE 
               WHEN pl.calc_snapshot->>'bill_amount' IS NOT NULL 
@@ -222,7 +246,7 @@ class DirectorService {
                 THEN (st.ex_showroom_price_paise::numeric / 100)
               WHEN pl.transaction_category = 'service' AND pl.points > 0
                 THEN (pl.points * 25.0)
-              WHEN pl.transaction_category = 'accessory' AND pl.points > 0
+              WHEN pl.transaction_category IN ('accessory', 'accessories') AND pl.points > 0
                 THEN (pl.points * 50.0)
               WHEN pl.transaction_category = 'bodyshop' AND pl.points > 0
                 THEN (pl.points * 33.33)
@@ -230,20 +254,25 @@ class DirectorService {
                 THEN (ABS(pl.points) * 0.25)
               ELSE 0 
             END
-          ), 0) AS revenue_volume
+          ), 0)::numeric AS revenue_volume
         FROM points_ledger pl
         LEFT JOIN sale_transactions st ON (st.vehicle_id = pl.vehicle_id OR (pl.vehicle_id IS NULL AND st.customer_id = pl.customer_id))
         WHERE pl.tenant_id = $1 ${dateFilter}
-        GROUP BY pl.transaction_category
+        GROUP BY 
+          CASE 
+            WHEN pl.transaction_category IN ('accessory', 'accessories') THEN 'accessory'
+            ELSE COALESCE(pl.transaction_category, 'other')
+          END
         ORDER BY revenue_volume DESC, points_issued DESC;`,
         queryParams
       );
 
-      // 8. Vehicle Model-by-Model Performance Breakdown (Real dynamic query for bar charts)
+      // 8. Vehicle Model-by-Model Performance Breakdown (Real dynamic query with vehicle_type)
       const modelRes = await client.query(
         `SELECT 
           COALESCE(NULLIF(TRIM(v.model), ''), 'Other Models') AS model_name,
           COALESCE(NULLIF(TRIM(v.brand_name), ''), 'Dealership') AS brand_name,
+          COALESCE(NULLIF(TRIM(v.vehicle_type), ''), '4W') AS vehicle_type,
           COUNT(DISTINCT v.vehicle_id)::int AS vehicle_count,
           COUNT(DISTINCT v.customer_id)::int AS customer_count,
           COALESCE(SUM(CASE WHEN pl.points > 0 THEN pl.points ELSE 0 END), 0)::bigint AS points_issued,
@@ -266,7 +295,10 @@ class DirectorService {
         FROM vehicles v
         LEFT JOIN points_ledger pl ON v.vehicle_id = pl.vehicle_id AND pl.tenant_id = v.tenant_id
         WHERE v.tenant_id = $1
-        GROUP BY COALESCE(NULLIF(TRIM(v.model), ''), 'Other Models'), COALESCE(NULLIF(TRIM(v.brand_name), ''), 'Dealership')
+        GROUP BY 
+          COALESCE(NULLIF(TRIM(v.model), ''), 'Other Models'), 
+          COALESCE(NULLIF(TRIM(v.brand_name), ''), 'Dealership'),
+          COALESCE(NULLIF(TRIM(v.vehicle_type), ''), '4W')
         ORDER BY vehicle_count DESC, points_issued DESC
         LIMIT 10;`,
         [tenantId]
@@ -274,6 +306,7 @@ class DirectorService {
       const modelBreakdown = modelRes.rows.map((m) => ({
         model_name: m.model_name,
         brand_name: m.brand_name,
+        vehicle_type: m.vehicle_type,
         vehicle_count: parseInt(m.vehicle_count, 10),
         customer_count: parseInt(m.customer_count, 10),
         points_issued: parseInt(m.points_issued, 10),
@@ -365,6 +398,31 @@ class DirectorService {
           total_revenue: parseFloat(r.total_revenue || 0),
         }));
 
+      // 9. Monthly Trend (Points Issued vs Redeemed over time)
+      let monthlyTrend = [];
+      try {
+        const trendRes = await client.query(
+          `SELECT 
+            TO_CHAR(pl.created_at, 'Mon YYYY') AS month_label,
+            DATE_TRUNC('month', pl.created_at) AS month_date,
+            COALESCE(SUM(CASE WHEN pl.points > 0 THEN pl.points ELSE 0 END), 0)::bigint AS points_issued,
+            COALESCE(SUM(CASE WHEN pl.points < 0 THEN ABS(pl.points) ELSE 0 END), 0)::bigint AS points_redeemed,
+            COUNT(pl.entry_id)::int AS transactions_count
+          FROM points_ledger pl
+          WHERE pl.tenant_id = $1
+          GROUP BY DATE_TRUNC('month', pl.created_at), TO_CHAR(pl.created_at, 'Mon YYYY')
+          ORDER BY month_date ASC
+          LIMIT 12;`,
+          [tenantId]
+        );
+        monthlyTrend = trendRes.rows.map(r => ({
+          month_label: r.month_label,
+          points_issued: parseInt(r.points_issued, 10),
+          points_redeemed: parseInt(r.points_redeemed, 10),
+          transactions_count: parseInt(r.transactions_count, 10),
+        }));
+      } catch (e) {}
+
       return {
         kpis: {
           // 1. Total Points
@@ -408,12 +466,12 @@ class DirectorService {
             points_awarded: parseInt(refKpis.referral_points_awarded || 0, 10),
           },
 
-          // 6. Gift Cards
+          // 6. Gift Cards (Consolidated Counter & Peer Vouchers)
           gift_cards: {
-            total_cards: parseInt(giftKpis.total_gifts || 0, 10),
+            total_cards: totalCombinedGiftCards,
             claimed_cards: parseInt(giftKpis.claimed_gifts || 0, 10),
-            active_unclaimed: parseInt(giftKpis.active_unclaimed_gifts || 0, 10),
-            total_volume_inr: parseFloat(giftKpis.total_gift_volume_inr || 0),
+            active_unclaimed: totalCombinedActiveUnclaimed,
+            total_volume_inr: totalCombinedGiftVolumeInr,
           },
 
           // RealBooks
@@ -422,6 +480,7 @@ class DirectorService {
 
         // Chart Bar Data
         charts: {
+          monthly_trend: monthlyTrend,
           points_velocity: [
             { id: 'issued', label: 'Points Issued', value: totalPointsIssued, color: '#10B981', pct: 100 },
             { id: 'liability', label: 'Escrow Liability', value: netPointsLiability, color: '#6366F1', pct: parseFloat(((netPointsLiability / totalPointsIssued) * 100).toFixed(1)) },
@@ -456,14 +515,30 @@ class DirectorService {
           liability_inr: Math.round(parseInt(r.net_points || 0, 10) * 0.25),
           total_revenue: parseFloat(r.total_revenue || 0),
         })),
-        departments: deptRes.rows.map((r) => ({
-          category: r.category,
-          transactions_count: parseInt(r.transactions_count || 0, 10),
-          customer_count: parseInt(r.customer_count || 0, 10),
-          points_issued: parseInt(r.points_issued || 0, 10),
-          points_redeemed: parseInt(r.points_redeemed || 0, 10),
-          revenue_volume: parseFloat(r.revenue_volume || 0),
-        })),
+        departments: (() => {
+          const CORE_DEPARTMENTS = ['sale', 'service', 'bodyshop', 'accessory'];
+          const map = new Map();
+          deptRes.rows.forEach((r) => {
+            if (CORE_DEPARTMENTS.includes(r.category)) {
+              map.set(r.category, {
+                category: r.category,
+                transactions_count: parseInt(r.transactions_count || 0, 10),
+                customer_count: parseInt(r.customer_count || 0, 10),
+                points_issued: parseInt(r.points_issued || 0, 10),
+                points_redeemed: parseInt(r.points_redeemed || 0, 10),
+                revenue_volume: parseFloat(r.revenue_volume || 0),
+              });
+            }
+          });
+          return CORE_DEPARTMENTS.map((cat) => map.get(cat) || {
+            category: cat,
+            transactions_count: 0,
+            customer_count: 0,
+            points_issued: 0,
+            points_redeemed: 0,
+            revenue_volume: 0,
+          });
+        })(),
         tiers: {
           Silver: tierCounts.Silver,
           Gold: tierCounts.Gold,

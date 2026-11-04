@@ -365,10 +365,14 @@ class CustomerService {
 
         // Also upsert customer_tier_snapshot
         await client.query(
-          `INSERT INTO customer_tier_snapshot (customer_id, current_tier, lifetime_points, tenant_id, updated_at)
-           VALUES ($1, 'Silver', $2, $3, NOW())
+          `INSERT INTO customer_tier_snapshot (customer_id, tier_name, current_tier, lifetime_points, current_balance, tenant_id, updated_at)
+           VALUES ($1, 'Silver', 'Silver', $2, $2, $3, NOW())
            ON CONFLICT (customer_id) DO UPDATE
-             SET lifetime_points = EXCLUDED.lifetime_points, updated_at = NOW();`,
+             SET tier_name = COALESCE(customer_tier_snapshot.tier_name, 'Silver'),
+                 current_tier = COALESCE(customer_tier_snapshot.current_tier, 'Silver'),
+                 lifetime_points = EXCLUDED.lifetime_points,
+                 current_balance = EXCLUDED.current_balance,
+                 updated_at = NOW();`,
           [customer.customer_id, totalInitialPoints, tenant_id]
         );
       }

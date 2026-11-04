@@ -105,24 +105,28 @@ class TierService {
     const tierName = await this.determineTier(totalMetricRs, tenantId, client);
 
     const aggRes = await client.query(
-      `SELECT COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS lifetime_points
+      `SELECT COALESCE(SUM(CASE WHEN points > 0 THEN points ELSE 0 END), 0) AS lifetime_points,
+              GREATEST(0, COALESCE(SUM(points), 0)) AS current_balance
        FROM points_ledger
        WHERE customer_id = $1 AND tenant_id = $2;`,
       [customerId, tenantId]
     );
     const lifetimePoints = Math.max(0, parseInt(aggRes.rows[0]?.lifetime_points || '0', 10));
+    const currentBalance = Math.max(0, parseInt(aggRes.rows[0]?.current_balance || '0', 10));
 
     const snapRes = await client.query(
       `INSERT INTO customer_tier_snapshot (
-         customer_id, tenant_id, current_tier, lifetime_points, total_expense_amount, updated_at
-       ) VALUES ($1, $2, $3, $4, $5, NOW())
+         customer_id, tenant_id, tier_name, current_tier, lifetime_points, current_balance, total_expense_amount, updated_at
+       ) VALUES ($1, $2, $3, $3, $4, $5, $6, NOW())
        ON CONFLICT (customer_id) DO UPDATE
-       SET current_tier = EXCLUDED.current_tier,
+       SET tier_name = EXCLUDED.tier_name,
+           current_tier = EXCLUDED.current_tier,
            lifetime_points = EXCLUDED.lifetime_points,
+           current_balance = EXCLUDED.current_balance,
            total_expense_amount = EXCLUDED.total_expense_amount,
            updated_at = NOW()
-       RETURNING customer_id, current_tier, lifetime_points, total_expense_amount, updated_at;`,
-      [customerId, tenantId, tierName, lifetimePoints, totalMetricRs]
+       RETURNING customer_id, current_tier, tier_name, lifetime_points, current_balance, total_expense_amount, updated_at;`,
+      [customerId, tenantId, tierName, lifetimePoints, currentBalance, totalMetricRs]
     );
 
     return snapRes.rows[0];
