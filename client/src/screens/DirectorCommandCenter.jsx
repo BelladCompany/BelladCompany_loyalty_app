@@ -21,6 +21,8 @@ import {
   BarChart3,
   Activity,
   Check,
+  IndianRupee,
+  Car,
 } from 'lucide-react';
 import ApiService from '../services/api';
 import { useToast } from '../components/ui';
