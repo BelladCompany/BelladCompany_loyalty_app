@@ -1,0 +1,69 @@
+-- Migration 060: Cloud Schema Harmonization
+-- Ensures all columns required by referral, vehicle, phone, and points queries exist across environments.
+
+DO $$
+BEGIN
+  -- 1. referral_approvers
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'referral_approvers') THEN
+    ALTER TABLE referral_approvers ADD COLUMN IF NOT EXISTS approver_id INTEGER;
+    ALTER TABLE referral_approvers ADD COLUMN IF NOT EXISTS id INTEGER;
+    ALTER TABLE referral_approvers ALTER COLUMN user_id DROP NOT NULL;
+    
+    UPDATE referral_approvers SET approver_id = id WHERE approver_id IS NULL AND id IS NOT NULL;
+    UPDATE referral_approvers SET id = approver_id WHERE id IS NULL AND approver_id IS NOT NULL;
+  END IF;
+
+  -- 2. vehicles
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'vehicles') THEN
+    ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS branch_id INTEGER;
+    ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS exshowroom_price NUMERIC;
+    ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vehicle_id INTEGER;
+    ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS id INTEGER;
+    ALTER TABLE vehicles ALTER COLUMN chassis_no DROP NOT NULL;
+    ALTER TABLE vehicles ALTER COLUMN model DROP NOT NULL;
+
+    UPDATE vehicles SET vehicle_id = id WHERE vehicle_id IS NULL AND id IS NOT NULL;
+    UPDATE vehicles SET id = vehicle_id WHERE id IS NULL AND vehicle_id IS NOT NULL;
+  END IF;
+
+  -- 3. customer_phones
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'customer_phones') THEN
+    ALTER TABLE customer_phones ADD COLUMN IF NOT EXISTS phone_id INTEGER;
+    ALTER TABLE customer_phones ADD COLUMN IF NOT EXISTS id INTEGER;
+    UPDATE customer_phones SET phone_id = id WHERE phone_id IS NULL AND id IS NOT NULL;
+    UPDATE customer_phones SET id = phone_id WHERE id IS NULL AND phone_id IS NOT NULL;
+  END IF;
+
+  -- 4. points_ledger
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'points_ledger') THEN
+    ALTER TABLE points_ledger ADD COLUMN IF NOT EXISTS entry_id BIGINT;
+    ALTER TABLE points_ledger ADD COLUMN IF NOT EXISTS id BIGINT;
+    ALTER TABLE points_ledger ALTER COLUMN type DROP NOT NULL;
+    ALTER TABLE points_ledger ALTER COLUMN points DROP NOT NULL;
+    UPDATE points_ledger SET entry_id = id WHERE entry_id IS NULL AND id IS NOT NULL;
+    UPDATE points_ledger SET id = entry_id WHERE id IS NULL AND entry_id IS NOT NULL;
+  END IF;
+
+  -- 5. customer_tier_snapshot
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'customer_tier_snapshot') THEN
+    ALTER TABLE customer_tier_snapshot ADD COLUMN IF NOT EXISTS tier_name VARCHAR(50);
+    ALTER TABLE customer_tier_snapshot ADD COLUMN IF NOT EXISTS current_tier VARCHAR(50);
+    ALTER TABLE customer_tier_snapshot ALTER COLUMN tier_name DROP NOT NULL;
+    ALTER TABLE customer_tier_snapshot ALTER COLUMN current_tier DROP NOT NULL;
+    UPDATE customer_tier_snapshot SET tier_name = current_tier WHERE tier_name IS NULL AND current_tier IS NOT NULL;
+    UPDATE customer_tier_snapshot SET current_tier = tier_name WHERE current_tier IS NULL AND tier_name IS NOT NULL;
+  END IF;
+
+  -- 6. Seed default referral approvers if table is empty
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'referral_approvers') THEN
+    IF NOT EXISTS (SELECT 1 FROM referral_approvers WHERE tenant_id = 'bellad_and_company') THEN
+      INSERT INTO referral_approvers (approver_id, name, is_active, tenant_id)
+      VALUES 
+        (1, 'Umesh', true, 'bellad_and_company'),
+        (2, 'Shrinivas', true, 'bellad_and_company'),
+        (3, 'Shivanand', true, 'bellad_and_company'),
+        (4, 'Admin Approver', true, 'bellad_and_company')
+      ON CONFLICT DO NOTHING;
+    END IF;
+  END IF;
+END $$;
