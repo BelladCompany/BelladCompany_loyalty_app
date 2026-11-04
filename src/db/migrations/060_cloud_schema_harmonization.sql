@@ -98,5 +98,32 @@ BEGIN
       ON CONFLICT DO NOTHING;
     END IF;
   END IF;
+
+  -- 7. otp_requests harmonization
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'otp_requests') THEN
+    ALTER TABLE otp_requests ADD COLUMN IF NOT EXISTS otp_id INTEGER;
+    ALTER TABLE otp_requests ADD COLUMN IF NOT EXISTS purpose VARCHAR(100);
+    ALTER TABLE otp_requests ADD COLUMN IF NOT EXISTS attempts INTEGER DEFAULT 0;
+    UPDATE otp_requests SET otp_id = id WHERE otp_id IS NULL AND id IS NOT NULL;
+    UPDATE otp_requests SET id = otp_id WHERE id IS NULL AND otp_id IS NOT NULL;
+
+    CREATE OR REPLACE FUNCTION sync_otp_requests_id_columns()
+    RETURNS TRIGGER AS $trig$
+    BEGIN
+      IF NEW.otp_id IS NULL AND NEW.id IS NOT NULL THEN
+        NEW.otp_id := NEW.id;
+      ELSIF NEW.id IS NULL AND NEW.otp_id IS NOT NULL THEN
+        NEW.id := NEW.otp_id;
+      END IF;
+      RETURN NEW;
+    END;
+    $trig$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS trg_sync_otp_requests_id_columns ON otp_requests;
+    CREATE TRIGGER trg_sync_otp_requests_id_columns
+      BEFORE INSERT OR UPDATE ON otp_requests
+      FOR EACH ROW
+      EXECUTE FUNCTION sync_otp_requests_id_columns();
+  END IF;
 END $$;
 

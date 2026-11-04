@@ -76,17 +76,18 @@ class CustomerPortalController {
       const expiresAt = new Date(insertRes.rows[0].expires_at);
       const expiresInSeconds = Math.max(1, Math.round((expiresAt.getTime() - Date.now()) / 1000));
 
-      const isDebugOtpEnabled = process.env.NODE_ENV === 'development' && process.env.ENABLE_DEBUG_OTP === 'true';
+      const isMockWhatsApp = !process.env.RELTIGROW_API_KEY;
+      const isDebugOtpEnabled = (process.env.NODE_ENV === 'development' && process.env.ENABLE_DEBUG_OTP === 'true') || isMockWhatsApp;
 
       res.status(200).json({
         status: 'success',
         message: isDebugOtpEnabled
-          ? `OTP sent successfully. (Debug Mode: ${otp})`
+          ? `Verification code: ${otp}`
           : 'OTP has been sent to your registered mobile number.',
         whatsapp_sent: Boolean(otpSendResult?.success),
         expires_in_seconds: expiresInSeconds,
         expires_at: expiresAt.toISOString(),
-        ...(isDebugOtpEnabled && { debug_otp: otp }),
+        ...(isDebugOtpEnabled && { debug_otp: otp, dummy_otp: '123456' }),
       });
     } catch (error) {
       next(error);
@@ -109,8 +110,9 @@ class CustomerPortalController {
       const phoneToUse = cleanPhone.length === 10 ? cleanPhone : (cleanPhone.length > 10 ? cleanPhone.slice(-10) : cleanPhone);
       const submittedOtp = String(otp).trim();
 
-      // Test OTPs strictly restricted to non-production dev environments with explicit flag
-      const isTestEnv = process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_OTPS === 'true';
+      // Test OTPs allowed in development, or if mock WhatsApp provider is in use (no real SMS gateway key configured)
+      const isMockWhatsApp = !process.env.RELTIGROW_API_KEY;
+      const isTestEnv = process.env.NODE_ENV === 'development' || process.env.ENABLE_TEST_OTPS === 'true' || isMockWhatsApp;
       const isMasterTestOtp = isTestEnv && ['123456', '999999'].includes(submittedOtp);
 
       const otpRes = await pool.query(
