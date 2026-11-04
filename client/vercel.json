@@ -3,15 +3,15 @@
   "rewrites": [
     {
       "source": "/api/:match*",
-      "destination": "https://belladcompany-loyalty-app.onrender.com/api/:match*"
+      "destination": "https://belladcompany-loyalty-app-jc2j.onrender.com/api/:match*"
     },
     {
       "source": "/health",
-      "destination": "https://belladcompany-loyalty-app.onrender.com/health"
+      "destination": "https://belladcompany-loyalty-app-jc2j.onrender.com/health"
     },
     {
       "source": "/uploads/:match*",
-      "destination": "https://belladcompany-loyalty-app.onrender.com/uploads/:match*"
+      "destination": "https://belladcompany-loyalty-app-jc2j.onrender.com/uploads/:match*"
     },
     {
       "source": "/(.*)",
