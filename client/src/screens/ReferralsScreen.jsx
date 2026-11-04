@@ -429,9 +429,6 @@ export const ReferralsScreen = ({ user }) => {
                             <Copy className="w-3.5 h-3.5" />
                           )}
                         </button>
-                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 ml-1">
-                          No PIN
-                        </span>
                       </div>
 
                       {isApproved ? (
@@ -468,17 +465,15 @@ export const ReferralsScreen = ({ user }) => {
                         )}
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Recipient / Friend</span>
-                        <span className="font-bold text-slate-900 block truncate">{ref.referred_name || 'Friend Referral'}</span>
-                        {ref.referred_customer_id ? (
-                          <span className="text-[10px] text-slate-500 font-mono">{ref.referred_customer_id}</span>
-                        ) : (
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Recipient Details</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="font-bold text-slate-900 block truncate">Shared via WhatsApp</span>
                           <span className="inline-flex items-center gap-1 text-[9px] font-bold text-[#25D366] bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                            📱 WhatsApp Share
+                            📱 WhatsApp
                           </span>
-                        )}
-                        {ref.referred_phone && ref.referred_phone !== '—' && (
-                          <span className="text-[10px] text-slate-500 block">📱 {ref.referred_phone}</span>
+                        </div>
+                        {ref.vehicle_model && (
+                          <span className="text-[10px] text-slate-500 block mt-0.5 font-medium">({ref.vehicle_model})</span>
                         )}
                       </div>
                     </div>
@@ -596,7 +591,7 @@ export const ReferralsScreen = ({ user }) => {
                           </div>
                         </td>
 
-                        {/* 3. Referral Code (NO PIN) */}
+                        {/* 3. Referral Code */}
                         <td className="py-2.5 sm:py-3.5 px-3.5 sm:px-5">
                           <div className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 font-mono text-xs px-2 sm:px-2.5 py-1 rounded-lg transition border border-slate-200 whitespace-nowrap">
                             <span className="whitespace-nowrap font-bold">{code}</span>
@@ -613,9 +608,6 @@ export const ReferralsScreen = ({ user }) => {
                               )}
                             </button>
                           </div>
-                          <span className="text-[10px] font-bold text-slate-400 block mt-0.5">
-                            🔒 Code Only • No PIN
-                          </span>
                         </td>
 
                         {/* 4. Recipient Details */}
@@ -623,22 +615,17 @@ export const ReferralsScreen = ({ user }) => {
                           <div>
                             <div className="flex items-center gap-1.5">
                               <span className="font-semibold text-slate-800 block break-words max-w-[200px] leading-snug">
-                                {ref.referred_name || 'Shared via WhatsApp'}
+                                Shared via WhatsApp
                               </span>
                               <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 📱 WhatsApp
                               </span>
                             </div>
-                            <div className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
-                              {ref.referred_phone && ref.referred_phone !== '—' ? (
-                                <span>📱 {ref.referred_phone}</span>
-                              ) : (
-                                <span className="text-slate-400">Via WhatsApp Invite Link</span>
-                              )}
-                              {ref.vehicle_model && (
-                                <span className="ml-2 text-slate-600 font-medium">({ref.vehicle_model})</span>
-                              )}
-                            </div>
+                            {ref.vehicle_model && (
+                              <div className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
+                                <span className="text-slate-600 font-medium">({ref.vehicle_model})</span>
+                              </div>
+                            )}
                           </div>
                         </td>
 

@@ -382,7 +382,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   const referralLink = `${window.location.origin}/portal?ref=${activeReferralCode}`;
 
   const whatsappReferralText = encodeURIComponent(
-    `🎁 *Bellad & Company Loyalty Referral Rewards*\n\nHey! Use my referral code *${activeReferralCode}* (No PIN required) when booking your new vehicle or workshop service at Bellad & Co dealerships. We will BOTH receive bonus reward points in our loyalty wallets!\n\n👉 Claim & register here:\n${referralLink}`
+    `🎁 *Bellad & Company Loyalty Referral Rewards*\n\nHey! Use my referral code *${activeReferralCode}* when booking your new vehicle or workshop service at Bellad & Co dealerships. We will BOTH receive bonus reward points in our loyalty wallets!\n\n👉 Claim & register here:\n${referralLink}`
   );
   const whatsappReferralUrl = `https://wa.me/?text=${whatsappReferralText}`;
 
