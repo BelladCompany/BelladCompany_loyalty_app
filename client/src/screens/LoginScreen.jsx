@@ -129,23 +129,7 @@ export const LoginScreen = ({ onLoginSuccess }) => {
             <span>QUICK DEMO ACCESS:</span>
             <span className="text-slate-400">Click to fill</span>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
-            <button
-              type="button"
-              onClick={() => handleFillDemo('agstya', 'agst@2026')}
-              className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
-                username === 'agstya'
-                  ? 'bg-amber-50 border-amber-300 text-amber-900 shadow-sm'
-                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
-              }`}
-            >
-              <div className="text-xs sm:text-sm font-bold flex items-center gap-1 sm:gap-1.5 text-amber-900 truncate">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span className="truncate">Director Agastya</span>
-              </div>
-              <div className="text-[10px] sm:text-xs text-slate-500 font-mono mt-0.5 truncate">agstya / agst@2026</div>
-            </button>
-
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
             <button
               type="button"
               onClick={() => handleFillDemo('admin', 'admin@123')}
