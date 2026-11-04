@@ -349,68 +349,82 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-12">
-      {/* ── 1. Top Executive Control Bar ── */}
-      <div className="bg-slate-900 rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-white shadow-xl border border-slate-800">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          {/* Title & Live Status */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/80">
-                Bellad &amp; Company Dealerships
-              </span>
-              <div
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold border transition ${autoRefreshInterval > 0
-                    ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/80'
-                    : 'bg-slate-800/60 text-slate-400 border-slate-700'
-                  }`}
-              >
-                <span
-                  className={`w-2 h-2 rounded-full ${autoRefreshInterval > 0
-                      ? isLivePulsing
-                        ? 'bg-emerald-300 scale-125 transition-transform'
-                        : 'bg-emerald-400 animate-pulse'
-                      : 'bg-slate-500'
-                    }`}
-                />
-                <span>
-                  {autoRefreshInterval > 0 ? `Live Sync: ${countdown}s` : 'Sync Paused'}
+      {/* ── 1. Top Executive Banner (Neat, Aligned & Faithful to Executive Spec) ── */}
+      <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-slate-800 relative overflow-hidden">
+        {/* Subtle accent glows */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+          {/* Left Block: Stacked Badges, Title & Subtitle */}
+          <div className="space-y-4 max-w-xl">
+            {/* Stacked Pills */}
+            <div className="space-y-2">
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-400 text-slate-950 font-black text-xs shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
+                  DIRECTOR COMMAND CENTER
                 </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block px-3 py-1 rounded-xl bg-slate-800/80 text-slate-300 font-bold text-xs border border-slate-700/80">
+                  Bellad &amp; Company Dealerships
+                </span>
+                <div
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold border transition ${
+                    autoRefreshInterval > 0
+                      ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/80'
+                      : 'bg-slate-800/60 text-slate-400 border-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      autoRefreshInterval > 0
+                        ? isLivePulsing
+                          ? 'bg-emerald-300 scale-125 transition-transform'
+                          : 'bg-emerald-400 animate-pulse'
+                        : 'bg-slate-500'
+                    }`}
+                  />
+                  <span>
+                    {autoRefreshInterval > 0 ? `Live Auto-Sync: ${countdown}s` : 'Sync Paused'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
-              <span>Director Command Center</span>
-              {isLivePulsing && (
-                <span className="text-[10px] sm:text-xs font-mono font-bold text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-800 animate-pulse">
-                  Updating...
-                </span>
-              )}
+            {/* Main Headline */}
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+              Executive<br />Loyalty<br />Intelligence
             </h1>
-            <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-              Consolidated real-time executive dashboard. Dynamic tracking of enrolled loyalty members, point redemptions, cash liabilities, and core business revenue.
+
+            {/* Paragraph Description */}
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              Consolidated real-time operational dashboard for Directors &amp; Executive Management. Live metrics for enrolled members, points earned/burned, cash flow, gift cards, and branch performance.
             </p>
           </div>
 
-          {/* Controls: Date Range, Auto-Sync Toggle, Refresh & Export */}
-          <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2.5 shrink-0">
+          {/* Right Block: Filters, Frequency & Actions */}
+          <div className="flex flex-wrap items-center gap-2.5 xl:justify-end shrink-0">
             {/* Date Range Selector */}
-            <div className="bg-slate-800/90 rounded-xl sm:rounded-2xl p-1 border border-slate-700/80 flex flex-wrap items-center gap-1">
+            <div className="bg-slate-800/90 rounded-2xl p-1 border border-slate-700/80 flex flex-wrap items-center gap-1">
               {[
                 { id: 'today', label: 'Today' },
                 { id: '7d', label: '7D' },
-                { id: '30d', label: 'Month' },
+                { id: '30d', label: 'This Month' },
                 { id: 'quarter', label: 'Quarter' },
-                { id: 'ytd', label: 'FY26-27' },
+                { id: 'ytd', label: 'FY26–27' },
                 { id: 'all', label: 'All Time' },
                 { id: 'custom', label: 'Custom' },
               ].map((btn) => (
                 <button
                   key={btn.id}
                   onClick={() => setDateRange(btn.id)}
-                  className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition cursor-pointer ${dateRange === btn.id
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    dateRange === btn.id
                       ? 'bg-white text-slate-950 shadow-sm'
                       : 'text-slate-300 hover:text-white'
-                    }`}
+                  }`}
                 >
                   {btn.label}
                 </button>
@@ -418,18 +432,19 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             </div>
 
             {/* Auto-Refresh Frequency Picker */}
-            <div className="bg-slate-800/90 rounded-xl sm:rounded-2xl px-2.5 py-1.5 border border-slate-700/80 flex items-center gap-1.5 text-xs text-slate-300">
+            <div className="bg-slate-800/90 rounded-2xl px-3 py-2 border border-slate-700/80 flex items-center gap-2 text-xs text-slate-300 font-bold">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Interval:</span>
               <select
                 value={autoRefreshInterval}
                 onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
-                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-bold text-white focus:outline-none focus:border-amber-400 cursor-pointer"
+                className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
               >
-                <option value={5}>5s</option>
-                <option value={10}>10s</option>
-                <option value={30}>30s</option>
-                <option value={60}>1 Min</option>
-                <option value={0}>Pause</option>
+                <option value={5} className="bg-slate-900">5s</option>
+                <option value={10} className="bg-slate-900">10s (Optimal)</option>
+                <option value={30} className="bg-slate-900">30s</option>
+                <option value={60} className="bg-slate-900">1 Min</option>
+                <option value={0} className="bg-slate-900">Pause</option>
               </select>
             </div>
 
@@ -440,7 +455,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                 if (activeSection === 'records') loadRecords();
               }}
               disabled={loadingOverview}
-              className="p-2 sm:p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl sm:rounded-2xl transition border border-slate-700 cursor-pointer flex items-center justify-center shrink-0"
+              className="w-10 h-10 bg-slate-800/90 hover:bg-slate-700 text-white rounded-2xl transition border border-slate-700/80 cursor-pointer flex items-center justify-center shrink-0"
               title="Refresh Now"
             >
               <RefreshCw className={`w-4 h-4 ${loadingOverview || isLivePulsing ? 'animate-spin text-amber-400' : ''}`} />
@@ -450,19 +465,19 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             <button
               onClick={handleExportCsv}
               disabled={exporting}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl sm:rounded-2xl font-bold text-xs transition shadow-md flex items-center gap-1.5 cursor-pointer shrink-0"
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs transition shadow-md flex items-center gap-1.5 cursor-pointer shrink-0"
             >
               <Download className="w-3.5 h-3.5" />
               <span>{exporting ? 'Exporting...' : 'Export'}</span>
             </button>
 
-            {/* Switch to Counter POS View */}
+            {/* Switch to Counter View */}
             {onSwitchToStaffView && (
               <button
                 onClick={onSwitchToStaffView}
-                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-200 hover:text-white rounded-xl sm:rounded-2xl font-bold text-xs transition border border-slate-700 flex items-center gap-1 cursor-pointer shrink-0"
+                className="px-3.5 py-2.5 bg-slate-800/90 hover:bg-slate-700 text-indigo-200 hover:text-white rounded-2xl font-bold text-xs transition border border-slate-700/80 flex items-center gap-1.5 cursor-pointer shrink-0"
               >
-                <span>POS</span>
+                <span>Counter</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}
@@ -506,27 +521,29 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
         )}
 
         {/* Section Navigation Tabs (Executive Overview & Audit Ledger) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mt-5 pt-4 border-t border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-8 pt-5 border-t border-slate-800">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveSection('dashboard')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${activeSection === 'dashboard'
-                  ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400/50'
+              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
+                activeSection === 'dashboard'
+                  ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-400/40'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
+              }`}
             >
               <BarChart3 className="w-4 h-4" />
-              <span>Executive Overview</span>
+              <span>Executive Overview &amp; Charts</span>
             </button>
             <button
               onClick={() => {
                 setActiveSection('records');
                 loadRecords();
               }}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${activeSection === 'records'
-                  ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400/50'
+              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
+                activeSection === 'records'
+                  ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-400/40'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
+              }`}
             >
               <Clock className="w-4 h-4" />
               <span>Audit Ledger ({totalTransactionsCount.toLocaleString('en-IN')})</span>
