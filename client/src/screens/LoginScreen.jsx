@@ -210,14 +210,21 @@ export const LoginScreen = ({ onLoginSuccess }) => {
         </div>
 
         {/* Bottom Link to Standalone Master Editor */}
-        <div className="mt-6 text-center">
-          <a
-            href="/editor"
-            className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-bold transition-colors"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            Open Standalone Master Studio Editor ↗
-          </a>
+        <div className="mt-6 text-center space-y-1">
+          <div>
+            <a
+              href="/editor"
+              className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-bold transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Open Standalone Master Studio Editor ↗
+            </a>
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 font-mono tracking-tight">
+              Backend API: {ApiService.getApiBase()}
+            </span>
+          </div>
         </div>
       </div>
     </div>

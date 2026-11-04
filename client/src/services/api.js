@@ -5,6 +5,10 @@ const API_BASE = cleanBase.startsWith('http') && !cleanBase.endsWith('/api')
   : cleanBase;
 
 export class ApiService {
+  static getApiBase() {
+    return API_BASE;
+  }
+
   /**
    * Proactively warm up backend service on Render free tier (prevents long wait on first user action)
    */
@@ -100,7 +104,7 @@ export class ApiService {
       if (!res) {
         if (fetchErr.isTimeout) {
           throw new Error(
-            'The cloud server is taking longer than expected to respond (Render free instances take ~30-50s to wake up from cold sleep). Please wait 15 seconds and try again.'
+            `The cloud backend at (${API_BASE}) took longer than expected to respond. If it is sleeping or on another Render account, please check the URL.`
           );
         }
         if (fetchErr.name === 'TypeError' || fetchErr.message === 'Failed to fetch') {
