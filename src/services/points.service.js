@@ -418,16 +418,16 @@ class PointsService {
 
     // 4. Fetch paginated ledger entries
     const entriesRes = await pool.query(
-      `SELECT pl.entry_id AS id, pl.customer_id, pl.branch_id, b.branch_name AS branch_name,
-              pl.type AS transaction_type, pl.points, pl.source_ref AS reference_id,
-              pl.cashier_id AS created_by, u.username AS created_by_username,
+      `SELECT COALESCE(pl.entry_id, pl.id) AS id, pl.customer_id, pl.branch_id, b.branch_name AS branch_name,
+              COALESCE(pl.type, pl.transaction_type) AS transaction_type, pl.points, pl.source_ref AS reference_id,
+              COALESCE(pl.cashier_id, pl.created_by) AS created_by, u.username AS created_by_username,
               pl.calc_snapshot, pl.reason_text,
               pl.created_at
        FROM points_ledger pl
        LEFT JOIN branches b ON pl.branch_id = b.branch_id
-       LEFT JOIN users u ON pl.cashier_id = u.user_id
+       LEFT JOIN users u ON COALESCE(pl.cashier_id, pl.created_by) = COALESCE(u.user_id, u.id)
        WHERE pl.customer_id = $1 AND pl.tenant_id = $2
-       ORDER BY pl.created_at DESC, pl.entry_id DESC
+       ORDER BY pl.created_at DESC, COALESCE(pl.entry_id, pl.id) DESC
        LIMIT $3 OFFSET $4;`,
       [customerId, tenantId, limit, offset]
     );

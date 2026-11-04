@@ -38,10 +38,42 @@ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'points_ledger') THEN
     ALTER TABLE points_ledger ADD COLUMN IF NOT EXISTS entry_id BIGINT;
     ALTER TABLE points_ledger ADD COLUMN IF NOT EXISTS id BIGINT;
+    ALTER TABLE points_ledger ADD COLUMN IF NOT EXISTS cashier_id INTEGER;
+    ALTER TABLE points_ledger ADD COLUMN IF NOT EXISTS created_by INTEGER;
     ALTER TABLE points_ledger ALTER COLUMN type DROP NOT NULL;
     ALTER TABLE points_ledger ALTER COLUMN points DROP NOT NULL;
     UPDATE points_ledger SET entry_id = id WHERE entry_id IS NULL AND id IS NOT NULL;
     UPDATE points_ledger SET id = entry_id WHERE id IS NULL AND entry_id IS NOT NULL;
+    UPDATE points_ledger SET cashier_id = created_by WHERE cashier_id IS NULL AND created_by IS NOT NULL;
+    UPDATE points_ledger SET created_by = cashier_id WHERE created_by IS NULL AND cashier_id IS NOT NULL;
+
+    -- Harmonize sync trigger for cashier_id/created_by and type/transaction_type
+    CREATE OR REPLACE FUNCTION public.sync_points_ledger_id_columns()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    AS $function$
+    BEGIN
+      IF NEW.entry_id IS NULL AND NEW.id IS NOT NULL THEN
+        NEW.entry_id := NEW.id;
+      ELSIF NEW.id IS NULL AND NEW.entry_id IS NOT NULL THEN
+        NEW.id := NEW.entry_id;
+      END IF;
+
+      IF NEW.cashier_id IS NULL AND NEW.created_by IS NOT NULL THEN
+        NEW.cashier_id := NEW.created_by;
+      ELSIF NEW.created_by IS NULL AND NEW.cashier_id IS NOT NULL THEN
+        NEW.created_by := NEW.cashier_id;
+      END IF;
+
+      IF NEW.type IS NULL AND NEW.transaction_type IS NOT NULL THEN
+        NEW.type := NEW.transaction_type;
+      ELSIF NEW.transaction_type IS NULL AND NEW.type IS NOT NULL THEN
+        NEW.transaction_type := NEW.type;
+      END IF;
+
+      RETURN NEW;
+    END;
+    $function$;
   END IF;
 
   -- 5. customer_tier_snapshot
@@ -67,3 +99,4 @@ BEGIN
     END IF;
   END IF;
 END $$;
+
