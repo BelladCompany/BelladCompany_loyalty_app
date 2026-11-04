@@ -6,13 +6,25 @@ const { startRedemptionStatusCron } = require('./cron/redemption_status_cron');
 const { startAppSheetPullCron } = require('./cron/appsheet_pull_cron');
 const { startGiftExpiryCron } = require('./cron/gift_expiry_cron');
 
-// Test DB connection before listening
-pool.query('SELECT NOW()')
-  .then((res) => {
-    console.log('📦 PostgreSQL Connected successfully at:', res.rows[0].now);
-    const server = app.listen(env.port, '0.0.0.0', () => {
-      console.log(`🚀 Loyalty Backend Server running on port ${env.port} [${env.nodeEnv}]`);
-      
+// 1. Immediately bind and start listening so Render, Vercel proxy & health checks succeed instantly
+const server = app.listen(env.port, '0.0.0.0', () => {
+  console.log(`🚀 Loyalty Backend Server running on port ${env.port} [${env.nodeEnv}]`);
+
+  // 2. Initialize database connection, migrations & background workers asynchronously
+  pool.query('SELECT NOW()')
+    .then(async (res) => {
+      console.log('📦 PostgreSQL Connected successfully at:', res.rows[0].now);
+
+      // Run pending migrations safely in background
+      try {
+        const runMigrations = require('./db/migrate');
+        if (typeof runMigrations === 'function') {
+          await runMigrations();
+        }
+      } catch (migErr) {
+        console.warn('⚠️ Background database migration note:', migErr.message);
+      }
+
       // Start redemption status & expiry cron job
       startRedemptionStatusCron();
 
@@ -28,29 +40,17 @@ pool.query('SELECT NOW()')
           console.error('Error running RealBooks retry worker in index:', err.message)
         );
       }, 60000);
+    })
+    .catch((err) => {
+      console.error('❌ Failed to connect to PostgreSQL database:', err.message);
+      console.log(`⚠️ Server remains online on port ${env.port} and will accept requests when DB is ready.`);
     });
+});
 
-    server.on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${env.port} is already in use by another process. Please stop the existing process or restart.`);
-      } else {
-        console.error('❌ Server error:', err.message);
-      }
-    });
-  })
-  .catch((err) => {
-    console.error('❌ Failed to connect to PostgreSQL database:', err.message);
-    console.log('⚠️ Please ensure PostgreSQL is running and your .env configuration is correct.');
-    console.log(`Starting server anyway on port ${env.port}...`);
-    const server = app.listen(env.port, '0.0.0.0', () => {
-      console.log(`🚀 Loyalty Backend Server running on port ${env.port} [${env.nodeEnv}] (DB Offline)`);
-    });
-
-    server.on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${env.port} is already in use by another process.`);
-      } else {
-        console.error('❌ Server error:', err.message);
-      }
-    });
-  });
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${env.port} is already in use by another process. Please stop the existing process or restart.`);
+  } else {
+    console.error('❌ Server error:', err.message);
+  }
+});

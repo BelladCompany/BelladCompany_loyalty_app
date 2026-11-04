@@ -260,10 +260,10 @@ export default function PublicBalancePassScreen({ token: propToken }) {
 
               <div className="pt-1 flex flex-col sm:flex-row gap-2 justify-center">
                 <a
-                  href="tel:+918197348730"
+                  href="tel:+919035354159"
                   className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg transition"
                 >
-                  <PhoneCall className="w-4 h-4" /> Call Showroom Support (+91 8197348730)
+                  <PhoneCall className="w-4 h-4" /> Call Showroom Support (+91 9035354159)
                 </a>
               </div>
             </div>

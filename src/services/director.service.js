@@ -239,6 +239,48 @@ class DirectorService {
         queryParams
       );
 
+      // 8. Vehicle Model-by-Model Performance Breakdown (Real dynamic query for bar charts)
+      const modelRes = await client.query(
+        `SELECT 
+          COALESCE(NULLIF(TRIM(v.model), ''), 'Other Models') AS model_name,
+          COALESCE(NULLIF(TRIM(v.brand_name), ''), 'Dealership') AS brand_name,
+          COUNT(DISTINCT v.vehicle_id)::int AS vehicle_count,
+          COUNT(DISTINCT v.customer_id)::int AS customer_count,
+          COALESCE(SUM(CASE WHEN pl.points > 0 THEN pl.points ELSE 0 END), 0)::bigint AS points_issued,
+          COALESCE(SUM(CASE WHEN pl.points < 0 THEN ABS(pl.points) ELSE 0 END), 0)::bigint AS points_redeemed,
+          COALESCE(SUM(
+            CASE 
+              WHEN pl.calc_snapshot->>'bill_amount' IS NOT NULL 
+                THEN (pl.calc_snapshot->>'bill_amount')::numeric
+              WHEN pl.calc_snapshot->>'amount_inr' IS NOT NULL 
+                THEN (pl.calc_snapshot->>'amount_inr')::numeric
+              WHEN pl.calc_snapshot->>'amount_paise' IS NOT NULL 
+                THEN (pl.calc_snapshot->>'amount_paise')::numeric / 100
+              WHEN pl.transaction_category = 'sale' AND pl.points > 0
+                THEN (pl.points * 100.0)
+              WHEN pl.points < 0
+                THEN (ABS(pl.points) * 0.25)
+              ELSE (pl.points * 25.0)
+            END
+          ), 0)::numeric AS estimated_revenue
+        FROM vehicles v
+        LEFT JOIN points_ledger pl ON v.vehicle_id = pl.vehicle_id AND pl.tenant_id = v.tenant_id
+        WHERE v.tenant_id = $1
+        GROUP BY COALESCE(NULLIF(TRIM(v.model), ''), 'Other Models'), COALESCE(NULLIF(TRIM(v.brand_name), ''), 'Dealership')
+        ORDER BY vehicle_count DESC, points_issued DESC
+        LIMIT 10;`,
+        [tenantId]
+      );
+      const modelBreakdown = modelRes.rows.map((m) => ({
+        model_name: m.model_name,
+        brand_name: m.brand_name,
+        vehicle_count: parseInt(m.vehicle_count, 10),
+        customer_count: parseInt(m.customer_count, 10),
+        points_issued: parseInt(m.points_issued, 10),
+        points_redeemed: parseInt(m.points_redeemed, 10),
+        estimated_revenue: parseFloat(m.estimated_revenue || 0),
+      }));
+
       // 8. VIP Tier Distribution (Silver Baseline, Gold, Platinum)
       // All customers are currently enrolled in Silver baseline until expense-based tier upgrade is triggered
       const totalCust = parseInt(custKpis.total_customers || 0, 10);
@@ -338,11 +380,13 @@ class DirectorService {
           new_customers_30d: parseInt(custKpis.new_customers_30d || 0, 10),
           total_vehicles: parseInt(vehKpis.total_vehicles || 0, 10),
 
-          // 3. Redeemed No / Redemptions
+          // 3. Redeemed Cash & Redemptions
           total_redemptions_count: totalRedemptionsCount,
           distinct_customers_redeemed: distinctCustomersRedeemed,
-          customer_points_amount_spent: discountDeliveredInr,
-          discount_delivered_inr: discountDeliveredInr,
+          redeemed_cash_inr: discountDeliveredInr > 0 ? discountDeliveredInr : counterDiscountInr,
+          original_amount_redeemed_inr: discountDeliveredInr > 0 ? discountDeliveredInr : counterDiscountInr,
+          customer_points_amount_spent: discountDeliveredInr > 0 ? discountDeliveredInr : counterDiscountInr,
+          discount_delivered_inr: discountDeliveredInr > 0 ? discountDeliveredInr : counterDiscountInr,
           counter_discount_inr: counterDiscountInr,
 
           // 4. Cash / Revenue
@@ -395,9 +439,11 @@ class DirectorService {
             { id: 'redeemed', label: 'Redeemed Discounts', count: distinctCustomersRedeemed, pct: parseFloat(((distinctCustomersRedeemed / totalCust) * 100).toFixed(1)), color: '#F43F5E' },
             { id: 'referrals', label: 'Referral Advocates', count: totalReferrals, pct: parseFloat(((totalReferrals / totalCust) * 100).toFixed(1)), color: '#0EA5E9' },
           ],
-          top_branches: activeBranches.slice(0, 5),
+          top_branches: activeBranches.slice(0, 8),
+          model_breakdown: modelBreakdown,
         },
 
+        models: modelBreakdown,
         branches: activeBranches.length > 0 ? activeBranches : branchRes.rows.slice(0, 10).map((r) => ({
           branch_id: r.branch_id,
           branch_name: r.branch_name,

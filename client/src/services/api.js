@@ -56,12 +56,22 @@ export class ApiService {
     try {
       res = await fetch(`${API_BASE}${cleanEndpoint}`, config);
     } catch (fetchErr) {
-      if (fetchErr.name === 'TypeError' || fetchErr.message === 'Failed to fetch') {
-        throw new Error(
-          `Unable to connect to backend server (${API_BASE}). If Render backend is waking up, please wait 30 seconds and try again.`
-        );
+      if ((fetchErr.name === 'TypeError' || fetchErr.message === 'Failed to fetch') && API_BASE.startsWith('http')) {
+        try {
+          res = await fetch(`/api${cleanEndpoint}`, config);
+        } catch (proxyErr) {
+          // both direct and proxy failed
+        }
       }
-      throw fetchErr;
+
+      if (!res) {
+        if (fetchErr.name === 'TypeError' || fetchErr.message === 'Failed to fetch') {
+          throw new Error(
+            `Unable to connect to backend server (${API_BASE}). If Render backend is waking up, please wait 30 seconds and try again.`
+          );
+        }
+        throw fetchErr;
+      }
     }
     const data = await res.json().catch(() => ({}));
 

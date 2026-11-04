@@ -91,3 +91,4 @@ BEGIN
     CHECK (status IN ('shared', 'pending', 'approved', 'rejected', 'claimed'));
 
 END $$;
+

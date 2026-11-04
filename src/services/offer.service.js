@@ -108,7 +108,7 @@ class OfferService {
       badge = 'MONTHLY SPECIAL',
       badge_color = 'bg-amber-500 text-slate-950 font-black',
       image_url = '',
-      whatsapp_number = '918197348730',
+      whatsapp_number = '919035354159',
       whatsapp_msg = '',
       is_active = true,
       priority = 0,

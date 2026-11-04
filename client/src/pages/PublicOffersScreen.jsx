@@ -137,7 +137,7 @@ export default function PublicOffersScreen() {
     badge: 'MONTHLY SPECIAL',
     badge_color: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
     image_url: '',
-    whatsapp_number: '918197348730',
+    whatsapp_number: '919035354159',
     is_active: true,
     priority: 5,
   });
@@ -265,7 +265,7 @@ export default function PublicOffersScreen() {
       badge: 'MONTHLY SPECIAL',
       badge_color: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
       image_url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
-      whatsapp_number: '918197348730',
+      whatsapp_number: '919035354159',
       is_active: true,
       priority: 5,
     });
@@ -278,8 +278,8 @@ export default function PublicOffersScreen() {
     const hl = Array.isArray(offer.highlights)
       ? offer.highlights.join('\n')
       : typeof offer.highlights === 'string'
-      ? offer.highlights
-      : '';
+        ? offer.highlights
+        : '';
 
     setFormData({
       brand_name: offer.brand_name || 'Tata Motors',
@@ -296,7 +296,7 @@ export default function PublicOffersScreen() {
       badge: offer.badge || 'MONTHLY SPECIAL',
       badge_color: offer.badge_color || 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
       image_url: offer.image_url || '',
-      whatsapp_number: offer.whatsapp_number || '918197348730',
+      whatsapp_number: offer.whatsapp_number || '919035354159',
       is_active: offer.is_active ?? true,
       priority: offer.priority || 0,
     });
@@ -374,7 +374,7 @@ export default function PublicOffersScreen() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col font-sans selection:bg-indigo-600 selection:text-white pb-24">
-      
+
       {/* ─── Light Ambient Background Orbs ────────────────────────────────────── */}
       <div className="fixed top-0 left-1/4 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-indigo-200/30 via-purple-100/20 to-blue-200/20 rounded-full blur-3xl pointer-events-none -z-10" />
       <div className="fixed bottom-10 right-10 w-[450px] h-[450px] bg-amber-100/30 rounded-full blur-3xl pointer-events-none -z-10" />
@@ -391,9 +391,9 @@ export default function PublicOffersScreen() {
               <ArrowLeft className="w-4 h-4 text-slate-600" />
               <span className="hidden md:inline">Portal Dashboard</span>
             </a>
-            
+
             <div className="h-5 w-px bg-slate-200 hidden md:block" />
-            
+
             <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shadow-xs shrink-0">
                 <img
@@ -422,11 +422,10 @@ export default function PublicOffersScreen() {
             {/* Editor Mode Quick Switch */}
             <button
               onClick={handleToggleEditorMode}
-              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 ${
-                isEditorMode
-                  ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-              }`}
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 ${isEditorMode
+                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                }`}
               title={isEditorMode ? 'Exit Editor Mode' : 'Unlock Offer Editor'}
             >
               {isEditorMode ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
@@ -444,7 +443,7 @@ export default function PublicOffersScreen() {
             )}
 
             <a
-              href="tel:+918197348730"
+              href="tel:+919035354159"
               className="px-2.5 sm:px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs shrink-0"
             >
               <PhoneCall className="w-3.5 h-3.5 text-indigo-600" />
@@ -533,11 +532,10 @@ export default function PublicOffersScreen() {
               <button
                 key={brand}
                 onClick={() => setSelectedBrand(brand)}
-                className={`flex-1 min-w-[125px] py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap ${
-                  isSelected
-                    ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20 scale-[1.01]'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                }`}
+                className={`flex-1 min-w-[125px] py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap ${isSelected
+                  ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20 scale-[1.01]'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                  }`}
               >
                 <span>{BRAND_ICONS[brand] || '🚘'}</span>
                 <span>{brand}</span>
@@ -550,7 +548,7 @@ export default function PublicOffersScreen() {
       {/* ─── Dynamic Filter Bar: Search, Category, Branch, Month ─────────────── */}
       <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-6">
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          
+
           {/* Keyword Search */}
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -687,15 +685,14 @@ export default function PublicOffersScreen() {
               const highlightsList = Array.isArray(offer.highlights)
                 ? offer.highlights
                 : typeof offer.highlights === 'string'
-                ? JSON.parse(offer.highlights || '[]')
-                : [];
+                  ? JSON.parse(offer.highlights || '[]')
+                  : [];
 
               return (
                 <div
                   key={offer.offer_id}
-                  className={`bg-white border rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:border-slate-300 ${
-                    offer.is_active ? 'border-slate-200/90 shadow-sm' : 'border-amber-300 bg-amber-50/20 opacity-80'
-                  }`}
+                  className={`bg-white border rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:border-slate-300 ${offer.is_active ? 'border-slate-200/90 shadow-sm' : 'border-amber-300 bg-amber-50/20 opacity-80'
+                    }`}
                 >
                   {/* Top Image & Badge Container */}
                   <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
@@ -710,7 +707,7 @@ export default function PublicOffersScreen() {
 
                     {/* Gradient shade over image bottom for badge contrast */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none" />
-                    
+
                     {/* Badge */}
                     <div className="absolute top-3 left-3 flex items-center gap-1.5">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] tracking-wider uppercase font-mono font-bold bg-amber-400 text-slate-950 shadow-sm">
@@ -783,7 +780,7 @@ export default function PublicOffersScreen() {
                     {/* ─── SINGLE CALL ACTION BUTTON ───────────────────────── */}
                     <div className="pt-2 space-y-2">
                       <a
-                        href={`tel:+${offer.whatsapp_number || '918197348730'}`}
+                        href={`tel:+${offer.whatsapp_number || '919035354159'}`}
                         className="w-full py-3.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-sm cursor-pointer transform hover:scale-[1.01] active:scale-[0.99]"
                       >
                         <Phone className="w-4 h-4 text-emerald-400" />
@@ -803,11 +800,10 @@ export default function PublicOffersScreen() {
 
                           <button
                             onClick={() => handleToggleActive(offer.offer_id)}
-                            className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold transition flex items-center gap-1 border ${
-                              offer.is_active
-                                ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
-                                : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
-                            }`}
+                            className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold transition flex items-center gap-1 border ${offer.is_active
+                              ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+                              : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
+                              }`}
                             title={offer.is_active ? 'Draft / Hide' : 'Publish Offer'}
                           >
                             {offer.is_active ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
@@ -837,11 +833,10 @@ export default function PublicOffersScreen() {
       <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40">
         <button
           onClick={handleToggleEditorMode}
-          className={`px-4 py-2.5 rounded-2xl shadow-xl font-black text-xs transition-all flex items-center gap-2 transform hover:scale-105 active:scale-95 cursor-pointer ${
-            isEditorMode
-              ? 'bg-amber-400 text-slate-950 border-2 border-slate-950 shadow-amber-500/20'
-              : 'bg-slate-900 text-white border border-slate-700 shadow-slate-950/20 hover:bg-slate-800'
-          }`}
+          className={`px-4 py-2.5 rounded-2xl shadow-xl font-black text-xs transition-all flex items-center gap-2 transform hover:scale-105 active:scale-95 cursor-pointer ${isEditorMode
+            ? 'bg-amber-400 text-slate-950 border-2 border-slate-950 shadow-amber-500/20'
+            : 'bg-slate-900 text-white border border-slate-700 shadow-slate-950/20 hover:bg-slate-800'
+            }`}
         >
           {isEditorMode ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
           <span>{isEditorMode ? 'Editor Active (Exit)' : 'Dealership Editor Mode'}</span>
@@ -947,7 +942,7 @@ export default function PublicOffersScreen() {
 
             {/* Scrollable Form Body */}
             <form id="manageOfferForm" onSubmit={handleSaveOffer} className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-6 space-y-3 sm:space-y-4 text-xs font-medium">
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 {/* Brand */}
                 <div>
@@ -1120,7 +1115,7 @@ export default function PublicOffersScreen() {
                   <label className="font-bold text-slate-700 block mb-1">Dealership Phone Number</label>
                   <input
                     type="tel"
-                    placeholder="918197348730"
+                    placeholder="919035354159"
                     value={formData.whatsapp_number}
                     onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"

@@ -736,7 +736,7 @@ class ReferralService {
           templateName: 'referral_lead_code',
           code: generatedCode,
           expiryMinutes: 1440,
-        }).catch(() => {});
+        }).catch(() => { });
       }
     } catch (msgErr) {
       // Non-blocking notification dispatch
@@ -995,7 +995,7 @@ class ReferralService {
          WHERE referrer_customer_id = $1 AND tenant_id = $2
            AND lead_phone IN (SELECT phone_number FROM customer_phones WHERE customer_id = $3);`,
         [referrer.customer_id, tenant_id, referred_customer_id]
-      ).catch(() => {});
+      ).catch(() => { });
 
       return insertRes.rows[0];
     } catch (err) {
@@ -1130,7 +1130,7 @@ class ReferralService {
       lead: leadInsert.rows[0],
       referral_code: referralCode,
       referred_customer_id: referredCustomerId,
-      message: 'Friend referral invite recorded! 2,500 points each will be unlocked once friend purchases a vehicle at Bellad dealerships.',
+      message: 'Friend referral invite recorded! Bonus loyalty points will be unlocked once friend purchases a vehicle at Bellad dealerships.',
     };
   }
 
@@ -1212,8 +1212,8 @@ class ReferralService {
     const shareMessage = `🎁 *Bellad & Company Loyalty Referral Rewards*\n\n` +
       `Hey! You have been invited by *${referrer.customer_name}* to join Bellad & Co Loyalty Rewards.\n\n` +
       `🌟 *Your Referral Code:* ${referralCode}\n` +
-      `*(No PIN required — simply show this code or register via the link)*\n\n` +
-      `Both of us will receive *+2,500 Bonus Points (₹625 Value)* on your new vehicle purchase or workshop service visit!\n\n` +
+      +
+      `Get Bonus Points on your new vehicle purchase at Bellad and Company \n\n` +
       `👉 Click here to claim & register:\n${claimUrl}`;
 
     const cleanPhone = referee_phone ? referee_phone.replace(/\D/g, '') : '';
@@ -1342,7 +1342,7 @@ class ReferralService {
 
       if (isClaimed) {
         status = 'claimed';
-        statusLabel = '+2,500 PTS Credited in Wallet';
+        statusLabel = `+${Number(points).toLocaleString('en-IN')} PTS Credited in Wallet`;
         canClaim = false;
         totalEarnedPoints += points;
       } else if (isPurchased) {

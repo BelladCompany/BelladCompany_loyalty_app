@@ -382,7 +382,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   const referralLink = `${window.location.origin}/portal?ref=${activeReferralCode}`;
 
   const whatsappReferralText = encodeURIComponent(
-    `🎁 *Bellad & Company Loyalty Referral Rewards*\n\nHey! Use my referral code *${activeReferralCode}* (No PIN required) when booking your new vehicle or workshop service at Bellad & Co dealerships. We will BOTH receive +2,500 Bonus Points (₹625 Value each)!\n\n👉 Claim & register here:\n${referralLink}`
+    `🎁 *Bellad & Company Loyalty Referral Rewards*\n\nHey! Use my referral code *${activeReferralCode}* (No PIN required) when booking your new vehicle or workshop service at Bellad & Co dealerships. We will BOTH receive bonus reward points in our loyalty wallets!\n\n👉 Claim & register here:\n${referralLink}`
   );
   const whatsappReferralUrl = `https://wa.me/?text=${whatsappReferralText}`;
 
@@ -1058,8 +1058,8 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
 
                 {/* 2. Ready to Claim Card */}
                 <div className={`p-4 rounded-2xl border flex flex-col justify-between ${(referralsSummary.ready_to_claim_count || 0) > 0
-                    ? 'bg-emerald-50 border-emerald-300 shadow-xs ring-2 ring-emerald-500/20'
-                    : 'bg-slate-50/80 border-slate-200'
+                  ? 'bg-emerald-50 border-emerald-300 shadow-xs ring-2 ring-emerald-500/20'
+                  : 'bg-slate-50/80 border-slate-200'
                   }`}>
                   <div>
                     <div className="flex items-center justify-between">
@@ -1125,9 +1125,9 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
 
                   {/* Dual Reward Badge */}
                   <div className="px-3.5 py-2 rounded-2xl bg-white/10 border border-white/10 text-right backdrop-blur-sm self-start sm:self-auto">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 block">Dual Bonus Points</span>
-                    <span className="text-sm font-black text-emerald-400 font-mono">+2,500 PTS Each</span>
-                    <span className="text-[10px] text-slate-300 block font-medium">5,000 PTS Total for Both</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 block">Dual Reward</span>
+                    <span className="text-sm font-black text-emerald-400 font-mono">Bonus Points for Both</span>
+                    <span className="text-[10px] text-slate-300 block font-medium">Earn loyalty points together</span>
                   </div>
                 </div>
 
@@ -1161,13 +1161,13 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 relative z-10">
                   <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-center">
                     <span className="text-[10px] text-indigo-200 block uppercase font-bold">You (Referrer) Get</span>
-                    <span className="text-sm font-black text-emerald-400">+2,500 PTS</span>
-                    <span className="text-[10px] text-slate-400 block">₹625 Service Value</span>
+                    <span className="text-sm font-black text-emerald-400">Bonus Points</span>
+                    <span className="text-[10px] text-slate-400 block">Credited to wallet</span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-center">
                     <span className="text-[10px] text-indigo-200 block uppercase font-bold">Friend (Buyer) Gets</span>
-                    <span className="text-sm font-black text-emerald-400">+2,500 PTS</span>
-                    <span className="text-[10px] text-slate-400 block">₹625 Welcome Bonus</span>
+                    <span className="text-sm font-black text-emerald-400">Bonus Points</span>
+                    <span className="text-[10px] text-slate-400 block">Welcome loyalty reward</span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-center">
                     <span className="text-[10px] text-indigo-200 block uppercase font-bold">Security & PIN</span>
@@ -1187,7 +1187,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                     <div>
                       <h4 className="text-xs font-black text-slate-900">Share Code via WhatsApp & Auto-Track</h4>
                       <p className="text-[11px] text-slate-600">
-                        Tracks who you shared with, log exact date & time, and unlocks +2,500 PTS for both upon vehicle purchase!
+                        Tracks who you shared with, log exact date & time, and unlocks bonus loyalty points for both upon vehicle purchase!
                       </p>
                     </div>
                   </div>
@@ -1248,7 +1248,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                   Vehicle Purchase &amp; PR Verification Rule:
                 </div>
                 <p className="text-[11px] leading-relaxed">
-                  Both accounts will see <strong>+2,500 PTS (₹625 Value each = 5,000 PTS total)</strong> in locked status. Points cannot be claimed or spent until your friend completes their vehicle purchase and Permanent Registration (PR) at Bellad dealerships. Once verified, tap <strong>Claim Points</strong> to credit the bonus directly into your loyalty wallet.
+                  Both accounts will receive bonus reward points in locked status. Points cannot be claimed or spent until your friend completes their vehicle purchase and Permanent Registration (PR) at Bellad dealerships. Once verified, tap <strong>Claim Points</strong> to credit the bonus directly into your loyalty wallet.
                 </p>
               </div>
 
@@ -1284,10 +1284,10 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                       <div
                         key={idx}
                         className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${ref.can_claim
-                            ? 'bg-gradient-to-r from-emerald-50/90 to-teal-50/90 border-emerald-300 shadow-sm'
-                            : ref.is_claimed
-                              ? 'bg-white border-slate-200'
-                              : 'bg-white border-amber-200/80'
+                          ? 'bg-gradient-to-r from-emerald-50/90 to-teal-50/90 border-emerald-300 shadow-sm'
+                          : ref.is_claimed
+                            ? 'bg-white border-slate-200'
+                            : 'bg-white border-amber-200/80'
                           }`}
                       >
                         <div className="space-y-1.5">
@@ -1310,8 +1310,8 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
                               {ref.friend_name || 'Friend'}
                             </span>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ref.role === 'referee'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-slate-100 text-slate-700'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-slate-100 text-slate-700'
                               }`}>
                               {ref.role_label || 'Friend Referral'}
                             </span>

@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS dealership_offers (
   badge VARCHAR(100) DEFAULT 'MONTHLY SPECIAL',
   badge_color VARCHAR(100) DEFAULT 'bg-amber-500 text-slate-950 font-black',
   image_url TEXT,
-  whatsapp_number VARCHAR(20) DEFAULT '918197348730',
+  whatsapp_number VARCHAR(20) DEFAULT '919035354159',
   whatsapp_msg TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
   priority INTEGER NOT NULL DEFAULT 0,
@@ -61,7 +61,7 @@ VALUES
   'FESTIVE SUV SPECIAL',
   'bg-amber-500 text-slate-950 font-black',
   'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad & Co, I am interested in the Tata Safari / Harrier Dark Edition November offer (Code: BELLAD-DARK-NOV). Please share the best on-road price quote and test drive availability.',
   true,
   10
@@ -83,7 +83,7 @@ VALUES
   'ELECTRIC REVOLUTION',
   'bg-emerald-500 text-slate-950 font-black',
   'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad & Co, I want to inquire about the Tata Nexon.ev & Tiago.ev November offer with free home charger (Code: BELLAD-EV-NOV).',
   true,
   9
@@ -105,7 +105,7 @@ VALUES
   'NEW EV LAUNCH',
   'bg-cyan-500 text-slate-950 font-black',
   'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad & Co MG Motors, please share complete pricing and test drive booking for MG Windsor EV (Code: BELLAD-MG-WINDSOR).',
   true,
   8
@@ -127,7 +127,7 @@ VALUES
   'LUXURY SUV DEAL',
   'bg-blue-600 text-white font-bold',
   'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad & Co, I want to inquire about the MG Hector November festive benefits (Code: BELLAD-HECTOR-NOV).',
   true,
   7
@@ -149,7 +149,7 @@ VALUES
   'ELECTRIC SCOOTER SPECIAL',
   'bg-orange-500 text-slate-950 font-black',
   'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad & Co Hero Vida, I would like to book a test drive for Hero Vida V1 Pro under the November offer (Code: BELLAD-VIDA-NOV).',
   true,
   6
@@ -171,7 +171,7 @@ VALUES
   'TOP COMMUTER VALUE',
   'bg-red-600 text-white font-bold',
   'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad Hero, please share on-road price and low down payment scheme details for Splendor+ XTEC (Code: BELLAD-HERO-NOV).',
   true,
   5
@@ -193,7 +193,7 @@ VALUES
   'PREMIUM EV SCOOTER',
   'bg-emerald-600 text-white font-bold',
   'https://images.unsplash.com/photo-1609630875171-b1321377ee65?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad Ather, I am interested in test riding the Ather 450X / Ather Rizta under the November festival scheme (Code: BELLAD-ATHER-NOV).',
   true,
   4
@@ -215,7 +215,7 @@ VALUES
   'WORKSHOP & DETAILING',
   'bg-purple-600 text-white font-bold',
   'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad Workshop, I would like to book a service appointment under the 30% discount winter service camp (Code: BELLAD-SERVICE-30).',
   true,
   3

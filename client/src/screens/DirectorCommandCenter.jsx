@@ -187,18 +187,20 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
   const kpis = overviewData?.kpis;
   const charts = overviewData?.charts || {};
   const branchesList = overviewData?.branches || [];
+  const modelsList = overviewData?.models || charts?.model_breakdown || [];
   const departmentsList = overviewData?.departments || [];
   const totalPages = Math.ceil((recordsData.total || 0) / recordsPerPage) || 1;
 
-  // Chart data calculations
-  const totalPointsIssued = kpis?.total_points_issued || 20299623;
-  const totalPointsRedeemed = kpis?.total_points_redeemed || 194867;
-  const netLiability = kpis?.net_points_liability || 20104756;
-  const liabilityInr = kpis?.liability_inr || 5026189;
-  const totalCashInflow = kpis?.total_invoiced_revenue || 2048833366;
-  const salesCash = kpis?.sales_cash_inr || 2045040776;
-  const serviceCash = kpis?.service_cash_inr || 3764840;
-  const discountInr = kpis?.discount_delivered_inr || 48717;
+  // Real dynamic metrics from database
+  const totalPointsIssued = Number(kpis?.total_points_issued || 0);
+  const totalPointsRedeemed = Number(kpis?.total_points_redeemed || 0);
+  const netLiability = Number(kpis?.net_points_liability || 0);
+  const liabilityInr = Number(kpis?.liability_inr || Math.round(netLiability * 0.25));
+  const redeemedCashInr = Number(kpis?.redeemed_cash_inr || kpis?.discount_delivered_inr || Math.round(totalPointsRedeemed * 0.25));
+  const totalCashInflow = Number(kpis?.total_invoiced_revenue || 0);
+  const salesCash = Number(kpis?.sales_cash_inr || 0);
+  const serviceCash = Number(kpis?.service_cash_inr || 0);
+  const discountInr = redeemedCashInr;
 
   return (
     <div className="space-y-6 pb-12">
@@ -379,47 +381,47 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
           </div>
         </div>
 
-        {/* Card 3: Redeemed No (Redemptions) */}
+        {/* Card 3: Redeemed Cash (Original cash / discount amount delivered till now) */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-emerald-300 transition group">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Redeemed Cash</span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <IndianRupee className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 group-hover:text-emerald-700 transition">
+              {loadingOverview ? '...' : formatInr(redeemedCashInr)}
+            </div>
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+              Original amount redeemed till now
+            </div>
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+            <span className="text-slate-400">Total Count:</span>
+            <span className="font-mono font-bold text-slate-700">{Number(kpis?.total_redemptions_count || 0).toLocaleString('en-IN')} Times</span>
+          </div>
+        </div>
+
+        {/* Card 4: Total Redeemed Points */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-rose-300 transition group">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Redeemed No</span>
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Total Redeemed Points</span>
             <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
               <Tag className="w-4 h-4" />
             </div>
           </div>
           <div>
             <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 group-hover:text-rose-600 transition">
-              {loadingOverview ? '...' : `${Number(kpis?.total_redemptions_count || 45).toLocaleString('en-IN')} Times`}
+              {loadingOverview ? '...' : `${Number(totalPointsRedeemed).toLocaleString('en-IN')} PTS`}
             </div>
             <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
-              Burned: <span className="font-bold text-rose-700 font-mono">{formatPoints(totalPointsRedeemed)}</span>
+              Burned in customer passbooks
             </div>
           </div>
           <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
-            <span className="text-slate-400">Discounts Saved:</span>
-            <span className="font-mono font-bold text-rose-600">₹{Number(discountInr).toLocaleString('en-IN')}</span>
-          </div>
-        </div>
-
-        {/* Card 4: Cash (Revenue & Inflows) */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-emerald-300 transition group">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Total Cash</span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xs font-mono">
-              ₹
-            </div>
-          </div>
-          <div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 group-hover:text-emerald-700 transition">
-              {loadingOverview ? '...' : formatInr(totalCashInflow)}
-            </div>
-            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
-              Sales: <span className="font-bold text-slate-800 font-mono">{formatInr(salesCash)}</span>
-            </div>
-          </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
-            <span className="text-slate-400">Service Spend:</span>
-            <span className="font-mono font-bold text-indigo-700">{formatInr(serviceCash)}</span>
+            <span className="text-slate-400">Discount Value:</span>
+            <span className="font-mono font-bold text-rose-600">{formatInr(redeemedCashInr)}</span>
           </div>
         </div>
 
@@ -471,30 +473,161 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
       {/* ── 3. Executive Dashboard View (Chart Bars & Breakdowns) ── */}
       {activeSection === 'dashboard' && (
         <div className="space-y-6">
-          {/* Main Visual Chart Bars Grid */}
+          {/* Main Visual Chart Bars Grid: Model-Wise and Branch-Wise Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
-            {/* Chart Bar 1: Cash & Revenue Distribution by Department */}
+            {/* Chart Bar 1: Vehicle Model-Wise Performance Breakdown */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
                   <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-600" />
-                    <span>Cash &amp; Invoiced Revenue by Department</span>
+                    <Car className="w-4 h-4 text-indigo-600" />
+                    <span>Vehicle Model-Wise Breakdown</span>
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Proportional cash inflows across vehicle sales, routine workshop service &amp; accessories
+                    Distribution of enrolled vehicles, sales volume &amp; points issued by model
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-base font-black font-mono text-indigo-600 block leading-tight">
+                    {modelsList.reduce((acc, m) => acc + (m.vehicle_count || 0), 0).toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase">Vehicles Tracked</span>
+                </div>
+              </div>
+
+              {/* Model Bar Chart List */}
+              <div className="space-y-3.5 pt-1">
+                {modelsList.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400">Loading model breakdown...</div>
+                ) : (
+                  modelsList.slice(0, 7).map((m, idx) => {
+                    const maxVehicles = Math.max(...modelsList.map((x) => x.vehicle_count || 1), 1);
+                    const pct = Math.min(Math.round(((m.vehicle_count || 0) / maxVehicles) * 100), 100);
+                    const brandColors = {
+                      hero: 'text-red-700 bg-red-50 border-red-200',
+                      tata: 'text-blue-700 bg-blue-50 border-blue-200',
+                      hyundai: 'text-indigo-700 bg-indigo-50 border-indigo-200',
+                      ather: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+                    };
+                    const brandKey = (m.brand_name || '').toLowerCase();
+                    const brandStyle = brandColors[brandKey] || 'text-slate-700 bg-slate-50 border-slate-200';
+                    const barColor = brandKey === 'hero' ? 'bg-red-500' : brandKey === 'ather' ? 'bg-emerald-500' : brandKey === 'hyundai' ? 'bg-indigo-600' : 'bg-blue-600';
+
+                    return (
+                      <div key={m.model_name || idx} className="space-y-1.5 group">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                              {m.model_name}
+                            </span>
+                            <span className={`text-[10px] font-bold px-2 py-0.2 rounded-full border ${brandStyle}`}>
+                              {m.brand_name || 'Automobile'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 font-mono">
+                            <span className="font-black text-slate-900">{m.vehicle_count} Cars</span>
+                            <span className="text-slate-400 text-[11px]">&bull;</span>
+                            <span className="text-indigo-700 font-bold text-xs">{formatPoints(m.points_issued)} PTS</span>
+                          </div>
+                        </div>
+                        <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${barColor} rounded-full transition-all duration-700`}
+                            style={{ width: `${Math.max(pct, 5)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Chart Bar 2: Dealership Branch-Wise Performance Breakdown */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-emerald-600" />
+                    <span>Branch-Wise Dealership Breakdown</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Activity, footfall, and points volume across active Karnataka branches
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-base font-black font-mono text-emerald-600 block leading-tight">
+                    {branchesList.length}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase">Active Outlets</span>
+                </div>
+              </div>
+
+              {/* Branch Bar Chart List */}
+              <div className="space-y-3.5 pt-1">
+                {branchesList.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400">Loading branch breakdown...</div>
+                ) : (
+                  branchesList.slice(0, 7).map((b, idx) => {
+                    const maxTxns = Math.max(...branchesList.map((x) => x.transactions_count || 1), 1);
+                    const pct = Math.min(Math.round(((b.transactions_count || 0) / maxTxns) * 100), 100);
+
+                    return (
+                      <div key={b.branch_id || idx} className="space-y-1.5 group">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 group-hover:text-emerald-600 transition">
+                              {b.branch_name}
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.2 rounded-full border bg-slate-50 text-slate-600 border-slate-200">
+                              {b.branch_city || 'Karnataka'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 font-mono">
+                            <span className="font-black text-slate-900">{b.transactions_count || 0} Txns</span>
+                            <span className="text-slate-400 text-[11px]">&bull;</span>
+                            <span className="text-emerald-700 font-bold text-xs">{formatPoints(b.points_issued || 0)} PTS</span>
+                          </div>
+                        </div>
+                        <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full transition-all duration-700"
+                            style={{ width: `${Math.max(pct, 5)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Secondary Visual Breakdowns (Top Branches & Engagement Funnel) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Chart Bar 3: Cash & Revenue Distribution by Department */}
+            <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    <span>Department Revenue Distribution</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Proportional revenue flow across vehicle sales, workshop service, parts &amp; redemptions
                   </p>
                 </div>
                 <div className="text-right">
                   <span className="text-base font-black font-mono text-emerald-600 block leading-tight">
                     {formatInr(totalCashInflow)}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase">Total Cash Flow</span>
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase">Total Network Revenue</span>
                 </div>
               </div>
 
-              {/* Department Horizontal Chart Bars */}
               <div className="space-y-4 pt-1">
                 {/* 1. Vehicle Sales */}
                 <div className="space-y-1.5">
@@ -506,12 +639,12 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                     <div className="flex items-center gap-2 font-mono">
                       <span className="font-black text-slate-900">{formatInr(salesCash)}</span>
                       <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        99.8%
+                        {totalCashInflow > 0 ? ((salesCash / totalCashInflow) * 100).toFixed(1) : 0}%
                       </span>
                     </div>
                   </div>
                   <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: '99.8%' }} />
+                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: '99%' }} />
                   </div>
                 </div>
 
@@ -525,12 +658,12 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                     <div className="flex items-center gap-2 font-mono">
                       <span className="font-black text-slate-900">{formatInr(serviceCash)}</span>
                       <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                        {((serviceCash / totalCashInflow) * 100).toFixed(2)}%
+                        {totalCashInflow > 0 ? ((serviceCash / totalCashInflow) * 100).toFixed(2) : 0}%
                       </span>
                     </div>
                   </div>
                   <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-500 rounded-full transition-all duration-700" style={{ width: '28%' }} />
+                    <div className="h-full bg-indigo-500 rounded-full transition-all duration-700" style={{ width: '30%' }} />
                   </div>
                 </div>
 
@@ -544,144 +677,33 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                     <div className="flex items-center gap-2 font-mono">
                       <span className="font-black text-slate-900">₹27,750</span>
                       <span className="text-xs font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
-                        0.02%
+                        Active
                       </span>
                     </div>
                   </div>
                   <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-sky-500 rounded-full transition-all duration-700" style={{ width: '12%' }} />
+                    <div className="h-full bg-sky-500 rounded-full transition-all duration-700" style={{ width: '15%' }} />
                   </div>
                 </div>
 
-                {/* 4. Loyalty Discounts Availments */}
+                {/* 4. Loyalty Discounts Delivered */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
                       Discounts Delivered on Loyalty Redemptions
                     </span>
                     <div className="flex items-center gap-2 font-mono">
-                      <span className="font-black text-rose-600">-₹{Number(discountInr).toLocaleString('en-IN')}</span>
-                      <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                        Savings
+                      <span className="font-black text-rose-600">-₹{Number(redeemedCashInr).toLocaleString('en-IN')}</span>
+                      <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                        Redeemed
                       </span>
                     </div>
                   </div>
                   <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-500 rounded-full transition-all duration-700" style={{ width: '18%' }} />
+                    <div className="h-full bg-rose-500 rounded-full transition-all duration-700" style={{ width: '20%' }} />
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Chart Bar 2: Points Velocity & Circulating Liability Breakdown */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div>
-                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                    <Coins className="w-4 h-4 text-amber-500" />
-                    <span>Points Velocity &amp; Escrow Liability Ratio</span>
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Distribution of issued points vs circulating customer liability &amp; redemptions
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="text-base font-black font-mono text-indigo-700 block leading-tight">
-                    {formatPoints(totalPointsIssued)}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase">Total Issued</span>
-                </div>
-              </div>
-
-              {/* Segmented Dual Bar */}
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between text-xs font-mono font-bold">
-                  <span className="text-indigo-700 flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-indigo-600" />
-                    Circulating Escrow (99.0%)
-                  </span>
-                  <span className="text-rose-600 flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-rose-500" />
-                    Burned / Redeemed (0.96%)
-                  </span>
-                </div>
-                <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden flex">
-                  <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700" style={{ width: '99%' }} />
-                  <div className="h-full bg-rose-500 transition-all duration-700" style={{ width: '1%' }} />
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>{formatPoints(netLiability)} in customer passbooks</span>
-                  <span>{formatPoints(totalPointsRedeemed)} redeemed</span>
-                </div>
-              </div>
-
-              {/* Breakdown Metric Chips */}
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-indigo-700 block">Current Liability in Escrow</span>
-                  <span className="text-lg font-black font-mono text-indigo-950 block">{formatInr(liabilityInr)}</span>
-                  <span className="text-[10px] text-indigo-600 font-medium block">Guaranteed at ₹0.25 / Point</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100 space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-emerald-700 block">Retained Net ROI Multiplier</span>
-                  <span className="text-lg font-black font-mono text-emerald-950 block">407.6×</span>
-                  <span className="text-[10px] text-emerald-600 font-medium block">Total Spend / Liability Ratio</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Secondary Visual Breakdowns (Top Branches & Engagement Funnel) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Chart Bar 3: Top Performing Dealership Branches */}
-            <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div>
-                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-indigo-600" />
-                    <span>Top Dealership Branches by Volume</span>
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Activity, footfall, and revenue volume across active Karnataka branches
-                  </p>
-                </div>
-                <span className="text-xs font-bold text-slate-400 font-mono">
-                  {branchesList.length} Active Branches
-                </span>
-              </div>
-
-              <div className="space-y-4 pt-1">
-                {branchesList.map((b, idx) => (
-                  <div key={b.branch_id || idx} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-bold text-slate-900">{b.branch_name}</span>
-                        <span className="text-[11px] text-slate-400 ml-1.5 font-normal">({b.branch_city})</span>
-                      </div>
-                      <div className="flex items-center gap-2 font-mono">
-                        <span className="font-black text-slate-900">{formatInr(b.total_revenue)}</span>
-                        <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                          {b.transactions_count} Invoices
-                        </span>
-                      </div>
-                    </div>
-                    {/* Visual Progress Bar proportional to top branch */}
-                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-700"
-                        style={{ width: `${Math.max(8, Math.min(100, (b.transactions_count / 3400) * 100))}%` }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                      <span>Points Issued: +{formatPoints(b.points_issued)}</span>
-                      <span>Redeemed: -{formatPoints(b.points_redeemed)}</span>
-                      <span>Liability: {formatInr(b.liability_inr)}</span>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
 

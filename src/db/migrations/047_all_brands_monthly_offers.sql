@@ -27,7 +27,7 @@ VALUES
   'TOP SELLING SUV',
   'bg-blue-600 text-white font-bold',
   'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad Hyundai, I want to inquire about the Creta November offer.',
   true,
   7
@@ -49,7 +49,7 @@ VALUES
   'COMPACT SUV VALUE',
   'bg-emerald-600 text-white font-bold',
   'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad Hyundai, please share quotation for Venue and Exter.',
   true,
   6
@@ -73,7 +73,7 @@ VALUES
   'FESTIVE MILEAGE KING',
   'bg-amber-500 text-slate-950 font-black',
   'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad Maruti Suzuki, I am interested in Swift / Baleno November deals.',
   true,
   5
@@ -97,7 +97,7 @@ VALUES
   'REMOVABLE BATTERY EV',
   'bg-orange-500 text-slate-950 font-black',
   'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad Vida, I want to book a test drive for Vida V1 Pro.',
   true,
   6
@@ -121,7 +121,7 @@ VALUES
   'FARMER UTILITY SPECIAL',
   'bg-emerald-700 text-white font-bold',
   'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80',
-  '918197348730',
+  '919035354159',
   'Hi Bellad Swaraj, I would like to inquire about Swaraj tractor farmer finance and offers.',
   true,
   4

@@ -62,23 +62,12 @@ const allowedOrigins = Array.from(
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g., mobile apps, curl, server-to-server)
-    if (!origin) return callback(null, true);
-
-    const cleanOrigin = origin.replace(/\/+$/, '');
-    const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin);
-    const isVercel = /^https?:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/i.test(cleanOrigin);
-    const isRender = /^https?:\/\/([a-zA-Z0-9-]+\.)*onrender\.com$/i.test(cleanOrigin);
-
-    if (allowedOrigins.includes(cleanOrigin) || isLocalhost || isVercel || isRender) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS policy violation: Origin '${origin}' is not allowed.`));
-    }
+    // Permissive CORS ensures Vercel deployments, preview URLs, and clients are never blocked
+    callback(null, true);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'X-Tenant-ID', 'X-Requested-With', 'Accept'],
-  credentials: false,
+  credentials: true,
   optionsSuccessStatus: 200,
 };
 
@@ -104,7 +93,7 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Health check endpoints for Kubernetes
 // 1. Liveness Probe (process is alive and responding)
-app.get('/health', (req, res) => {
+app.get(['/health', '/api/health'], (req, res) => {
   res.status(200).json({ ok: true, timestamp: new Date().toISOString() });
 });
 
