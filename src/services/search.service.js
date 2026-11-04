@@ -38,16 +38,16 @@ class SearchService {
         COALESCE(
           json_agg(
             DISTINCT jsonb_build_object(
-              'id', cp.phone_id,
+              'id', COALESCE(cp.phone_id, cp.id),
               'phone_number', cp.phone_number,
               'is_primary', cp.is_verified
             )
-          ) FILTER (WHERE cp.phone_id IS NOT NULL), '[]'
+          ) FILTER (WHERE cp.phone_number IS NOT NULL), '[]'
         ) AS phones,
         COALESCE(
           json_agg(
             DISTINCT jsonb_build_object(
-              'id', v.vehicle_id,
+              'id', COALESCE(v.vehicle_id, v.id),
               'vin', COALESCE(v.vin, v.chassis_no, ''),
               'chassis_no', v.chassis_no,
               'registration_number', COALESCE(v.registration_number, v.chassis_no, ''),
@@ -65,8 +65,9 @@ class SearchService {
               'emps_discount', FLOOR(COALESCE(st.emps_discount_paise, 0) / 100.0),
               'oem_offers_amount', FLOOR(COALESCE(st.oem_offers_amount_paise, 0) / 100.0)
             )
-          ) FILTER (WHERE v.vehicle_id IS NOT NULL), '[]'
+          ) FILTER (WHERE v.chassis_no IS NOT NULL OR v.registration_number IS NOT NULL OR v.vehicle_id IS NOT NULL OR v.id IS NOT NULL), '[]'
         ) AS vehicles,
+        (SELECT COALESCE(cts.current_tier, cts.tier_name, 'Silver') FROM customer_tier_snapshot cts WHERE cts.customer_id = c.customer_id AND cts.tenant_id = c.tenant_id LIMIT 1) AS current_tier,
         (SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl WHERE pl.customer_id = c.customer_id AND pl.tenant_id = c.tenant_id) AS points_balance
       FROM customers c
       LEFT JOIN customer_phones cp ON c.customer_id = cp.customer_id AND cp.tenant_id = c.tenant_id
@@ -75,6 +76,7 @@ class SearchService {
       WHERE c.tenant_id = $1
         AND (
           c.customer_name ILIKE $2
+          OR c.name ILIKE $2
           OR c.customer_id ILIKE $2
           OR c.aadhaar_number ILIKE $2
           OR c.firm_name ILIKE $2
@@ -148,16 +150,16 @@ class SearchService {
         COALESCE(
           json_agg(
             DISTINCT jsonb_build_object(
-              'id', cp.phone_id,
+              'id', COALESCE(cp.phone_id, cp.id),
               'phone_number', cp.phone_number,
               'is_primary', cp.is_verified
             )
-          ) FILTER (WHERE cp.phone_id IS NOT NULL), '[]'
+          ) FILTER (WHERE cp.phone_number IS NOT NULL), '[]'
         ) AS phones,
         COALESCE(
           json_agg(
             DISTINCT jsonb_build_object(
-              'id', v.vehicle_id,
+              'id', COALESCE(v.vehicle_id, v.id),
               'vin', COALESCE(v.vin, v.chassis_no, ''),
               'chassis_no', v.chassis_no,
               'registration_number', COALESCE(v.registration_number, v.chassis_no, ''),
@@ -175,9 +177,9 @@ class SearchService {
               'emps_discount', FLOOR(COALESCE(st.emps_discount_paise, 0) / 100.0),
               'oem_offers_amount', FLOOR(COALESCE(st.oem_offers_amount_paise, 0) / 100.0)
             )
-          ) FILTER (WHERE v.vehicle_id IS NOT NULL), '[]'
+          ) FILTER (WHERE v.chassis_no IS NOT NULL OR v.registration_number IS NOT NULL OR v.vehicle_id IS NOT NULL OR v.id IS NOT NULL), '[]'
         ) AS vehicles,
-        (SELECT cts.current_tier FROM customer_tier_snapshot cts WHERE cts.customer_id = c.customer_id AND cts.tenant_id = c.tenant_id LIMIT 1) AS current_tier,
+        (SELECT COALESCE(cts.current_tier, cts.tier_name, 'Silver') FROM customer_tier_snapshot cts WHERE cts.customer_id = c.customer_id AND cts.tenant_id = c.tenant_id LIMIT 1) AS current_tier,
         (SELECT GREATEST(0, COALESCE(SUM(pl.points), 0)) FROM points_ledger pl WHERE pl.customer_id = c.customer_id AND pl.tenant_id = c.tenant_id) AS points_balance
       FROM customers c
       LEFT JOIN customer_phones cp ON c.customer_id = cp.customer_id AND cp.tenant_id = c.tenant_id
