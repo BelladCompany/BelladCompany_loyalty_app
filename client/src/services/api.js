@@ -654,8 +654,9 @@ export class ApiService {
     });
   }
 
-  static async portalGetReferrals() {
-    return this.request('/v1/me/referrals');
+  static async portalGetReferrals(customerId) {
+    const qs = customerId ? `?customer_id=${encodeURIComponent(customerId)}` : '';
+    return this.request(`/v1/me/referrals${qs}`);
   }
 
   static async portalShareReferral(payload = {}) {

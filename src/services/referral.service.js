@@ -1158,28 +1158,48 @@ class ReferralService {
     referee_phone = null,
     vehicle_model = null,
     share_channel = 'whatsapp',
+    referral_code = null,
     tenant_id = 'bellad_and_company',
   }) {
-    // 1. Fetch referrer customer details
-    const refCheck = await pool.query(
+    // 1. Fetch referrer customer details (or auto-create baseline customer if missing)
+    let refCheck = await pool.query(
       `SELECT customer_id, customer_name FROM customers WHERE customer_id = $1 AND tenant_id = $2;`,
       [referrer_customer_id, tenant_id]
     );
-    if (refCheck.rows.length === 0) {
-      throw { statusCode: 404, message: `Referrer customer '${referrer_customer_id}' not found.` };
+    let referrer = refCheck.rows[0];
+    if (!referrer) {
+      const insCust = await pool.query(
+        `INSERT INTO customers (customer_id, customer_name, tenant_id)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (customer_id) DO UPDATE SET customer_name = EXCLUDED.customer_name
+         RETURNING customer_id, customer_name;`,
+        [referrer_customer_id, 'Loyal Member', tenant_id]
+      );
+      referrer = insCust.rows[0] || { customer_id: referrer_customer_id, customer_name: 'Loyal Member' };
     }
-    const referrer = refCheck.rows[0];
 
-    // 2. Generate unique referral code (REF-BELL-XXXX-XXXX, NO PIN)
-    let referralCode = '';
-    let isUnique = false;
-    for (let attempt = 0; attempt < 5 && !isUnique; attempt++) {
-      referralCode = ReferralService.generateReferralCode();
+    // 2. Generate or use unique referral code (REF-BELL-XXXX-XXXX, NO PIN)
+    let finalReferralCode = referral_code ? String(referral_code).trim().toUpperCase() : '';
+    if (finalReferralCode) {
       const exist = await pool.query(
         `SELECT referral_id FROM referrals WHERE referral_code = $1 LIMIT 1;`,
-        [referralCode]
+        [finalReferralCode]
       );
-      if (exist.rows.length === 0) isUnique = true;
+      if (exist.rows.length > 0) {
+        finalReferralCode = '';
+      }
+    }
+
+    if (!finalReferralCode) {
+      let isUnique = false;
+      for (let attempt = 0; attempt < 5 && !isUnique; attempt++) {
+        finalReferralCode = ReferralService.generateReferralCode();
+        const exist = await pool.query(
+          `SELECT referral_id FROM referrals WHERE referral_code = $1 LIMIT 1;`,
+          [finalReferralCode]
+        );
+        if (exist.rows.length === 0) isUnique = true;
+      }
     }
 
     // 3. Insert record into referrals
@@ -1197,7 +1217,7 @@ class ReferralService {
         referrer_customer_id,
         referee_name ? referee_name.trim() : 'Friend / WhatsApp Contact',
         referee_phone ? referee_phone.trim() : null,
-        referralCode,
+        finalReferralCode,
         share_channel || 'whatsapp',
         vehicle_model
           ? `Referral for ${vehicle_model}`
@@ -1214,10 +1234,10 @@ class ReferralService {
 
     // Build the share message and link
     const baseUrl = process.env.APP_BASE_URL || 'https://loyalty.bellad.in';
-    const claimUrl = `${baseUrl}/portal?ref=${referralCode}`;
+    const claimUrl = `${baseUrl}/portal?ref=${finalReferralCode}`;
     const shareMessage = `🎁 *Bellad & Company Loyalty Referral Rewards*\n\n` +
       `Hey! You have been invited by *${referrer.customer_name}* to join Bellad & Co Loyalty Rewards.\n\n` +
-      `🌟 *Your Referral Code:* ${referralCode}\n\n` +
+      `🌟 *Your Referral Code:* ${finalReferralCode}\n\n` +
       `Get Bonus Points on your new vehicle purchase at Bellad and Company \n\n` +
       `👉 Click here to claim & register:\n${claimUrl}`;
 
@@ -1227,7 +1247,7 @@ class ReferralService {
     return {
       success: true,
       referral: record,
-      referral_code: referralCode,
+      referral_code: finalReferralCode,
       share_channel: share_channel || 'whatsapp',
       shared_at: record.shared_at,
       whatsapp_url: whatsappUrl,

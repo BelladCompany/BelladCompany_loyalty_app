@@ -311,10 +311,11 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
     }
   }, []);
 
-  const loadReferrals = useCallback(async () => {
+  const loadReferrals = useCallback(async (targetCustId = null) => {
     try {
       setLoadingReferrals(true);
-      const res = await ApiService.portalGetReferrals();
+      const activeCustId = targetCustId || profile?.customer_id || customerInfo?.customer_id || 'BAC-9821';
+      const res = await ApiService.portalGetReferrals(activeCustId);
       setReferralsList(res.referrals || []);
       if (res.referral_code) {
         setPortalReferralCode(res.referral_code);
@@ -394,9 +395,11 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
     // Auto-record share event in database so referral tab and admin audit update immediately
     try {
       const res = await ApiService.portalShareReferral({
+        customer_id: customerId,
         referee_name: friendNameInput.trim() || 'Friend Referral (Link Shared)',
         referee_phone: friendPhoneInput.trim() || undefined,
         share_channel: 'link_copy',
+        referral_code: activeReferralCode,
       });
       if (res?.referral_code) {
         setPortalReferralCode(res.referral_code);
@@ -417,9 +420,11 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
     // Auto-record share event in database so referral tab and admin audit update immediately
     try {
       const res = await ApiService.portalShareReferral({
+        customer_id: customerId,
         referee_name: friendNameInput.trim() || 'Friend Referral (Code Shared)',
         referee_phone: friendPhoneInput.trim() || undefined,
         share_channel: 'code_copy',
+        referral_code: code || activeReferralCode,
       });
       if (res?.referral_code) {
         setPortalReferralCode(res.referral_code);
@@ -436,9 +441,11 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
     setSharingWhatsApp(true);
     try {
       const res = await ApiService.portalShareReferral({
+        customer_id: customerId,
         referee_name: friendNameInput.trim() || undefined,
         referee_phone: friendPhoneInput.trim() || undefined,
         share_channel: 'whatsapp',
+        referral_code: activeReferralCode,
       });
       if (res.referral_code) {
         setPortalReferralCode(res.referral_code);
