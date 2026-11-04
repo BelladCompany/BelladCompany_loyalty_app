@@ -117,7 +117,7 @@ class DirectorService {
           [tenantId]
         );
         redKpis = redRes.rows[0] || redKpis;
-      } catch (e) {}
+      } catch (e) { }
 
       // 6. Net Sales Cash & Volume from sale_transactions
       let salesKpis = { total_sales_count: 0, net_sales_cash_inr: 0, gross_ex_showroom_inr: 0 };
@@ -134,7 +134,7 @@ class DirectorService {
           [tenantId]
         );
         salesKpis = salesRes.rows[0] || salesKpis;
-      } catch (e) {}
+      } catch (e) { }
 
       // 7. RealBooks Accounting Sync Metrics (from realbooks_sync_log)
       let realBooksMetrics = { total_synced: 85, total_failed: 0, total_logged: 92, sync_rate: 92.4 };
@@ -299,8 +299,8 @@ class DirectorService {
 
       const totalReferrals = parseInt(refKpis.total_referrals || 0, 10);
       const purchasedReferrals = parseInt(refKpis.purchased_referrals || 0, 10);
-      const referralConversionRate = totalReferrals > 0 
-        ? ((purchasedReferrals / totalReferrals) * 100).toFixed(1) 
+      const referralConversionRate = totalReferrals > 0
+        ? ((purchasedReferrals / totalReferrals) * 100).toFixed(1)
         : '0.0';
 
       const totalRedemptionsCount = parseInt(redKpis.total_redemptions_count || 0, 10) || 45;

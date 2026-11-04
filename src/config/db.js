@@ -5,10 +5,10 @@ const connectionString = env.db.connectionString;
 const isProduction = env.nodeEnv === 'production';
 const isLocalOrContainer = Boolean(
   connectionString &&
-    (connectionString.includes('localhost') ||
-      connectionString.includes('127.0.0.1') ||
-      connectionString.includes('@postgres:') ||
-      connectionString.includes('postgres-service'))
+  (connectionString.includes('localhost') ||
+    connectionString.includes('127.0.0.1') ||
+    connectionString.includes('@postgres:') ||
+    connectionString.includes('postgres-service'))
 );
 
 const isRemoteDb = Boolean(connectionString && !isLocalOrContainer);
@@ -17,11 +17,11 @@ const useSsl =
   process.env.DB_SSL === 'false'
     ? false
     : process.env.DB_SSL === 'true'
-    ? true
-    : Boolean(
+      ? true
+      : Boolean(
         (isProduction || isRemoteDb) &&
-          !isLocalOrContainer &&
-          !connectionString?.includes('sslmode=disable')
+        !isLocalOrContainer &&
+        !connectionString?.includes('sslmode=disable')
       );
 
 const poolOptions = {
@@ -34,19 +34,19 @@ const poolOptions = {
 
 const poolConfig = connectionString
   ? {
-      connectionString,
-      ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
-      ...poolOptions,
-    }
+    connectionString,
+    ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
+    ...poolOptions,
+  }
   : {
-      host: env.db.host,
-      port: env.db.port,
-      user: env.db.user,
-      password: env.db.password,
-      database: env.db.database,
-      ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
-      ...poolOptions,
-    };
+    host: env.db.host,
+    port: env.db.port,
+    user: env.db.user,
+    password: env.db.password,
+    database: env.db.database,
+    ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
+    ...poolOptions,
+  };
 
 const pool = new Pool(poolConfig);
 
