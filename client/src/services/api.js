@@ -5,6 +5,39 @@ const API_BASE = cleanBase.startsWith('http') && !cleanBase.endsWith('/api')
   : cleanBase;
 
 export class ApiService {
+  /**
+   * Proactively warm up backend service on Render free tier (prevents long wait on first user action)
+   */
+  static wakeUpBackend() {
+    try {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 8000);
+      if (API_BASE.startsWith('http')) {
+        fetch(`${API_BASE}/health`, { signal: controller.signal, mode: 'no-cors' }).catch(() => {});
+      }
+      fetch('/health', { signal: controller.signal, mode: 'no-cors' }).catch(() => {});
+    } catch (e) {
+      // ignore wake-up errors
+    }
+  }
+
+  static async fetchWithTimeout(url, config, timeoutMs = 20000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, { ...config, signal: controller.signal });
+      clearTimeout(timer);
+      return response;
+    } catch (err) {
+      clearTimeout(timer);
+      if (err.name === 'AbortError') {
+        const timeoutErr = new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s.`);
+        timeoutErr.isTimeout = true;
+        throw timeoutErr;
+      }
+      throw err;
+    }
+  }
   static getToken() {
     return localStorage.getItem('bac_loyalty_token') || '';
   }
@@ -54,17 +87,22 @@ export class ApiService {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     let res;
     try {
-      res = await fetch(`${API_BASE}${cleanEndpoint}`, config);
+      res = await this.fetchWithTimeout(`${API_BASE}${cleanEndpoint}`, config, 18000);
     } catch (fetchErr) {
-      if ((fetchErr.name === 'TypeError' || fetchErr.message === 'Failed to fetch') && API_BASE.startsWith('http')) {
+      if ((fetchErr.name === 'TypeError' || fetchErr.message === 'Failed to fetch' || fetchErr.isTimeout) && API_BASE.startsWith('http')) {
         try {
-          res = await fetch(`/api${cleanEndpoint}`, config);
+          res = await this.fetchWithTimeout(`/api${cleanEndpoint}`, config, 12000);
         } catch (proxyErr) {
           // both direct and proxy failed
         }
       }
 
       if (!res) {
+        if (fetchErr.isTimeout) {
+          throw new Error(
+            'The cloud server is taking longer than expected to respond (Render free instances take ~30-50s to wake up from cold sleep). Please wait 15 seconds and try again.'
+          );
+        }
         if (fetchErr.name === 'TypeError' || fetchErr.message === 'Failed to fetch') {
           throw new Error(
             `Unable to connect to backend server (${API_BASE}). If Render backend is waking up, please wait 30 seconds and try again.`

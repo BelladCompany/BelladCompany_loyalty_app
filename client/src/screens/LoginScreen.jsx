@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Car, Lock, User, AlertCircle, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 import ApiService from '../services/api';
 
@@ -7,6 +7,25 @@ export const LoginScreen = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('Admin@123');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingElapsed, setLoadingElapsed] = useState(0);
+
+  useEffect(() => {
+    // Proactively ping backend to wake up sleeping Render instance as soon as login screen mounts
+    ApiService.wakeUpBackend();
+  }, []);
+
+  useEffect(() => {
+    let timer;
+    if (isLoading) {
+      setLoadingElapsed(0);
+      timer = setInterval(() => {
+        setLoadingElapsed((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setLoadingElapsed(0);
+    }
+    return () => clearInterval(timer);
+  }, [isLoading]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -112,7 +131,11 @@ export const LoginScreen = ({ onLoginSuccess }) => {
             {isLoading ? (
               <span className="inline-flex items-center gap-2">
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Signing in...
+                {loadingElapsed > 8
+                  ? `Waking cloud server (${loadingElapsed}s)...`
+                  : loadingElapsed > 3
+                    ? `Connecting to backend (${loadingElapsed}s)...`
+                    : 'Signing in...'}
               </span>
             ) : (
               <>
@@ -121,6 +144,12 @@ export const LoginScreen = ({ onLoginSuccess }) => {
               </>
             )}
           </button>
+
+          {isLoading && loadingElapsed > 4 && (
+            <p className="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-center animate-pulse leading-snug">
+              ⏱️ Cloud server is waking up from sleep mode (free tier cold starts take ~20-40s). Please wait a moment...
+            </p>
+          )}
         </form>
 
         {/* Demo Credentials Section */}

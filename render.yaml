@@ -23,7 +23,7 @@ services:
       - key: DEFAULT_TENANT_ID
         value: bellad_and_company
       - key: FRONTEND_URL
-        value: https://bellad-company-loyalty.vercel.app
+        value: https://bellad-company-loyalty-app.vercel.app,https://bellad-company-loyalty.vercel.app
 
 databases:
   # Managed PostgreSQL Database on Render (PostgreSQL 16 LTS)
