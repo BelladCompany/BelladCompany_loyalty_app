@@ -1007,7 +1007,7 @@ class MasterEditorController {
           approval_status,
           approved_by,
           updated_at
-        ) VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+        ) VALUES ($1, $2, $3::bigint, $4::bigint, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
         ON CONFLICT (tenant_id, tier_name) DO UPDATE SET
           min_points = EXCLUDED.min_points,
           min_lifetime_points = EXCLUDED.min_lifetime_points,
@@ -1027,6 +1027,7 @@ class MasterEditorController {
       const values = [
         tenant_id,
         tier_name.trim(),
+        Number(min_lifetime_points || 0),
         Number(min_lifetime_points || 0),
         Number(min_expense_amount || 0),
         max_expense_amount != null ? Number(max_expense_amount) : null,

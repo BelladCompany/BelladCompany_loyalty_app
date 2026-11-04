@@ -117,7 +117,7 @@ class TierService {
     const snapRes = await client.query(
       `INSERT INTO customer_tier_snapshot (
          customer_id, tenant_id, tier_name, current_tier, lifetime_points, current_balance, total_expense_amount, updated_at
-       ) VALUES ($1, $2, $3, $3, $4, $5, $6, NOW())
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
        ON CONFLICT (customer_id) DO UPDATE
        SET tier_name = EXCLUDED.tier_name,
            current_tier = EXCLUDED.current_tier,
@@ -126,7 +126,7 @@ class TierService {
            total_expense_amount = EXCLUDED.total_expense_amount,
            updated_at = NOW()
        RETURNING customer_id, current_tier, tier_name, lifetime_points, current_balance, total_expense_amount, updated_at;`,
-      [customerId, tenantId, tierName, lifetimePoints, currentBalance, totalMetricRs]
+      [customerId, tenantId, tierName, tierName, lifetimePoints, currentBalance, totalMetricRs]
     );
 
     return snapRes.rows[0];

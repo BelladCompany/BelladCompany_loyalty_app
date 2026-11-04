@@ -3,3 +3,4 @@
 
 ALTER TABLE points_ledger ADD COLUMN IF NOT EXISTS created_by INTEGER;
 ALTER TABLE points_ledger ADD COLUMN IF NOT EXISTS cashier_id INTEGER;
+
