@@ -1,6 +1,45 @@
 -- Migration 059: Seed core business data (customers, vehicles, points ledger, gift cards, referrals)
 -- Ensures production databases on Render / cloud have rich customer data, gift cards, and referrals available immediately
 
+-- ============================================================================
+-- 0. DDL Preparations: Pre-create and harmonize columns before PL/pgSQL compiles
+-- ============================================================================
+
+-- Harmonize brands
+ALTER TABLE brands ALTER COLUMN name DROP NOT NULL;
+ALTER TABLE brands ALTER COLUMN code DROP NOT NULL;
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS brand_id SERIAL;
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS id INTEGER;
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS brand_name VARCHAR(255);
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS code VARCHAR(50);
+
+-- Harmonize point_rules
+ALTER TABLE point_rules ADD COLUMN IF NOT EXISTS points_per_100 NUMERIC(10, 2);
+ALTER TABLE point_rules ADD COLUMN IF NOT EXISTS rate_type VARCHAR(32);
+ALTER TABLE point_rules ADD COLUMN IF NOT EXISTS rule_type VARCHAR(32);
+ALTER TABLE point_rules ADD COLUMN IF NOT EXISTS multiplier_numerator BIGINT DEFAULT 1;
+ALTER TABLE point_rules ADD COLUMN IF NOT EXISTS multiplier_denominator BIGINT DEFAULT 100;
+ALTER TABLE point_rules ALTER COLUMN multiplier_numerator DROP NOT NULL;
+ALTER TABLE point_rules ALTER COLUMN multiplier_denominator DROP NOT NULL;
+
+-- Harmonize customers
+ALTER TABLE customers ALTER COLUMN customer_name DROP NOT NULL;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255);
+
+-- Harmonize vehicles
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vin VARCHAR(64);
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS registration_number VARCHAR(32);
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(20) DEFAULT '4W';
+
+-- Harmonize customer_tier_snapshot
+ALTER TABLE customer_tier_snapshot ADD COLUMN IF NOT EXISTS total_expense_amount NUMERIC(12, 2) DEFAULT 0;
+
+-- ============================================================================
+-- 1. Seed Business Data Block
+-- ============================================================================
+
 DO $$
 DECLARE
   v_tenant VARCHAR(64) := 'bellad_and_company';
@@ -21,15 +60,7 @@ BEGIN
   SET firm_name = EXCLUDED.firm_name,
       point_to_rupee_rate = EXCLUDED.point_to_rupee_rate;
 
-  -- 2. Harmonize & Ensure Brands (support both brand_name and name schemas without NOT NULL constraint violations)
-  ALTER TABLE brands ALTER COLUMN name DROP NOT NULL;
-  ALTER TABLE brands ALTER COLUMN code DROP NOT NULL;
-  ALTER TABLE brands ADD COLUMN IF NOT EXISTS brand_id SERIAL;
-  ALTER TABLE brands ADD COLUMN IF NOT EXISTS id INTEGER;
-  ALTER TABLE brands ADD COLUMN IF NOT EXISTS brand_name VARCHAR(255);
-  ALTER TABLE brands ADD COLUMN IF NOT EXISTS name VARCHAR(255);
-  ALTER TABLE brands ADD COLUMN IF NOT EXISTS code VARCHAR(50);
-
+  -- 2. Harmonize & Ensure Brands
   INSERT INTO brands (name, brand_name, code, tenant_id)
   VALUES
     ('Hyundai', 'Hyundai', 'HYUN', v_tenant),
@@ -56,32 +87,16 @@ BEGIN
     1
   ) INTO v_branch_id;
 
-  -- 4. Ensure Point Rules
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'multiplier_numerator') THEN
-    ALTER TABLE point_rules ALTER COLUMN multiplier_numerator DROP NOT NULL;
-  END IF;
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'multiplier_denominator') THEN
-    ALTER TABLE point_rules ALTER COLUMN multiplier_denominator DROP NOT NULL;
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'rate_type') THEN
-    INSERT INTO point_rules (tenant_id, rate_type, points_per_100)
-    VALUES
-      (v_tenant, 'sale', 1.00),
-      (v_tenant, 'service', 1.00)
-    ON CONFLICT DO NOTHING;
-  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'rule_type') THEN
-    INSERT INTO point_rules (tenant_id, rule_type, multiplier_numerator, multiplier_denominator, points_per_100, description)
-    VALUES
-      (v_tenant, 'sale', 1, 100, 1.00, 'Sale 1 pt per 100'),
-      (v_tenant, 'service', 1, 100, 1.00, 'Service 1 pt per 100')
-    ON CONFLICT DO NOTHING;
+  -- 4. Ensure Point Rules using dynamic SQL to guarantee immunity from catalog variations
+  IF NOT EXISTS (SELECT 1 FROM point_rules WHERE tenant_id = v_tenant) THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'rate_type') THEN
+      EXECUTE 'INSERT INTO point_rules (tenant_id, rate_type, points_per_100) VALUES ($1, ''sale'', 1.00), ($1, ''service'', 1.00) ON CONFLICT DO NOTHING' USING v_tenant;
+    ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'point_rules' AND column_name = 'rule_type') THEN
+      EXECUTE 'INSERT INTO point_rules (tenant_id, rule_type, multiplier_numerator, multiplier_denominator, description) VALUES ($1, ''sale'', 1, 100, ''Sale 1 pt per 100''), ($1, ''service'', 1, 100, ''Service 1 pt per 100'') ON CONFLICT DO NOTHING' USING v_tenant;
+    END IF;
   END IF;
 
   -- 5. Customer 1: Rajesh Kumar Sharma (BAC-9001, Phone: 9845012345, Creta SX)
-  ALTER TABLE customers ALTER COLUMN customer_name DROP NOT NULL;
-  ALTER TABLE customers ADD COLUMN IF NOT EXISTS name VARCHAR(255);
-
   INSERT INTO customers (
     customer_id, customer_name, name, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
     age, firm_name, branch_name, address, is_first_time_visitor, tenant_id
