@@ -61,6 +61,18 @@ const formatPoints = (val) => {
   return `${Math.round(num).toLocaleString('en-IN')} PTS`;
 };
 
+// Helper to separate point number and unit for responsive card alignment without wrapping
+const formatPointsParts = (val) => {
+  const num = Number(val || 0);
+  if (num >= 10000000) {
+    return { value: (num / 10000000).toFixed(2), unit: 'Cr PTS' };
+  }
+  if (num >= 100000) {
+    return { value: (num / 100000).toFixed(2), unit: 'L PTS' };
+  }
+  return { value: Math.round(num).toLocaleString('en-IN'), unit: 'PTS' };
+};
+
 // Helper to classify vehicles accurately and return respectful UI metadata
 const getVehicleMeta = (m) => {
   const vType = (m.vehicle_type || '').toUpperCase();
@@ -350,102 +362,92 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-12">
-      {/* ── 1. Top Executive Banner (Neat, Aligned & Faithful to Executive Spec) ── */}
-      <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-slate-800 relative overflow-hidden">
+      {/* ── 1. Top Executive Banner (Clean, Modern & Neatly Aligned) ── */}
+      <div className="bg-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl border border-slate-800 relative overflow-hidden">
         {/* Subtle accent glows */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           {/* Left Block: Stacked Badges, Title & Subtitle */}
-          <div className="space-y-4 max-w-xl">
-            {/* Stacked Pills */}
-            <div className="space-y-2">
-              <div>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-400 text-slate-950 font-black text-xs shadow-sm">
-                  <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-                  DIRECTOR COMMAND CENTER
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-block px-3 py-1 rounded-xl bg-slate-800/80 text-slate-300 font-bold text-xs border border-slate-700/80">
-                  Bellad &amp; Company Dealerships
-                </span>
-                <div
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold border transition ${
+          <div className="space-y-3 max-w-xl">
+            {/* Badges in a single horizontal wrap row */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-400 text-slate-950 font-black text-xs shadow-xs">
+                <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
+                DIRECTOR COMMAND CENTER
+              </span>
+              <span className="inline-block px-3 py-1 rounded-xl bg-slate-800/80 text-slate-300 font-bold text-xs border border-slate-700/80 whitespace-nowrap">
+                Bellad &amp; Company Dealerships
+              </span>
+              <div
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold border transition whitespace-nowrap ${
+                  autoRefreshInterval > 0
+                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/80'
+                    : 'bg-slate-800/60 text-slate-400 border-slate-700'
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
                     autoRefreshInterval > 0
-                      ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/80'
-                      : 'bg-slate-800/60 text-slate-400 border-slate-700'
+                      ? isLivePulsing
+                        ? 'bg-emerald-300 scale-125 transition-transform'
+                        : 'bg-emerald-400 animate-pulse'
+                      : 'bg-slate-500'
                   }`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      autoRefreshInterval > 0
-                        ? isLivePulsing
-                          ? 'bg-emerald-300 scale-125 transition-transform'
-                          : 'bg-emerald-400 animate-pulse'
-                        : 'bg-slate-500'
-                    }`}
-                  />
-                  <span>
-                    {autoRefreshInterval > 0 ? `Live Auto-Sync: ${countdown}s` : 'Sync Paused'}
-                  </span>
-                </div>
+                />
+                <span>
+                  {autoRefreshInterval > 0 ? `Live Auto-Sync: ${countdown}s` : 'Sync Paused'}
+                </span>
               </div>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
-              Executive<br />Loyalty<br />Intelligence
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white leading-tight">
+              Executive Loyalty Intelligence
             </h1>
 
             {/* Paragraph Description */}
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed max-w-lg">
               Consolidated real-time operational dashboard for Directors &amp; Executive Management. Live metrics for enrolled members, points earned/burned, cash flow, gift cards, and branch performance.
             </p>
           </div>
 
-          {/* Right Block: Filters, Frequency & Actions */}
-          <div className="flex flex-wrap items-center gap-2.5 xl:justify-end shrink-0">
-            {/* Date Range Selector */}
-            <div className="bg-slate-800/90 rounded-2xl p-1 border border-slate-700/80 flex flex-wrap items-center gap-1">
-              {[
-                { id: 'today', label: 'Today' },
-                { id: '7d', label: '7D' },
-                { id: '30d', label: 'This Month' },
-                { id: 'quarter', label: 'Quarter' },
-                { id: 'ytd', label: 'FY26–27' },
-                { id: 'all', label: 'All Time' },
-                { id: 'custom', label: 'Custom' },
-              ].map((btn) => (
-                <button
-                  key={btn.id}
-                  onClick={() => setDateRange(btn.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    dateRange === btn.id
-                      ? 'bg-white text-slate-950 shadow-sm'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
-                >
-                  {btn.label}
-                </button>
-              ))}
+          {/* Right Block: Clean Controls (Date Dropdown, Interval Dropdown, Refresh, Export, Counter Switch) */}
+          <div className="flex flex-wrap items-center gap-2.5 lg:justify-end shrink-0">
+            {/* Clean Date Range Dropdown (Replaces the messy row of 7 buttons) */}
+            <div className="bg-slate-800/90 hover:bg-slate-800 rounded-xl px-3 py-2 border border-slate-700/80 flex items-center gap-2 text-xs text-slate-200 font-bold transition shadow-xs">
+              <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Date:</span>
+              <select
+                value={dateRange}
+                onChange={(e) => setDateRange(e.target.value)}
+                className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="all" className="bg-slate-900 text-white">All Time (Complete)</option>
+                <option value="today" className="bg-slate-900 text-white">Today</option>
+                <option value="7d" className="bg-slate-900 text-white">Last 7 Days</option>
+                <option value="30d" className="bg-slate-900 text-white">This Month</option>
+                <option value="quarter" className="bg-slate-900 text-white">Quarter (Q3)</option>
+                <option value="ytd" className="bg-slate-900 text-white">FY26–27 YTD</option>
+                <option value="custom" className="bg-slate-900 text-white">Custom Range...</option>
+              </select>
             </div>
 
             {/* Auto-Refresh Frequency Picker */}
-            <div className="bg-slate-800/90 rounded-2xl px-3 py-2 border border-slate-700/80 flex items-center gap-2 text-xs text-slate-300 font-bold">
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Interval:</span>
+            <div className="bg-slate-800/90 hover:bg-slate-800 rounded-xl px-3 py-2 border border-slate-700/80 flex items-center gap-2 text-xs text-slate-200 font-bold transition shadow-xs">
+              <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Sync:</span>
               <select
                 value={autoRefreshInterval}
                 onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
-                className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
+                className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer pr-1"
               >
-                <option value={5} className="bg-slate-900">5s</option>
-                <option value={10} className="bg-slate-900">10s (Optimal)</option>
-                <option value={30} className="bg-slate-900">30s</option>
-                <option value={60} className="bg-slate-900">1 Min</option>
-                <option value={0} className="bg-slate-900">Pause</option>
+                <option value={5} className="bg-slate-900 text-white">5s</option>
+                <option value={10} className="bg-slate-900 text-white">10s (Optimal)</option>
+                <option value={30} className="bg-slate-900 text-white">30s</option>
+                <option value={60} className="bg-slate-900 text-white">1 Min</option>
+                <option value={0} className="bg-slate-900 text-white">Pause</option>
               </select>
             </div>
 
@@ -456,17 +458,17 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                 if (activeSection === 'records') loadRecords();
               }}
               disabled={loadingOverview}
-              className="w-10 h-10 bg-slate-800/90 hover:bg-slate-700 text-white rounded-2xl transition border border-slate-700/80 cursor-pointer flex items-center justify-center shrink-0"
+              className="w-9 h-9 bg-slate-800/90 hover:bg-slate-700 text-white rounded-xl transition border border-slate-700/80 cursor-pointer flex items-center justify-center shrink-0 shadow-xs"
               title="Refresh Now"
             >
-              <RefreshCw className={`w-4 h-4 ${loadingOverview || isLivePulsing ? 'animate-spin text-amber-400' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingOverview || isLivePulsing ? 'animate-spin text-amber-400' : ''}`} />
             </button>
 
             {/* Export CSV Button */}
             <button
               onClick={handleExportCsv}
               disabled={exporting}
-              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs transition shadow-md flex items-center gap-1.5 cursor-pointer shrink-0"
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
             >
               <Download className="w-3.5 h-3.5" />
               <span>{exporting ? 'Exporting...' : 'Export'}</span>
@@ -476,18 +478,18 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
             {onSwitchToStaffView && (
               <button
                 onClick={onSwitchToStaffView}
-                className="px-3.5 py-2.5 bg-slate-800/90 hover:bg-slate-700 text-indigo-200 hover:text-white rounded-2xl font-bold text-xs transition border border-slate-700/80 flex items-center gap-1.5 cursor-pointer shrink-0"
+                className="px-3.5 py-2 bg-slate-800/90 hover:bg-slate-700 text-indigo-200 hover:text-white rounded-xl font-bold text-xs transition border border-slate-700/80 flex items-center gap-1.5 cursor-pointer shrink-0 shadow-xs whitespace-nowrap"
               >
-                <span>Counter</span>
+                <span>Counter POS</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
         </div>
 
-        {/* Custom Date Range Picker Bar */}
+        {/* Custom Date Range Picker Bar (Only shown when dateRange === 'custom') */}
         {dateRange === 'custom' && (
-          <div className="mt-4 pt-4 border-t border-slate-800 flex flex-wrap items-center gap-3 text-xs bg-slate-950/60 p-3 rounded-2xl">
+          <div className="mt-4 pt-4 border-t border-slate-800/80 flex flex-wrap items-center gap-3 text-xs bg-slate-950/60 p-3 rounded-2xl">
             <span className="font-bold text-amber-400 flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5" />
               Custom Range:
@@ -522,11 +524,11 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
         )}
 
         {/* Section Navigation Tabs (Executive Overview & Audit Ledger) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mt-8 pt-5 border-t border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-6 pt-5 border-t border-slate-800/80">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveSection('dashboard')}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
                 activeSection === 'dashboard'
                   ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-400/40'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -540,7 +542,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
                 setActiveSection('records');
                 loadRecords();
               }}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
                 activeSection === 'records'
                   ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-400/40'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -560,25 +562,28 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
         </div>
       </div>
 
-      {/* ── 2. The 6 Core Executive KPI Cards ── */}
+      {/* ── 2. The 6 Core Executive KPI Cards (Neat, Aligned & Responsive Fonts) ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4">
         {/* Card 1: Enrolled Members */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-indigo-300 transition-all hover:shadow-md group">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-indigo-300 transition-all hover:shadow-md group min-h-[148px]">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-bold text-slate-600">Enrolled Members</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Users className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Users className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black font-mono text-slate-900 group-hover:text-indigo-600 transition">
-              {loadingOverview ? '...' : totalEnrolledCustomers.toLocaleString('en-IN')}
+            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="text-lg sm:text-xl font-black font-mono text-slate-900 group-hover:text-indigo-600 transition tracking-tight">
+                {loadingOverview ? '...' : totalEnrolledCustomers.toLocaleString('en-IN')}
+              </span>
+              <span className="text-[11px] font-bold text-slate-400 font-sans">Members</span>
             </div>
-            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug truncate">
               Active loyalty membership
             </div>
           </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
             <span className="text-slate-400">Total Vehicles:</span>
             <span className="font-mono font-bold text-slate-700">
               {Number(kpis?.total_vehicles || 3460).toLocaleString('en-IN')}
@@ -587,66 +592,78 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
         </div>
 
         {/* Card 2: Redeemed Points */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-rose-300 transition-all hover:shadow-md group">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-rose-300 transition-all hover:shadow-md group min-h-[148px]">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-bold text-slate-600">Redeemed Points</span>
-            <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Tag className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Tag className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black font-mono text-slate-900 group-hover:text-rose-600 transition">
-              {loadingOverview ? '...' : formatPoints(totalPointsRedeemed)}
+            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="text-lg sm:text-xl font-black font-mono text-slate-900 group-hover:text-rose-600 transition tracking-tight">
+                {loadingOverview ? '...' : formatPointsParts(totalPointsRedeemed).value}
+              </span>
+              <span className="text-[11px] font-bold text-rose-600 font-sans uppercase">
+                {loadingOverview ? '' : formatPointsParts(totalPointsRedeemed).unit}
+              </span>
             </div>
-            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug truncate">
               Burned in customer passbooks
             </div>
           </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
             <span className="text-slate-400">Redemptions:</span>
             <span className="font-mono font-bold text-rose-600">{totalRedemptionsCount} Times</span>
           </div>
         </div>
 
         {/* Card 3: Cash Redeemed */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-amber-300 transition-all hover:shadow-md group">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-amber-300 transition-all hover:shadow-md group min-h-[148px]">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-bold text-slate-600">Cash Redeemed</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <IndianRupee className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <IndianRupee className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black font-mono text-slate-900 group-hover:text-amber-600 transition">
-              {loadingOverview ? '...' : formatInr(redeemedCashInr)}
+            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="text-lg sm:text-xl font-black font-mono text-slate-900 group-hover:text-amber-600 transition tracking-tight">
+                {loadingOverview ? '...' : formatInr(redeemedCashInr)}
+              </span>
             </div>
-            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug truncate">
               Counter discounts honored
             </div>
           </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
             <span className="text-slate-400">Conversion Rate:</span>
             <span className="font-mono font-bold text-slate-700">₹0.25 / Point</span>
           </div>
         </div>
 
         {/* Card 4: Available Points & Liability */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-emerald-300 transition-all hover:shadow-md group">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-emerald-300 transition-all hover:shadow-md group min-h-[148px]">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-bold text-slate-600">Available Points</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Coins className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Coins className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black font-mono text-slate-900 group-hover:text-emerald-600 transition">
-              {loadingOverview ? '...' : formatPoints(netPointsLiability)}
+            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="text-lg sm:text-xl font-black font-mono text-slate-900 group-hover:text-emerald-600 transition tracking-tight">
+                {loadingOverview ? '...' : formatPointsParts(netPointsLiability).value}
+              </span>
+              <span className="text-[11px] font-bold text-emerald-600 font-sans uppercase">
+                {loadingOverview ? '' : formatPointsParts(netPointsLiability).unit}
+              </span>
             </div>
-            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug truncate">
               Cash Value: <span className="font-bold font-mono text-emerald-700">{formatInr(liabilityInr)}</span>
             </div>
           </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
             <span className="text-slate-400">Burn Rate:</span>
             <span className="font-mono font-bold text-emerald-600">
               {kpis?.points_burn_rate_pct || '1.32'}% (Safe)
@@ -655,44 +672,50 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
         </div>
 
         {/* Card 5: Gift Cards */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-purple-300 transition-all hover:shadow-md group">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-purple-300 transition-all hover:shadow-md group min-h-[148px]">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-bold text-slate-600">Gift Cards</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Gift className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Gift className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black font-mono text-slate-900 group-hover:text-purple-600 transition">
-              {loadingOverview ? '...' : `${totalGiftCards} Cards`}
+            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="text-lg sm:text-xl font-black font-mono text-slate-900 group-hover:text-purple-600 transition tracking-tight">
+                {loadingOverview ? '...' : totalGiftCards}
+              </span>
+              <span className="text-[11px] font-bold text-purple-600 font-sans">Cards</span>
             </div>
-            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug truncate">
               Volume: <span className="font-bold text-slate-900 font-mono">{formatInr(totalGiftVolume)}</span>
             </div>
           </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
             <span className="text-slate-400">Active Unclaimed:</span>
             <span className="font-mono font-bold text-purple-700">{activeUnclaimedGifts} Passes</span>
           </div>
         </div>
 
         {/* Card 6: Referrals */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-sky-300 transition-all hover:shadow-md group">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-sky-300 transition-all hover:shadow-md group min-h-[148px]">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-bold text-slate-600">Referrals</span>
-            <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Share2 className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Share2 className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black font-mono text-slate-900 group-hover:text-sky-600 transition">
-              {loadingOverview ? '...' : `${totalReferrals} Leads`}
+            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="text-lg sm:text-xl font-black font-mono text-slate-900 group-hover:text-sky-600 transition tracking-tight">
+                {loadingOverview ? '...' : totalReferrals}
+              </span>
+              <span className="text-[11px] font-bold text-sky-600 font-sans">Leads</span>
             </div>
-            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug truncate">
               Sales: <span className="font-bold text-emerald-600 font-mono">{purchasedReferrals} Cars</span> ({referralConversionRate.toFixed(1)}%)
             </div>
           </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
             <span className="text-slate-400">Bonus Given:</span>
             <span className="font-mono font-bold text-sky-700">{Number(referralPointsAwarded).toLocaleString('en-IN')} PTS</span>
           </div>
