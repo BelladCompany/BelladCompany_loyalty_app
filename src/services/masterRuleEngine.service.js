@@ -44,7 +44,11 @@ class MasterRuleEngineService {
         AND applicable_from <= $2
         AND applicable_upto >= $2
         AND spend_type = $3
-        AND ($4::varchar IS NULL OR LOWER(scheme_type) = LOWER($4))
+        AND (
+          ($4::varchar IS NOT NULL AND LOWER(scheme_type) = LOWER($4))
+          OR
+          ($4::varchar IS NULL AND (scheme_type IS NULL OR LOWER(scheme_type) IN ('standard', 'general', '')))
+        )
         AND (vehicle_type = 'ALL' OR LOWER(vehicle_type) = LOWER($5) OR $5 = 'ALL')
         AND (min_spend_paise <= $6)
         AND (max_spend_paise IS NULL OR max_spend_paise >= $6)

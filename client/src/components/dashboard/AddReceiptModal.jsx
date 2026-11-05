@@ -260,7 +260,7 @@ export const AddReceiptModal = ({
           category: category,
           reference_id: receiptNo.trim(),
           receipt_no: receiptNo.trim(),
-          description: `Receipt: ${receiptNo.trim()}${notes.trim() ? ` | Job Card: ${notes.trim()}` : ''}`,
+          description: `${receiptNo.trim()} | ${category.charAt(0).toUpperCase() + category.slice(1).toLowerCase()}${notes.trim() ? ` (${notes.trim()})` : ''}`,
         };
 
         const res = await ApiService.earnPoints(payload);

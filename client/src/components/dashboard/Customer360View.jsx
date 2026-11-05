@@ -189,15 +189,51 @@ export const Customer360View = ({
       field: 'reference_id',
       header: 'Reference & Details',
       sortable: true,
-      render: (val) => {
-        if (!val) return '—';
-        const parts = val.split(' | ');
-        const refCode = parts[0];
-        const desc = parts.slice(1).join(' | ');
+      render: (val, row) => {
+        if (!val && !row?.receipt_no && !row?.source_ref) return '—';
+
+        // 1. Extract clean Receipt Number / Reference Code
+        let receiptNo = row?.receipt_no;
+        const rawStr = String(val || row?.source_ref || '').trim();
+
+        if (!receiptNo) {
+          const recMatch = rawStr.match(/Rec-[A-Za-z0-9_-]+/i) || rawStr.match(/INV-[A-Za-z0-9_-]+/i);
+          if (recMatch) {
+            receiptNo = recMatch[0];
+          } else if (rawStr.includes('PR Done Sales Sync:')) {
+            receiptNo = rawStr.replace('PR Done Sales Sync:', '').trim();
+          } else {
+            const first = rawStr.split(' | ')[0].replace(/^Receipt:\s*/i, '').trim();
+            receiptNo = first || rawStr;
+          }
+        }
+
+        // 2. Extract clean Type (Service, Accessories, Sale, Redemption, Spares, Bodyshop)
+        const cat = String(row?.transaction_category || row?.transaction_type || row?.type || '').toLowerCase();
+        let typeBadge = '';
+        if (cat.includes('service')) typeBadge = 'Service';
+        else if (cat.includes('access')) typeBadge = 'Accessories';
+        else if (cat.includes('spares') || cat.includes('part')) typeBadge = 'Spares';
+        else if (cat.includes('bodyshop')) typeBadge = 'Bodyshop';
+        else if (cat.includes('sale') || cat.includes('purchase')) typeBadge = 'Sale';
+        else if (cat.includes('redemption') || Number(row?.points || 0) < 0) typeBadge = 'Redemption';
+        else {
+          const rawLower = rawStr.toLowerCase();
+          if (rawLower.includes('service')) typeBadge = 'Service';
+          else if (rawLower.includes('access')) typeBadge = 'Accessories';
+          else if (rawLower.includes('spares')) typeBadge = 'Spares';
+          else if (rawLower.includes('bodyshop')) typeBadge = 'Bodyshop';
+          else if (rawLower.includes('sale')) typeBadge = 'Sale';
+          else if (rawLower.includes('redemption')) typeBadge = 'Redemption';
+          else typeBadge = 'Service';
+        }
+
         return (
-          <div className="flex flex-col gap-0.5">
-            <span className="font-mono text-xs font-semibold text-slate-800">{refCode}</span>
-            {desc && <span className="text-[11px] text-emerald-600 font-medium bg-emerald-50 px-1.5 py-0.5 rounded w-fit">{desc}</span>}
+          <div className="flex flex-col gap-1 items-start">
+            <span className="font-mono text-xs font-bold text-slate-900 tracking-tight">{receiptNo}</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+              {typeBadge}
+            </span>
           </div>
         );
       },

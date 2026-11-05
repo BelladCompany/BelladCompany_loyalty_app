@@ -254,8 +254,10 @@ class PointsService {
         earnedPoints = await this.calculatePoints(activeCategory, amount, tenant_id, client);
       }
 
-      // 4. Insert immutable record into points_ledger
-      const sourceRef = [reference_id, description, appliedRuleNotice].filter(Boolean).join(' | ') || `${activeCategory.toUpperCase()} transaction earning`;
+      // 4. Insert immutable record into points_ledger (clean: Receipt No and Type only)
+      const formattedCategory = (activeCategory || 'service').charAt(0).toUpperCase() + (activeCategory || 'service').slice(1).toLowerCase();
+      const cleanRef = (receipt_no || reference_id || '').trim();
+      const sourceRef = cleanRef ? `${cleanRef} | ${formattedCategory}` : `${formattedCategory} transaction earning`;
 
       let insertCols = ['customer_id', 'vehicle_id', 'branch_id', typeCol, 'points', refCol, actorCol, 'tenant_id'];
       let insertVals = [customer_id, vehicle_id || null, branch_id, ledgerType, earnedPoints, sourceRef, created_by || null, tenant_id];
@@ -438,13 +440,19 @@ class PointsService {
     }
 
     const entriesRes = await pool.query(
-      `SELECT COALESCE(pl.entry_id, pl.id) AS id, pl.customer_id, pl.branch_id, b.branch_name AS branch_name,
-              COALESCE(pl.type, pl.transaction_type) AS transaction_type, pl.points, pl.source_ref AS reference_id,
+      `SELECT COALESCE(pl.entry_id, pl.id) AS id, pl.customer_id, pl.branch_id, 
+              COALESCE(b.branch_name, b.name) AS branch_name,
+              COALESCE(pl.type, pl.transaction_type) AS transaction_type, 
+              pl.points, 
+              pl.source_ref AS reference_id,
+              pl.source_ref,
+              pl.receipt_no,
+              pl.transaction_category,
               ${actorCol} AS created_by, u.username AS created_by_username,
               pl.calc_snapshot, pl.reason_text,
               pl.created_at
        FROM points_ledger pl
-       LEFT JOIN branches b ON pl.branch_id = b.branch_id
+       LEFT JOIN branches b ON (pl.branch_id = b.branch_id OR pl.branch_id = b.id)
        LEFT JOIN users u ON ${actorCol} = COALESCE(u.user_id, u.id)
        WHERE pl.customer_id = $1 AND pl.tenant_id = $2
        ORDER BY pl.created_at DESC, COALESCE(pl.entry_id, pl.id) DESC
