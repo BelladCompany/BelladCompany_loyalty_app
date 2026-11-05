@@ -1,7 +1,7 @@
 const { pool } = require('../config/db');
 
 /**
- * IP rate limiter for login requests (max 10 attempts per 15 minutes per IP)
+ * IP rate limiter for login requests (generous limit preventing brute-force while allowing dealership branch operations)
  */
 const loginIpRequestCounts = new Map();
 
@@ -12,13 +12,15 @@ setInterval(() => {
       loginIpRequestCounts.delete(ip);
     }
   }
-}, 15 * 60 * 1000);
+}, 5 * 60 * 1000);
 
 const loginRateLimiter = (req, res, next) => {
-  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+  const rawIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '127.0.0.1';
+  const clientIp = typeof rawIp === 'string' ? rawIp.split(',')[0].trim() : '127.0.0.1';
   const now = Date.now();
-  const windowMs = 15 * 60 * 1000;
-  const maxRequests = 10;
+  const windowMs = 5 * 60 * 1000; // 5 minute window
+  const isDev = process.env.NODE_ENV !== 'production';
+  const maxRequests = isDev ? 1000 : 100; // 100 attempts per 5 mins per IP in production; 1000 in dev
 
   const current = loginIpRequestCounts.get(clientIp);
 
@@ -30,7 +32,8 @@ const loginRateLimiter = (req, res, next) => {
   if (current.count >= maxRequests) {
     return res.status(429).json({
       status: 'fail',
-      error: 'Too many login attempts from this IP. Please try again in 15 minutes.',
+      error: 'Too many login attempts from this network. Please wait a few minutes and try again.',
+      retry_after_seconds: Math.ceil((current.resetTime - now) / 1000),
     });
   }
 

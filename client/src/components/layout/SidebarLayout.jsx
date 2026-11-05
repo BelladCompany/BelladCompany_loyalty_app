@@ -104,6 +104,7 @@ export const SidebarLayout = ({
             group: 'Executive Suite',
             items: [
               { id: 'director_command_center', label: 'Director Command Center', icon: Crown },
+              { id: 'user_management', label: 'User & Staff Roles', icon: Users },
             ],
           },
           {

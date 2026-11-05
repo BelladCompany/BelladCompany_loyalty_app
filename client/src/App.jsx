@@ -19,6 +19,7 @@ import PublicOffersScreen from './pages/PublicOffersScreen';
 import PublicGiftClaimScreen from './screens/PublicGiftClaimScreen';
 import CustomerRedemptionsScreen from './screens/CustomerRedemptionsScreen';
 import DirectorCommandCenter from './screens/DirectorCommandCenter';
+import UserManagementScreen from './screens/UserManagementScreen';
 import ApiService from './services/api';
 
 class BuilderErrorBoundary extends React.Component {
@@ -288,7 +289,10 @@ export function App() {
         <DirectorCommandCenter
           user={user}
           onSwitchToStaffView={() => setActiveTab('dashboard')}
+          onOpenUserManagement={() => setActiveTab('user_management')}
         />
+      ) : activeTab === 'user_management' ? (
+        <UserManagementScreen user={user} />
       ) : activeTab === 'dashboard' || activeTab === 'search' || activeTab === 'redemptions' ? (
         <CashierDashboard
           user={user}

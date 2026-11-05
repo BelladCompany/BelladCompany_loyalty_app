@@ -39,10 +39,46 @@ export const AddReceiptModal = ({
   branches = [{ id: 1, name: 'Central Showroom - Bangalore' }],
   user,
 }) => {
+  const resolveCashierBranch = () => {
+    const currentUser = user || ApiService.getUser();
+    if (!currentUser) {
+      return branches[0]?.id || branches[0]?.branch_id || 1;
+    }
+
+    // 1. Direct match by branch_id if branches list has it
+    if (currentUser.branch_id && branches?.length > 0) {
+      const matched = branches.find(
+        (b) => String(b.id || b.branch_id) === String(currentUser.branch_id)
+      );
+      if (matched) return matched.id || matched.branch_id;
+    }
+
+    // 2. City or name match if branch_name / branch_city is available
+    const searchCity = (currentUser.branch_city || '').toLowerCase().trim();
+    const searchName = (currentUser.branch_name || '').toLowerCase().trim();
+
+    if ((searchCity || searchName) && branches?.length > 0) {
+      const matched = branches.find((b) => {
+        const bName = (b.name || b.branch_name || '').toLowerCase();
+        const bCity = (b.address || b.city || b.branch_city || '').toLowerCase();
+        if (searchCity && (bCity.includes(searchCity) || bName.includes(searchCity))) return true;
+        if (searchName && (bName.includes(searchName) || searchName.includes(bName))) return true;
+        return false;
+      });
+      if (matched) return matched.id || matched.branch_id;
+    }
+
+    // 3. Fallback to currentUser.branch_id
+    if (currentUser.branch_id) return currentUser.branch_id;
+
+    // 4. Fallback to first branch
+    return branches[0]?.id || branches[0]?.branch_id || 1;
+  };
+
   const [category, setCategory] = useState('service');
   const [billAmount, setBillAmount] = useState('');
   const [receiptNo, setReceiptNo] = useState('');
-  const [branchId, setBranchId] = useState(user?.branch_id || branches[0]?.id || 1);
+  const [branchId, setBranchId] = useState(() => resolveCashierBranch());
   const [notes, setNotes] = useState('');
 
   const vehicles = customer?.vehicles || [];
@@ -68,13 +104,13 @@ export const AddReceiptModal = ({
     customer?.phone ||
     '';
 
-  // Reset form on open
+  // Reset form on open & auto-select cashier branch
   useEffect(() => {
     if (isOpen) {
       setCategory('service');
       setBillAmount('');
       setReceiptNo('');
-      setBranchId(user?.branch_id || branches[0]?.id || 1);
+      setBranchId(resolveCashierBranch());
       setNotes('');
       setErrorMessage('');
       setSuccessData(null);
@@ -85,7 +121,7 @@ export const AddReceiptModal = ({
         setSelectedVehicleId(String(vehicles[0].id || vehicles[0].vehicle_id || ''));
       }
     }
-  }, [isOpen, customer]);
+  }, [isOpen, customer, user, branches]);
 
   // Fetch redemption eligibility when vehicle or category changes
   useEffect(() => {
@@ -288,6 +324,11 @@ export const AddReceiptModal = ({
     if (onSuccess) onSuccess();
     onClose();
   };
+
+  const currentUser = user || ApiService.getUser();
+  const isBranchAutoSelected = Boolean(
+    currentUser?.branch_id && String(branchId) === String(currentUser.branch_id)
+  );
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden animate-fadeIn">
@@ -604,19 +645,30 @@ export const AddReceiptModal = ({
 
                   {/* Branch */}
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Dealership Branch
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Dealership Branch
+                      </label>
+                      {isBranchAutoSelected && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Auto-selected ({currentUser?.branch_name ? `${currentUser.branch_name}` : currentUser?.username ? `${currentUser.username} counter` : 'Staff profile'})
+                        </span>
+                      )}
+                    </div>
                     <select
-                      value={branchId}
-                      onChange={(e) => setBranchId(e.target.value)}
+                      value={String(branchId || '')}
+                      onChange={(e) => setBranchId(Number(e.target.value) || e.target.value)}
                       className="w-full h-10 sm:h-11 px-3 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
                     >
-                      {branches.map((b) => (
-                        <option key={b.id || b.branch_id} value={b.id || b.branch_id}>
-                          {b.name || b.branch_name}
-                        </option>
-                      ))}
+                      {branches.map((b) => {
+                        const bid = String(b.id || b.branch_id);
+                        return (
+                          <option key={bid} value={bid}>
+                            {b.name || b.branch_name}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                 </div>

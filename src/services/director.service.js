@@ -378,9 +378,9 @@ class DirectorService {
         ? ((purchasedReferrals / totalReferrals) * 100).toFixed(1)
         : '0.0';
 
-      const totalRedemptionsCount = parseInt(redKpis.total_redemptions_count || 0, 10) || 45;
-      const distinctCustomersRedeemed = parseInt(redKpis.distinct_customers_redeemed || 0, 10) || 36;
-      const counterDiscountInr = parseFloat(redKpis.total_discount_delivered_inr || 0) || 32968.25;
+      const totalRedemptionsCount = redKpis.total_redemptions_count != null ? parseInt(redKpis.total_redemptions_count, 10) : 0;
+      const distinctCustomersRedeemed = redKpis.distinct_customers_redeemed != null ? parseInt(redKpis.distinct_customers_redeemed, 10) : 0;
+      const counterDiscountInr = redKpis.total_discount_delivered_inr != null ? parseFloat(redKpis.total_discount_delivered_inr) : 0;
 
       // Active branches with real transactions
       const activeBranches = branchRes.rows

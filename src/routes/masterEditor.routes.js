@@ -12,10 +12,13 @@ router.use(authenticateToken);
 router.get('/lookups', requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager']), MasterEditorController.getLookups);
 router.post('/simulate', requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager']), MasterEditorController.simulateRule);
 
-// 2. User Access Control (Staff & Role Management) - Strictly restricted to admin/super_admin/regional_admin
-router.get('/users/list', requireRole(['admin', 'super_admin', 'regional_admin']), MasterEditorController.getUsers);
-router.patch('/users/:id/role', requireRole(['admin', 'super_admin']), MasterEditorController.updateUserRole);
-router.post('/users', requireRole(['admin', 'super_admin']), MasterEditorController.createUser);
+// 2. User Access Control (Staff, Role & Branch Management) - Restricted to admin/super_admin/regional_admin/director
+router.get('/users/list', requireRole(['admin', 'super_admin', 'regional_admin', 'director']), MasterEditorController.getUsers);
+router.patch('/users/:id/role', requireRole(['admin', 'super_admin', 'director']), MasterEditorController.updateUserRole);
+router.patch('/users/:id/branch', requireRole(['admin', 'super_admin', 'director']), MasterEditorController.updateUserBranch);
+router.post('/users', requireRole(['admin', 'super_admin', 'director']), MasterEditorController.createUser);
+router.post('/users/:id/reset-password', requireRole(['admin', 'super_admin', 'director']), MasterEditorController.resetUserPassword);
+router.delete('/users/:id', requireRole(['admin', 'super_admin', 'director']), MasterEditorController.deleteUser);
 
 // 3. Custom Schemes Registration - Admin / Super Admin only
 router.post('/schemes/register', requireRole(['admin', 'super_admin', 'regional_admin']), MasterEditorController.registerCustomScheme);

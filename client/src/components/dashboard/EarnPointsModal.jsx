@@ -25,7 +25,18 @@ export const EarnPointsModal = ({
   onClose,
   onSuccess,
   branches = [{ id: 1, name: 'Central Showroom - Bangalore' }],
+  user,
 }) => {
+  const resolveCashierBranch = () => {
+    const currentUser = user || ApiService.getUser();
+    if (!currentUser) return branches[0]?.id || 1;
+    if (currentUser.branch_id && branches?.length > 0) {
+      const matched = branches.find((b) => String(b.id || b.branch_id) === String(currentUser.branch_id));
+      if (matched) return matched.id || matched.branch_id;
+    }
+    return currentUser.branch_id || branches[0]?.id || 1;
+  };
+
   const [step, setStep] = useState(1); // 1: OTP Request, 2: Details & Live Calc, 3: Success
   const [otp, setOtp] = useState('');
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
@@ -35,7 +46,7 @@ export const EarnPointsModal = ({
   const [category, setCategory] = useState('service'); // 'service' | 'sale' | 'accessories' | 'bodyshop'
   const [amount, setAmount] = useState('');
   const [jobCardNumber, setJobCardNumber] = useState('');
-  const [branchId, setBranchId] = useState(branches[0]?.id || 1);
+  const [branchId, setBranchId] = useState(() => resolveCashierBranch());
   const [isFetchingDms, setIsFetchingDms] = useState(false);
   const [dmsStatus, setDmsStatus] = useState(null);
   const [isLoading, setIsLoading] = useState(false);

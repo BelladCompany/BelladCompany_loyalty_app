@@ -33,6 +33,8 @@ import {
 } from 'lucide-react';
 import ApiService from '../services/api';
 import { useToast } from '../components/ui';
+import ComboVelocityChart from '../components/dashboard/ComboVelocityChart';
+import DistributionPieChart from '../components/dashboard/DistributionPieChart';
 
 // Helper to format currency numbers nicely in Indian notation (Cr, L, K, ₹)
 const formatInr = (val) => {
@@ -154,7 +156,7 @@ const DEPARTMENT_CONFIG = {
 };
 const CORE_DEPARTMENT_KEYS = ['sale', 'service', 'bodyshop', 'accessory'];
 
-export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
+export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpenUserManagement }) {
   const { showError, showSuccess } = useToast();
 
   const [loadingOverview, setLoadingOverview] = useState(true);
@@ -255,6 +257,24 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
       setTimeout(() => setIsLivePulsing(false), 800);
     }
   }, [getDateBounds, showError]);
+
+  const [isSyncingAppSheet, setIsSyncingAppSheet] = useState(false);
+
+  const handleSyncAppSheet = async () => {
+    setIsSyncingAppSheet(true);
+    try {
+      const res = await ApiService.syncAppSheetPrDone();
+      const s = res?.summary;
+      const newly = s?.newCreditsCount || 0;
+      const total = s?.syncedCount || 0;
+      showSuccess(`AppSheet Synced: ${total} PR Done customers verified (${newly} new credits).`);
+      loadOverview();
+    } catch (err) {
+      showError(err.message || 'Failed to sync PR Done records from AppSheet.');
+    } finally {
+      setIsSyncingAppSheet(false);
+    }
+  };
 
   // Fetch Records Feed
   const loadRecords = useCallback(async () => {
@@ -359,6 +379,17 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
   const referralConversionRate = Number(referralKpi.conversion_rate_pct || 0);
 
   const totalTransactionsCount = Number(kpis?.total_transactions || 0);
+  const totalPointsIssued = Number(kpis?.total_points_issued || 0);
+
+  const dateRangeLabels = {
+    today: 'Today',
+    '7d': 'Last 7 Days',
+    '30d': 'This Month',
+    quarter: 'Quarter',
+    ytd: 'FY26–27',
+    all: 'All Time',
+    custom: 'Custom Range',
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-12">
@@ -551,6 +582,27 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
               <Clock className="w-4 h-4" />
               <span>Audit Ledger ({totalTransactionsCount.toLocaleString('en-IN')})</span>
             </button>
+
+            {onOpenUserManagement && (
+              <button
+                onClick={onOpenUserManagement}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800/80 border border-slate-700/60 cursor-pointer"
+                title="Manage Staff, Cashiers & Outlets"
+              >
+                <Users className="w-4 h-4 text-indigo-400" />
+                <span>Staff &amp; User Roles</span>
+              </button>
+            )}
+
+            <button
+              onClick={handleSyncAppSheet}
+              disabled={isSyncingAppSheet}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 text-emerald-300 hover:text-white hover:bg-emerald-950/80 border border-emerald-700/60 cursor-pointer disabled:opacity-50"
+              title="Pull PR Done vehicle purchases from AppSheet (April 01, 2026 to Till Date - Read Only)"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isSyncingAppSheet ? 'animate-spin' : ''}`} />
+              <span>{isSyncingAppSheet ? 'Syncing AppSheet...' : 'Sync AppSheet (FY26–27)'}</span>
+            </button>
           </div>
 
           <div className="text-[11px] font-mono text-slate-400 flex items-center gap-2">
@@ -725,7 +777,21 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView }) {
       {/* ── 3. Executive Dashboard View ── */}
       {activeSection === 'dashboard' && (
         <div className="space-y-6">
-          {/* Main Visual Row 1: Core Departments & Vehicle Models */}
+          {/* Executive Visual Analytics Suite (Dual-Axis Combo Velocity & Dynamic Pie Distribution) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ComboVelocityChart
+              trendData={charts?.monthly_trend}
+              totalTransactions={totalTransactionsCount || 1}
+              currentFilter={dateRangeLabels[dateRange] || 'All Time'}
+            />
+            <DistributionPieChart
+              departments={departmentsList}
+              models={modelsList}
+              totalPointsIssued={totalPointsIssued}
+            />
+          </div>
+
+          {/* Main Visual Row 2: Core Departments & Vehicle Models */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* Chart 1: Core Business Departments (Sales, Service, Bodyshop, Accessories ONLY) */}

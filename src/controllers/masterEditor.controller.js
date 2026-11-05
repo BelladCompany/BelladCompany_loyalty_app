@@ -648,7 +648,7 @@ class MasterEditorController {
 
       // 3. Get branches from branches table
       const branchesRes = await pool.query(
-        `SELECT DISTINCT branch_name, branch_city FROM branches WHERE tenant_id = $1 ORDER BY branch_name;`,
+        `SELECT branch_id, branch_name, branch_city FROM branches WHERE tenant_id = $1 ORDER BY branch_name;`,
         [tenant_id]
       );
 
@@ -700,8 +700,14 @@ class MasterEditorController {
         'ALL'
       ];
       const defaultBranches = [
-        'Belagavi', 'Belagavi Central', 'Belgaum',
-        'Hubballi Central', 'Bengaluru South', 'Dharwad Showroom', 'Gadag Main',
+        'Ather Energy Hubballi', 'Vida Hubli', 'Tata Motors Bellary', 'Hyundai Hubli',
+        'Hero Moto Corp Hubli', 'MG Motors Belgaum', 'MG Motors Hubballi', 'Ather Energy Belgaum',
+        'Swaraj Hubli', 'Tata Motors Sarjapur Bangalore', 'Ather Bangalore', 'CNH Hubli',
+        'MG Motors Gulbarga', 'MG Motors Hospet', 'Tata Motors Bommasandra Bangalore',
+        'Haveri TRZ', 'Hero Moto Corp Dharwad', 'Hyundai Gadag', 'Hyundai Haveri',
+        'Hyundai Dharwad', 'Tilakwadi TRZ', 'Tata Motors Raichur', 'Ather Bommasandra Bangalore',
+        'Tata Motors Hospet', 'Tata Motors Koppal', 'Tata Motors Gangavathi',
+        'Tata Motors Sindhnoor', 'Tata Motors Bommasandra Workshop',
         'ALL'
       ];
       const defaultBrands = ['MG Motors', 'Tata Motors', 'Hero', 'Vida', 'Mahindra', 'Maruti Suzuki', 'Hyundai', 'ALL'];
@@ -741,6 +747,7 @@ class MasterEditorController {
           models,
           variants,
           branches,
+          branches_list: branchesRes.rows,
           brands,
         },
       });
@@ -751,16 +758,18 @@ class MasterEditorController {
   }
 
   /**
-   * User Control Access: Get all users with their current roles
+   * User Control Access: Get all users with their current roles and assigned branches
    */
   static async getUsers(req, res) {
     try {
       const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       const result = await pool.query(
-        `SELECT id, user_id, username, role, branch_id, created_at 
-         FROM users 
-         WHERE tenant_id = $1 
-         ORDER BY id ASC;`,
+        `SELECT u.id, u.user_id, u.username, u.role, u.branch_id, u.created_at,
+                b.branch_name, b.branch_city
+         FROM users u
+         LEFT JOIN branches b ON u.branch_id = b.branch_id
+         WHERE u.tenant_id = $1 
+         ORDER BY u.id ASC;`,
         [tenant_id]
       );
       return res.status(200).json({ success: true, data: result.rows });
@@ -777,7 +786,7 @@ class MasterEditorController {
     try {
       const { id } = req.params;
       const { role } = req.body;
-      const validRoles = ['cashier', 'branch_manager', 'regional_admin', 'admin', 'super_admin'];
+      const validRoles = ['cashier', 'branch_manager', 'manager', 'regional_admin', 'admin', 'super_admin', 'director'];
       if (!validRoles.includes(role)) {
         return res.status(400).json({ success: false, error: `Invalid role. Allowed: ${validRoles.join(', ')}` });
       }
@@ -807,7 +816,55 @@ class MasterEditorController {
   }
 
   /**
-   * User Control Access: 2-Click Add Staff User
+   * User Control Access: 1-Click Dealership Branch Switch
+   */
+  static async updateUserBranch(req, res) {
+    try {
+      const { id } = req.params;
+      const { branch_id } = req.body;
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+
+      const parsedBranchId = branch_id ? Number(branch_id) : null;
+
+      const result = await pool.query(
+        `UPDATE users 
+         SET branch_id = $1 
+         WHERE (id = $2 OR user_id = $2) AND tenant_id = $3 
+         RETURNING id, user_id, username, role, branch_id;`,
+        [parsedBranchId, id, tenant_id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'User not found.' });
+      }
+
+      let branchName = null;
+      let branchCity = null;
+      if (parsedBranchId) {
+        const bRes = await pool.query('SELECT branch_name, branch_city FROM branches WHERE branch_id = $1', [parsedBranchId]);
+        if (bRes.rows.length > 0) {
+          branchName = bRes.rows[0].branch_name;
+          branchCity = bRes.rows[0].branch_city;
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `Updated branch for '${result.rows[0].username}' to '${branchName || parsedBranchId}'.`,
+        data: {
+          ...result.rows[0],
+          branch_name: branchName,
+          branch_city: branchCity,
+        },
+      });
+    } catch (error) {
+      console.error('Error updating user branch:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * User Control Access: 2-Click Add Staff User with Branch Assignment
    */
   static async createUser(req, res) {
     try {
@@ -819,22 +876,164 @@ class MasterEditorController {
       const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
       const bcrypt = require('bcryptjs');
       const hash = await bcrypt.hash(password || 'Staff@123', 10);
+      const parsedBranchId = Number(branch_id) || 1;
 
       const insert = await pool.query(
         `INSERT INTO users (tenant_id, username, password_hash, role, branch_id)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, username, role, branch_id, created_at;`,
-        [tenant_id, username.trim().toLowerCase(), hash, role, Number(branch_id) || 1]
+         RETURNING id, user_id, username, role, branch_id, created_at;`,
+        [tenant_id, username.trim().toLowerCase(), hash, role, parsedBranchId]
       );
+
+      let branchName = null;
+      let branchCity = null;
+      if (parsedBranchId) {
+        const bRes = await pool.query('SELECT branch_name, branch_city FROM branches WHERE branch_id = $1', [parsedBranchId]);
+        if (bRes.rows.length > 0) {
+          branchName = bRes.rows[0].branch_name;
+          branchCity = bRes.rows[0].branch_city;
+        }
+      }
 
       return res.status(201).json({
         success: true,
-        message: `Staff user '${username}' created with ${role} control.`,
-        data: insert.rows[0],
+        message: `Staff user '${username}' created with ${role} role at '${branchName || parsedBranchId}'.`,
+        data: {
+          ...insert.rows[0],
+          branch_name: branchName,
+          branch_city: branchCity,
+        },
       });
     } catch (error) {
       console.error('Error creating user:', error);
       return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * User Control Access: Reset Staff / Cashier Password
+   */
+  static async resetUserPassword(req, res) {
+    try {
+      const { id } = req.params;
+      const { password } = req.body;
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+
+      if (!password || String(password).trim().length < 4) {
+        return res.status(400).json({ success: false, error: 'Password must be at least 4 characters long.' });
+      }
+
+      const bcrypt = require('bcryptjs');
+      const hash = await bcrypt.hash(String(password).trim(), 10);
+
+      const result = await pool.query(
+        `UPDATE users 
+         SET password_hash = $1, updated_at = NOW() 
+         WHERE (id = $2 OR user_id = $2) AND tenant_id = $3 
+         RETURNING id, user_id, username, role, branch_id;`,
+        [hash, id, tenant_id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'User not found.' });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `Password for user '${result.rows[0].username}' has been reset successfully.`,
+        data: result.rows[0],
+      });
+    } catch (error) {
+      console.error('Error resetting user password:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * User Control Access: Delete User Account with Safe Foreign Key Cleanup
+   */
+  static async deleteUser(req, res) {
+    const client = await pool.connect();
+    try {
+      const { id } = req.params;
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const requestingUserId = req.user?.id || req.user?.user_id;
+
+      // 1. Fetch target user
+      const userRes = await client.query(
+        `SELECT id, user_id, username, role FROM users WHERE (id = $1 OR user_id = $1) AND tenant_id = $2;`,
+        [id, tenant_id]
+      );
+
+      if (userRes.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'User not found.' });
+      }
+
+      const target = userRes.rows[0];
+      const targetUserId = target.user_id || target.id;
+
+      // Prevent deleting currently logged-in user
+      if (
+        (requestingUserId && String(requestingUserId) === String(targetUserId)) ||
+        (req.user?.username && req.user.username.toLowerCase() === target.username.toLowerCase())
+      ) {
+        return res.status(400).json({ success: false, error: 'You cannot delete your own logged-in user account.' });
+      }
+
+      // Protect root system administrator accounts
+      if (['admin', 'director'].includes(target.username.toLowerCase())) {
+        return res.status(400).json({ success: false, error: `Root system account '${target.username}' cannot be deleted.` });
+      }
+
+      await client.query('BEGIN');
+
+      // Temporarily disable points_ledger audit trigger for cashier_id cleanup
+      try {
+        await client.query(`ALTER TABLE points_ledger DISABLE TRIGGER trg_prevent_points_ledger_modification;`);
+      } catch (e) {
+        // Trigger might not exist in some environments
+      }
+
+      // Detach all nullable foreign keys
+      await client.query(`UPDATE points_ledger SET cashier_id = NULL WHERE cashier_id = $1;`, [targetUserId]);
+      await client.query(`UPDATE redemptions SET cashier_id = NULL WHERE cashier_id = $1;`, [targetUserId]);
+      await client.query(`UPDATE audit_log SET actor_user_id = NULL WHERE actor_user_id = $1;`, [targetUserId]);
+      await client.query(`UPDATE customer_merge_log SET approved_by = NULL WHERE approved_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE service_transactions SET created_by = NULL WHERE created_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE sale_transactions SET created_by = NULL WHERE created_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE nominees SET created_by = NULL WHERE created_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE gift_cards SET created_by = NULL WHERE created_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE gift_card_redemptions SET cashier_id = NULL WHERE cashier_id = $1;`, [targetUserId]);
+      await client.query(`UPDATE correction_requests SET cashier_user_id = NULL WHERE cashier_user_id = $1;`, [targetUserId]);
+      await client.query(`UPDATE correction_requests SET reviewed_by = NULL WHERE reviewed_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE kyc_change_requests SET requested_by = NULL WHERE requested_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE kyc_change_requests SET reviewed_by = NULL WHERE reviewed_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE change_sets SET created_by = NULL WHERE created_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE change_sets SET approved_by = NULL WHERE approved_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE change_sets SET rolled_back_by = NULL WHERE rolled_back_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE scheme_rows SET created_by = NULL WHERE created_by = $1;`, [targetUserId]);
+      await client.query(`UPDATE scheme_rows SET approved_by = NULL WHERE approved_by = $1;`, [targetUserId]);
+
+      // Delete user
+      await client.query(`DELETE FROM users WHERE (id = $1 OR user_id = $1) AND tenant_id = $2;`, [targetUserId, tenant_id]);
+
+      // Re-enable points_ledger audit trigger
+      try {
+        await client.query(`ALTER TABLE points_ledger ENABLE TRIGGER trg_prevent_points_ledger_modification;`);
+      } catch (e) {}
+
+      await client.query('COMMIT');
+
+      return res.status(200).json({
+        success: true,
+        message: `User '${target.username}' was successfully removed from the system.`,
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error deleting user:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    } finally {
+      client.release();
     }
   }
 

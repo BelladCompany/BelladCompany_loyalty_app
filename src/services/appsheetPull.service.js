@@ -15,7 +15,7 @@ class AppSheetPullService {
   static getTableNames() {
     const table1 = process.env.APPSHEET_TABLE_NAME || 'VIN order form';
     const table2 = process.env.APPSHEET_TABLE_NAME_2 || 'Tally Billing Master';
-    
+
     // Support comma-separated table list or multiple env vars
     const tables = [table1, table2].filter(Boolean);
     return [...new Set(tables)]; // Unique list
@@ -56,40 +56,10 @@ class AppSheetPullService {
   }
 
   /**
-   * Mark a processed row as SyncedToLoyalty = true in AppSheet via Edit Action
+   * Strictly READ-ONLY mode: never write, edit, or push anything back to AppSheet.
    */
   static async markRowAsSyncedInAppSheet(tableName, keyColumnName, keyValue) {
-    if (!keyValue) return;
-
-    const url = `https://www.appsheet.com/api/v2/apps/${APPSHEET_APP_ID}/tables/${encodeURIComponent(tableName)}/Action`;
-
-    try {
-      const editPayload = {
-        Action: 'Edit',
-        Properties: { Locale: 'en-US' },
-        Rows: [
-          {
-            [keyColumnName]: keyValue,
-            SyncedToLoyalty: true,
-          },
-        ],
-      };
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ApplicationAccessKey': APPSHEET_ACCESS_KEY,
-        },
-        body: JSON.stringify(editPayload),
-      });
-
-      if (!res.ok) {
-        console.warn(`[AppSheet Mark Synced Warning] Table: ${tableName}, Key: ${keyValue}, Status: ${res.status}`);
-      }
-    } catch (err) {
-      console.error(`[AppSheet Mark Synced Error] Table: ${tableName}, Key: ${keyValue}:`, err.message || err);
-    }
+    return;
   }
 
   /**
@@ -330,205 +300,8 @@ class AppSheetPullService {
    * Executes a full AppSheet pull cycle for all configured tables
    */
   static async executePullCycle(tenantId = process.env.DEFAULT_TENANT_ID || 'bellad_and_company') {
-    const tableNames = this.getTableNames();
-    console.log(`\n📡 [AppSheetPull] Starting pull cycle for table(s): ${tableNames.join(', ')}`);
-
-    const summary = {
-      tablesProcessed: 0,
-      totalFetched: 0,
-      totalSynced: 0,
-      totalSkipped: 0,
-      totalErrored: 0,
-    };
-
-    for (const tableName of tableNames) {
-      let fetchedCount = 0;
-      let syncedCount = 0;
-      let skippedCount = 0;
-      let erroredCount = 0;
-      const errorDetails = [];
-
-      try {
-        const rows = await this.fetchUnsyncedRows(tableName);
-        fetchedCount = rows.length;
-        console.log(`   📋 Table '${tableName}': Fetched ${fetchedCount} unsynced row(s).`);
-
-        for (const row of rows) {
-          const keyColumn = row['Order Unique ID'] ? 'Order Unique ID' : row['_RowNumber'] ? '_RowNumber' : 'Order Unique ID';
-          const keyValue = row[keyColumn] || row['Order Unique ID'] || row['DMS Booking ID'];
-
-          try {
-            const exShowroomVal = Number(row['Ex-Showroom Price'] || row['Ex Showroom Price'] || row['Ex-Showroom'] || 0);
-            const billAmount = Number(row['Total Vehicle Billing Amount'] || exShowroomVal || row['Net Ex-Showroom Price'] || 0);
-
-            if (!billAmount && !exShowroomVal) {
-              skippedCount++;
-              continue;
-            }
-
-            // 1. Resolve / Auto-create customer
-            const customerId = await this.resolveOrCreateCustomer(row, tenantId);
-
-            // 2. Resolve / Auto-create vehicle
-            const vehicleId = await this.resolveOrCreateVehicle(row, customerId, tenantId);
-
-            // 3. Resolve branch
-            const branchId = await this.resolveBranchId(row['Branch'] || row['branch_code'], tenantId);
-
-            const refId = row['Order Unique ID'] || row['DMS Booking ID'] || row['DMS Invoice Number'];
-            const jobCard = row['Order Unique ID'] || row['DMS Booking ID'];
-            const category = (row['Department'] || '').toLowerCase() === 'service' ? 'service' : 'sale';
-
-            // Extract raw discount fields for vehicle sales points engine
-            const tcsAmount = VehiclePointsEngine.cleanNumber(row['TCS % Amount'] || row['TCS Amount'] || row['TCS'] || 0);
-            const dealerDiscount = VehiclePointsEngine.cleanNumber(row['Dealer Cash Discount'] || row['Dealer Discount'] || row['Discount/FAIM'] || row['Cash Discount'] || 0);
-            const empsDiscount = VehiclePointsEngine.cleanNumber(row['EMPS Discount'] || row['EMPS'] || row['Other Discount Amount'] || row['Other Discount'] || row['Other Discounts'] || 0);
-            const oemOffers = VehiclePointsEngine.cleanNumber(row['OEM Offers Amount'] || row['OEM Offers Total Amount'] || row['OEM Offers'] || row['OEM Offer'] || row['Offers Amount'] || 0);
-
-            console.log(`📡 [AppSheetPull] Key: ${keyValue}, VIN: ${row['VIN Number'] || row['Chassis Number']}, Raw Discounts -> ExShowroom: ${exShowroomVal}, TCS: ${tcsAmount}, Dealer: ${dealerDiscount}, EMPS: ${empsDiscount}, OEM: ${oemOffers}`);
-
-            // Parse generic additional discounts sub-table or flexible AppSheet columns
-            const additionalDiscounts = [];
-            if (row['Additional Discounts'] && Array.isArray(row['Additional Discounts'])) {
-              additionalDiscounts.push(...row['Additional Discounts']);
-            } else {
-              // Extract any arbitrary key like "Corporate Discount", "Festive Offer"
-              for (const [key, val] of Object.entries(row)) {
-                const kLower = key.toLowerCase();
-                if (
-                  kLower.includes('discount') &&
-                  !['dealer cash discount', 'dealer discount', 'emps discount', 'emps', 'other discount amount', 'other discount', 'total discount amount'].includes(kLower) &&
-                  VehiclePointsEngine.cleanNumber(val) > 0
-                ) {
-                  additionalDiscounts.push({ discount_type: key, discount_name: key, amount: VehiclePointsEngine.cleanNumber(val) });
-                }
-              }
-            }
-
-            const invoiceStageStr = String(row['Invoice Stage'] || row['Status'] || row['Stage'] || 'finalized').toLowerCase();
-            const isFinalized = !invoiceStageStr.includes('booking') && !invoiceStageStr.includes('draft');
-
-            // 4. Sync transaction idempotently via TransactionService
-            const syncResult = await TransactionService.syncTransaction({
-              category,
-              job_card_number: jobCard,
-              reference_id: refId,
-              bill_amount: billAmount,
-              ex_showroom_price: exShowroomVal || billAmount,
-              tcs_amount: tcsAmount,
-              dealer_cash_discount: dealerDiscount,
-              emps_discount: empsDiscount,
-              oem_offers_amount: oemOffers,
-              additional_discounts: additionalDiscounts,
-              is_invoice_finalized: isFinalized,
-              stage: invoiceStageStr,
-              customer_id: customerId,
-              vehicle_id: vehicleId,
-              registration_number: row['Reg Number'] || row['VIN Number'],
-              branch_id: branchId,
-              source: 'appsheet_bot',
-              created_by: null,
-              tenant_id: tenantId,
-            });
-
-            if (syncResult.status === 'already_processed') {
-              skippedCount++;
-            } else {
-              syncedCount++;
-            }
-
-            // 4b. Automatic Referral Credit Path (Path A) if referred_by_code is set
-            const referredByCode = (
-              row['Referred By Code'] ||
-              row['Referred By'] ||
-              row['Referral Code'] ||
-              row['Referred_By_Code'] ||
-              ''
-            ).trim();
-
-            if (referredByCode) {
-              try {
-                const ReferralService = require('./referral.service');
-                const buyerAadhaar = row['Aadhar Card No'] || row['Aadhaar Card No'] || '';
-                
-                // First check if this is a lead-generated code (e.g. RF8K92X1)
-                const leadResult = await ReferralService.processLeadAtPurchase({
-                  generated_code: referredByCode,
-                  buyer_aadhaar,
-                  sale_reference: refId,
-                  tenant_id: tenantId,
-                });
-
-                if (leadResult) {
-                  if (leadResult.matched) {
-                    console.log(`      🎯 Referral Lead '${referredByCode}' matched buyer Aadhaar! Status set to 'used' (Awaiting RC completion for crediting).`);
-                  } else {
-                    console.warn(`      ⚠️ Referral Lead '${referredByCode}' Aadhaar MISMATCH! Flagged for admin review.`);
-                  }
-                } else {
-                  // Fallback: Legacy direct customer referral code
-                  await ReferralService.processReferralBonusForPurchase({
-                    referral_code: referredByCode,
-                    buyer_customer_id: customerId,
-                    vehicle_id: vehicleId,
-                    receipt_no: row['DMS Invoice Number'] || refId || null,
-                    account_ledger_no: null,
-                    branch_id: branchId,
-                    cashier_id: null,
-                    tenant_id: tenantId,
-                  });
-                  console.log(`      🎉 Auto-credited direct referral bonus for code '${referredByCode}' on vehicle ${vehicleId}`);
-                }
-              } catch (refErr) {
-                console.warn(`      ⚠️ [Referral Auto-Credit Warning] Code '${referredByCode}':`, refErr.message || refErr);
-              }
-            }
-
-            // 4c. Process In-house Service Bonus Points (Finance, Insurance, Exchange)
-            try {
-              await AppSheetPullService.processInHouseServiceBonuses(row, customerId, vehicleId, branchId, refId, tenantId);
-            } catch (bonusErr) {
-              console.warn(`      ⚠️ [In-House Service Bonus Warning] Customer ${customerId}:`, bonusErr.message || bonusErr);
-            }
-
-            // 5. Update SyncedToLoyalty = true in AppSheet
-            await this.markRowAsSyncedInAppSheet(tableName, keyColumn, keyValue);
-          } catch (rowErr) {
-            erroredCount++;
-            errorDetails.push({ key: keyValue, error: rowErr.message || rowErr });
-            console.error(`      ❌ Error syncing row '${keyValue}' from '${tableName}':`, rowErr.message || rowErr);
-          }
-        }
-      } catch (tableErr) {
-        console.error(`   ❌ Failed to pull rows from table '${tableName}':`, tableErr.message || tableErr);
-        errorDetails.push({ table: tableName, fatalError: tableErr.message || tableErr });
-      }
-
-      // Log pull cycle results to appsheet_pull_log table
-      try {
-        await pool.query(
-          `INSERT INTO appsheet_pull_log (table_name, rows_fetched, rows_synced, rows_skipped, rows_errored, details, tenant_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7);`,
-          [tableName, fetchedCount, syncedCount, skippedCount, erroredCount, JSON.stringify(errorDetails), tenantId]
-        );
-      } catch (logErr) {
-        console.error('[AppSheet Pull Logging Error]', logErr.message || logErr);
-      }
-
-      summary.tablesProcessed++;
-      summary.totalFetched += fetchedCount;
-      summary.totalSynced += syncedCount;
-      summary.totalSkipped += skippedCount;
-      summary.totalErrored += erroredCount;
-    }
-
-    console.log(`\n🏁 [AppSheetPull] Pull cycle completed.`);
-    console.log(`   • Fetched : ${summary.totalFetched}`);
-    console.log(`   • Synced  : ${summary.totalSynced}`);
-    console.log(`   • Skipped : ${summary.totalSkipped}`);
-    console.log(`   • Errored : ${summary.totalErrored}\n`);
-
-    return summary;
+    const AppSheetSyncEngine = require('./appsheetSyncEngine.service');
+    return AppSheetSyncEngine.syncAllPrDoneFromCutoff(tenantId);
   }
 
   /**

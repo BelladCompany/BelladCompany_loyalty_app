@@ -158,7 +158,7 @@ export const LoginScreen = ({ onLoginSuccess }) => {
             <span>QUICK DEMO ACCESS:</span>
             <span className="text-slate-400">Click to fill</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-2.5">
             <button
               type="button"
               onClick={() => handleFillDemo('admin', 'admin@123')}
@@ -170,9 +170,41 @@ export const LoginScreen = ({ onLoginSuccess }) => {
             >
               <div className="text-xs sm:text-sm font-bold flex items-center gap-1 sm:gap-1.5 truncate">
                 <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span className="truncate">Admin</span>
+                <span className="truncate">Admin Full Suite</span>
               </div>
               <div className="text-[10px] sm:text-xs text-slate-500 font-mono mt-0.5 truncate">admin / admin@123</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleFillDemo('cashier_belgaum', 'Cashier@123')}
+              className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
+                username === 'cashier_belgaum'
+                  ? 'bg-emerald-50 border-emerald-400 text-emerald-950 shadow-sm ring-2 ring-emerald-500/20'
+                  : 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300 text-emerald-900'
+              }`}
+            >
+              <div className="text-xs sm:text-sm font-black flex items-center gap-1 sm:gap-1.5 truncate text-emerald-700">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="truncate">Cashier Belgaum</span>
+              </div>
+              <div className="text-[10px] sm:text-xs text-emerald-800 font-mono mt-0.5 truncate font-bold">cashier_belgaum / Cashier@123</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleFillDemo('cashier', 'Cashier@123')}
+              className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
+                username === 'cashier'
+                  ? 'bg-indigo-50 border-indigo-300 text-indigo-900 shadow-sm'
+                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
+              }`}
+            >
+              <div className="text-xs sm:text-sm font-bold flex items-center gap-1 sm:gap-1.5 truncate">
+                <Car className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span className="truncate">Cashier Hubli</span>
+              </div>
+              <div className="text-[10px] sm:text-xs text-slate-500 font-mono mt-0.5 truncate">cashier / Cashier@123</div>
             </button>
 
             <button
@@ -189,22 +221,6 @@ export const LoginScreen = ({ onLoginSuccess }) => {
                 <span className="truncate">Manager Kavya</span>
               </div>
               <div className="text-[10px] sm:text-xs text-slate-500 font-mono mt-0.5 truncate">kavya / kav@2026</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleFillDemo('cashier', 'Cashier@123')}
-              className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
-                username === 'cashier'
-                  ? 'bg-indigo-50 border-indigo-300 text-indigo-900 shadow-sm'
-                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
-              }`}
-            >
-              <div className="text-xs sm:text-sm font-bold flex items-center gap-1 sm:gap-1.5 truncate">
-                <Car className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span className="truncate">Cashier</span>
-              </div>
-              <div className="text-[10px] sm:text-xs text-slate-500 font-mono mt-0.5 truncate">cashier / Cashier@123</div>
             </button>
           </div>
         </div>

@@ -379,6 +379,7 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
           ledgerData={ledgerData}
           tierInfo={tierInfo}
           branches={branches}
+          user={user}
           onRefresh={() => loadCustomerProfile(customerData.customer_id)}
         />
       )}
@@ -389,6 +390,7 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
         onClose={() => setAddModalOpen(false)}
         onSuccess={(newCust) => loadCustomerProfile(newCust.customer_id)}
         user={user}
+        branches={branches}
       />
 
       {/* WhatsApp Message Log Modal */}

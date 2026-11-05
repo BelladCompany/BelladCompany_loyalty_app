@@ -18,7 +18,7 @@ import ApiService from '../../services/api';
  *  - Points Award / Opening Points (Manual customers start with 0 points)
  *  - VIN No, Purchase Date, Ex-Showroom Price
  */
-export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
+export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = [] }) => {
   // ─── Form State ─────────────────────────────────────────────────────────────
   const [step, setStep] = useState('form'); // 'form' | 'otp'
 
@@ -45,8 +45,9 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
   const [age, setAge] = useState('');
 
   // Optional Vehicle Details
+  const defaultBranch = user?.branch_name || user?.branch_city || '';
   const [brandName, setBrandName] = useState('');
-  const [branchName, setBranchName] = useState('');
+  const [branchName, setBranchName] = useState(defaultBranch);
   const [model, setModel] = useState('');
   const [regNo, setRegNo] = useState('');
 
@@ -73,8 +74,10 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
       errs.phone = 'Phone number must be exactly 10 numeric digits.';
     }
     const cleanAadhaar = aadhaar.replace(/[\s-]/g, '');
-    if (cleanAadhaar && !/^\d{12}$/.test(cleanAadhaar)) {
-      errs.aadhaar = 'Aadhaar number must be exactly 12 numeric digits (or leave blank).';
+    if (!cleanAadhaar) {
+      errs.aadhaar = 'Aadhaar Card No is mandatory (12 digits).';
+    } else if (!/^\d{12}$/.test(cleanAadhaar)) {
+      errs.aadhaar = 'Aadhaar number must be exactly 12 numeric digits.';
     }
     if (gstNumber.trim() && gstNumber.trim().length > 15) {
       errs.gstNumber = 'GST Number must not exceed 15 characters.';
@@ -140,7 +143,7 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
       const payload = {
         name: name.trim(),
         phone_numbers: [phone.trim().replace(/\D/g, '')],
-        aadhaar_number: aadhaar.replace(/[\s-]/g, '').trim() || undefined,
+        aadhaar_number: aadhaar.replace(/[\s-]/g, '').trim(),
         gst_number: gstNumber.trim() || undefined,
         visit_type: 'first_time',
         is_first_time_visitor: true,
@@ -194,7 +197,7 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
     setAge('');
     setAadhaar('');
     setBrandName('');
-    setBranchName('');
+    setBranchName(defaultBranch);
     setModel('');
     setRegNo('');
     setOtp('');
@@ -376,13 +379,14 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
                     </div>
 
                     <div>
-                      <label className="text-sm font-bold text-ink-primary block mb-1.5">
-                        Aadhaar Card No <span className="text-xs text-slate-400 font-normal">(Optional)</span>
+                      <label htmlFor="add-cust-aadhaar" className="text-sm font-bold text-ink-primary block mb-1.5">
+                        Aadhaar Card No <span className="text-action-danger">*</span>
                       </label>
                       <input
                         id="add-cust-aadhaar"
                         type="text"
-                        placeholder="e.g. 123456789012 (12 digits, optional)"
+                        required
+                        placeholder="e.g. 123456789012 (12 digits mandatory)"
                         value={aadhaar}
                         onChange={(e) => setAadhaar(e.target.value.replace(/\D/g, '').slice(0, 12))}
                         disabled={isLoading || isSendingOtp || !!success}
@@ -643,13 +647,19 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user }) => {
                       <label className="text-sm font-bold text-ink-primary block mb-1.5">Branch</label>
                       <input
                         id="add-cust-branch"
+                        list="add-cust-branch-suggestions"
                         type="text"
-                        placeholder="e.g. Belgaum Main, Hubli"
+                        placeholder="e.g. Ather Energy Belgaum, Swaraj Hubli"
                         value={branchName}
                         onChange={(e) => setBranchName(e.target.value)}
                         disabled={isLoading || isSendingOtp || !!success}
                         className="w-full h-11 px-4 border border-surface-border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white"
                       />
+                      <datalist id="add-cust-branch-suggestions">
+                        {branches.map((b) => (
+                          <option key={b.id || b.branch_id || b} value={b.name || b.branch_name || b} />
+                        ))}
+                      </datalist>
                     </div>
 
                     <div>

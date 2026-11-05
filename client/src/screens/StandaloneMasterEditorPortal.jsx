@@ -42,6 +42,7 @@ import {
   UserCheck,
   Store,
   Lock,
+  Key,
   Calculator,
   Truck,
   Tractor,
@@ -361,6 +362,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
 
   // Users List for Role Control
   const [usersList, setUsersList] = useState([]);
+  const [branchesList, setBranchesList] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [addUserModalOpen, setAddUserModalOpen] = useState(false);
   const [newUserData, setNewUserData] = useState({
@@ -470,9 +472,17 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
 
   const loadLookups = useCallback(async (tenantId = selectedTenant) => {
     try {
-      const res = await ApiService.request(`/master-rules/lookups?tenant_id=${encodeURIComponent(tenantId)}`);
+      const [res, branchRes] = await Promise.all([
+        ApiService.request(`/master-rules/lookups?tenant_id=${encodeURIComponent(tenantId)}`),
+        ApiService.getBranches().catch(() => ({ data: [] })),
+      ]);
       if (res && res.data) {
         setLookups(res.data);
+      }
+      if (branchRes && branchRes.data && branchRes.data.length > 0) {
+        setBranchesList(branchRes.data);
+      } else if (res?.data?.branches_list?.length > 0) {
+        setBranchesList(res.data.branches_list);
       }
     } catch (err) {
       console.warn('Error loading lookups:', err);
@@ -839,6 +849,44 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
     }
   };
 
+  // 1-Click Dealership Branch Switch for Users
+  const handleBranchSwitch = async (userId, newBranchId) => {
+    try {
+      await ApiService.updateMasterUserBranch(userId, newBranchId);
+      showToast('User dealership branch updated successfully.');
+      await loadUsers();
+    } catch (err) {
+      showToast(err.message || 'Failed to update user branch', true);
+    }
+  };
+
+  // Create Staff User with Role & Branch Assignment
+  const handleCreateUser = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!newUserData.username?.trim()) {
+      showToast('Username is required.', true);
+      return;
+    }
+    try {
+      await ApiService.createMasterUser({
+        ...newUserData,
+        username: newUserData.username.trim(),
+        branch_id: Number(newUserData.branch_id) || 1,
+      });
+      showToast(`Staff member '${newUserData.username}' created with branch assigned.`);
+      setAddUserModalOpen(false);
+      setNewUserData({
+        username: '',
+        password: 'Staff@123',
+        role: 'cashier',
+        branch_id: branchesList[0]?.id || 1,
+      });
+      await loadUsers();
+    } catch (err) {
+      showToast(err.message || 'Failed to create staff member', true);
+    }
+  };
+
   // 1-Click Role Switch for Users
   const handleRoleSwitch = async (userId, newRole) => {
     try {
@@ -847,6 +895,40 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
       await loadUsers();
     } catch (err) {
       showToast(err.message || 'Failed to update user role', true);
+    }
+  };
+
+  // Reset Password for User in Standalone Portal
+  const handleResetPassword = async (u) => {
+    const defaultPwd = `Bellad@${Math.floor(1000 + Math.random() * 9000)}`;
+    const newPwd = window.prompt(`Enter new password for @${u.username}:`, defaultPwd);
+    if (!newPwd) return;
+    if (newPwd.trim().length < 4) {
+      showToast('Password must be at least 4 characters long.', true);
+      return;
+    }
+    try {
+      await ApiService.resetMasterUserPassword(u.id || u.user_id, newPwd.trim());
+      showToast(`Password for @${u.username} has been reset to: ${newPwd.trim()}`);
+    } catch (err) {
+      showToast(err.message || 'Failed to reset password', true);
+    }
+  };
+
+  // Delete User in Standalone Portal
+  const handleDeleteUser = async (u) => {
+    if (['admin', 'director'].includes((u.username || '').toLowerCase())) {
+      showToast(`Root system account '${u.username}' cannot be deleted.`, true);
+      return;
+    }
+    const confirmed = window.confirm(`Are you sure you want to permanently delete user @${u.username}?`);
+    if (!confirmed) return;
+    try {
+      await ApiService.deleteMasterUser(u.id || u.user_id);
+      showToast(`User @${u.username} deleted successfully.`);
+      await loadUsers();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete user', true);
     }
   };
 
@@ -1698,21 +1780,34 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
             </div>
           )}
 
-          {/* ── VIEW 5: USER ROLE CONTROL ── */}
+          {/* ── VIEW 5: USER ROLE & BRANCH CONTROL ── */}
           {activeCategory === 'user_access_matrix' && (
             <div className="space-y-5">
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
-                      Staff Access Management
+                      Staff Access &amp; Branch Routing
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Auto Branch Routing Active
                     </span>
                   </div>
-                  <h1 className="text-2xl font-black text-slate-900 mt-1">Operator Role Control</h1>
+                  <h1 className="text-2xl font-black text-slate-900 mt-1">Operator Role &amp; Dealership Branch Control</h1>
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
-                    1-Click role assignment for counter cashiers, branch supervisors and group administrators.
+                    Assign counter cashiers, branch supervisors and administrators to their home dealership branch (e.g. Belagavi, Hubli, etc.). The cashier's branch is automatically pre-selected when issuing receipts.
                   </p>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setAddUserModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs transition active:scale-98 cursor-pointer shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  + Add Staff / Cashier
+                </button>
               </div>
 
               <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
@@ -1721,17 +1816,40 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                     <tr>
                       <th className="px-6 py-4">Username</th>
                       <th className="px-6 py-4">Current Role</th>
-                      <th className="px-6 py-4">Quick Switch Access</th>
+                      <th className="px-6 py-4">Assigned Dealership Branch</th>
+                      <th className="px-6 py-4">Quick Switch Role</th>
+                      <th className="px-6 py-4 text-center">Manage</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                     {usersList.map((u) => (
-                      <tr key={u.id} className="hover:bg-slate-50/80 transition">
-                        <td className="px-6 py-4 font-bold text-slate-900">{u.username}</td>
+                      <tr key={u.id || u.user_id} className="hover:bg-slate-50/80 transition">
+                        <td className="px-6 py-4 font-bold text-slate-900">
+                          <div>{u.username}</div>
+                          {u.created_at && (
+                            <span className="text-[10px] text-slate-400 font-normal">
+                              Joined {new Date(u.created_at).toLocaleDateString('en-IN')}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-6 py-4">
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-100 text-slate-800">
                             {u.role}
                           </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <select
+                            value={String(u.branch_id || '')}
+                            onChange={(e) => handleBranchSwitch(u.id || u.user_id, Number(e.target.value))}
+                            className="h-8 px-2.5 text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                          >
+                            <option value="">No Branch Assigned</option>
+                            {(branchesList.length > 0 ? branchesList : (lookups.branches_list || [])).map((b) => (
+                              <option key={b.id || b.branch_id} value={String(b.id || b.branch_id)}>
+                                {b.name || b.branch_name}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
@@ -1739,8 +1857,8 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                               <button
                                 key={roleOpt}
                                 type="button"
-                                onClick={() => handleRoleSwitch(u.id, roleOpt)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-black transition ${
+                                onClick={() => handleRoleSwitch(u.id || u.user_id, roleOpt)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-black transition cursor-pointer ${
                                   u.role === roleOpt
                                     ? 'bg-slate-900 text-white'
                                     : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
@@ -1749,6 +1867,33 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                                 {roleOpt.replace('_', ' ').toUpperCase()}
                               </button>
                             ))}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleResetPassword(u)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold transition shadow-2xs cursor-pointer"
+                              title={`Reset password for ${u.username}`}
+                            >
+                              <Key className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Reset Pwd</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUser(u)}
+                              disabled={['admin', 'director'].includes((u.username || '').toLowerCase())}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition shadow-2xs ${
+                                ['admin', 'director'].includes((u.username || '').toLowerCase())
+                                  ? 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed opacity-50'
+                                  : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 cursor-pointer'
+                              }`}
+                              title={['admin', 'director'].includes((u.username || '').toLowerCase()) ? 'Protected root user' : `Delete user ${u.username}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -2820,6 +2965,113 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
       )}
 
       {/* ── MODAL: CUSTOMER PRIORITY TIER CONFIGURATION ── */}
+      {/* ── MODAL 3: ADD STAFF / CASHIER MODAL ── */}
+      {addUserModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+                  <UserCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black">Add New Staff / Cashier</h3>
+                  <p className="text-[11px] text-slate-300">Create staff profile with assigned home branch</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAddUserModalOpen(false)}
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Username *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. cashier_belagavi"
+                  value={newUserData.username}
+                  onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })}
+                  className="w-full h-10 px-3 text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Password *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Staff@123"
+                  value={newUserData.password}
+                  onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                  className="w-full h-10 px-3 text-xs font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  System Role
+                </label>
+                <select
+                  value={newUserData.role}
+                  onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
+                  className="w-full h-10 px-3 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                >
+                  <option value="cashier">CASHIER (Counter Billing &amp; Redemptions)</option>
+                  <option value="branch_manager">BRANCH MANAGER (Supervisor Approvals)</option>
+                  <option value="admin">ADMIN (Full System Administrator)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Assigned Dealership Branch *
+                </label>
+                <select
+                  value={newUserData.branch_id}
+                  onChange={(e) => setNewUserData({ ...newUserData, branch_id: Number(e.target.value) })}
+                  className="w-full h-10 px-3 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                >
+                  {(branchesList.length > 0 ? branchesList : (lookups.branches_list || [])).map((b) => (
+                    <option key={b.id || b.branch_id} value={b.id || b.branch_id}>
+                      {b.name || b.branch_name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  When this cashier opens the counter to add a receipt, this branch will auto-select automatically.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setAddUserModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs transition active:scale-98"
+                >
+                  Create Staff Account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {tierModalOpen && editingTier && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl p-6 space-y-4">

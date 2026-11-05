@@ -59,17 +59,14 @@ const createCustomerSchema = z.object({
   }).optional().nullable(),
   // Optional opening points (admin-only meaningful; cashier always gets 0 enforced server-side)
   opening_points: z.coerce.number().int().min(0, 'Opening points cannot be negative').default(0).optional(),
-  // Aadhaar & Optional GST Number
+  // Aadhaar (Mandatory 12 digits) & Optional GST Number
   aadhaar_number: z
-    .string()
+    .string({ required_error: 'Aadhaar card number is mandatory (12 digits).' })
     .trim()
     .transform((val) => (val ? val.replace(/[\s-]/g, '') : ''))
-    .refine((val) => !val || /^\d{12}$/.test(val), {
-      message: 'Aadhaar number must be exactly 12 numeric digits.',
-    })
-    .optional()
-    .nullable()
-    .or(z.literal('')),
+    .refine((val) => /^\d{12}$/.test(val), {
+      message: 'Aadhaar number is mandatory and must be exactly 12 numeric digits.',
+    }),
   gst_number: z
     .string()
     .trim()

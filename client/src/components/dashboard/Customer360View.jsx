@@ -30,6 +30,7 @@ export const Customer360View = ({
   tierInfo,
   onRefresh,
   branches = [],
+  user,
 }) => {
   const [activeProfileTab, setActiveProfileTab] = useState('ledger');
   const [addReceiptModalOpen, setAddReceiptModalOpen] = useState(false);
@@ -576,6 +577,7 @@ export const Customer360View = ({
           points_balance: currentBalance,
         }}
         branches={branches}
+        user={user}
         onClose={() => setAddReceiptModalOpen(false)}
         onSuccess={() => onRefresh && onRefresh()}
       />

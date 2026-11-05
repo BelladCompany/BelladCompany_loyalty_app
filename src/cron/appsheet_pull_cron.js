@@ -1,26 +1,27 @@
-const AppSheetPullService = require('../services/appsheetPull.service');
+const AppSheetSyncEngine = require('../services/appsheetSyncEngine.service');
 
-const DEFAULT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+// Default sync interval: 12 Hours (never polls repeatedly in short cycles)
+const DEFAULT_INTERVAL_MS = 12 * 60 * 60 * 1000;
 
 function startAppSheetPullCron() {
   const intervalMs = parseInt(process.env.APPSHEET_PULL_INTERVAL_MS || String(DEFAULT_INTERVAL_MS), 10);
-  const intervalMinutes = (intervalMs / 60000).toFixed(1);
+  const intervalHours = (intervalMs / (60 * 60 * 1000)).toFixed(1);
 
-  console.log(`📅 [AppSheetPullCron] Scheduled AppSheet recurring pull worker (every ${intervalMinutes} mins).`);
+  console.log(`📅 [AppSheetPullCron] Scheduled AppSheet PR Done recurring pull worker (every ${intervalHours} hours, Cutoff: >= 2026-04-01). Strictly pull-only.`);
 
-  // Initial pull run 15 seconds after server startup
+  // Initial pull run 30 seconds after server startup
   setTimeout(() => {
-    AppSheetPullService.executePullCycle().catch((err) =>
+    AppSheetSyncEngine.syncAllPrDoneFromCutoff().catch((err) =>
       console.error('❌ [AppSheetPullCron] Initial pull cycle error:', err.message || err)
     );
 
-    // Schedule recurring pull cycles
+    // Schedule recurring pull cycles (every 12 to 24 hours)
     setInterval(() => {
-      AppSheetPullService.executePullCycle().catch((err) =>
+      AppSheetSyncEngine.syncAllPrDoneFromCutoff().catch((err) =>
         console.error('❌ [AppSheetPullCron] Recurring pull cycle error:', err.message || err)
       );
     }, intervalMs);
-  }, 15_000);
+  }, 30_000);
 }
 
 module.exports = { startAppSheetPullCron };

@@ -346,6 +346,14 @@ export class ApiService {
     return this.request('/admin/appsheet-logs');
   }
 
+  static async syncAppSheetPrDone() {
+    return this.request('/appsheet/sync-pr-done', { method: 'POST' });
+  }
+
+  static async getAppSheetSyncStatus() {
+    return this.request('/appsheet/sync-status');
+  }
+
   // Referrals
   static async getByReferralCode(code) {
     const encoded = encodeURIComponent(code.trim());
@@ -768,10 +776,30 @@ export class ApiService {
     });
   }
 
+  static async updateMasterUserBranch(id, branch_id) {
+    return this.request(`/master-rules/users/${encodeURIComponent(id)}/branch`, {
+      method: 'PATCH',
+      body: { branch_id },
+    });
+  }
+
   static async createMasterUser(payload) {
     return this.request('/master-rules/users', {
       method: 'POST',
       body: payload,
+    });
+  }
+
+  static async resetMasterUserPassword(id, password) {
+    return this.request(`/master-rules/users/${encodeURIComponent(id)}/reset-password`, {
+      method: 'POST',
+      body: { password },
+    });
+  }
+
+  static async deleteMasterUser(id) {
+    return this.request(`/master-rules/users/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
     });
   }
 
