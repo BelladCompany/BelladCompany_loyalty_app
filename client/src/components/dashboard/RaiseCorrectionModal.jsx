@@ -104,7 +104,7 @@ export const RaiseCorrectionModal = ({
           <div className="flex items-center gap-2.5 min-w-0">
             <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 shrink-0" />
             <h3 className="text-base sm:text-xl font-bold text-slate-900 truncate">
-              Raise Transaction Correction Request
+              Raise Bill Correction Request
             </h3>
           </div>
           <button
@@ -239,7 +239,7 @@ export const RaiseCorrectionModal = ({
                   disabled={isLoading || !reference || !wrongAmount || !correctAmount || !explanation.trim() || !selectedFile}
                   className="font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
                 >
-                  {isLoading ? 'Submitting Ticket…' : 'Submit Correction Ticket →'}
+                  {isLoading ? 'Submitting Ticket…' : 'Submit Bill Correction →'}
                 </Button>
               </div>
             </form>

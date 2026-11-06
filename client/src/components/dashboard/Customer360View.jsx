@@ -306,9 +306,9 @@ export const Customer360View = ({
               setCorrectionModalOpen(true);
             }}
             className="px-2.5 py-1 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-md border border-amber-300 shadow-xs cursor-pointer transition"
-            title="Put this bill for correction"
+            title="Raise bill correction for this transaction"
           >
-            Put for Correction
+            Bill Correction
           </button>
         );
       },
@@ -612,10 +612,10 @@ export const Customer360View = ({
                     setCorrectionModalOpen(true);
                   }}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition shadow-xs cursor-pointer"
-                  title="Put for correction if wrong bill or amount was entered by mistake"
+                  title="Raise bill correction if wrong bill or amount was entered by mistake"
                 >
                   <FileText className="w-3.5 h-3.5 text-white" />
-                  Put for Correction
+                  Bill Correction
                 </button>
               </div>
             </div>

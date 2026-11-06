@@ -64,7 +64,7 @@ export const SidebarLayout = ({
         group: 'Accounts Approvals',
         items: [
           { id: 'kyc_approvals', label: 'KYC Approvals', icon: ShieldCheck },
-          { id: 'corrections_queue', label: 'Queue Approvals', icon: FileText },
+          { id: 'corrections_queue', label: 'Bill Correction Queue', icon: FileText },
         ],
       },
     ]
@@ -79,7 +79,7 @@ export const SidebarLayout = ({
         {
           group: 'Managerial Approvals',
           items: [
-            { id: 'corrections_queue', label: 'Queue Approvals', icon: FileText },
+            { id: 'corrections_queue', label: 'Bill Correction Queue', icon: FileText },
           ],
         },
         {
@@ -126,7 +126,7 @@ export const SidebarLayout = ({
             items: [
               { id: 'customer_redemptions', label: 'Customer Redemptions', icon: Sparkles },
               { id: 'kyc_approvals', label: 'KYC Approvals', icon: ShieldCheck },
-              { id: 'corrections_queue', label: 'Queue Approvals', icon: FileText },
+              { id: 'corrections_queue', label: 'Bill Correction Queue', icon: FileText },
             ],
           },
           {

@@ -22,13 +22,13 @@ const requireRole = (allowedRoles = []) => {
     const effectiveRoles = [userRole];
 
     if (userRole === 'director' || userRole === 'management' || userRole === 'super_admin') {
-      effectiveRoles.push('director', 'management', 'super_admin', 'admin', 'regional_admin', 'branch_manager', 'cashier');
+      effectiveRoles.push('director', 'management', 'super_admin', 'admin', 'regional_admin', 'branch_manager', 'manager', 'cashier');
     } else if (userRole === 'admin') {
-      effectiveRoles.push('director', 'management', 'super_admin', 'regional_admin', 'branch_manager', 'cashier');
+      effectiveRoles.push('director', 'management', 'super_admin', 'admin', 'regional_admin', 'branch_manager', 'manager', 'cashier');
     } else if (userRole === 'regional_admin') {
-      effectiveRoles.push('branch_manager', 'cashier');
+      effectiveRoles.push('branch_manager', 'manager', 'cashier');
     } else if (userRole === 'branch_manager' || userRole === 'manager') {
-      effectiveRoles.push('cashier');
+      effectiveRoles.push('branch_manager', 'manager', 'cashier');
     }
 
     const hasAccess = allowedRoles.some((role) => effectiveRoles.includes(role.toLowerCase()));
