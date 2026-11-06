@@ -36,6 +36,7 @@ import ApiService from '../services/api';
 import { useToast } from '../components/ui';
 import ComboVelocityChart from '../components/dashboard/ComboVelocityChart';
 import DistributionPieChart from '../components/dashboard/DistributionPieChart';
+import BranchNetworkChart from '../components/dashboard/BranchNetworkChart';
 
 // Helper to format currency numbers nicely in Indian notation (Cr, L, K, ₹)
 const formatInr = (val) => {
@@ -946,98 +947,11 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpe
 
           </div>
 
-          {/* Main Visual Row: Branch Network Performance & Footfall */}
-          <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-indigo-600" />
-                  <span>Branch Network Performance &amp; Customer Footfall</span>
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Live customer visits, points earned vs. redeemed, cash invoiced &amp; counter discounts by branch
-                </p>
-              </div>
-              <div className="text-xs font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 font-mono">
-                {branchesList.length} Dealership Branches Monitored
-              </div>
-            </div>
-
-            {/* Branch Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                    <th className="pb-3">Dealership Branch</th>
-                    <th className="pb-3 text-center">Customer Footfall</th>
-                    <th className="pb-3 text-right">Points Earned (+PTS)</th>
-                    <th className="pb-3 text-right">Points Redeemed (-PTS)</th>
-                    <th className="pb-3 text-right">Cash Invoiced (₹)</th>
-                    <th className="pb-3 text-right">Discounts Redeemed (₹)</th>
-                    <th className="pb-3 text-right">Burn Rate</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {branchesList.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-8 text-center text-xs text-slate-400">
-                        No branch transaction data available for this date filter.
-                      </td>
-                    </tr>
-                  ) : (
-                    branchesList.map((b) => {
-                      const issued = Number(b.points_issued || 0);
-                      const redeemed = Number(b.points_redeemed || 0);
-                      const burnRate = issued > 0 ? ((redeemed / issued) * 100).toFixed(1) : '0.0';
-                      const discountInr = Number(b.cash_redeemed_inr || Math.round(redeemed * 0.25));
-
-                      return (
-                        <tr key={b.branch_id || b.branch_name} className="hover:bg-slate-50/80 transition group">
-                          <td className="py-3.5">
-                            <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition block">
-                              {b.branch_name}
-                            </span>
-                            <span className="text-[10px] font-mono text-slate-400">
-                              {b.branch_city || 'Central'} &bull; Branch #{b.branch_id}
-                            </span>
-                          </td>
-                          <td className="py-3.5 text-center">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">
-                              {Number(b.customer_count || 0).toLocaleString('en-IN')} Cust
-                            </span>
-                            <span className="block text-[10px] text-slate-400 mt-0.5">
-                              {Number(b.transactions_count || 0).toLocaleString('en-IN')} Visits
-                            </span>
-                          </td>
-                          <td className="py-3.5 text-right font-mono font-bold text-emerald-600">
-                            +{issued.toLocaleString('en-IN')} PTS
-                          </td>
-                          <td className="py-3.5 text-right font-mono font-bold text-rose-600">
-                            {redeemed > 0 ? `-${redeemed.toLocaleString('en-IN')} PTS` : '0 PTS'}
-                          </td>
-                          <td className="py-3.5 text-right font-mono font-bold text-slate-900">
-                            {formatInr(b.total_revenue)}
-                          </td>
-                          <td className="py-3.5 text-right font-mono font-bold text-amber-700">
-                            {formatInr(discountInr)}
-                          </td>
-                          <td className="py-3.5 text-right">
-                            <span className={`inline-block px-2 py-0.5 rounded-md font-mono text-[11px] font-bold ${
-                              Number(burnRate) > 10
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-slate-50 text-slate-600 border border-slate-200'
-                            }`}>
-                              {burnRate}%
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          {/* Main Visual Row: Branch Network Performance & Footfall (Executive Non-Bar Chart) */}
+          <BranchNetworkChart
+            branches={branchesList}
+            currentFilter={dateRangeLabels[dateRange] || 'All Time'}
+          />
 
           {/* Main Visual Row 2: Dedicated Gift Cards & Referral Velocity */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
