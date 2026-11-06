@@ -20,3 +20,4 @@ ADD COLUMN IF NOT EXISTS integrations_config JSONB NOT NULL DEFAULT '{
     "sms": { "enabled": true, "provider": "fast2sms", "sender_id": "BELLAD" }
   }
 }'::jsonb;
+
