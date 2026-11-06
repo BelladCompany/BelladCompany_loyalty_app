@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const compression = require('compression');
 
 const authRoutes = require('./routes/auth.routes');
 const customerRoutes = require('./routes/customer.routes');
@@ -84,6 +85,12 @@ app.use(helmet({ crossOriginResourcePolicy: false, contentSecurityPolicy: false 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
+// Enable Gzip/Brotli compression for high-speed API responses & static assets
+app.use(compression({
+  threshold: 1024, // Compress responses above 1KB
+  level: 6,
+}));
+
 // Global rate limiting across all API endpoints (protects against high-concurrency DDoS / brute-force)
 app.use('/api', globalApiRateLimiter);
 
@@ -149,11 +156,21 @@ app.use('/api', kycRoutes);
 // Serve static uploads (proofs, attachments)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Serve static client assets if client/dist exists (production fullstack deploy)
+// Serve static client assets if client/dist exists (production fullstack deploy) with high-speed immutable browser cache
 const fs = require('fs');
 const clientDistPath = path.join(__dirname, '../client/dist');
 if (fs.existsSync(clientDistPath)) {
-  app.use(express.static(clientDistPath));
+  app.use(express.static(clientDistPath, {
+    maxAge: '1y',
+    immutable: true,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    },
+  }));
   app.get('*', (req, res, next) => {
     if (
       req.originalUrl.startsWith('/api') ||
