@@ -32,6 +32,7 @@ const giftRoutes = require('./routes/gift.routes');
 const offerRoutes = require('./routes/offer.routes');
 const directorRoutes = require('./routes/director.routes');
 const integrationRoutes = require('./routes/integration.routes');
+const appBuilderRoutes = require('./routes/appBuilder.routes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -143,6 +144,7 @@ app.use('/api/admin/corrections', correctionRoutes);
 app.use('/api/corrections', correctionRoutes);
 app.use('/api/admin/tenants', tenantRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/app-builder', appBuilderRoutes);
 app.use('/api/director', directorRoutes);
 app.use('/api/v1/integration', integrationRoutes);
 app.use('/api/integration', integrationRoutes);

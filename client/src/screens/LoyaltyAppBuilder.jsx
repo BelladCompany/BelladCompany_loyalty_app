@@ -5,7 +5,6 @@ import {
   Monitor,
   Sparkles,
   Percent,
-  DollarSign,
   Crown,
   ShieldCheck,
   Palette,
@@ -24,9 +23,6 @@ import {
   Star,
   Gift,
   Car,
-  Bike,
-  Truck,
-  Tractor,
   Wrench,
   ShoppingBag,
   Tag,
@@ -46,7 +42,20 @@ import {
   QrCode,
   CreditCard,
   Users,
-  ChevronDown
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  ArrowUp,
+  ArrowDown,
+  Upload,
+  Download,
+  Share2,
+  Eye,
+  SlidersHorizontal,
+  FileText,
+  LayoutDashboard,
+  CheckCheck,
+  Sparkle
 } from 'lucide-react';
 import ApiService from '../services/api';
 
@@ -54,395 +63,444 @@ import ApiService from '../services/api';
  * Standard Dealerships / Tenants Catalog
  */
 const DEALERSHIPS = [
-  { id: 'bellad_and_company', name: 'Bellad & Company', brands: 'Tata Motors & MG Motors', city: 'Hubballi / Belagavi' },
-  { id: 'sprint_hero', name: 'Sprint Moto Club', brands: 'Hero MotoCorp & EV', city: 'Hubballi / Belagavi' },
-  { id: 'trident_automobiles', name: 'Trident Automobiles', brands: 'Hyundai & Multi-Brand', city: 'Bengaluru Metro' },
-  { id: 'advaith_motors', name: 'Advaith Motors', brands: 'Advaith Auto Group', city: 'Bengaluru / Mysuru' },
+  { id: 'bellad_and_company', name: 'Bellad & Company', brands: 'Tata Motors & MG Motors', city: 'Hubballi / Belagavi', logo: '/bellad-logo.png' },
+  { id: 'sprint_hero', name: 'Sprint Moto Club', brands: 'Hero MotoCorp & EV', city: 'Hubballi / Belagavi', logo: '/hero-logo.png' },
+  { id: 'trident_automobiles', name: 'Trident Automobiles', brands: 'Hyundai & Multi-Brand', city: 'Bengaluru Metro', logo: '/bellad-logo.png' },
+  { id: 'advaith_motors', name: 'Advaith Motors', brands: 'Advaith Auto Group', city: 'Bengaluru / Mysuru', logo: '/bellad-logo.png' },
 ];
 
 /**
- * Pre-configured Test Customers for Simulator & Live Preview
+ * Pre-configured 1-Click Theme Palettes
  */
-const TEST_CUSTOMERS = [
-  {
-    id: 'cust_1',
-    name: 'Rahul Sharma',
-    phone: '9888877777',
-    tier: 'Gold VIP',
-    tierKey: 'gold',
-    vehicle: 'Tata Safari Dark Edition',
-    chassis: 'KA-25-EA-8899',
-    spend_type: 'service',
-    spend_amount: 18500,
-    vehicle_type: '4W',
-    brand: 'Tata Motors',
-    points_balance: 4250,
-  },
-  {
-    id: 'cust_2',
-    name: 'Priya Patel',
-    phone: '9777766666',
-    tier: 'Silver Member',
-    tierKey: 'silver',
-    vehicle: 'Tata Nexon Creative Plus',
-    chassis: 'KA-22-MB-4411',
-    spend_type: 'sale',
-    spend_amount: 1450000,
-    vehicle_type: '4W',
-    brand: 'Tata Motors',
-    points_balance: 14500,
-  },
-  {
-    id: 'cust_3',
-    name: 'Vikram Singh Fleet Logistics',
-    phone: '9900011223',
-    tier: 'Diamond Director',
-    tierKey: 'diamond',
-    vehicle: 'Tata Prima 5530.S Heavy Truck',
-    chassis: 'KA-25-TR-9900',
-    spend_type: 'sale',
-    spend_amount: 3800000,
-    vehicle_type: 'Commercial',
-    brand: 'Tata Motors Commercial',
-    points_balance: 76000,
-  },
+const THEME_PRESETS = [
+  { id: 'tata_blue', name: 'Tata Executive Navy', primary: '#1e40af', secondary: '#3b82f6', accent: '#10b981', surface: 'light' },
+  { id: 'emerald_green', name: 'Emerald Eco Mobility', primary: '#059669', secondary: '#10b981', accent: '#3b82f6', surface: 'light' },
+  { id: 'royal_ruby', name: 'Royal Crimson Ruby', primary: '#991b1b', secondary: '#ef4444', accent: '#f59e0b', surface: 'light' },
+  { id: 'cyber_violet', name: 'Cyber Violet', primary: '#581c87', secondary: '#8b5cf6', accent: '#ec4899', surface: 'light' },
+  { id: 'luxury_gold', name: 'Luxury Amber Gold', primary: '#b45309', secondary: '#f59e0b', accent: '#10b981', surface: 'dark' },
+  { id: 'stealth_dark', name: 'Stealth Midnight Slate', primary: '#0f172a', secondary: '#38bdf8', accent: '#10b981', surface: 'dark' },
 ];
 
+/**
+ * Available Icons for Tab & Button Selection
+ */
+const AVAILABLE_ICONS = [
+  { id: 'LayoutDashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'FileText', label: 'File / Bill', icon: FileText },
+  { id: 'Sparkles', label: 'Sparkles / Rewards', icon: Sparkles },
+  { id: 'Gift', label: 'Gift Box', icon: Gift },
+  { id: 'Users', label: 'Users / Members', icon: Users },
+  { id: 'ShieldCheck', label: 'Security / KYC', icon: ShieldCheck },
+  { id: 'Crown', label: 'Executive Crown', icon: Crown },
+  { id: 'Calculator', label: 'Analytics / Reports', icon: Calculator },
+  { id: 'Tag', label: 'Offers Tag', icon: Tag },
+  { id: 'Car', label: 'Vehicle', icon: Car },
+  { id: 'Wrench', label: 'Service / Wrench', icon: Wrench },
+  { id: 'Coins', label: 'Coins / Points', icon: Coins },
+  { id: 'Share2', label: 'Share / WhatsApp', icon: Share2 },
+  { id: 'QrCode', label: 'QR Code', icon: QrCode },
+  { id: 'CreditCard', label: 'Card / Payment', icon: CreditCard },
+  { id: 'Plus', label: 'Plus / Add', icon: Plus },
+  { id: 'RefreshCw', label: 'Sync / Refresh', icon: RefreshCw },
+];
+
+const ICON_MAP = {
+  LayoutDashboard,
+  FileText,
+  Sparkles,
+  Gift,
+  Users,
+  ShieldCheck,
+  Crown,
+  Calculator,
+  Tag,
+  Car,
+  Wrench,
+  Coins,
+  Share2,
+  QrCode,
+  CreditCard,
+  Plus,
+  RefreshCw,
+  BarChart3: Calculator,
+  ShoppingBag,
+  Store,
+  Clock,
+  Sparkle
+};
+
+const renderIcon = (iconName, className = 'w-4 h-4') => {
+  const IconComp = ICON_MAP[iconName] || LayoutDashboard;
+  return <IconComp className={className} />;
+};
+
+/**
+ * Default Factory Configuration
+ */
+const DEFAULT_CONFIG = {
+  theme: {
+    dealership_name: 'Bellad & Company',
+    tagline: 'Tata Motors & MG Motors Authorised Dealership Group',
+    logo_url: '/bellad-logo.png',
+    primary_color: '#1e40af',
+    secondary_color: '#3b82f6',
+    accent_color: '#10b981',
+    surface_mode: 'light',
+    card_radius: 'rounded-2xl',
+    font_family: 'Plus Jakarta Sans',
+    header_banner_text: 'Customer Loyalty & Rewards Suite',
+    show_header_banner: true,
+  },
+  tabs: [
+    { id: 'dashboard', label: 'Customer Search & 360', icon: 'LayoutDashboard', group: 'Counter POS', order: 1, visible: true, role_access: 'all' },
+    { id: 'corrections_queue', label: 'Bill Correction Queue', icon: 'FileText', group: 'Managerial Approvals', order: 2, visible: true, role_access: 'manager' },
+    { id: 'customer_redemptions', label: 'Customer Redemptions', icon: 'Sparkles', group: 'Loyalty Rewards', order: 3, visible: true, role_access: 'cashier' },
+    { id: 'referrals', label: 'Referral Rewards', icon: 'Users', group: 'Rewards & Referrals', order: 4, visible: true, role_access: 'cashier' },
+    { id: 'gift_cards', label: 'Gift Card Rewards', icon: 'Gift', group: 'Rewards & Referrals', order: 5, visible: true, role_access: 'cashier' },
+    { id: 'director_command_center', label: 'Director Command Center', icon: 'Crown', group: 'Executive Suite', order: 6, visible: true, role_access: 'director' },
+    { id: 'kyc_approvals', label: 'KYC Approvals', icon: 'ShieldCheck', group: 'Loyalty Rewards', order: 7, visible: true, role_access: 'manager' },
+    { id: 'reports', label: 'Reports & Analytics', icon: 'Calculator', group: 'Analytics', order: 8, visible: true, role_access: 'manager' },
+  ],
+  buttons: [
+    { id: 'btn_add_receipt', label: 'Add Receipt', icon: 'Plus', style: 'solid', placement: 'header', action_type: 'open_receipt_modal', color: 'emerald', enabled: true, order: 1 },
+    { id: 'btn_bill_correction', label: 'Bill Correction', icon: 'FileText', style: 'solid', placement: 'header', action_type: 'open_bill_correction_modal', color: 'amber', enabled: true, order: 2 },
+    { id: 'btn_redeem', label: 'Redeem Discount', icon: 'Sparkles', style: 'solid', placement: 'customer_card', action_type: 'open_redemption_modal', color: 'indigo', enabled: true, order: 3 },
+    { id: 'btn_whatsapp_pass', label: 'Send WhatsApp Pass', icon: 'Share2', style: 'outline', placement: 'customer_card', action_type: 'send_whatsapp', color: 'emerald', enabled: true, order: 4 },
+    { id: 'btn_quick_referral', label: 'Add Referral', icon: 'Users', style: 'soft', placement: 'customer_card', action_type: 'open_referral_modal', color: 'primary', enabled: true, order: 5 },
+    { id: 'btn_appsheet_sync', label: 'Sync AppSheet', icon: 'RefreshCw', style: 'outline', placement: 'header', action_type: 'sync_appsheet', color: 'slate', enabled: true, order: 6 },
+  ],
+  logic: {
+    sales_net_ex_pct: 1.0,
+    service_points_pct: 2.5,
+    bodyshop_points_pct: 1.5,
+    accessories_points_pct: 3.0,
+    points_to_inr_ratio: 0.25,
+    lock_in_months: 12,
+    expiry_policy: 'FIFO_12_MONTHS',
+    max_redemption_pct: 50,
+    min_points_to_redeem: 500,
+    bill_correction_enabled: true,
+    bill_correction_window_hours: 24,
+    manager_approval_threshold: 5000,
+    welcome_bonus_points: 250,
+    birthday_multiplier: 2.0,
+  },
+  tiers: [
+    { tier: 'Silver Member', threshold: 0, multiplier: 1.0, badge_color: '#64748b', perks: 'Base 1% Points + Welcome Bonus' },
+    { tier: 'Gold VIP', threshold: 100000, multiplier: 1.25, badge_color: '#f59e0b', perks: '1.25x Priority Points + Free Wash' },
+    { tier: 'Diamond Director', threshold: 500000, multiplier: 1.5, badge_color: '#3b82f6', perks: '1.5x Points + Dedicated Relationship Manager' },
+  ]
+};
+
+/**
+ * Pre-configured Test Customer for Live Interactive Preview
+ */
+const TEST_CUSTOMER = {
+  id: 'cust_sample_1',
+  name: 'Rahul Sharma',
+  phone: '98888 77777',
+  chassis: 'KA-25-EA-8899',
+  vehicle: 'Tata Safari Dark Edition',
+  tier: 'Gold VIP',
+  points_balance: 4250,
+  locked_points: 1200,
+  available_points: 3050,
+  lifetime_spend: 1850000,
+};
+
 export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
-  // ─── 1. Core Builder Workspace State ──────────────────────────────────────
-  const [viewMode, setViewMode] = useState('mobile'); // 'mobile' | 'tablet' | 'desktop'
-  const [activeTab, setActiveTab] = useState('rules_catalog'); // 'rules_catalog' | 'formulas' | 'redemption' | 'tiers' | 'simulator' | 'approvals' | 'theme'
-  const [selectedTenant, setSelectedTenant] = useState('bellad_and_company');
-  const [selectedCustomer, setSelectedCustomer] = useState(TEST_CUSTOMERS[0]);
+  // ─── Top Bar & Viewport States ───
+  const [viewport, setViewport] = useState('desktop'); // 'desktop' | 'tablet' | 'mobile'
+  const [editorMode, setEditorMode] = useState('customize'); // 'customize' | 'preview'
+  const [selectedTenant, setSelectedTenant] = useState(user?.tenant_id || 'bellad_and_company');
+  const [inspectorTab, setInspectorTab] = useState('theme'); // 'theme' | 'tabs' | 'buttons' | 'logic' | 'tiers'
 
-  // Status & Feedback
+  // ─── Main Configurations State (WordPress Customizer Data) ───
+  const [theme, setTheme] = useState(DEFAULT_CONFIG.theme);
+  const [tabs, setTabs] = useState(DEFAULT_CONFIG.tabs);
+  const [buttons, setButtons] = useState(DEFAULT_CONFIG.buttons);
+  const [logic, setLogic] = useState(DEFAULT_CONFIG.logic);
+  const [tiers, setTiers] = useState(DEFAULT_CONFIG.tiers);
+
+  // ─── App Builder Status & Feedback ───
   const [loading, setLoading] = useState(false);
-  const [toastMsg, setToastMsg] = useState(null);
-  const [toastError, setToastError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublished, setIsPublished] = useState(true);
+  const [lastSavedTime, setLastSavedTime] = useState(new Date().toLocaleTimeString());
+  const [toast, setToast] = useState(null);
 
-  const showToast = (msg, isErr = false) => {
-    setToastMsg(msg);
-    setToastError(isErr);
-    setTimeout(() => setToastMsg(null), 4000);
+  // ─── Interactive Stage Preview States ───
+  const [previewActiveTab, setPreviewActiveTab] = useState('dashboard');
+  const [testCustomer, setTestCustomer] = useState(TEST_CUSTOMER);
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+  const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
+  const [redemptionModalOpen, setRedemptionModalOpen] = useState(false);
+
+  // Spend Simulator Input in Preview
+  const [testSpendType, setTestSpendType] = useState('service');
+  const [testSpendAmount, setTestSpendAmount] = useState(12500);
+  const [redeemInputPoints, setRedeemInputPoints] = useState(1000);
+
+  // Tab & Button Edit Modals / Inline Editors
+  const [editingTabId, setEditingTabId] = useState(null);
+  const [newTabModalOpen, setNewTabModalOpen] = useState(false);
+  const [newTabData, setNewTabData] = useState({ label: '', icon: 'Sparkles', group: 'Loyalty Rewards', role_access: 'all' });
+
+  const [editingButtonId, setEditingButtonId] = useState(null);
+  const [newButtonModalOpen, setNewButtonModalOpen] = useState(false);
+  const [newButtonData, setNewButtonData] = useState({ label: '', icon: 'Sparkles', style: 'solid', placement: 'header', action_type: 'open_receipt_modal', color: 'emerald' });
+
+  const showNotification = (message, isError = false) => {
+    setToast({ message, isError });
+    setTimeout(() => setToast(null), 4000);
   };
 
-  // ─── 2. Database Live Master Rules State ──────────────────────────────────
-  const [rules, setRules] = useState([]);
-  const [stats, setStats] = useState({});
-  const [searchFilter, setSearchFilter] = useState('');
-  const [schemeFilter, setSchemeFilter] = useState('ALL');
-  const [spendFilter, setSpendFilter] = useState('ALL');
-
-  // Rule Editor Modal State
-  const [ruleModalOpen, setRuleModalOpen] = useState(false);
-  const [editingRuleId, setEditingRuleId] = useState(null);
-  const [ruleFormData, setRuleFormData] = useState({
-    rule_code: '',
-    rule_name: '',
-    description: '',
-    scheme_type: 'standard',
-    spend_type: 'sale',
-    vehicle_type: '4W',
-    brand_name: 'Tata Motors',
-    min_spend_rs: 0,
-    max_spend_rs: '',
-    points_multiplier_numerator: 1,
-    points_multiplier_denominator: 100,
-    priority_tier: 'ALL',
-    priority_weight: 100,
-    approval_status: 'approved',
-  });
-
-  // ─── 3. Points Gain Formulas State (Ex-Showroom 1%, Service 4%, etc.) ─────
-  const [formulas, setFormulas] = useState({
-    sale: { rate: 1.0, deductInsurance: true, deductRto: true, deductTcs: true },
-    service: { rate: 4.0 },
-    accessories: { rate: 2.0 },
-    bodyshop: { rate: 3.0 },
-    spares: { rate: 2.0 },
-    referralBonus: 500,
-    reviewBonus: 250,
-    exchangeBonus: 1000,
-  });
-
-  // ─── 4. Redemption Policy, 12M Lock-In & Bill Caps ─────────────────────────
-  const [redemptionPolicy, setRedemptionPolicy] = useState({
-    pointsPerRupee: 4, // 4 pts = ₹1.00 (0.25 conversion)
-    serviceBillCapPercent: 30, // 30% Max discount on routine service
-    accessoriesBillCapPercent: 50, // 50% Max discount on accessories
-    vehicleLockinMonths: 12, // 12-Month Lock on vehicle purchase points
-    accessoriesExemption: true, // Accessories exempt from 12-Month lock
-    pointsExpiryMonths: 24, // 24-Month FIFO expiry
-    requireWhatsAppOtp: true,
-  });
-
-  // ─── 5. Director Agstya Priority Slabs ─────────────────────────────────────
-  const [tierModel, setTierModel] = useState('spend'); // 'spend' | 'points' | 'flagship'
-  const [tierSlabs, setTierSlabs] = useState([]);
-
-  // ─── 6. Live Policy Simulator State ────────────────────────────────────────
-  const [simParams, setSimParams] = useState({
-    spend_type: 'service',
-    vehicle_type: '4W',
-    spend_amount: 18500,
-    priority_tier: 'gold',
-  });
-  const [simResult, setSimResult] = useState(null);
-  const [simRunning, setSimRunning] = useState(false);
-
-  // ─── 7. Branding & Module Toggles ─────────────────────────────────────────
-  const [branding, setBranding] = useState({
-    appName: 'Bellad & Company Loyalty',
-    tagline: "Karnataka's Premier Automotive Rewards",
-    primaryColor: '#4f46e5',
-    cardGradient: 'gold',
-  });
-
-  const [modules, setModules] = useState({
-    digitalCard: true,
-    qrPass: true,
-    serviceRewards: true,
-    vehicleSalesRewards: true,
-    accessoriesRewards: true,
-    bodyshopRewards: true,
-    vouchersHub: true,
-    referralProgram: true,
-    googleReviewBonus: true,
-    customerGarage: true,
-  });
-
-  // ─── 8. Data Fetching from Live Backend ───────────────────────────────────
-  const loadMasterRules = useCallback(async (tenantId = selectedTenant) => {
+  // ─── Load Config from Backend API on mount & tenant switch ───
+  const loadConfig = useCallback(async (tenantId) => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await ApiService.request(`/master-rules?tenant_id=${encodeURIComponent(tenantId)}`);
+      const res = await ApiService.getAppBuilderConfig(tenantId);
       if (res && res.data) {
-        setRules(res.data);
-        setStats(res.stats || {});
+        if (res.data.theme_config && Object.keys(res.data.theme_config).length > 0) {
+          setTheme((prev) => ({ ...prev, ...res.data.theme_config }));
+        }
+        if (Array.isArray(res.data.tabs_config) && res.data.tabs_config.length > 0) {
+          setTabs(res.data.tabs_config);
+        }
+        if (Array.isArray(res.data.buttons_config) && res.data.buttons_config.length > 0) {
+          setButtons(res.data.buttons_config);
+        }
+        if (res.data.logic_config && Object.keys(res.data.logic_config).length > 0) {
+          setLogic((prev) => ({ ...prev, ...res.data.logic_config }));
+        }
+        setIsPublished(Boolean(res.data.is_published));
+        setLastSavedTime(new Date().toLocaleTimeString());
       }
     } catch (err) {
-      console.warn('Error loading master rules:', err);
+      console.warn('Could not fetch app builder config from DB, using fallback defaults:', err.message);
     } finally {
       setLoading(false);
     }
-  }, [selectedTenant]);
-
-  const loadPriorityTiers = useCallback(async (tenantId = selectedTenant) => {
-    try {
-      const res = await ApiService.getMasterPriorityTiers(tenantId);
-      if (res && res.data) {
-        setTierSlabs(res.data);
-      }
-    } catch (err) {
-      console.warn('Error loading tiers:', err);
-    }
-  }, [selectedTenant]);
-
-  const loadPolicy = useCallback(async (tenantId = selectedTenant) => {
-    try {
-      const res = await ApiService.getDealershipPolicy(tenantId);
-      if (res && res.data) {
-        if (res.data.point_to_rupee_rate) {
-          setRedemptionPolicy((prev) => ({
-            ...prev,
-            pointsPerRupee: Math.round(1 / res.data.point_to_rupee_rate),
-          }));
-        }
-      }
-    } catch (err) {
-      console.warn('Error loading policy:', err);
-    }
-  }, [selectedTenant]);
+  }, []);
 
   useEffect(() => {
-    loadMasterRules(selectedTenant);
-    loadPriorityTiers(selectedTenant);
-    loadPolicy(selectedTenant);
-  }, [selectedTenant, loadMasterRules, loadPriorityTiers, loadPolicy]);
+    loadConfig(selectedTenant);
+  }, [selectedTenant, loadConfig]);
 
-  // ─── 9. Instant Master Rule Toggles & Actions (Implemented Next Sec!) ───────
-
-  // Instant 1-second toggle rule active/inactive in DB
-  const handleToggleRuleActive = async (ruleId) => {
+  // ─── Save Draft or Publish Live to PostgreSQL Backend ───
+  const handleSave = async (publish = false) => {
+    setIsSaving(true);
     try {
-      await ApiService.toggleActiveMasterRule(ruleId);
-      // Immediately reflect in local state & database
-      setRules((prev) =>
-        prev.map((r) => (r.rule_id === ruleId ? { ...r, is_active: !r.is_active } : r))
-      );
-      showToast('Rule status updated live in PostgreSQL database.');
-    } catch (err) {
-      showToast(err.message || 'Failed to toggle rule', true);
-    }
-  };
-
-  // Instant approve rule by Director
-  const handleApproveRule = async (ruleId) => {
-    try {
-      await ApiService.approveMasterRule(ruleId, 'Approved by Executive Director Agstya');
-      setRules((prev) =>
-        prev.map((r) => (r.rule_id === ruleId ? { ...r, approval_status: 'approved' } : r))
-      );
-      showToast('Rule approved and activated instantly.');
-    } catch (err) {
-      showToast(err.message || 'Failed to approve rule', true);
-    }
-  };
-
-  // Instant delete rule
-  const handleDeleteRule = async (ruleId) => {
-    if (!window.confirm('Are you sure you want to delete this rule from the live database?')) return;
-    try {
-      await ApiService.deleteMasterRule(ruleId);
-      setRules((prev) => prev.filter((r) => r.rule_id !== ruleId));
-      showToast('Rule deleted successfully from database.');
-    } catch (err) {
-      showToast(err.message || 'Failed to delete rule', true);
-    }
-  };
-
-  // Save / Create Master Rule in DB
-  const handleSaveRuleModal = async (e) => {
-    e.preventDefault();
-    try {
-      setIsSaving(true);
       const payload = {
-        ...ruleFormData,
         tenant_id: selectedTenant,
-        min_spend_rs: Number(ruleFormData.min_spend_rs || 0),
-        max_spend_rs: ruleFormData.max_spend_rs ? Number(ruleFormData.max_spend_rs) : null,
-        points_multiplier_numerator: Number(ruleFormData.points_multiplier_numerator || 1),
-        points_multiplier_denominator: Number(ruleFormData.points_multiplier_denominator || 100),
+        theme_config: theme,
+        tabs_config: tabs,
+        buttons_config: buttons,
+        logic_config: logic,
+        is_published: publish ? true : isPublished,
       };
 
-      if (editingRuleId) {
-        await ApiService.updateMasterRule(editingRuleId, payload);
-        showToast('Rule updated in live database.');
-      } else {
-        await ApiService.createMasterRule(payload);
-        showToast('New rule created & deployed live.');
-      }
+      const res = await ApiService.saveAppBuilderConfig(selectedTenant, payload);
+      setIsPublished(publish ? true : isPublished);
+      setLastSavedTime(new Date().toLocaleTimeString());
 
-      setRuleModalOpen(false);
-      setEditingRuleId(null);
-      await loadMasterRules(selectedTenant);
+      if (publish) {
+        showNotification('🚀 Configuration published live! Live loyalty counter app is now updated.');
+      } else {
+        showNotification('💾 Draft configuration saved successfully.');
+      }
     } catch (err) {
-      showToast(err.message || 'Failed to save rule', true);
+      console.error('Save builder config failed:', err);
+      showNotification(`Save failed: ${err.message}`, true);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Run live simulator calculation
-  const handleRunSimulation = async () => {
+  // ─── Reset Configuration ───
+  const handleResetToDefaults = async () => {
+    if (!window.confirm('Reset this dealership configuration to standard factory defaults? Any unsaved custom styling will be replaced.')) {
+      return;
+    }
+    setLoading(true);
     try {
-      setSimRunning(true);
-      const res = await ApiService.simulateMasterRule({
-        tenant_id: selectedTenant,
-        spend_type: simParams.spend_type,
-        vehicle_type: simParams.vehicle_type,
-        spend_amount: Number(simParams.spend_amount || 0),
-        priority_tier: simParams.priority_tier,
-        brand_name: 'Tata Motors',
-        model_name: 'ALL',
-        branch_name: 'Belagavi',
-        transaction_date: new Date().toISOString(),
-      });
-      if (res && res.data) {
-        setSimResult(res.data);
-      }
+      await ApiService.resetAppBuilderConfig(selectedTenant);
+      setTheme(DEFAULT_CONFIG.theme);
+      setTabs(DEFAULT_CONFIG.tabs);
+      setButtons(DEFAULT_CONFIG.buttons);
+      setLogic(DEFAULT_CONFIG.logic);
+      setTiers(DEFAULT_CONFIG.tiers);
+      setIsPublished(true);
+      showNotification('✅ Reset to factory defaults completed.');
     } catch (err) {
-      showToast(err.message || 'Simulation error', true);
+      showNotification(`Reset failed: ${err.message}`, true);
     } finally {
-      setSimRunning(false);
+      setLoading(false);
     }
   };
 
-  // Filtered master rules list
-  const filteredRules = useMemo(() => {
-    return rules.filter((r) => {
-      const matchSearch =
-        !searchFilter ||
-        r.rule_name?.toLowerCase().includes(searchFilter.toLowerCase()) ||
-        r.rule_code?.toLowerCase().includes(searchFilter.toLowerCase());
-      const matchScheme = schemeFilter === 'ALL' || r.scheme_type === schemeFilter;
-      const matchSpend = spendFilter === 'ALL' || r.spend_type === spendFilter;
-      return matchSearch && matchScheme && matchSpend;
-    });
-  }, [rules, searchFilter, schemeFilter, spendFilter]);
+  // ─── Export / Import JSON ───
+  const handleExportJSON = () => {
+    const data = { theme, tabs, buttons, logic, tiers, exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `loyalty_app_config_${selectedTenant}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotification('📥 Config exported to JSON');
+  };
+
+  const handleImportJSON = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        if (parsed.theme) setTheme(parsed.theme);
+        if (parsed.tabs) setTabs(parsed.tabs);
+        if (parsed.buttons) setButtons(parsed.buttons);
+        if (parsed.logic) setLogic(parsed.logic);
+        if (parsed.tiers) setTiers(parsed.tiers);
+        showNotification('📤 Config imported successfully. Click "Publish Live" to commit.');
+      } catch (err) {
+        showNotification('Invalid JSON file format.', true);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // ─── Tab Management Handlers ───
+  const handleMoveTab = (index, direction) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= tabs.length) return;
+    const newTabs = [...tabs];
+    const [moved] = newTabs.splice(index, 1);
+    newTabs.splice(targetIndex, 0, moved);
+    // update order
+    const reordered = newTabs.map((t, idx) => ({ ...t, order: idx + 1 }));
+    setTabs(reordered);
+  };
+
+  const handleToggleTabVisibility = (id) => {
+    setTabs(tabs.map((t) => (t.id === id ? { ...t, visible: !t.visible } : t)));
+  };
+
+  const handleDeleteTab = (id) => {
+    if (tabs.length <= 1) {
+      showNotification('At least one tab must remain in the app.', true);
+      return;
+    }
+    setTabs(tabs.filter((t) => t.id !== id));
+  };
+
+  const handleCreateNewTab = () => {
+    if (!newTabData.label.trim()) {
+      showNotification('Please enter a tab label.', true);
+      return;
+    }
+    const slug = newTabData.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const newTab = {
+      id: `tab_${slug}_${Date.now()}`,
+      label: newTabData.label,
+      icon: newTabData.icon,
+      group: newTabData.group || 'Custom Pages',
+      order: tabs.length + 1,
+      visible: true,
+      role_access: newTabData.role_access || 'all',
+    };
+    setTabs([...tabs, newTab]);
+    setNewTabModalOpen(false);
+    setNewTabData({ label: '', icon: 'Sparkles', group: 'Loyalty Rewards', role_access: 'all' });
+    showNotification(`New tab "${newTab.label}" added to navigation menu.`);
+  };
+
+  // ─── Button Management Handlers ───
+  const handleToggleBtnEnabled = (id) => {
+    setButtons(buttons.map((b) => (b.id === id ? { ...b, enabled: !b.enabled } : b)));
+  };
+
+  const handleDeleteBtn = (id) => {
+    setButtons(buttons.filter((b) => b.id !== id));
+  };
+
+  const handleCreateNewButton = () => {
+    if (!newButtonData.label.trim()) {
+      showNotification('Please enter button text/label.', true);
+      return;
+    }
+    const newBtn = {
+      id: `btn_${Date.now()}`,
+      label: newButtonData.label,
+      icon: newButtonData.icon,
+      style: newButtonData.style,
+      placement: newButtonData.placement,
+      action_type: newButtonData.action_type,
+      color: newButtonData.color,
+      enabled: true,
+      order: buttons.length + 1,
+    };
+    setButtons([...buttons, newBtn]);
+    setNewButtonModalOpen(false);
+    setNewButtonData({ label: '', icon: 'Sparkles', style: 'solid', placement: 'header', action_type: 'open_receipt_modal', color: 'emerald' });
+    showNotification(`Button "${newBtn.label}" added successfully.`);
+  };
+
+  // ─── Live Points Calculation Formula based on configured logic ───
+  const calculatePointsForSpend = (spendType, amount) => {
+    const num = Number(amount) || 0;
+    let pct = 0;
+    if (spendType === 'sale') pct = logic.sales_net_ex_pct;
+    else if (spendType === 'service') pct = logic.service_points_pct;
+    else if (spendType === 'bodyshop') pct = logic.bodyshop_points_pct;
+    else if (spendType === 'accessories') pct = logic.accessories_points_pct;
+
+    const basePoints = Math.round((num * pct) / 100);
+    return basePoints;
+  };
+
+  const calculatedPoints = useMemo(() => {
+    return calculatePointsForSpend(testSpendType, testSpendAmount);
+  }, [testSpendType, testSpendAmount, logic]);
+
+  // Cash discount value for points
+  const calculatedRupeeValue = useMemo(() => {
+    return (redeemInputPoints * (logic.points_to_inr_ratio || 0.25)).toFixed(2);
+  }, [redeemInputPoints, logic]);
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-100 font-sans text-slate-800 antialiased">
-      {/* ========================================================
-          1. TOP APP BUILDER HEADER (Clean, Unclipped, Live)
-          ======================================================== */}
-      <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
-        {/* Software Title & Brand */}
+    <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 1. WORDPRESS-REPLICA TOP TOOLBAR                           */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <header className="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between z-30 shrink-0">
+        {/* Left: App Identity & Tenant Switcher */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-sm">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm text-slate-900 tracking-tight">
-                Loyalty Studio Builder
-              </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700">
-                Live Master Control
-              </span>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-700 to-indigo-600 flex items-center justify-center shadow-md">
+              <Sparkles className="w-4 h-4 text-white" />
             </div>
-            <span className="text-[11px] text-slate-400 font-medium block -mt-0.5">
-              Rules modified here take effect in PostgreSQL the next second
-            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-sm tracking-tight text-white">App Builder</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-900/60 text-blue-300 border border-blue-700/50">
+                  WordPress Mode
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-400 block -mt-0.5">Visual Loyalty Customizer</span>
+            </div>
           </div>
-        </div>
 
-        {/* DEVICE VIEWPORT SWITCHER (Mobile, Tablet, Desktop) */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-          <button
-            type="button"
-            onClick={() => setViewMode('mobile')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'mobile'
-                ? 'bg-white text-purple-700 shadow-2xs'
-                : 'text-slate-500 hover:text-slate-800'
-              }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Mobile</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('tablet')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'tablet'
-                ? 'bg-white text-purple-700 shadow-2xs'
-                : 'text-slate-500 hover:text-slate-800'
-              }`}
-          >
-            <Tablet className="w-3.5 h-3.5" />
-            <span>Tablet</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('desktop')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === 'desktop'
-                ? 'bg-white text-purple-700 shadow-2xs'
-                : 'text-slate-500 hover:text-slate-800'
-              }`}
-          >
-            <Monitor className="w-3.5 h-3.5" />
-            <span>Desktop</span>
-          </button>
-        </div>
+          <div className="h-5 w-[1px] bg-slate-800 mx-1 hidden sm:block" />
 
-        {/* Dealership Switcher & POS Link */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-            <Store className="w-3.5 h-3.5 text-slate-500" />
+          {/* Dealership Switcher */}
+          <div className="relative">
             <select
               value={selectedTenant}
               onChange={(e) => setSelectedTenant(e.target.value)}
-              className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer"
+              className="bg-slate-800/90 text-slate-200 border border-slate-700 text-xs font-semibold rounded-lg px-2.5 py-1.5 pr-8 appearance-none focus:outline-none focus:border-blue-500 cursor-pointer"
             >
               {DEALERSHIPS.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -450,661 +508,1100 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
                 </option>
               ))}
             </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Center: Device Viewport Switcher & Simulator Toggle */}
+        <div className="flex items-center gap-2">
+          {/* Responsive Viewports */}
+          <div className="flex items-center bg-slate-800/90 p-1 rounded-lg border border-slate-700/80">
+            <button
+              onClick={() => setViewport('desktop')}
+              title="Desktop View (1280px)"
+              className={`p-1.5 rounded-md transition ${viewport === 'desktop' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
+            >
+              <Monitor className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewport('tablet')}
+              title="Tablet View (768px)"
+              className={`p-1.5 rounded-md transition ${viewport === 'tablet' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
+            >
+              <Tablet className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewport('mobile')}
+              title="Mobile Simulator View (375px)"
+              className={`p-1.5 rounded-md transition ${viewport === 'mobile' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
+            >
+              <Smartphone className="w-4 h-4" />
+            </button>
           </div>
 
-          {toastMsg && (
-            <span className={`text-xs font-bold px-3 py-1 rounded-xl flex items-center gap-1 animate-fadeIn ${toastError ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              }`}>
-              {toastError ? <AlertCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              <span>{toastMsg}</span>
-            </span>
-          )}
-
-          {onExitToCounterApp && (
+          {/* Mode Switcher */}
+          <div className="hidden md:flex items-center bg-slate-800/90 p-1 rounded-lg border border-slate-700/80 text-xs font-semibold">
             <button
-              type="button"
-              onClick={onExitToCounterApp}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 transition"
+              onClick={() => setEditorMode('customize')}
+              className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition ${editorMode === 'customize' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Counter POS</span>
+              <Palette className="w-3.5 h-3.5" />
+              <span>Customize</span>
             </button>
-          )}
+            <button
+              onClick={() => setEditorMode('preview')}
+              className={`px-3 py-1 rounded-md flex items-center gap-1.5 transition ${editorMode === 'preview' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+              <Play className="w-3.5 h-3.5" />
+              <span>Test Simulator</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Actions (Reset, JSON, Save Draft, Publish Live, Exit) */}
+        <div className="flex items-center gap-2">
+          {/* Status Badge */}
+          <div className="hidden xl:flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-800/50 px-2.5 py-1 rounded-md border border-slate-700/50">
+            <span className={`w-2 h-2 rounded-full ${isPublished ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
+            <span>{isPublished ? 'Live Published' : 'Draft Modified'}</span>
+            <span className="text-slate-500">· {lastSavedTime}</span>
+          </div>
+
+          {/* Reset Button */}
+          <button
+            onClick={handleResetToDefaults}
+            title="Reset to factory defaults"
+            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+
+          {/* Export JSON */}
+          <button
+            onClick={handleExportJSON}
+            title="Export JSON"
+            className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+
+          {/* Import JSON */}
+          <label
+            title="Import JSON"
+            className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition cursor-pointer"
+          >
+            <Upload className="w-4 h-4" />
+            <input type="file" accept=".json" onChange={handleImportJSON} className="hidden" />
+          </label>
+
+          {/* Save Draft */}
+          <button
+            onClick={() => handleSave(false)}
+            disabled={isSaving}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 transition"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>Save Draft</span>
+          </button>
+
+          {/* Publish Live Button (WordPress style primary) */}
+          <button
+            onClick={() => handleSave(true)}
+            disabled={isSaving}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold rounded-lg shadow-sm shadow-emerald-950 transition transform active:scale-95"
+          >
+            {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            <span>Publish Live</span>
+          </button>
+
+          {/* Exit / Return to Main App */}
+          <button
+            onClick={onExitToCounterApp}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-lg transition ml-1"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Exit POS</span>
+          </button>
         </div>
       </header>
 
-      {/* ========================================================
-          2. WORKSPACE (Left: Complete Control Studio | Right: Live Preview)
-          ======================================================== */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl text-xs font-bold transition transform animate-in fade-in slide-in-from-bottom-3 ${
+            toast.isError ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'
+          }`}
+        >
+          {toast.isError ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 hover:opacity-75">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
-        {/* ----------------------------------------------------
-            LEFT PANEL: Editor Dashboard in Builder (52% width)
-            ---------------------------------------------------- */}
-        <section className="w-full lg:w-[52%] bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-hidden">
-          {/* Builder Navigation Sub-Tabs */}
-          <div className="border-b border-slate-200 bg-slate-50/80 px-4 pt-3 flex gap-1.5 overflow-x-auto shrink-0 select-none">
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 2. MAIN WORKSPACE (INSPECTOR SIDEBAR + LIVE CANVAS)       */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* ─── LEFT: WORDPRESS INSPECTOR SIDEBAR ─── */}
+        <aside className="w-full sm:w-[420px] bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 z-20 overflow-hidden">
+          {/* Inspector Navigation Tabs */}
+          <div className="flex items-center border-b border-slate-800 bg-slate-900/90 overflow-x-auto scrollbar-none px-2 shrink-0">
             {[
-              { id: 'rules_catalog', label: 'Master Rules Catalog', icon: Sliders },
-              { id: 'formulas', label: 'Earning Formulas', icon: Percent },
-              { id: 'redemption', label: 'Redeem, Lock & Caps', icon: DollarSign },
-              { id: 'tiers', label: 'Priority VIP Slabs', icon: Crown },
-              { id: 'approvals', label: 'Director Approvals', icon: ShieldCheck },
-              { id: 'simulator', label: 'Policy Simulator', icon: Play },
-              { id: 'theme', label: 'Theme & Toggles', icon: Palette },
-            ].map((tab) => {
-              const Icon = tab.icon;
+              { id: 'theme', label: 'Theme & Logo', icon: Palette },
+              { id: 'tabs', label: 'Tab Manager', icon: Layers },
+              { id: 'buttons', label: 'Buttons Studio', icon: Sparkles },
+              { id: 'logic', label: 'Loyalty Rules', icon: Sliders },
+              { id: 'tiers', label: 'Tier Slabs', icon: Crown },
+            ].map((t) => {
+              const Icon = t.icon;
+              const isActive = inspectorTab === t.id;
               return (
                 <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-3 py-2 border-b-2 text-xs font-bold whitespace-nowrap transition ${activeTab === tab.id
-                      ? 'border-purple-600 text-purple-700 bg-white rounded-t-lg'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
-                    }`}
+                  key={t.id}
+                  onClick={() => setInspectorTab(t.id)}
+                  className={`flex items-center gap-1.5 px-3 py-3 border-b-2 text-xs font-bold whitespace-nowrap transition ${
+                    isActive
+                      ? 'border-blue-500 text-blue-400 bg-slate-800/40'
+                      : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/20'
+                  }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
+                  <span>{t.label}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Builder Scrollable Content Panel */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {/* Inspector Scrollable Body */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-5 text-slate-300 text-xs scrollbar-thin scrollbar-thumb-slate-700">
+            {/* ═══════════════════════════════════════════════════ */}
+            {/* TAB 1: THEME, LOGO & SITE IDENTITY                  */}
+            {/* ═══════════════════════════════════════════════════ */}
+            {inspectorTab === 'theme' && (
+              <div className="space-y-5">
+                <div className="border-b border-slate-800 pb-2">
+                  <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-blue-400" />
+                    <span>Site Identity & Brand Colors</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Customize your dealership logo, brand name, tagline, and live color themes.
+                  </p>
+                </div>
 
-            {/* TAB 1: MASTER RULES CATALOG (The Heart of Editor) */}
-            {activeTab === 'rules_catalog' && (
-              <div className="space-y-4">
-                {/* Header Actions */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                {/* Dealership Name & Tagline */}
+                <div className="space-y-3 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                    Dealership / Group Name
+                  </label>
+                  <input
+                    type="text"
+                    value={theme.dealership_name}
+                    onChange={(e) => setTheme({ ...theme, dealership_name: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-semibold"
+                    placeholder="e.g. Bellad & Company"
+                  />
+
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider pt-1">
+                    Tagline / Subtitle
+                  </label>
+                  <input
+                    type="text"
+                    value={theme.tagline}
+                    onChange={(e) => setTheme({ ...theme, tagline: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    placeholder="e.g. Tata Motors & MG Motors Authorised Dealership"
+                  />
+                </div>
+
+                {/* Dealership Logo Customizer */}
+                <div className="space-y-3 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                      Dealership Logo
+                    </label>
+                    <span className="text-[10px] text-blue-400 font-semibold">Live in Header & Passes</span>
+                  </div>
+
+                  {/* Logo Preview Card */}
+                  <div className="flex items-center gap-3 p-2 bg-slate-900 rounded-lg border border-slate-700">
+                    <div className="w-14 h-14 bg-white rounded-lg p-1 flex items-center justify-center overflow-hidden border border-slate-300 shrink-0">
+                      <img
+                        src={theme.logo_url || '/bellad-logo.png'}
+                        alt="Dealership Logo"
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          e.target.src = '/bellad-logo.png';
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <input
+                        type="text"
+                        value={theme.logo_url}
+                        onChange={(e) => setTheme({ ...theme, logo_url: e.target.value })}
+                        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-white focus:outline-none"
+                        placeholder="Image URL (e.g. /bellad-logo.png)"
+                      />
+                      <div className="flex gap-1.5 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setTheme({ ...theme, logo_url: '/bellad-logo.png' })}
+                          className="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-medium"
+                        >
+                          Tata Bellad
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTheme({ ...theme, logo_url: '/hero-logo.png' })}
+                          className="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-medium"
+                        >
+                          Sprint Hero
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 1-Click Color Presets */}
+                <div className="space-y-3 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                    1-Click Brand Themes
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {THEME_PRESETS.map((preset) => {
+                      const isSelected = theme.primary_color === preset.primary;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() =>
+                            setTheme({
+                              ...theme,
+                              primary_color: preset.primary,
+                              secondary_color: preset.secondary,
+                              accent_color: preset.accent,
+                              surface_mode: preset.surface,
+                            })
+                          }
+                          className={`p-2.5 rounded-lg border text-left transition flex items-center gap-2.5 ${
+                            isSelected
+                              ? 'bg-slate-800 border-blue-500 shadow-xs'
+                              : 'bg-slate-900/60 border-slate-700/60 hover:bg-slate-800/60'
+                          }`}
+                        >
+                          <div className="flex -space-x-1 shrink-0">
+                            <span
+                              className="w-4 h-4 rounded-full border border-slate-800 shadow-xs"
+                              style={{ backgroundColor: preset.primary }}
+                            />
+                            <span
+                              className="w-4 h-4 rounded-full border border-slate-800 shadow-xs"
+                              style={{ backgroundColor: preset.secondary }}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-[11px] text-white truncate">{preset.name}</div>
+                          </div>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Custom Color Pickers */}
+                <div className="space-y-3 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                    Custom Color Palette
+                  </label>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <span className="block text-[10px] text-slate-400 mb-1">Primary Color</span>
+                      <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg p-1.5">
+                        <input
+                          type="color"
+                          value={theme.primary_color}
+                          onChange={(e) => setTheme({ ...theme, primary_color: e.target.value })}
+                          className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent"
+                        />
+                        <span className="text-[10px] font-mono text-slate-300 ml-1 truncate">
+                          {theme.primary_color}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-slate-400 mb-1">Secondary</span>
+                      <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg p-1.5">
+                        <input
+                          type="color"
+                          value={theme.secondary_color}
+                          onChange={(e) => setTheme({ ...theme, secondary_color: e.target.value })}
+                          className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent"
+                        />
+                        <span className="text-[10px] font-mono text-slate-300 ml-1 truncate">
+                          {theme.secondary_color}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-slate-400 mb-1">Accent</span>
+                      <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg p-1.5">
+                        <input
+                          type="color"
+                          value={theme.accent_color}
+                          onChange={(e) => setTheme({ ...theme, accent_color: e.target.value })}
+                          className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent"
+                        />
+                        <span className="text-[10px] font-mono text-slate-300 ml-1 truncate">
+                          {theme.accent_color}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Surface Mode & Border Radius */}
+                <div className="grid grid-cols-2 gap-3 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
                   <div>
-                    <h3 className="text-sm font-extrabold text-slate-900">Live PostgreSQL Rules Catalog</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Toggle, create, or modify rules. Any change is deployed to cashiers instantly.
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Surface Theme
+                    </label>
+                    <select
+                      value={theme.surface_mode}
+                      onChange={(e) => setTheme({ ...theme, surface_mode: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                    >
+                      <option value="light">Clean Light (Neumorphic)</option>
+                      <option value="slate">Modern Slate</option>
+                      <option value="dark">Executive Dark</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Card Corner Radius
+                    </label>
+                    <select
+                      value={theme.card_radius}
+                      onChange={(e) => setTheme({ ...theme, card_radius: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                    >
+                      <option value="rounded-none">Crisp (0px)</option>
+                      <option value="rounded-md">Smooth (6px)</option>
+                      <option value="rounded-xl">Standard (12px)</option>
+                      <option value="rounded-2xl">Modern Soft (16px)</option>
+                      <option value="rounded-3xl">Pill Curve (24px)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════ */}
+            {/* TAB 2: NAVIGATION & TAB CREATION MANAGER            */}
+            {/* ═══════════════════════════════════════════════════ */}
+            {inspectorTab === 'tabs' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-blue-400" />
+                      <span>Tab & Navigation Studio</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Add, reorder, rename, change icons, and set staff role access for tabs.
                     </p>
                   </div>
                   <button
-                    type="button"
-                    onClick={() => {
-                      setEditingRuleId(null);
-                      setRuleFormData({
-                        rule_code: `RULE-${Date.now().toString().slice(-4)}`,
-                        rule_name: '',
-                        description: '',
-                        scheme_type: 'standard',
-                        spend_type: 'sale',
-                        vehicle_type: '4W',
-                        brand_name: 'Tata Motors',
-                        min_spend_rs: 0,
-                        max_spend_rs: '',
-                        points_multiplier_numerator: 1,
-                        points_multiplier_denominator: 100,
-                        priority_tier: 'ALL',
-                        priority_weight: 100,
-                        approval_status: 'approved',
-                      });
-                      setRuleModalOpen(true);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition"
+                    onClick={() => setNewTabModalOpen(true)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs shadow-xs transition"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Add New Rule</span>
+                    <span>New Tab</span>
                   </button>
                 </div>
 
-                {/* Search & Filters */}
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Search rule name or code..."
-                      value={searchFilter}
-                      onChange={(e) => setSearchFilter(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 outline-none"
-                    />
-                  </div>
-                  <select
-                    value={schemeFilter}
-                    onChange={(e) => setSchemeFilter(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 outline-none font-bold text-slate-700"
-                  >
-                    <option value="ALL">All Schemes</option>
-                    <option value="standard">Standard Loyalty</option>
-                    <option value="festive">Festive Offers</option>
-                    <option value="exchange">Used Car Exchange</option>
-                    <option value="insurance">In-House Insurance</option>
-                    <option value="finance">In-House Finance</option>
-                    <option value="google">Google 5★ Reviews</option>
-                  </select>
-                  <select
-                    value={spendFilter}
-                    onChange={(e) => setSpendFilter(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 outline-none font-bold text-slate-700"
-                  >
-                    <option value="ALL">All Spend Types</option>
-                    <option value="sale">Vehicle Sales (1%)</option>
-                    <option value="service">Workshop Service (4%)</option>
-                    <option value="accessories">Accessories (2%)</option>
-                    <option value="bodyshop">Bodyshop (3%)</option>
-                  </select>
-                </div>
-
-                {/* Rules List Cards with Instant Toggle Buttons */}
-                <div className="space-y-2.5">
-                  {loading ? (
-                    <div className="p-8 text-center text-xs text-slate-400">Loading master rules from database...</div>
-                  ) : filteredRules.length === 0 ? (
-                    <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                      No master rules found matching filters.
-                    </div>
-                  ) : (
-                    filteredRules.map((r) => {
-                      const isActive = r.is_active;
-                      const isApproved = r.approval_status === 'approved';
-                      return (
-                        <div
-                          key={r.rule_id}
-                          className={`p-3.5 rounded-xl border transition flex items-center justify-between ${isActive ? 'bg-white border-slate-200 hover:border-purple-300 shadow-2xs' : 'bg-slate-50/70 border-slate-200 opacity-60'
-                            }`}
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <strong className="text-xs font-bold text-slate-900">{r.rule_name}</strong>
-                              <span className="font-mono text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 font-bold">
-                                {r.rule_code}
-                              </span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase">
-                                {r.spend_type}
-                              </span>
-                              {!isApproved && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                                  Pending Director Approval
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-[11px] text-slate-500 flex items-center gap-3">
-                              <span>Rate: <strong>{r.points_multiplier_numerator}/{r.points_multiplier_denominator}</strong></span>
-                              <span>•</span>
-                              <span>Vehicle: <strong>{r.vehicle_type}</strong></span>
-                              <span>•</span>
-                              <span>Tier: <strong>{r.priority_tier}</strong></span>
-                            </div>
+                {/* Tabs Orderable List */}
+                <div className="space-y-2">
+                  {tabs.map((tab, idx) => (
+                    <div
+                      key={tab.id}
+                      className={`p-3 rounded-xl border transition ${
+                        tab.visible
+                          ? 'bg-slate-800/70 border-slate-700/80'
+                          : 'bg-slate-900/40 border-slate-800/60 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {/* Order buttons */}
+                          <div className="flex flex-col">
+                            <button
+                              onClick={() => handleMoveTab(idx, -1)}
+                              disabled={idx === 0}
+                              className="text-slate-500 hover:text-white disabled:opacity-30 disabled:pointer-events-none p-0.5"
+                            >
+                              <ArrowUp className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleMoveTab(idx, 1)}
+                              disabled={idx === tabs.length - 1}
+                              className="text-slate-500 hover:text-white disabled:opacity-30 disabled:pointer-events-none p-0.5"
+                            >
+                              <ArrowDown className="w-3 h-3" />
+                            </button>
                           </div>
 
-                          {/* Quick Action Controls */}
-                          <div className="flex items-center gap-2">
-                            {!isApproved && (
-                              <button
-                                type="button"
-                                onClick={() => handleApproveRule(r.rule_id)}
-                                className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold shadow-2xs hover:bg-emerald-700"
-                              >
-                                Approve
-                              </button>
-                            )}
+                          <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center text-blue-400 border border-slate-700 shrink-0">
+                            {renderIcon(tab.icon, 'w-3.5 h-3.5')}
+                          </div>
 
-                            {/* Live Toggle Button (Takes effect next second!) */}
-                            <button
-                              type="button"
-                              onClick={() => handleToggleRuleActive(r.rule_id)}
-                              className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${isActive ? 'bg-purple-600' : 'bg-slate-300'
-                                }`}
-                            >
-                              <div className={`w-4 h-4 rounded-full bg-white shadow-xs transform transition-transform ${isActive ? 'translate-x-4' : 'translate-x-0'
-                                }`} />
-                            </button>
-
-                            {/* Delete */}
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteRule(r.rule_id)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 transition"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                          <div className="min-w-0">
+                            <span className="font-bold text-white block text-xs truncate">{tab.label}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              Role: <span className="text-blue-300 font-semibold">{tab.role_access}</span>
+                            </span>
                           </div>
                         </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            )}
 
-            {/* TAB 2: POINTS EARNING FORMULAS */}
-            {activeTab === 'formulas' && (
-              <div className="space-y-4 text-xs">
-                <div className="border-b border-slate-100 pb-2">
-                  <h3 className="text-sm font-extrabold text-slate-900">Department Points Gain Formulas</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Live calculation formulas for Vehicle Sales, Workshop Service, Accessories, and Bodyshop
-                  </p>
-                </div>
+                        {/* Visibility and delete controls */}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleToggleTabVisibility(tab.id)}
+                            title={tab.visible ? 'Hide tab from sidebar' : 'Show tab in sidebar'}
+                            className={`p-1.5 rounded-lg text-xs font-bold transition ${
+                              tab.visible ? 'text-emerald-400 hover:bg-slate-700' : 'text-slate-500 hover:bg-slate-700'
+                            }`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
 
-                {/* Vehicle Sales 1% Net Ex-Showroom */}
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Car className="w-4 h-4 text-purple-600" />
-                      <strong className="text-slate-900 font-bold">Vehicle Purchase Net Ex-Showroom Formula</strong>
+                          <button
+                            onClick={() => setEditingTabId(editingTabId === tab.id ? null : tab.id)}
+                            title="Edit tab label & icon"
+                            className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded-lg transition"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteTab(tab.id)}
+                            title="Delete tab"
+                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700 rounded-lg transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Inline Edit Form when opened */}
+                      {editingTabId === tab.id && (
+                        <div className="mt-3 pt-3 border-t border-slate-700/80 space-y-2">
+                          <div>
+                            <label className="text-[10px] text-slate-400 font-bold block mb-1">Tab Label</label>
+                            <input
+                              type="text"
+                              value={tab.label}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setTabs(tabs.map((t) => (t.id === tab.id ? { ...t, label: val } : t)));
+                              }}
+                              className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] text-slate-400 font-bold block mb-1">Icon</label>
+                              <select
+                                value={tab.icon}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setTabs(tabs.map((t) => (t.id === tab.id ? { ...t, icon: val } : t)));
+                                }}
+                                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                              >
+                                {AVAILABLE_ICONS.map((i) => (
+                                  <option key={i.id} value={i.id}>
+                                    {i.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] text-slate-400 font-bold block mb-1">Role Access</label>
+                              <select
+                                value={tab.role_access}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setTabs(tabs.map((t) => (t.id === tab.id ? { ...t, role_access: val } : t)));
+                                }}
+                                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                              >
+                                <option value="all">All Roles</option>
+                                <option value="cashier">Cashier Only</option>
+                                <option value="manager">Manager Only</option>
+                                <option value="accounts">Accounts Head</option>
+                                <option value="director">Director Only</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <span className="font-mono font-bold text-purple-700 bg-white px-2 py-0.5 rounded border border-slate-200">
-                      {formulas.sale.rate}% Net Ex-Showroom
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.25"
-                    max="3.0"
-                    step="0.25"
-                    value={formulas.sale.rate}
-                    onChange={(e) => setFormulas({
-                      ...formulas,
-                      sale: { ...formulas.sale, rate: parseFloat(e.target.value) }
-                    })}
-                    className="w-full accent-purple-600 cursor-pointer"
-                  />
-
-                  {/* Deduction Checkboxes */}
-                  <div className="pt-2 border-t border-slate-200 space-y-1.5">
-                    <span className="font-bold text-slate-700 block text-[11px]">Mandatory Statutory Deductions:</span>
-                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formulas.sale.deductInsurance}
-                          onChange={(e) => setFormulas({
-                            ...formulas,
-                            sale: { ...formulas.sale, deductInsurance: e.target.checked }
-                          })}
-                          className="rounded text-purple-600"
-                        />
-                        <span>Deduct Comprehensive Insurance</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formulas.sale.deductRto}
-                          onChange={(e) => setFormulas({
-                            ...formulas,
-                            sale: { ...formulas.sale, deductRto: e.target.checked }
-                          })}
-                          className="rounded text-purple-600"
-                        />
-                        <span>Deduct RTO & Road Tax</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formulas.sale.deductTcs}
-                          onChange={(e) => setFormulas({
-                            ...formulas,
-                            sale: { ...formulas.sale, deductTcs: e.target.checked }
-                          })}
-                          className="rounded text-purple-600"
-                        />
-                        <span>Deduct TCS (1% Tax at Source)</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Service, Accessories, Bodyshop */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
-                    <span className="font-bold text-slate-800 block">Workshop Service</span>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-500">Labor + Spares</span>
-                      <span className="font-mono font-bold text-emerald-700">{formulas.service.rate}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="6"
-                      step="0.5"
-                      value={formulas.service.rate}
-                      onChange={(e) => setFormulas({
-                        ...formulas,
-                        service: { ...formulas.service, rate: parseFloat(e.target.value) }
-                      })}
-                      className="w-full accent-emerald-600 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
-                    <span className="font-bold text-slate-800 block">Genuine Accessories</span>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-500">Counter Sale</span>
-                      <span className="font-mono font-bold text-purple-700">{formulas.accessories.rate}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="5"
-                      step="0.5"
-                      value={formulas.accessories.rate}
-                      onChange={(e) => setFormulas({
-                        ...formulas,
-                        accessories: { ...formulas.accessories, rate: parseFloat(e.target.value) }
-                      })}
-                      className="w-full accent-purple-600 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
-                    <span className="font-bold text-slate-800 block">Bodyshop Repairs</span>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-500">Customer Share</span>
-                      <span className="font-mono font-bold text-blue-700">{formulas.bodyshop.rate}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="5"
-                      step="0.5"
-                      value={formulas.bodyshop.rate}
-                      onChange={(e) => setFormulas({
-                        ...formulas,
-                        bodyshop: { ...formulas.bodyshop, rate: parseFloat(e.target.value) }
-                      })}
-                      className="w-full accent-blue-600 cursor-pointer"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: REDEMPTION, LOCK-IN & BILL CAPS */}
-            {activeTab === 'redemption' && (
-              <div className="space-y-4 text-xs">
-                <div className="border-b border-slate-100 pb-2">
-                  <h3 className="text-sm font-extrabold text-slate-900">Points Redemption, Valuation & Lock-In</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Configure the 4:1 conversion ratio, 12-month lock, and accessories exemption
-                  </p>
-                </div>
-
-                {/* Valuation Ratio Pill Selector */}
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <strong className="text-slate-900 font-bold">Valuation Conversion Ratio</strong>
-                    <span className="font-mono font-bold text-purple-700 bg-white px-2 py-0.5 rounded border border-slate-200">
-                      {redemptionPolicy.pointsPerRupee} Points = ₹1.00
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    {[4, 2, 1].map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRedemptionPolicy({ ...redemptionPolicy, pointsPerRupee: r })}
-                        className={`p-2.5 rounded-xl border text-center transition ${redemptionPolicy.pointsPerRupee === r
-                            ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                          }`}
-                      >
-                        <strong className="font-mono block text-xs">{r} Pts</strong>
-                        <span className="text-[10px] opacity-90 block">= ₹1.00</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 12-Month Vehicle Purchase Lock & ACCESSORIES EXEMPTION */}
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <strong className="text-slate-900 block font-bold">Vehicle Purchase Lock-In Horizon</strong>
-                      <span className="text-[10px] text-slate-500">Points locked for 12 months for routine service</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        value={redemptionPolicy.vehicleLockinMonths}
-                        onChange={(e) => setRedemptionPolicy({ ...redemptionPolicy, vehicleLockinMonths: parseInt(e.target.value) || 0 })}
-                        className="w-16 bg-white border border-slate-200 rounded-lg p-1.5 font-mono font-bold text-slate-900 text-center"
-                      />
-                      <span className="text-slate-500 font-bold">Mo</span>
-                    </div>
-                  </div>
-
-                  {/* ACCESSORIES EXEMPTION TOGGLE */}
-                  <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
-                    <div>
-                      <strong className="text-emerald-950 block text-[11px] font-bold">Accessories Lock-In Exemption</strong>
-                      <span className="text-[10px] text-emerald-700 leading-tight block">
-                        Allow customers to redeem points immediately for genuine accessories without waiting 12 months.
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setRedemptionPolicy({ ...redemptionPolicy, accessoriesExemption: !redemptionPolicy.accessoriesExemption })}
-                      className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ml-3 ${redemptionPolicy.accessoriesExemption ? 'bg-emerald-600' : 'bg-slate-300'
-                        }`}
-                    >
-                      <div className={`w-4 h-4 rounded-full bg-white shadow-xs transform transition-transform ${redemptionPolicy.accessoriesExemption ? 'translate-x-4' : 'translate-x-0'
-                        }`} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Service & Accessories Margin Caps */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
-                    <span className="font-bold text-slate-800 block">Workshop Service Bill Cap</span>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-500">Max Discount on Bill</span>
-                      <span className="font-mono font-bold text-purple-700">{redemptionPolicy.serviceBillCapPercent}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="15"
-                      max="50"
-                      step="5"
-                      value={redemptionPolicy.serviceBillCapPercent}
-                      onChange={(e) => setRedemptionPolicy({ ...redemptionPolicy, serviceBillCapPercent: parseInt(e.target.value) })}
-                      className="w-full accent-purple-600 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
-                    <span className="font-bold text-slate-800 block">Accessories Bill Cap</span>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-500">Max Discount on Bill</span>
-                      <span className="font-mono font-bold text-emerald-700">{redemptionPolicy.accessoriesBillCapPercent}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="20"
-                      max="60"
-                      step="5"
-                      value={redemptionPolicy.accessoriesBillCapPercent}
-                      onChange={(e) => setRedemptionPolicy({ ...redemptionPolicy, accessoriesBillCapPercent: parseInt(e.target.value) })}
-                      className="w-full accent-emerald-600 cursor-pointer"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 4: DIRECTOR AGSTYA PRIORITY SLABS */}
-            {activeTab === 'tiers' && (
-              <div className="space-y-4 text-xs">
-                <div className="border-b border-slate-100 pb-2">
-                  <h3 className="text-sm font-extrabold text-slate-900">Director Agstya Dynamic Priority Slabs</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Toggle qualification basis: Annual Spend vs Cumulative Points vs Flagship Vehicle
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: 'spend', title: '💰 Annual Spend', desc: '₹1.5L / ₹5L / ₹15L' },
-                    { id: 'points', title: '🪙 Cumulative Points', desc: '2.5k / 10k / 30k' },
-                    { id: 'flagship', title: '🚗 Flagship Ownership', desc: 'Harrier / Safari / Gloster' },
-                  ].map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setTierModel(m.id)}
-                      className={`p-3 rounded-xl border text-left transition ${tierModel === m.id
-                          ? 'border-purple-600 bg-purple-50/70 ring-1 ring-purple-500'
-                          : 'border-slate-200 bg-slate-50 hover:bg-white'
-                        }`}
-                    >
-                      <strong className="text-xs font-bold text-slate-900 block">{m.title}</strong>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">{m.desc}</span>
-                    </button>
                   ))}
                 </div>
 
-                <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b border-slate-200 font-bold text-slate-600">
-                      <tr>
-                        <th className="p-2.5">Tier</th>
-                        <th className="p-2.5">Threshold ({tierModel})</th>
-                        <th className="p-2.5">Multiplier</th>
-                        <th className="p-2.5">Perk</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
-                      <tr>
-                        <td className="p-2.5 font-bold text-slate-700">Silver Member</td>
-                        <td className="p-2.5 text-slate-500 font-mono">₹0 Entry</td>
-                        <td className="p-2.5 font-mono font-bold">1.00x</td>
-                        <td className="p-2.5 text-slate-400">Standard Access</td>
-                      </tr>
-                      <tr>
-                        <td className="p-2.5 font-bold text-amber-600">Gold VIP</td>
-                        <td className="p-2.5 text-slate-700 font-mono">₹1.5L Annual Spend</td>
-                        <td className="p-2.5 font-mono font-bold text-purple-700">1.25x</td>
-                        <td className="p-2.5 text-emerald-600 font-bold">Free Wash</td>
-                      </tr>
-                      <tr>
-                        <td className="p-2.5 font-bold text-slate-900">Platinum Elite</td>
-                        <td className="p-2.5 text-slate-700 font-mono">₹5.0L Annual Spend</td>
-                        <td className="p-2.5 font-mono font-bold text-purple-700">1.50x</td>
-                        <td className="p-2.5 text-emerald-600 font-bold">Priority Bay</td>
-                      </tr>
-                      <tr>
-                        <td className="p-2.5 font-bold text-purple-700">Diamond Director</td>
-                        <td className="p-2.5 text-slate-700 font-mono">₹15.0L Fleet / Comm</td>
-                        <td className="p-2.5 font-mono font-bold text-purple-700">2.00x</td>
-                        <td className="p-2.5 text-emerald-600 font-bold">Dedicated Advisor</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 5: DIRECTOR APPROVALS & KYC QUEUE */}
-            {activeTab === 'approvals' && (
-              <div className="space-y-4 text-xs">
-                <div className="border-b border-slate-100 pb-2">
-                  <h3 className="text-sm font-extrabold text-slate-900">Director Agstya Approvals & Risk Controls</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Maker-checker authorization, high-value transaction queue, and KYC thresholds
-                  </p>
-                </div>
-
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <strong className="text-slate-900 block font-bold">Agstya Sir Approval Limit</strong>
-                      <span className="text-[10px] text-slate-500">Manual points credit threshold requiring Director review</span>
-                    </div>
-                    <span className="font-mono font-bold text-purple-700 bg-white px-3 py-1 rounded-lg border border-slate-200">
-                      &gt; 1,000 Points
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                    <div>
-                      <strong className="text-slate-900 block font-bold">Mandatory KYC Verification Limit</strong>
-                      <span className="text-[10px] text-slate-500">Requires verified PAN/Aadhaar before redemption</span>
-                    </div>
-                    <span className="font-mono font-bold text-purple-700 bg-white px-3 py-1 rounded-lg border border-slate-200">
-                      &gt; 10,000 Points
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-purple-900 text-xs">
-                  <strong>Strict VIN / Chassis Uniqueness Enforcement:</strong>
-                  <p className="text-[11px] text-purple-700 mt-0.5">
-                    PostgreSQL database strictly enforces 1 VIN = 1 vehicle purchase reward issuance. Prevents duplicate points fraud across branches.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 6: LIVE POLICY SIMULATOR */}
-            {activeTab === 'simulator' && (
-              <div className="space-y-4 text-xs">
-                <div className="border-b border-slate-100 pb-2">
-                  <h3 className="text-sm font-extrabold text-slate-900">Live Policy & Points Simulator</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Simulate customer transactions against active master rules to verify points awarded and discounts
-                  </p>
-                </div>
-
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Spend Category</label>
-                      <select
-                        value={simParams.spend_type}
-                        onChange={(e) => setSimParams({ ...simParams, spend_type: e.target.value })}
-                        className="w-full bg-white border border-slate-200 rounded-lg p-2 font-bold text-slate-800"
-                      >
-                        <option value="sale">Vehicle Purchase (1%)</option>
-                        <option value="service">Workshop Routine Service (4%)</option>
-                        <option value="accessories">Genuine Accessories (2%)</option>
-                        <option value="bodyshop">Bodyshop Repairs (3%)</option>
-                      </select>
+                {/* Modal for Creating New Tab */}
+                {newTabModalOpen && (
+                  <div className="p-3 bg-blue-950/40 border border-blue-700/60 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-blue-300 text-xs">Create New Navigation Tab</span>
+                      <button onClick={() => setNewTabModalOpen(false)} className="text-slate-400 hover:text-white">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     </div>
 
                     <div>
-                      <label className="font-bold text-slate-700 block mb-1">Spend Amount (₹)</label>
+                      <label className="text-[10px] text-slate-300 font-bold block mb-1">Tab Name</label>
                       <input
-                        type="number"
-                        value={simParams.spend_amount}
-                        onChange={(e) => setSimParams({ ...simParams, spend_amount: e.target.value })}
-                        className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono font-bold text-slate-800"
+                        type="text"
+                        placeholder="e.g. VIP Club Lounge"
+                        value={newTabData.label}
+                        onChange={(e) => setNewTabData({ ...newTabData, label: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
                       />
                     </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-300 font-bold block mb-1">Icon</label>
+                        <select
+                          value={newTabData.icon}
+                          onChange={(e) => setNewTabData({ ...newTabData, icon: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none"
+                        >
+                          {AVAILABLE_ICONS.map((i) => (
+                            <option key={i.id} value={i.id}>
+                              {i.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-slate-300 font-bold block mb-1">Access Role</label>
+                        <select
+                          value={newTabData.role_access}
+                          onChange={(e) => setNewTabData({ ...newTabData, role_access: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none"
+                        >
+                          <option value="all">All Roles</option>
+                          <option value="cashier">Cashier</option>
+                          <option value="manager">Manager</option>
+                          <option value="accounts">Accounts Head</option>
+                          <option value="director">Director Only</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        onClick={() => setNewTabModalOpen(false)}
+                        className="px-3 py-1 bg-slate-800 text-slate-300 text-xs rounded-lg"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleCreateNewTab}
+                        className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg shadow-xs"
+                      >
+                        Add Tab
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════ */}
+            {/* TAB 3: BUTTONS & ACTION STUDIO                      */}
+            {/* ═══════════════════════════════════════════════════ */}
+            {inspectorTab === 'buttons' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-400" />
+                      <span>Action Buttons Studio</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Create & configure custom action buttons like Add Receipt, Bill Correction, Redeem, etc.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setNewButtonModalOpen(true)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs shadow-xs transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>New Button</span>
+                  </button>
+                </div>
+
+                {/* Buttons List */}
+                <div className="space-y-2">
+                  {buttons.map((btn) => (
+                    <div
+                      key={btn.id}
+                      className={`p-3 rounded-xl border transition ${
+                        btn.enabled
+                          ? 'bg-slate-800/70 border-slate-700/80'
+                          : 'bg-slate-900/40 border-slate-800/60 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center text-emerald-400 border border-slate-700 shrink-0">
+                            {renderIcon(btn.icon, 'w-3.5 h-3.5')}
+                          </div>
+
+                          <div className="min-w-0">
+                            <span className="font-bold text-white block text-xs truncate">{btn.label}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              Placement: <span className="text-emerald-300 font-semibold">{btn.placement}</span> · Style:{' '}
+                              <span className="text-blue-300 font-semibold">{btn.style}</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleToggleBtnEnabled(btn.id)}
+                            title={btn.enabled ? 'Disable button' : 'Enable button'}
+                            className={`p-1.5 rounded-lg text-xs font-bold transition ${
+                              btn.enabled
+                                ? 'text-emerald-400 hover:bg-slate-700'
+                                : 'text-slate-500 hover:bg-slate-700'
+                            }`}
+                          >
+                            <CheckCheck className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => setEditingButtonId(editingButtonId === btn.id ? null : btn.id)}
+                            title="Edit button settings"
+                            className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded-lg transition"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteBtn(btn.id)}
+                            title="Delete button"
+                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700 rounded-lg transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Inline Edit Details */}
+                      {editingButtonId === btn.id && (
+                        <div className="mt-3 pt-3 border-t border-slate-700/80 space-y-2">
+                          <div>
+                            <label className="text-[10px] text-slate-400 font-bold block mb-1">Button Label</label>
+                            <input
+                              type="text"
+                              value={btn.label}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setButtons(buttons.map((b) => (b.id === btn.id ? { ...b, label: val } : b)));
+                              }}
+                              className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] text-slate-400 font-bold block mb-1">Style Format</label>
+                              <select
+                                value={btn.style}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setButtons(buttons.map((b) => (b.id === btn.id ? { ...b, style: val } : b)));
+                                }}
+                                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                              >
+                                <option value="solid">Solid Fill</option>
+                                <option value="outline">Outline</option>
+                                <option value="pill">Rounded Pill</option>
+                                <option value="soft">Soft Tint</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] text-slate-400 font-bold block mb-1">Color Shade</label>
+                              <select
+                                value={btn.color}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setButtons(buttons.map((b) => (b.id === btn.id ? { ...b, color: val } : b)));
+                                }}
+                                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                              >
+                                <option value="emerald">Emerald Green</option>
+                                <option value="amber">Amber Warning</option>
+                                <option value="indigo">Indigo Violet</option>
+                                <option value="primary">Brand Primary</option>
+                                <option value="rose">Rose Red</option>
+                                <option value="slate">Slate Neutral</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] text-slate-400 font-bold block mb-1">Placement</label>
+                              <select
+                                value={btn.placement}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setButtons(buttons.map((b) => (b.id === btn.id ? { ...b, placement: val } : b)));
+                                }}
+                                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                              >
+                                <option value="header">Top Header Bar</option>
+                                <option value="customer_card">Customer Loyalty Card</option>
+                                <option value="quick_actions">Quick Actions Bar</option>
+                                <option value="floating_fab">Floating Action FAB</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] text-slate-400 font-bold block mb-1">Trigger Action</label>
+                              <select
+                                value={btn.action_type}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setButtons(buttons.map((b) => (b.id === btn.id ? { ...b, action_type: val } : b)));
+                                }}
+                                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                              >
+                                <option value="open_receipt_modal">Open Receipt Modal</option>
+                                <option value="open_bill_correction_modal">Open Bill Correction</option>
+                                <option value="open_redemption_modal">Open Redemption Modal</option>
+                                <option value="send_whatsapp">Send WhatsApp Pass</option>
+                                <option value="open_referral_modal">Add Referral</option>
+                                <option value="sync_appsheet">Sync AppSheet</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Modal for Creating New Button */}
+                {newButtonModalOpen && (
+                  <div className="p-3 bg-emerald-950/40 border border-emerald-700/60 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-emerald-300 text-xs">Create New Custom Button</span>
+                      <button onClick={() => setNewButtonModalOpen(false)} className="text-slate-400 hover:text-white">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-slate-300 font-bold block mb-1">Button Label</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Bill Correction, Quick KYC"
+                        value={newButtonData.label}
+                        onChange={(e) => setNewButtonData({ ...newButtonData, label: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-300 font-bold block mb-1">Icon</label>
+                        <select
+                          value={newButtonData.icon}
+                          onChange={(e) => setNewButtonData({ ...newButtonData, icon: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none"
+                        >
+                          {AVAILABLE_ICONS.map((i) => (
+                            <option key={i.id} value={i.id}>
+                              {i.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-slate-300 font-bold block mb-1">Placement</label>
+                        <select
+                          value={newButtonData.placement}
+                          onChange={(e) => setNewButtonData({ ...newButtonData, placement: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none"
+                        >
+                          <option value="header">Top Header Bar</option>
+                          <option value="customer_card">Customer Card</option>
+                          <option value="quick_actions">Quick Actions Bar</option>
+                          <option value="floating_fab">Floating FAB</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-300 font-bold block mb-1">Style</label>
+                        <select
+                          value={newButtonData.style}
+                          onChange={(e) => setNewButtonData({ ...newButtonData, style: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none"
+                        >
+                          <option value="solid">Solid Fill</option>
+                          <option value="outline">Outline</option>
+                          <option value="pill">Pill Shape</option>
+                          <option value="soft">Soft Tint</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-slate-300 font-bold block mb-1">Color</label>
+                        <select
+                          value={newButtonData.color}
+                          onChange={(e) => setNewButtonData({ ...newButtonData, color: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none"
+                        >
+                          <option value="emerald">Emerald</option>
+                          <option value="amber">Amber</option>
+                          <option value="indigo">Indigo</option>
+                          <option value="primary">Primary Brand</option>
+                          <option value="rose">Rose</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        onClick={() => setNewButtonModalOpen(false)}
+                        className="px-3 py-1 bg-slate-800 text-slate-300 text-xs rounded-lg"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleCreateNewButton}
+                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow-xs"
+                      >
+                        Add Button
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════ */}
+            {/* TAB 4: LOYALTY BUSINESS LOGIC & RULES ENGINE        */}
+            {/* ═══════════════════════════════════════════════════ */}
+            {inspectorTab === 'logic' && (
+              <div className="space-y-4">
+                <div className="border-b border-slate-800 pb-2">
+                  <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-purple-400" />
+                    <span>Loyalty Business Logic Engine</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Configure point earning % rates, lock-in, redemption value, and bill correction rules.
+                  </p>
+                </div>
+
+                {/* Earning Formulas Sliders */}
+                <div className="space-y-3 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
+                  <span className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                    Point Gain Formulas (% of spend)
+                  </span>
+
+                  {/* Net Ex-showroom */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span>Vehicle Sales (Net Ex-Showroom)</span>
+                      <span className="text-blue-400 font-bold">{logic.sales_net_ex_pct}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="3.0"
+                      step="0.1"
+                      value={logic.sales_net_ex_pct}
+                      onChange={(e) => setLogic({ ...logic, sales_net_ex_pct: parseFloat(e.target.value) })}
+                      className="w-full accent-blue-500 cursor-pointer"
+                    />
+                    <span className="text-[10px] text-slate-400">
+                      ₹15,00,000 car sale delivers {Math.round((1500000 * logic.sales_net_ex_pct) / 100)} points.
+                    </span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleRunSimulation}
-                    disabled={simRunning}
-                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-2xs"
-                  >
-                    {simRunning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                    <span>Run Simulation</span>
-                  </button>
+                  {/* Service */}
+                  <div className="space-y-1 pt-2">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span>Service Visits & Maintenance</span>
+                      <span className="text-emerald-400 font-bold">{logic.service_points_pct}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="5.0"
+                      step="0.5"
+                      value={logic.service_points_pct}
+                      onChange={(e) => setLogic({ ...logic, service_points_pct: parseFloat(e.target.value) })}
+                      className="w-full accent-emerald-500 cursor-pointer"
+                    />
+                    <span className="text-[10px] text-slate-400">
+                      ₹10,000 service bill delivers {Math.round((10000 * logic.service_points_pct) / 100)} points.
+                    </span>
+                  </div>
 
-                  {simResult && (
-                    <div className="p-3 bg-white rounded-xl border border-purple-200 space-y-1.5 animate-fadeIn">
-                      <strong className="text-purple-900 block font-bold">Simulation Results:</strong>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Points Awarded:</span>
-                        <strong className="text-purple-700 font-mono text-sm">{simResult.points_awarded || simResult.points_calculated || 0} pts</strong>
+                  {/* Bodyshop */}
+                  <div className="space-y-1 pt-2">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span>Bodyshop & Insurance Repairs</span>
+                      <span className="text-amber-400 font-bold">{logic.bodyshop_points_pct}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="4.0"
+                      step="0.5"
+                      value={logic.bodyshop_points_pct}
+                      onChange={(e) => setLogic({ ...logic, bodyshop_points_pct: parseFloat(e.target.value) })}
+                      className="w-full accent-amber-500 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Accessories */}
+                  <div className="space-y-1 pt-2">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span>Accessories & Spares</span>
+                      <span className="text-purple-400 font-bold">{logic.accessories_points_pct}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="5.0"
+                      step="0.5"
+                      value={logic.accessories_points_pct}
+                      onChange={(e) => setLogic({ ...logic, accessories_points_pct: parseFloat(e.target.value) })}
+                      className="w-full accent-purple-500 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Conversion Valuation & Lock-in */}
+                <div className="space-y-3 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
+                  <span className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                    Valuation & Lock-in Governance
+                  </span>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-slate-400 block font-bold mb-1">
+                        Valuation (₹ per point)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.05"
+                        value={logic.points_to_inr_ratio}
+                        onChange={(e) => setLogic({ ...logic, points_to_inr_ratio: parseFloat(e.target.value) || 0.25 })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                      />
+                      <span className="text-[10px] text-slate-400 block mt-1">
+                        {Math.round(1 / (logic.points_to_inr_ratio || 0.25))} pts = ₹1.00 cash
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-slate-400 block font-bold mb-1">
+                        Lock-in Period (Months)
+                      </label>
+                      <input
+                        type="number"
+                        value={logic.lock_in_months}
+                        onChange={(e) => setLogic({ ...logic, lock_in_months: parseInt(e.target.value) || 0 })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                      />
+                      <span className="text-[10px] text-slate-400 block mt-1">Points unlock after {logic.lock_in_months}m</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <label className="text-[10px] text-slate-400 block font-bold mb-1">Points Expiry Rule</label>
+                    <select
+                      value={logic.expiry_policy}
+                      onChange={(e) => setLogic({ ...logic, expiry_policy: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                    >
+                      <option value="FIFO_12_MONTHS">FIFO 12-Month Expiry (Rolling)</option>
+                      <option value="FIFO_24_MONTHS">FIFO 24-Month Expiry</option>
+                      <option value="NO_EXPIRY">Points Never Expire</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Bill Correction Controls */}
+                <div className="space-y-3 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-white text-xs block">Bill Correction Workflow</span>
+                      <span className="text-[10px] text-slate-400">Allows cashiers to request bill corrections</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLogic({ ...logic, bill_correction_enabled: !logic.bill_correction_enabled })}
+                      className={`w-10 h-5 rounded-full transition relative p-0.5 ${
+                        logic.bill_correction_enabled ? 'bg-amber-500' : 'bg-slate-700'
+                      }`}
+                    >
+                      <span
+                        className={`block w-4 h-4 rounded-full bg-white transition transform ${
+                          logic.bill_correction_enabled ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {logic.bill_correction_enabled && (
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-700/60">
+                      <div>
+                        <label className="text-[10px] text-slate-400 block font-bold mb-1">Time Window</label>
+                        <select
+                          value={logic.bill_correction_window_hours}
+                          onChange={(e) => setLogic({ ...logic, bill_correction_window_hours: parseInt(e.target.value) })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                        >
+                          <option value="24">24 Hours</option>
+                          <option value="48">48 Hours</option>
+                          <option value="72">72 Hours</option>
+                          <option value="168">7 Days</option>
+                        </select>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Effective Cash Value (4:1):</span>
-                        <strong className="text-emerald-600 font-mono">₹{((simResult.points_awarded || 0) / 4).toFixed(2)}</strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Rule Evaluated:</span>
-                        <span className="text-slate-700 font-mono">{simResult.applied_rule?.rule_name || 'Standard Rate'}</span>
+
+                      <div>
+                        <label className="text-[10px] text-slate-400 block font-bold mb-1">Manager Sign-off</label>
+                        <input
+                          type="number"
+                          value={logic.manager_approval_threshold}
+                          onChange={(e) => setLogic({ ...logic, manager_approval_threshold: parseInt(e.target.value) || 0 })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                          placeholder="₹5,000"
+                        />
                       </div>
                     </div>
                   )}
@@ -1112,387 +1609,676 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
               </div>
             )}
 
-            {/* TAB 7: THEME & COMPONENT TOGGLES */}
-            {activeTab === 'theme' && (
-              <div className="space-y-4 text-xs">
-                <div className="border-b border-slate-100 pb-2">
-                  <h3 className="text-sm font-extrabold text-slate-900">App Branding & Feature Toggles</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Customize customer-facing theme, primary colors, and toggle active modules
+            {/* ═══════════════════════════════════════════════════ */}
+            {/* TAB 5: PRIORITY TIER SLABS                          */}
+            {/* ═══════════════════════════════════════════════════ */}
+            {inspectorTab === 'tiers' && (
+              <div className="space-y-4">
+                <div className="border-b border-slate-800 pb-2">
+                  <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-amber-400" />
+                    <span>Customer Priority Tiers</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Set tier thresholds, multipliers, and perks for Silver, Gold, and Diamond members.
                   </p>
                 </div>
 
                 <div className="space-y-3">
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">App Display Name</label>
-                    <input
-                      type="text"
-                      value={branding.appName}
-                      onChange={(e) => setBranding({ ...branding, appName: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800"
-                    />
-                  </div>
+                  {tiers.map((t, idx) => (
+                    <div key={idx} className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-white text-xs flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.badge_color }} />
+                          {t.tier}
+                        </span>
+                        <span className="text-[11px] font-bold text-amber-400">{t.multiplier}x Multiplier</span>
+                      </div>
 
-                  {/* Primary Color Palette */}
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1.5">Brand Primary Color</label>
-                    <div className="flex items-center gap-3">
-                      {[
-                        { color: '#4f46e5', name: 'Indigo' },
-                        { color: '#2563eb', name: 'Tata Blue' },
-                        { color: '#dc2626', name: 'Hero Red' },
-                        { color: '#059669', name: 'Emerald' },
-                        { color: '#7c3aed', name: 'Purple' },
-                      ].map((c) => (
-                        <button
-                          key={c.color}
-                          type="button"
-                          onClick={() => setBranding({ ...branding, primaryColor: c.color })}
-                          className={`w-7 h-7 rounded-full border-2 transition ${branding.primaryColor === c.color ? 'border-slate-900 scale-110 shadow-sm' : 'border-transparent'
-                            }`}
-                          style={{ backgroundColor: c.color }}
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div>
+                          <label className="text-[10px] text-slate-400 block font-bold">Spend Threshold</label>
+                          <input
+                            type="number"
+                            value={t.threshold}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              setTiers(tiers.map((item, i) => (i === idx ? { ...item, threshold: val } : item)));
+                            }}
+                            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] text-slate-400 block font-bold">Points Multiplier</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={t.multiplier}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 1.0;
+                              setTiers(tiers.map((item, i) => (i === idx ? { ...item, multiplier: val } : item)));
+                            }}
+                            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-slate-400 block font-bold">Tier Perks Description</label>
+                        <input
+                          type="text"
+                          value={t.perks}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setTiers(tiers.map((item, i) => (i === idx ? { ...item, perks: val } : item)));
+                          }}
+                          className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none"
                         />
-                      ))}
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}
-
           </div>
-        </section>
+        </aside>
 
-        {/* ----------------------------------------------------
-            RIGHT PANEL: Live Interactive Loyalty App Preview (48% width)
-            ---------------------------------------------------- */}
-        <section className="flex-1 bg-slate-200/60 p-6 flex flex-col items-center justify-center overflow-hidden relative">
-          {/* Top Customer Switcher & Device Label */}
-          <div className="absolute top-3 left-6 right-6 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-bold text-slate-600">LIVE PREVIEW ({viewMode.toUpperCase()})</span>
-            </div>
-
-            {/* Test Customer Switcher */}
-            <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-300 shadow-2xs">
-              <span className="text-[10px] text-slate-400 font-bold">Preview Member:</span>
-              <select
-                value={selectedCustomer.id}
-                onChange={(e) => {
-                  const cust = TEST_CUSTOMERS.find((c) => c.id === e.target.value);
-                  if (cust) setSelectedCustomer(cust);
-                }}
-                className="bg-transparent font-bold text-slate-800 text-xs outline-none cursor-pointer"
-              >
-                {TEST_CUSTOMERS.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.tier})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* DYNAMIC DEVICE VIEWPORT CONTAINER */}
+        {/* ─── RIGHT: CENTER CANVAS (LIVE RESPONSIVE STAGE) ─── */}
+        <main className="flex-1 bg-slate-950 flex flex-col items-center justify-center p-3 sm:p-6 overflow-y-auto relative">
+          {/* Subtle Grid dots background */}
           <div
-            className={`transition-all duration-300 ease-in-out bg-white flex flex-col shadow-2xl overflow-hidden mt-6 ${viewMode === 'mobile'
-                ? 'w-[375px] h-[670px] rounded-[44px] border-[10px] border-slate-900'
-                : viewMode === 'tablet'
-                  ? 'w-[560px] h-[670px] rounded-[36px] border-[12px] border-slate-900'
-                  : 'w-full max-w-[800px] h-[670px] rounded-2xl border border-slate-300'
-              }`}
+            className="absolute inset-0 opacity-15 pointer-events-none"
+            style={{
+              backgroundImage: 'radial-gradient(circle, #60a5fa 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
+            }}
+          />
+
+          {/* Viewport Frame Container */}
+          <div
+            className={`transition-all duration-300 ease-out flex flex-col shadow-2xl relative z-10 overflow-hidden ${
+              viewport === 'mobile'
+                ? 'w-[375px] h-[780px] rounded-[44px] border-[10px] border-slate-800 bg-white ring-1 ring-slate-700 shadow-blue-950/40'
+                : viewport === 'tablet'
+                ? 'w-[768px] h-[820px] rounded-[32px] border-[10px] border-slate-800 bg-white ring-1 ring-slate-700 shadow-blue-950/40'
+                : 'w-full max-w-[1240px] h-[840px] rounded-2xl border border-slate-800 bg-white shadow-2xl'
+            }`}
           >
-            {/* Mobile Notch */}
-            {viewMode === 'mobile' && (
-              <div className="h-6 bg-slate-900 flex items-center justify-center shrink-0">
-                <div className="w-20 h-3 bg-black rounded-full" />
+            {/* Mobile / Tablet Dynamic Island / Bezel Notch */}
+            {viewport === 'mobile' && (
+              <div className="h-6 bg-slate-900 flex items-center justify-between px-6 pt-1 select-none shrink-0 z-30">
+                <span className="text-[10px] font-bold text-white">9:41</span>
+                <div className="w-20 h-3.5 bg-black rounded-full" />
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span className="text-[9px] font-bold text-white">5G</span>
+                </div>
               </div>
             )}
 
-            {/* LIVE CUSTOMER LOYALTY APP SCREEN */}
-            <div className="flex-1 flex flex-col overflow-y-auto bg-slate-50 font-sans">
-              {/* App Navigation Bar */}
-              <div
-                className="px-5 py-3.5 text-white flex items-center justify-between shrink-0 shadow-xs"
-                style={{ backgroundColor: branding.primaryColor }}
+            {/* ══════════════════════════════════════════════════════════ */}
+            {/* SIMULATED LIVE LOYALTY APP (FRONTEND FUNCTIONALITY)       */}
+            {/* ══════════════════════════════════════════════════════════ */}
+            <div className="flex-1 flex flex-col overflow-hidden bg-slate-50 text-slate-800 select-text">
+              {/* Dealership Live Header */}
+              <header
+                className="px-4 py-2.5 text-white flex items-center justify-between shadow-xs transition-colors shrink-0"
+                style={{ backgroundColor: theme.primary_color }}
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-xs">
-                    <Store className="w-4 h-4 text-white" />
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-10 h-10 bg-white rounded-lg p-0.5 flex items-center justify-center shrink-0 shadow-xs">
+                    <img
+                      src={theme.logo_url || '/bellad-logo.png'}
+                      alt="Logo"
+                      className="w-full h-full object-contain"
+                      onError={(e) => (e.target.src = '/bellad-logo.png')}
+                    />
                   </div>
-                  <div>
-                    <span className="font-extrabold text-xs tracking-tight block leading-tight">
-                      {branding.appName}
-                    </span>
-                    <span className="text-[9px] text-white/80 block leading-tight">
-                      {branding.tagline}
-                    </span>
+                  <div className="min-w-0">
+                    <h1 className="font-extrabold text-sm tracking-tight truncate leading-tight">
+                      {theme.dealership_name}
+                    </h1>
+                    <span className="text-[10px] opacity-90 truncate block">{theme.tagline}</span>
                   </div>
                 </div>
 
-                <div className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-bold text-white uppercase tracking-wider">
-                  {selectedCustomer.tier}
+                {/* Header Action Buttons (Rendered according to Buttons Studio!) */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {buttons
+                    .filter((b) => b.enabled && b.placement === 'header')
+                    .map((btn) => {
+                      const isAmber = btn.color === 'amber';
+                      const isEmerald = btn.color === 'emerald';
+                      const isSlate = btn.color === 'slate';
+
+                      return (
+                        <button
+                          key={btn.id}
+                          onClick={() => {
+                            if (btn.action_type === 'open_receipt_modal') setReceiptModalOpen(true);
+                            else if (btn.action_type === 'open_bill_correction_modal') setCorrectionModalOpen(true);
+                            else if (btn.action_type === 'open_redemption_modal') setRedemptionModalOpen(true);
+                            else if (btn.action_type === 'sync_appsheet')
+                              showNotification('🔄 Cloud AppSheet bi-directional sync executed.');
+                          }}
+                          className={`flex items-center gap-1 px-2.5 py-1.5 font-bold text-[11px] rounded-lg transition shadow-xs ${
+                            btn.style === 'solid'
+                              ? isEmerald
+                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                : isAmber
+                                ? 'bg-amber-500 hover:bg-amber-400 text-slate-900 font-extrabold'
+                                : 'bg-white text-slate-900 hover:bg-slate-100'
+                              : 'border border-white/40 text-white hover:bg-white/10'
+                          }`}
+                        >
+                          {renderIcon(btn.icon, 'w-3 h-3')}
+                          <span>{btn.label}</span>
+                        </button>
+                      );
+                    })}
                 </div>
-              </div>
+              </header>
 
-              {/* Scrollable App Body */}
-              <div className="p-4 space-y-4">
-
-                {/* DIGITAL MEMBER PASS CARD */}
-                {modules.digitalCard && (
-                  <div
-                    className={`rounded-2xl p-5 text-white shadow-lg relative overflow-hidden bg-gradient-to-tr ${branding.cardGradient === 'gold'
-                        ? 'from-amber-600 via-amber-500 to-yellow-600'
-                        : 'from-purple-700 via-indigo-600 to-indigo-800'
-                      }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/80 block">
-                          Digital Member Pass
-                        </span>
-                        <h4 className="text-base font-extrabold text-white mt-0.5">{selectedCustomer.name}</h4>
-                        <span className="text-[10px] font-mono text-white/70">ID: BAC-9821 • {selectedCustomer.vehicle}</span>
-                      </div>
-                      <Crown className="w-6 h-6 text-white/90" />
-                    </div>
-
-                    <div className="mt-4 flex items-end justify-between">
-                      <div>
-                        <span className="text-[10px] text-white/80 block">Usable Points Balance</span>
-                        <div className="text-2xl font-black font-mono tracking-tight text-white">
-                          {selectedCustomer.points_balance.toLocaleString()} <span className="text-xs font-normal">pts</span>
-                        </div>
-                        <span className="text-[11px] font-bold text-white/90 block mt-0.5">
-                          ≈ ₹{(selectedCustomer.points_balance / redemptionPolicy.pointsPerRupee).toFixed(2)} Cash Discount ({redemptionPolicy.pointsPerRupee} pts = ₹1)
-                        </span>
-                      </div>
-
-                      {modules.qrPass && (
-                        <div className="w-14 h-14 bg-white rounded-xl p-1 shadow-sm flex items-center justify-center">
-                          <QrCode className="w-full h-full text-slate-900" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
+              {/* Sub-header Tabs & Search bar */}
+              <div className="flex flex-1 overflow-hidden">
+                {/* Live Sidebar Navigation (Desktop & Tablet) */}
+                {viewport !== 'mobile' && (
+                  <nav className="w-56 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-y-auto p-2 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
+                      Menu Navigation
+                    </span>
+                    {tabs
+                      .filter((t) => t.visible)
+                      .map((tab) => {
+                        const isActive = previewActiveTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => setPreviewActiveTab(tab.id)}
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-lg text-left transition ${
+                              isActive
+                                ? 'text-white shadow-xs'
+                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                            }`}
+                            style={{
+                              backgroundColor: isActive ? theme.primary_color : 'transparent',
+                            }}
+                          >
+                            {renderIcon(tab.icon, 'w-4 h-4 shrink-0')}
+                            <span className="truncate">{tab.label}</span>
+                          </button>
+                        );
+                      })}
+                  </nav>
                 )}
 
-                {/* QUICK ACTION BUTTONS */}
-                <div className="grid grid-cols-4 gap-2">
-                  {modules.qrPass && (
-                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 text-center shadow-2xs">
-                      <QrCode className="w-4 h-4 mx-auto text-purple-600" />
-                      <span className="text-[10px] font-bold text-slate-700 block mt-1">QR Pass</span>
-                    </div>
-                  )}
-                  {modules.vouchersHub && (
-                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 text-center shadow-2xs">
-                      <Gift className="w-4 h-4 mx-auto text-pink-600" />
-                      <span className="text-[10px] font-bold text-slate-700 block mt-1">Gift Cards</span>
-                    </div>
-                  )}
-                  {modules.customerGarage && (
-                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 text-center shadow-2xs">
-                      <Car className="w-4 h-4 mx-auto text-blue-600" />
-                      <span className="text-[10px] font-bold text-slate-700 block mt-1">Garage</span>
-                    </div>
-                  )}
-                  {modules.referralProgram && (
-                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 text-center shadow-2xs">
-                      <Users className="w-4 h-4 mx-auto text-emerald-600" />
-                      <span className="text-[10px] font-bold text-slate-700 block mt-1">Rewards</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* EARNING PRIVILEGES (Dynamically reflects formulas state!) */}
-                <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs space-y-2">
-                  <span className="text-[11px] font-bold text-slate-800 block">Current Earning Privileges</span>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2 bg-slate-50 rounded-lg">
-                      <span className="text-[10px] text-slate-400 block">Workshop Service</span>
-                      <strong className="text-emerald-700 font-bold font-mono">{formulas.service.rate}% Net Bill</strong>
-                    </div>
-                    <div className="p-2 bg-slate-50 rounded-lg">
-                      <span className="text-[10px] text-slate-400 block">Vehicle Sales</span>
-                      <strong className="text-purple-700 font-bold font-mono">{formulas.sale.rate}% Ex-Showroom</strong>
-                    </div>
-                    <div className="p-2 bg-slate-50 rounded-lg">
-                      <span className="text-[10px] text-slate-400 block">Accessories</span>
-                      <strong className="text-slate-800 font-bold font-mono">{formulas.accessories.rate}% Counter</strong>
-                    </div>
-                    <div className="p-2 bg-slate-50 rounded-lg">
-                      <span className="text-[10px] text-slate-400 block">Bodyshop</span>
-                      <strong className="text-blue-700 font-bold font-mono">{formulas.bodyshop.rate}% Customer Share</strong>
-                    </div>
-                  </div>
-                </div>
-
-                {/* MY VEHICLES & 12-MONTH LOCK STATUS */}
-                {modules.customerGarage && (
-                  <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-800">My Registered Vehicle</span>
-                      <span className="text-[10px] font-bold text-purple-600">{selectedCustomer.chassis}</span>
-                    </div>
-
-                    <div className="p-2.5 bg-slate-50 rounded-lg flex items-center justify-between text-xs">
-                      <div>
-                        <strong className="text-slate-900 block font-bold">{selectedCustomer.vehicle}</strong>
-                        <span className="text-[10px] text-slate-400">Delivered: 14 Feb 2026</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 block">
-                          {redemptionPolicy.vehicleLockinMonths}M Lock Active
+                {/* Main Content Pane inside Device Stage */}
+                <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4">
+                  {/* TAB VIEW 1: CUSTOMER SEARCH & 360 */}
+                  {previewActiveTab === 'dashboard' && (
+                    <div className="space-y-4">
+                      {/* Search Bar */}
+                      <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
+                        <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                        <input
+                          type="text"
+                          readOnly
+                          value="Rahul Sharma · 98888 77777 · KA-25-EA-8899"
+                          className="w-full text-xs font-semibold text-slate-700 bg-transparent focus:outline-none"
+                        />
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200">
+                          Active Member
                         </span>
-                        {redemptionPolicy.accessoriesExemption && (
-                          <span className="text-[9px] font-bold text-emerald-600 block mt-0.5">
-                            ✓ Accessories Exempt
+                      </div>
+
+                      {/* Customer Loyalty 360 Card (Dynamic Primary Color & Radius) */}
+                      <div
+                        className={`p-4 sm:p-5 text-white shadow-lg transition-all ${theme.card_radius}`}
+                        style={{
+                          background: `linear-gradient(135deg, ${theme.primary_color} 0%, ${theme.secondary_color} 100%)`,
+                        }}
+                      >
+                        <div className="flex items-center justify-between pb-3 border-b border-white/20">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-black text-base sm:text-lg">{testCustomer.name}</span>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-400 text-slate-900 shadow-xs">
+                                {testCustomer.tier}
+                              </span>
+                            </div>
+                            <span className="text-xs opacity-90">{testCustomer.vehicle} ({testCustomer.chassis})</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] uppercase font-bold tracking-wider opacity-80 block">
+                              Total Balance
+                            </span>
+                            <span className="text-xl sm:text-2xl font-black">{testCustomer.points_balance} PTS</span>
+                          </div>
+                        </div>
+
+                        {/* Point Slabs details */}
+                        <div className="grid grid-cols-3 gap-2 pt-3 text-[11px]">
+                          <div>
+                            <span className="opacity-80 block text-[10px]">Available to Redeem</span>
+                            <span className="font-extrabold text-sm">{testCustomer.available_points} PTS</span>
+                            <span className="text-[10px] opacity-75 block">
+                              = ₹{(testCustomer.available_points * (logic.points_to_inr_ratio || 0.25)).toFixed(0)} Cash
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="opacity-80 block text-[10px]">Lock-in Period</span>
+                            <span className="font-extrabold text-sm">{testCustomer.locked_points} PTS</span>
+                            <span className="text-[10px] opacity-75 block">{logic.lock_in_months} months policy</span>
+                          </div>
+
+                          <div>
+                            <span className="opacity-80 block text-[10px]">Expiry Policy</span>
+                            <span className="font-extrabold text-sm">12M FIFO</span>
+                            <span className="text-[10px] opacity-75 block">{logic.expiry_policy}</span>
+                          </div>
+                        </div>
+
+                        {/* Customer Card Action Buttons (Configured in Buttons Studio) */}
+                        <div className="flex flex-wrap gap-2 pt-4 border-t border-white/20 mt-3">
+                          {buttons
+                            .filter((b) => b.enabled && b.placement === 'customer_card')
+                            .map((btn) => (
+                              <button
+                                key={btn.id}
+                                onClick={() => {
+                                  if (btn.action_type === 'open_redemption_modal') setRedemptionModalOpen(true);
+                                  else if (btn.action_type === 'send_whatsapp')
+                                    showNotification('📲 Digital WhatsApp Pass dispatched to Rahul Sharma (+91 98888 77777)');
+                                  else if (btn.action_type === 'open_referral_modal')
+                                    showNotification('👥 Referral lead registered for customer.');
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold text-xs rounded-lg transition backdrop-blur-xs"
+                              >
+                                {renderIcon(btn.icon, 'w-3.5 h-3.5')}
+                                <span>{btn.label}</span>
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Live Policy Calculation Sandbox in Preview */}
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <span className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5">
+                            <Calculator className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Live Transaction Rule Simulator</span>
                           </span>
-                        )}
+                          <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            Auto-Synched with Rules
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <label className="text-[10px] text-slate-500 font-bold block mb-1">Spend Category</label>
+                            <select
+                              value={testSpendType}
+                              onChange={(e) => setTestSpendType(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none"
+                            >
+                              <option value="sale">Vehicle Sale ({logic.sales_net_ex_pct}%)</option>
+                              <option value="service">Service & Repair ({logic.service_points_pct}%)</option>
+                              <option value="bodyshop">Bodyshop & Insurance ({logic.bodyshop_points_pct}%)</option>
+                              <option value="accessories">Accessories & VAS ({logic.accessories_points_pct}%)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] text-slate-500 font-bold block mb-1">Invoice Value (₹)</label>
+                            <input
+                              type="number"
+                              value={testSpendAmount}
+                              onChange={(e) => setTestSpendAmount(Number(e.target.value))}
+                              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Calculated Earn Preview Box */}
+                        <div className="p-3 bg-blue-50/80 rounded-lg border border-blue-200 flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] text-blue-700 font-bold block">Calculated Points Earned</span>
+                            <span className="text-base font-black text-blue-900">+{calculatedPoints} PTS</span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setTestCustomer({
+                                ...testCustomer,
+                                points_balance: testCustomer.points_balance + calculatedPoints,
+                                available_points: testCustomer.available_points + calculatedPoints,
+                              });
+                              showNotification(`✅ Added +${calculatedPoints} PTS to ${testCustomer.name}`);
+                            }}
+                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-lg shadow-xs transition"
+                          >
+                            Apply Points
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
+                  {/* TAB VIEW 2: BILL CORRECTION QUEUE PREVIEW */}
+                  {previewActiveTab === 'corrections_queue' && (
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div>
+                          <span className="font-extrabold text-xs text-slate-800 block">
+                            Manager Bill Correction Queue
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            Cashier entered wrong bills can be reviewed & corrected by Manager.
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                          Window: {logic.bill_correction_window_hours}h
+                        </span>
+                      </div>
+
+                      <div className="p-3 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-xs text-slate-900 block">
+                            Invoice #INV-2026-9041 · Rahul Sharma
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            Requested by Cashier BLR-01 · Mistaken Amount: ₹18,500 (Actual: ₹12,500)
+                          </span>
+                        </div>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => showNotification('Correction bill approved by Manager')}
+                            className="px-2.5 py-1 bg-emerald-600 text-white font-bold text-[11px] rounded"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => showNotification('Correction bill rejected')}
+                            className="px-2.5 py-1 bg-slate-200 text-slate-700 font-bold text-[11px] rounded"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB VIEW 3: CUSTOMER REDEMPTIONS PREVIEW */}
+                  {previewActiveTab === 'customer_redemptions' && (
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <span className="font-extrabold text-xs text-slate-800">Redemption & Discount Counter</span>
+                        <span className="text-[10px] text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded">
+                          Cap: {logic.max_redemption_pct}% of bill
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 text-xs">
+                        <label className="text-[10px] text-slate-500 font-bold block">Enter Points to Burn</label>
+                        <input
+                          type="number"
+                          value={redeemInputPoints}
+                          onChange={(e) => setRedeemInputPoints(Number(e.target.value))}
+                          className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold"
+                        />
+                        <div className="p-3 bg-purple-50 rounded-lg border border-purple-200 flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] text-purple-700 font-bold block">Rupee Discount</span>
+                            <span className="text-base font-black text-purple-900">₹{calculatedRupeeValue} Cash</span>
+                          </div>
+                          <button
+                            onClick={() => showNotification(`Voucher for ₹${calculatedRupeeValue} created`)}
+                            className="px-3 py-1.5 bg-purple-600 text-white font-bold text-xs rounded-lg"
+                          >
+                            Generate Voucher
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* OTHER CUSTOM TABS PLACEHOLDER */}
+                  {!['dashboard', 'corrections_queue', 'customer_redemptions'].includes(previewActiveTab) && (
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 text-center space-y-2">
+                      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto">
+                        <Sparkles className="w-6 h-6" />
+                      </div>
+                      <h3 className="font-black text-sm text-slate-900">
+                        {tabs.find((t) => t.id === previewActiveTab)?.label || 'Custom Tab View'}
+                      </h3>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        This view is fully integrated with your loyalty database and staff permission roles.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Mobile Bottom Navigation Bar (When viewport === 'mobile') */}
+              {viewport === 'mobile' && (
+                <nav className="h-14 bg-white border-t border-slate-200 flex items-center justify-around px-2 shrink-0">
+                  {tabs
+                    .filter((t) => t.visible)
+                    .slice(0, 4)
+                    .map((tab) => {
+                      const isActive = previewActiveTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setPreviewActiveTab(tab.id)}
+                          className={`flex flex-col items-center justify-center py-1 transition ${
+                            isActive ? 'text-blue-600 font-bold' : 'text-slate-400'
+                          }`}
+                        >
+                          {renderIcon(tab.icon, 'w-4 h-4')}
+                          <span className="text-[9px] mt-0.5 truncate max-w-[65px]">{tab.label}</span>
+                        </button>
+                      );
+                    })}
+                </nav>
+              )}
             </div>
+
+            {/* ─── LIVE INTERACTIVE MODALS INSIDE DEVICE STAGE ─── */}
+            {/* Modal 1: Add Receipt Modal */}
+            {receiptModalOpen && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-40">
+                <div className="bg-white w-full max-w-sm rounded-2xl p-4 shadow-2xl space-y-3">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <span className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
+                      <Plus className="w-4 h-4 text-emerald-600" />
+                      <span>Add Spending Receipt</span>
+                    </span>
+                    <button onClick={() => setReceiptModalOpen(false)}>
+                      <X className="w-4 h-4 text-slate-400" />
+                    </button>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-bold block mb-1">Invoice Number</label>
+                      <input
+                        type="text"
+                        defaultValue="INV-2026-9912"
+                        className="w-full border rounded p-1.5 text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-bold block mb-1">Spend Category</label>
+                      <select
+                        value={testSpendType}
+                        onChange={(e) => setTestSpendType(e.target.value)}
+                        className="w-full border rounded p-1.5 text-xs font-semibold"
+                      >
+                        <option value="sale">Vehicle Sale ({logic.sales_net_ex_pct}%)</option>
+                        <option value="service">Service ({logic.service_points_pct}%)</option>
+                        <option value="bodyshop">Bodyshop ({logic.bodyshop_points_pct}%)</option>
+                        <option value="accessories">Accessories ({logic.accessories_points_pct}%)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-bold block mb-1">Invoice Amount (₹)</label>
+                      <input
+                        type="number"
+                        value={testSpendAmount}
+                        onChange={(e) => setTestSpendAmount(Number(e.target.value))}
+                        className="w-full border rounded p-1.5 text-xs font-semibold"
+                      />
+                    </div>
+                    <div className="p-2 bg-emerald-50 rounded border border-emerald-200 text-center">
+                      <span className="text-[10px] text-emerald-800 font-bold block">Calculated Reward</span>
+                      <span className="text-base font-black text-emerald-900">+{calculatedPoints} Points</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => setReceiptModalOpen(false)}
+                      className="flex-1 py-1.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        setReceiptModalOpen(false);
+                        setTestCustomer({
+                          ...testCustomer,
+                          points_balance: testCustomer.points_balance + calculatedPoints,
+                          available_points: testCustomer.available_points + calculatedPoints,
+                        });
+                        showNotification(`Receipt logged! +${calculatedPoints} PTS credited.`);
+                      }}
+                      className="flex-1 py-1.5 bg-emerald-600 text-white font-bold text-xs rounded-lg"
+                    >
+                      Confirm Bill
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal 2: Bill Correction Modal */}
+            {correctionModalOpen && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-40">
+                <div className="bg-white w-full max-w-sm rounded-2xl p-4 shadow-2xl space-y-3">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <span className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-amber-600" />
+                      <span>Request Bill Correction</span>
+                    </span>
+                    <button onClick={() => setCorrectionModalOpen(false)}>
+                      <X className="w-4 h-4 text-slate-400" />
+                    </button>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    <p className="text-[11px] text-slate-500">
+                      Submit wrong bill details for Branch Manager approval (Window: {logic.bill_correction_window_hours}h).
+                    </p>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-bold block mb-1">Original Invoice Number</label>
+                      <input
+                        type="text"
+                        defaultValue="INV-2026-8802"
+                        className="w-full border rounded p-1.5 text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-bold block mb-1">Reason for Correction</label>
+                      <textarea
+                        rows={2}
+                        defaultValue="Wrong part number billed by cashier error"
+                        className="w-full border rounded p-1.5 text-xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => setCorrectionModalOpen(false)}
+                      className="flex-1 py-1.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCorrectionModalOpen(false);
+                        showNotification('Bill correction submitted to Manager queue.');
+                      }}
+                      className="flex-1 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-extrabold text-xs rounded-lg"
+                    >
+                      Submit for Correction
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal 3: Redemption Discount Modal */}
+            {redemptionModalOpen && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-40">
+                <div className="bg-white w-full max-w-sm rounded-2xl p-4 shadow-2xl space-y-3">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <span className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-indigo-600" />
+                      <span>Redeem Points for Invoice Discount</span>
+                    </span>
+                    <button onClick={() => setRedemptionModalOpen(false)}>
+                      <X className="w-4 h-4 text-slate-400" />
+                    </button>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    <div className="p-2 bg-indigo-50 rounded border border-indigo-200">
+                      <span className="text-[10px] text-indigo-800 font-bold block">Available Balance</span>
+                      <span className="text-sm font-black text-indigo-950">
+                        {testCustomer.available_points} PTS (= ₹
+                        {(testCustomer.available_points * (logic.points_to_inr_ratio || 0.25)).toFixed(2)})
+                      </span>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-bold block mb-1">Points to Redeem</label>
+                      <input
+                        type="number"
+                        value={redeemInputPoints}
+                        onChange={(e) => setRedeemInputPoints(Number(e.target.value))}
+                        className="w-full border rounded p-1.5 text-xs font-bold"
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-xs font-bold text-slate-700">
+                      <span>Instant Cash Value:</span>
+                      <span className="text-emerald-600 font-extrabold text-sm">₹{calculatedRupeeValue}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => setRedemptionModalOpen(false)}
+                      className="flex-1 py-1.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRedemptionModalOpen(false);
+                        setTestCustomer({
+                          ...testCustomer,
+                          points_balance: Math.max(0, testCustomer.points_balance - redeemInputPoints),
+                          available_points: Math.max(0, testCustomer.available_points - redeemInputPoints),
+                        });
+                        showNotification(`Discount of ₹${calculatedRupeeValue} applied to invoice!`);
+                      }}
+                      className="flex-1 py-1.5 bg-indigo-600 text-white font-bold text-xs rounded-lg"
+                    >
+                      Redeem Discount
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        </section>
+        </main>
       </div>
-
-      {/* ========================================================
-          3. ADD / EDIT RULE MODAL (Full Control from Editor)
-          ======================================================== */}
-      {ruleModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-fadeIn">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-extrabold text-slate-900">
-                {editingRuleId ? 'Edit Master Rule' : 'Create New Master Rule'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setRuleModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveRuleModal} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Rule Code *</label>
-                  <input
-                    type="text"
-                    required
-                    value={ruleFormData.rule_code}
-                    onChange={(e) => setRuleFormData({ ...ruleFormData, rule_code: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Rule Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={ruleFormData.rule_name}
-                    onChange={(e) => setRuleFormData({ ...ruleFormData, rule_name: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Scheme Type</label>
-                  <select
-                    value={ruleFormData.scheme_type}
-                    onChange={(e) => setRuleFormData({ ...ruleFormData, scheme_type: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold"
-                  >
-                    <option value="standard">Standard Loyalty</option>
-                    <option value="festive">Festive Offers</option>
-                    <option value="exchange">Used Car Exchange</option>
-                    <option value="insurance">In-House Insurance</option>
-                    <option value="finance">In-House Finance</option>
-                    <option value="google">Google 5★ Reviews</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Spend Category</label>
-                  <select
-                    value={ruleFormData.spend_type}
-                    onChange={(e) => setRuleFormData({ ...ruleFormData, spend_type: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold"
-                  >
-                    <option value="sale">Vehicle Sales</option>
-                    <option value="service">Workshop Service</option>
-                    <option value="accessories">Genuine Accessories</option>
-                    <option value="bodyshop">Bodyshop Repair</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Points Multiplier Rate</label>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      value={ruleFormData.points_multiplier_numerator}
-                      onChange={(e) => setRuleFormData({ ...ruleFormData, points_multiplier_numerator: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono font-bold text-center"
-                    />
-                    <span className="text-slate-400 font-bold">/</span>
-                    <input
-                      type="number"
-                      value={ruleFormData.points_multiplier_denominator}
-                      onChange={(e) => setRuleFormData({ ...ruleFormData, points_multiplier_denominator: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono font-bold text-center"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Vehicle Type</label>
-                  <select
-                    value={ruleFormData.vehicle_type}
-                    onChange={(e) => setRuleFormData({ ...ruleFormData, vehicle_type: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold"
-                  >
-                    <option value="4W">4W Passenger</option>
-                    <option value="2W">2W Two-Wheeler</option>
-                    <option value="Commercial">Commercial Trucks/Buses</option>
-                    <option value="Agri">Machinery / Agri</option>
-                    <option value="EV">Electric Vehicles</option>
-                    <option value="ALL">All Vehicles</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setRuleModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-xs"
-                >
-                  {isSaving ? 'Deploying...' : 'Deploy to Database'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
