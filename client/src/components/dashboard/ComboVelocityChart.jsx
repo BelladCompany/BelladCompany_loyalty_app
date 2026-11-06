@@ -31,8 +31,11 @@ export const ComboVelocityChart = ({ trendData = [], totalTransactions = 1, curr
     const issued = Number(d.points_issued || 0);
     const redeemed = Number(d.points_redeemed || 0);
     const txns = Number(d.transactions_count || 0);
+    const redemptionTxns = Number(d.redemption_txns_count || 0);
     const burnRatePct = issued > 0 ? (redeemed / issued) * 100 : 0;
-    const activityRatePct = totalTransactions > 0 ? (txns / totalTransactions) * 100 : (txns > 0 ? 5.5 : 0);
+    const activityRatePct = redemptionTxns > 0 && txns > 0
+      ? (redemptionTxns / txns) * 100
+      : (totalTransactions > 0 ? (txns / totalTransactions) * 100 : (txns > 0 ? 5.5 : 0));
 
     return {
       label: d.month_label || d.label || 'Period',
@@ -40,14 +43,14 @@ export const ComboVelocityChart = ({ trendData = [], totalTransactions = 1, curr
       redeemed,
       txns,
       burnRatePct: Number(burnRatePct.toFixed(2)),
-      activityRatePct: Number(Math.min(activityRatePct, 20).toFixed(2)),
+      activityRatePct: Number(activityRatePct.toFixed(2)),
     };
   });
 
   // Dimensions
-  const svgWidth = 660;
+  const svgWidth = 700;
   const svgHeight = 320;
-  const padding = { top: 35, right: 55, bottom: 50, left: 70 };
+  const padding = { top: 35, right: 65, bottom: 50, left: 70 };
   const chartWidth = svgWidth - padding.left - padding.right;
   const chartHeight = svgHeight - padding.top - padding.bottom;
 
@@ -59,7 +62,7 @@ export const ComboVelocityChart = ({ trendData = [], totalTransactions = 1, curr
 
   // Max % for Right Y-Axis
   const maxPctRaw = Math.max(...items.map((d) => Math.max(d.burnRatePct, d.activityRatePct)), 8);
-  const maxPct = Math.max(10, Math.ceil(maxPctRaw / 2) * 2); // e.g. 10%, 12%, 14%
+  const maxPct = Math.max(10, Math.ceil(maxPctRaw / 5) * 5); // Clean multiples of 5 (e.g. 10%, 15%, 20%, 25%)
 
   // 5 grid ticks
   const numTicks = 5;
@@ -126,10 +129,10 @@ export const ComboVelocityChart = ({ trendData = [], totalTransactions = 1, curr
       </div>
 
       {/* SVG Chart Area */}
-      <div className="relative w-full overflow-x-auto py-2">
+      <div className="relative w-full py-2">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          className="w-full h-auto min-w-[580px] select-none"
+          className="w-full h-auto select-none"
         >
           {/* Horizontal Gridlines */}
           {leftTicks.map((tick, i) => {

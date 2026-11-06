@@ -407,9 +407,10 @@ class DirectorService {
             DATE_TRUNC('month', pl.created_at) AS month_date,
             COALESCE(SUM(CASE WHEN pl.points > 0 THEN pl.points ELSE 0 END), 0)::bigint AS points_issued,
             COALESCE(SUM(CASE WHEN pl.points < 0 THEN ABS(pl.points) ELSE 0 END), 0)::bigint AS points_redeemed,
-            COUNT(pl.entry_id)::int AS transactions_count
+            COUNT(pl.entry_id)::int AS transactions_count,
+            COUNT(CASE WHEN pl.points < 0 THEN 1 END)::int AS redemption_txns_count
           FROM points_ledger pl
-          WHERE pl.tenant_id = $1
+          WHERE (pl.tenant_id = $1 OR pl.tenant_id IS NULL)
           GROUP BY DATE_TRUNC('month', pl.created_at), TO_CHAR(pl.created_at, 'Mon YYYY')
           ORDER BY month_date ASC
           LIMIT 12;`,
@@ -420,8 +421,11 @@ class DirectorService {
           points_issued: parseInt(r.points_issued, 10),
           points_redeemed: parseInt(r.points_redeemed, 10),
           transactions_count: parseInt(r.transactions_count, 10),
+          redemption_txns_count: parseInt(r.redemption_txns_count || 0, 10),
         }));
-      } catch (e) {}
+      } catch (e) {
+        console.error('DirectorService.monthlyTrend query error:', e.message);
+      }
 
       return {
         kpis: {
