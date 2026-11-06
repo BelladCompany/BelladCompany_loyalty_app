@@ -754,7 +754,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpe
         {/* Card 6: Referrals */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-sky-300 transition-all hover:shadow-md group min-h-[148px]">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold text-slate-600">Referrals</span>
+            <span className="text-xs font-bold text-slate-600">Customer Referrals</span>
             <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <Share2 className="w-3.5 h-3.5" />
             </div>
@@ -764,15 +764,15 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpe
               <span className="text-lg sm:text-xl font-black font-mono text-slate-900 group-hover:text-sky-600 transition tracking-tight">
                 {loadingOverview ? '...' : totalReferrals}
               </span>
-              <span className="text-[11px] font-bold text-sky-600 font-sans">Leads</span>
+              <span className="text-[11px] font-bold text-sky-600 font-sans">Given</span>
             </div>
             <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug truncate">
-              Sales: <span className="font-bold text-emerald-600 font-mono">{purchasedReferrals} Cars</span> ({referralConversionRate.toFixed(1)}%)
+              Purchased: <span className="font-bold text-emerald-600 font-mono">{purchasedReferrals} Vehicles</span>
             </div>
           </div>
           <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
-            <span className="text-slate-400">Bonus Given:</span>
-            <span className="font-mono font-bold text-sky-700">{Number(referralPointsAwarded).toLocaleString('en-IN')} PTS</span>
+            <span className="text-slate-400">Reward Got:</span>
+            <span className="font-mono font-bold text-sky-700">{formatInr(Number(referralPointsAwarded || 0) * 0.25)}</span>
           </div>
         </div>
       </div>
@@ -1013,57 +1013,48 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpe
               </div>
             </div>
 
-            {/* Panel 2: Customer Referral Funnel & Points */}
+            {/* Panel 2: Customer Referral Performance */}
             <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
                   <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
                     <Share2 className="w-4 h-4 text-sky-600" />
-                    <span>Customer Referral Funnel</span>
+                    <span>Customer Referrals</span>
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Organic customer acquisitions and bonus points awarded
+                    Referrals given, vehicle purchases &amp; reward amount credited
                   </p>
                 </div>
                 <span className="text-xs font-black font-mono text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-200">
-                  {referralConversionRate.toFixed(1)}% Conversion
+                  {purchasedReferrals} of {totalReferrals} Purchased
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="p-3 bg-sky-50/60 rounded-2xl border border-sky-100">
-                  <span className="text-[10px] font-bold uppercase text-sky-600 block">Leads Generated</span>
-                  <span className="text-base font-black font-mono text-slate-900 mt-0.5 block">
-                    {totalReferrals} Advocates
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                <div className="p-4 bg-sky-50/70 rounded-2xl border border-sky-100/90 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600 block">Referrals Given</span>
+                  <span className="text-2xl font-black font-mono text-slate-900 my-1 block">
+                    {totalReferrals}
                   </span>
+                  <span className="text-[10px] text-slate-500 font-medium">Customer leads referred</span>
                 </div>
-                <div className="p-3 bg-emerald-50/60 rounded-2xl border border-emerald-100">
-                  <span className="text-[10px] font-bold uppercase text-emerald-700 block">Vehicles Delivered</span>
-                  <span className="text-base font-black font-mono text-emerald-800 mt-0.5 block">
-                    {purchasedReferrals} Delivered
-                  </span>
-                </div>
-                <div className="p-3 bg-indigo-50/60 rounded-2xl border border-indigo-100">
-                  <span className="text-[10px] font-bold uppercase text-indigo-700 block">Bonus Points</span>
-                  <span className="text-base font-black font-mono text-indigo-800 mt-0.5 block">
-                    {Number(referralPointsAwarded).toLocaleString('en-IN')} PTS
-                  </span>
-                </div>
-              </div>
 
-              {/* Funnel Meter */}
-              <div className="space-y-1.5 pt-2">
-                <div className="flex items-center justify-between text-xs font-medium">
-                  <span className="text-slate-600 font-bold">Acquisition Conversion Rate</span>
-                  <span className="font-mono font-black text-emerald-600">
-                    {purchasedReferrals} of {totalReferrals} Leads Converted
+                <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-100/90 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Vehicles Purchased</span>
+                  <span className="text-2xl font-black font-mono text-emerald-800 my-1 block">
+                    {purchasedReferrals}
                   </span>
+                  <span className="text-[10px] text-emerald-600 font-medium">Delivered using referral</span>
                 </div>
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-sky-500 to-emerald-500 rounded-full transition-all duration-700"
-                    style={{ width: `${Math.max(referralConversionRate, 8)}%` }}
-                  />
+
+                <div className="p-4 bg-indigo-50/70 rounded-2xl border border-indigo-100/90 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 block">Reward Amount Got</span>
+                  <span className="text-2xl font-black font-mono text-indigo-900 my-1 block">
+                    {formatInr(Number(referralPointsAwarded || 0) * 0.25)}
+                  </span>
+                  <span className="text-[10px] text-indigo-600 font-mono font-bold">
+                    {Number(referralPointsAwarded || 0).toLocaleString('en-IN')} PTS Credited
+                  </span>
                 </div>
               </div>
             </div>
