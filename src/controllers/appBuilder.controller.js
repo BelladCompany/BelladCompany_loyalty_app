@@ -20,6 +20,7 @@ class AppBuilderController {
           users_config,
           portal_config,
           rewards_config,
+          integrations_config,
           is_published,
           published_at,
           created_at,
@@ -138,6 +139,7 @@ class AppBuilderController {
         users_config,
         portal_config,
         rewards_config,
+        integrations_config,
         is_published = false
       } = req.body;
 
@@ -152,11 +154,12 @@ class AppBuilderController {
           users_config,
           portal_config,
           rewards_config,
+          integrations_config,
           is_published,
           published_at,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $10 = TRUE THEN NOW() ELSE NULL END, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CASE WHEN $11 = TRUE THEN NOW() ELSE NULL END, NOW())
         ON CONFLICT (tenant_id)
         DO UPDATE SET
           theme_config = EXCLUDED.theme_config,
@@ -167,6 +170,7 @@ class AppBuilderController {
           users_config = EXCLUDED.users_config,
           portal_config = EXCLUDED.portal_config,
           rewards_config = EXCLUDED.rewards_config,
+          integrations_config = EXCLUDED.integrations_config,
           is_published = EXCLUDED.is_published,
           published_at = CASE WHEN EXCLUDED.is_published = TRUE THEN NOW() ELSE app_builder_configs.published_at END,
           updated_at = NOW()
@@ -183,6 +187,7 @@ class AppBuilderController {
         JSON.stringify(users_config || []),
         JSON.stringify(portal_config || {}),
         JSON.stringify(rewards_config || {}),
+        JSON.stringify(integrations_config || {}),
         Boolean(is_published)
       ];
 
@@ -217,6 +222,7 @@ class AppBuilderController {
           users_config,
           portal_config,
           rewards_config,
+          integrations_config,
           published_at
          FROM app_builder_configs
          WHERE tenant_id = $1 AND is_published = TRUE
