@@ -30,6 +30,7 @@ import {
   ArrowRight,
   Zap,
   Sparkles,
+  Building2,
 } from 'lucide-react';
 import ApiService from '../services/api';
 import { useToast } from '../components/ui';
@@ -353,6 +354,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpe
   const charts = overviewData?.charts || {};
   const modelsList = overviewData?.models || charts?.model_breakdown || [];
   const departmentsList = overviewData?.departments || [];
+  const branchesList = overviewData?.branches || charts?.top_branches || [];
   const totalPages = Math.ceil((recordsData.total || 0) / recordsPerPage) || 1;
 
   // Real dynamic metrics from database
@@ -819,37 +821,59 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpe
                 {CORE_DEPARTMENT_KEYS.map((catKey) => {
                   const dept = departmentsList.find((d) => d.category === catKey) || {
                     category: catKey,
+                    customer_count: 0,
                     transactions_count: 0,
                     revenue_volume: 0,
                     points_issued: 0,
+                    points_redeemed: 0,
+                    cash_redeemed_inr: 0,
                   };
                   const cfg = DEPARTMENT_CONFIG[catKey];
                   const maxPts = Math.max(...departmentsList.map((d) => d.points_issued || 1), 1);
-                  const barPct = Math.min(Math.round(((dept.points_issued || 0) / maxPts) * 100), 100);
+                  const issuedPct = Math.min(Math.round(((dept.points_issued || 0) / maxPts) * 100), 100);
+                  const redeemedPts = Number(dept.points_redeemed || 0);
+                  const discountInr = Number(dept.cash_redeemed_inr || Math.round(redeemedPts * 0.25));
 
                   return (
-                    <div key={catKey} className="space-y-1.5 group">
-                      <div className="flex items-center justify-between text-xs">
+                    <div key={catKey} className="p-3 bg-slate-50/70 hover:bg-slate-50 rounded-2xl border border-slate-100 transition group space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition">
                             {cfg.label}
                           </span>
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.badge}`}>
-                            {dept.transactions_count || 0} Txns
+                            {dept.customer_count || 0} Customers &bull; {dept.transactions_count || 0} Visits
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 font-mono">
+                        <div className="flex items-center gap-2 font-mono text-xs">
+                          <span className="text-slate-500 font-medium">Invoiced:</span>
                           <span className="text-slate-900 font-bold">{formatInr(dept.revenue_volume)}</span>
-                          <span className="text-slate-300 text-[11px]">&bull;</span>
-                          <span className="text-emerald-700 font-bold text-xs">
-                            +{Number(dept.points_issued || 0).toLocaleString('en-IN')} PTS
-                          </span>
                         </div>
                       </div>
-                      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+
+                      {/* Points Earned vs Redeemed Breakdown */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono pt-0.5">
+                        <div className="flex items-center gap-3">
+                          <span className="text-emerald-700 font-bold flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                            Earned: +{Number(dept.points_issued || 0).toLocaleString('en-IN')} PTS
+                          </span>
+                          <span className="text-slate-300">&bull;</span>
+                          <span className="text-rose-600 font-bold flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
+                            Redeemed: {redeemedPts > 0 ? `-${redeemedPts.toLocaleString('en-IN')} PTS` : '0 PTS'}
+                          </span>
+                        </div>
+                        <span className="text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+                          Discount: {formatInr(discountInr)}
+                        </span>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="w-full h-2 bg-slate-200/80 rounded-full overflow-hidden flex">
                         <div
                           className={`h-full ${cfg.barColor} rounded-full transition-all duration-700`}
-                          style={{ width: `${Math.max(barPct, 4)}%` }}
+                          style={{ width: `${Math.max(issuedPct, 4)}%` }}
                         />
                       </div>
                     </div>
@@ -920,6 +944,99 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpe
               </div>
             </div>
 
+          </div>
+
+          {/* Main Visual Row: Branch Network Performance & Footfall */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-indigo-600" />
+                  <span>Branch Network Performance &amp; Customer Footfall</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Live customer visits, points earned vs. redeemed, cash invoiced &amp; counter discounts by branch
+                </p>
+              </div>
+              <div className="text-xs font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 font-mono">
+                {branchesList.length} Dealership Branches Monitored
+              </div>
+            </div>
+
+            {/* Branch Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                    <th className="pb-3">Dealership Branch</th>
+                    <th className="pb-3 text-center">Customer Footfall</th>
+                    <th className="pb-3 text-right">Points Earned (+PTS)</th>
+                    <th className="pb-3 text-right">Points Redeemed (-PTS)</th>
+                    <th className="pb-3 text-right">Cash Invoiced (₹)</th>
+                    <th className="pb-3 text-right">Discounts Redeemed (₹)</th>
+                    <th className="pb-3 text-right">Burn Rate</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {branchesList.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-xs text-slate-400">
+                        No branch transaction data available for this date filter.
+                      </td>
+                    </tr>
+                  ) : (
+                    branchesList.map((b) => {
+                      const issued = Number(b.points_issued || 0);
+                      const redeemed = Number(b.points_redeemed || 0);
+                      const burnRate = issued > 0 ? ((redeemed / issued) * 100).toFixed(1) : '0.0';
+                      const discountInr = Number(b.cash_redeemed_inr || Math.round(redeemed * 0.25));
+
+                      return (
+                        <tr key={b.branch_id || b.branch_name} className="hover:bg-slate-50/80 transition group">
+                          <td className="py-3.5">
+                            <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition block">
+                              {b.branch_name}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              {b.branch_city || 'Central'} &bull; Branch #{b.branch_id}
+                            </span>
+                          </td>
+                          <td className="py-3.5 text-center">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">
+                              {Number(b.customer_count || 0).toLocaleString('en-IN')} Cust
+                            </span>
+                            <span className="block text-[10px] text-slate-400 mt-0.5">
+                              {Number(b.transactions_count || 0).toLocaleString('en-IN')} Visits
+                            </span>
+                          </td>
+                          <td className="py-3.5 text-right font-mono font-bold text-emerald-600">
+                            +{issued.toLocaleString('en-IN')} PTS
+                          </td>
+                          <td className="py-3.5 text-right font-mono font-bold text-rose-600">
+                            {redeemed > 0 ? `-${redeemed.toLocaleString('en-IN')} PTS` : '0 PTS'}
+                          </td>
+                          <td className="py-3.5 text-right font-mono font-bold text-slate-900">
+                            {formatInr(b.total_revenue)}
+                          </td>
+                          <td className="py-3.5 text-right font-mono font-bold text-amber-700">
+                            {formatInr(discountInr)}
+                          </td>
+                          <td className="py-3.5 text-right">
+                            <span className={`inline-block px-2 py-0.5 rounded-md font-mono text-[11px] font-bold ${
+                              Number(burnRate) > 10
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-slate-50 text-slate-600 border border-slate-200'
+                            }`}>
+                              {burnRate}%
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Main Visual Row 2: Dedicated Gift Cards & Referral Velocity */}

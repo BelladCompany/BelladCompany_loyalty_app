@@ -12,6 +12,7 @@ import { PieChart as PieIcon, Layers, ShieldCheck } from 'lucide-react';
  */
 export const DistributionPieChart = ({ departments = [], models = [], totalPointsIssued = 0 }) => {
   const [viewMode, setViewMode] = useState('department'); // 'department' | 'brand'
+  const [metricMode, setMetricMode] = useState('issued'); // 'issued' | 'redeemed' | 'revenue'
   const [hoveredSlice, setHoveredSlice] = useState(null);
 
   // Vibrant palette pixel-matched to Screenshot 2
@@ -26,13 +27,28 @@ export const DistributionPieChart = ({ departments = [], models = [], totalPoint
     '#EC4899', // Pink
   ];
 
+  // Helper to format values dynamically based on metric mode
+  const formatSliceValue = (val) => {
+    const num = Number(val || 0);
+    if (metricMode === 'revenue') {
+      if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
+      if (num >= 100000) return `₹${(num / 100000).toFixed(2)} L`;
+      if (num >= 1000) return `₹${(num / 1000).toFixed(1)} K`;
+      return `₹${num.toLocaleString('en-IN')}`;
+    }
+    if (num >= 10000000) return `${(num / 10000000).toFixed(2)} Cr PTS`;
+    if (num >= 100000) return `${(num / 100000).toFixed(1)} L PTS`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)} K PTS`;
+    return `${num.toLocaleString('en-IN')} PTS`;
+  };
+
   // 1. Build Department Slices
   const deptData = (() => {
     const raw = departments && departments.length > 0 ? departments : [
-      { category: 'sale', revenue_volume: 2036831697, points_issued: 20584600 },
-      { category: 'service', revenue_volume: 3829540, points_issued: 182858 },
-      { category: 'accessory', revenue_volume: 49400, points_issued: 988 },
-      { category: 'bodyshop', revenue_volume: 0, points_issued: 0 },
+      { category: 'sale', revenue_volume: 2036831697, points_issued: 20584600, points_redeemed: 0 },
+      { category: 'service', revenue_volume: 3829540, points_issued: 182858, points_redeemed: 135160 },
+      { category: 'accessory', revenue_volume: 49400, points_issued: 988, points_redeemed: 32400 },
+      { category: 'bodyshop', revenue_volume: 0, points_issued: 0, points_redeemed: 0 },
     ];
 
     const labels = {
@@ -42,17 +58,25 @@ export const DistributionPieChart = ({ departments = [], models = [], totalPoint
       bodyshop: 'Bodyshop & Repairs',
     };
 
-    const total = raw.reduce((sum, d) => sum + Number(d.points_issued || 0), 0) || 1;
+    const getVal = (d) => {
+      if (metricMode === 'redeemed') return Number(d.points_redeemed || 0);
+      if (metricMode === 'revenue') return Number(d.revenue_volume || 0);
+      return Number(d.points_issued || 0);
+    };
+
+    const total = raw.reduce((sum, d) => sum + getVal(d), 0) || 1;
 
     return raw
       .map((d, i) => {
-        const val = Number(d.points_issued || 0);
+        const val = getVal(d);
         const pct = (val / total) * 100;
         return {
           id: d.category,
           label: labels[d.category] || d.category,
           value: val,
           revenue: Number(d.revenue_volume || 0),
+          points_issued: Number(d.points_issued || 0),
+          points_redeemed: Number(d.points_redeemed || 0),
           pct: Number(pct.toFixed(1)),
           color: COLORS[i % COLORS.length],
         };
@@ -65,10 +89,16 @@ export const DistributionPieChart = ({ departments = [], models = [], totalPoint
     if (!models || models.length === 0) return [];
     const brandMap = new Map();
 
+    const getVal = (m) => {
+      if (metricMode === 'redeemed') return Number(m.points_redeemed || 0);
+      if (metricMode === 'revenue') return Number(m.estimated_revenue || 0);
+      return Number(m.points_issued || 0);
+    };
+
     models.forEach((m) => {
       const bName = m.brand_name || 'Other OEM';
       const cur = brandMap.get(bName) || { label: bName, value: 0, units: 0 };
-      cur.value += Number(m.points_issued || 0);
+      cur.value += getVal(m);
       cur.units += Number(m.vehicle_count || 0);
       brandMap.set(bName, cur);
     });
@@ -185,6 +215,48 @@ export const DistributionPieChart = ({ departments = [], models = [], totalPoint
         </div>
       </div>
 
+      {/* Metric Mode Toggle (Points Earned | Points Redeemed | Cash Inflow) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 pb-1">
+        <div className="flex items-center gap-1.5 text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => setMetricMode('issued')}
+            className={`px-3 py-1 rounded-xl transition-all ${
+              metricMode === 'issued'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Points Earned (+PTS)
+          </button>
+          <button
+            type="button"
+            onClick={() => setMetricMode('redeemed')}
+            className={`px-3 py-1 rounded-xl transition-all ${
+              metricMode === 'redeemed'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Points Redeemed (-PTS)
+          </button>
+          <button
+            type="button"
+            onClick={() => setMetricMode('revenue')}
+            className={`px-3 py-1 rounded-xl transition-all ${
+              metricMode === 'revenue'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Cash Inflow (₹)
+          </button>
+        </div>
+        <span className="text-[11px] font-mono text-slate-400">
+          Showing: {metricMode === 'issued' ? 'Points Earned' : metricMode === 'redeemed' ? 'Points Redeemed' : 'Revenue Inflow'}
+        </span>
+      </div>
+
       {/* Main Content: Pie SVG (Left) + Legend Card (Right) */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center py-4">
         {/* SVG Pie Chart Canvas (7 cols) */}
@@ -267,11 +339,7 @@ export const DistributionPieChart = ({ departments = [], models = [], totalPoint
 
                   <div className="flex items-center gap-2 font-mono flex-shrink-0">
                     <span className="text-slate-500 text-[11px]">
-                      {item.value >= 10000000
-                        ? `${(item.value / 10000000).toFixed(2)} Cr`
-                        : item.value >= 100000
-                        ? `${(item.value / 100000).toFixed(1)} L`
-                        : item.value.toLocaleString('en-IN')} PTS
+                      {formatSliceValue(item.value)}
                     </span>
                     <span
                       className="text-[10px] font-black px-1.5 py-0.5 rounded-md"
@@ -294,7 +362,7 @@ export const DistributionPieChart = ({ departments = [], models = [], totalPoint
       <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500 font-medium">
         <span>Click or hover any slice to isolate channel volume</span>
         <span className="font-mono font-bold text-slate-800">
-          Total: {Number(totalValue).toLocaleString('en-IN')} PTS
+          Total: {formatSliceValue(totalValue)}
         </span>
       </div>
     </div>

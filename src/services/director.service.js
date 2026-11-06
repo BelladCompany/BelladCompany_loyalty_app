@@ -215,7 +215,7 @@ class DirectorService {
             END
           ), 0) AS total_revenue
         FROM branches b
-        LEFT JOIN points_ledger pl ON b.branch_id = pl.branch_id AND pl.tenant_id = $1 ${dateFilter}
+        LEFT JOIN points_ledger pl ON b.branch_id = pl.branch_id AND (pl.tenant_id = $1 OR pl.tenant_id IS NULL) ${dateFilter}
         LEFT JOIN sale_transactions st ON (st.vehicle_id = pl.vehicle_id OR (pl.vehicle_id IS NULL AND st.customer_id = pl.customer_id))
         GROUP BY b.branch_id, b.branch_name, b.branch_city
         ORDER BY total_revenue DESC, points_issued DESC;`,
@@ -227,6 +227,11 @@ class DirectorService {
         `SELECT 
           CASE 
             WHEN pl.transaction_category IN ('accessory', 'accessories') THEN 'accessory'
+            WHEN pl.transaction_category = 'redemption' THEN
+              COALESCE(
+                (SELECT pl2.transaction_category FROM points_ledger pl2 WHERE pl2.receipt_no = pl.receipt_no AND pl2.transaction_category != 'redemption' LIMIT 1),
+                'service'
+              )
             ELSE COALESCE(pl.transaction_category, 'other')
           END AS category,
           COUNT(pl.entry_id) AS transactions_count,
@@ -257,10 +262,15 @@ class DirectorService {
           ), 0)::numeric AS revenue_volume
         FROM points_ledger pl
         LEFT JOIN sale_transactions st ON (st.vehicle_id = pl.vehicle_id OR (pl.vehicle_id IS NULL AND st.customer_id = pl.customer_id))
-        WHERE pl.tenant_id = $1 ${dateFilter}
+        WHERE (pl.tenant_id = $1 OR pl.tenant_id IS NULL) ${dateFilter}
         GROUP BY 
           CASE 
             WHEN pl.transaction_category IN ('accessory', 'accessories') THEN 'accessory'
+            WHEN pl.transaction_category = 'redemption' THEN
+              COALESCE(
+                (SELECT pl2.transaction_category FROM points_ledger pl2 WHERE pl2.receipt_no = pl.receipt_no AND pl2.transaction_category != 'redemption' LIMIT 1),
+                'service'
+              )
             ELSE COALESCE(pl.transaction_category, 'other')
           END
         ORDER BY revenue_volume DESC, points_issued DESC;`,
@@ -507,7 +517,10 @@ class DirectorService {
         },
 
         models: modelBreakdown,
-        branches: activeBranches.length > 0 ? activeBranches : branchRes.rows.slice(0, 10).map((r) => ({
+        branches: (branchRes.rows.filter(r => parseInt(r.transactions_count || 0, 10) > 0).length > 0
+          ? branchRes.rows.filter(r => parseInt(r.transactions_count || 0, 10) > 0)
+          : branchRes.rows.slice(0, 10)
+        ).map((r) => ({
           branch_id: r.branch_id,
           branch_name: r.branch_name,
           branch_city: r.branch_city,
@@ -515,6 +528,7 @@ class DirectorService {
           customer_count: parseInt(r.customer_count || 0, 10),
           points_issued: parseInt(r.points_issued || 0, 10),
           points_redeemed: parseInt(r.points_redeemed || 0, 10),
+          cash_redeemed_inr: Math.round(parseInt(r.points_redeemed || 0, 10) * 0.25),
           net_points: parseInt(r.net_points || 0, 10),
           liability_inr: Math.round(parseInt(r.net_points || 0, 10) * 0.25),
           total_revenue: parseFloat(r.total_revenue || 0),
@@ -530,6 +544,7 @@ class DirectorService {
                 customer_count: parseInt(r.customer_count || 0, 10),
                 points_issued: parseInt(r.points_issued || 0, 10),
                 points_redeemed: parseInt(r.points_redeemed || 0, 10),
+                cash_redeemed_inr: Math.round(parseInt(r.points_redeemed || 0, 10) * 0.25),
                 revenue_volume: parseFloat(r.revenue_volume || 0),
               });
             }
@@ -540,6 +555,7 @@ class DirectorService {
             customer_count: 0,
             points_issued: 0,
             points_redeemed: 0,
+            cash_redeemed_inr: 0,
             revenue_volume: 0,
           });
         })(),
