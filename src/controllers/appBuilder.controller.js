@@ -6,7 +6,7 @@ class AppBuilderController {
    */
   static async getConfig(req, res, next) {
     try {
-      const tenantId = req.params.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const tenantId = req.params.tenantId || req.user?.tenant_id || 'trident_automobiles';
       
       const query = `
         SELECT 
@@ -16,6 +16,10 @@ class AppBuilderController {
           tabs_config,
           buttons_config,
           logic_config,
+          branches_config,
+          users_config,
+          portal_config,
+          rewards_config,
           is_published,
           published_at,
           created_at,
@@ -27,22 +31,21 @@ class AppBuilderController {
       const result = await pool.query(query, [tenantId]);
 
       if (result.rows.length === 0) {
-        // Return default configuration
         return res.status(200).json({
           status: 'success',
           data: {
             tenant_id: tenantId,
             theme_config: {
-              dealership_name: 'Bellad & Company',
-              tagline: 'Tata Motors & MG Motors Authorised Dealership Group',
-              logo_url: '/bellad-logo.png',
-              primary_color: '#1e40af',
-              secondary_color: '#3b82f6',
-              accent_color: '#10b981',
+              dealership_name: 'Trident Automobiles',
+              tagline: 'Authorised Multi-Brand & Premium Mobility Partner',
+              logo_url: '/trident-logo.svg',
+              primary_color: '#0284c7',
+              secondary_color: '#0369a1',
+              accent_color: '#059669',
               surface_mode: 'light',
-              card_radius: 'lg',
+              card_radius: 'rounded-2xl',
               font_family: 'Plus Jakarta Sans',
-              header_banner_text: 'Customer Loyalty & Rewards Suite',
+              header_banner_text: 'Trident Elite Customer Privilege Club',
               show_header_banner: true
             },
             tabs_config: [
@@ -53,7 +56,7 @@ class AppBuilderController {
               { id: 'gift_cards', label: 'Gift Card Rewards', icon: 'Gift', group: 'Rewards & Referrals', order: 5, visible: true, role_access: 'cashier' },
               { id: 'director_command_center', label: 'Director Command Center', icon: 'Crown', group: 'Executive Suite', order: 6, visible: true, role_access: 'director' },
               { id: 'kyc_approvals', label: 'KYC Approvals', icon: 'ShieldCheck', group: 'Loyalty Rewards', order: 7, visible: true, role_access: 'manager' },
-              { id: 'reports', label: 'Reports & Analytics', icon: 'BarChart3', group: 'Analytics', order: 8, visible: true, role_access: 'manager' }
+              { id: 'reports', label: 'Reports & Analytics', icon: 'Calculator', group: 'Analytics', order: 8, visible: true, role_access: 'manager' }
             ],
             buttons_config: [
               { id: 'btn_add_receipt', label: 'Add Receipt', icon: 'Plus', style: 'solid', placement: 'header', action_type: 'open_receipt_modal', color: 'emerald', enabled: true, order: 1 },
@@ -79,6 +82,33 @@ class AppBuilderController {
               welcome_bonus_points: 250,
               birthday_multiplier: 2.0
             },
+            branches_config: [
+              { id: 'br_blr_south', code: 'TRD-BLR-01', name: 'Trident Bengaluru South', city: 'Bengaluru', multiplier: 1.0, redemption_budget: 500000, manager_approval_limit: 5000, is_active: true },
+              { id: 'br_indiranagar', code: 'TRD-BLR-02', name: 'Trident Indiranagar Flagship', city: 'Bengaluru', multiplier: 1.1, redemption_budget: 750000, manager_approval_limit: 7500, is_active: true },
+              { id: 'br_whitefield', code: 'TRD-BLR-03', name: 'Trident Whitefield Tech Hub', city: 'Bengaluru', multiplier: 1.0, redemption_budget: 600000, manager_approval_limit: 5000, is_active: true }
+            ],
+            users_config: [
+              { id: 'usr_1', username: 'trident_cashier1', full_name: 'Ramesh Kumar', role: 'cashier', branch_code: 'TRD-BLR-01', phone: '9880011223', is_active: true },
+              { id: 'usr_2', username: 'trident_mgr1', full_name: 'Anand Varma', role: 'branch_manager', branch_code: 'TRD-BLR-01', phone: '9880044556', is_active: true },
+              { id: 'usr_3', username: 'trident_accounts', full_name: 'Suresh Hegde', role: 'accounts_head', branch_code: 'TRD-BLR-02', phone: '9880077889', is_active: true },
+              { id: 'usr_4', username: 'trident_director', full_name: 'Director Trident Auto', role: 'director', branch_code: 'ALL', phone: '9880099001', is_active: true }
+            ],
+            portal_config: {
+              hero_title: 'Trident Privilege Club Portal',
+              hero_subtitle: 'Exclusive member rewards, complimentary vehicle inspections, and service point redemptions.',
+              banner_image: '/offers/portal-banner.jpg',
+              show_points_calculator: true,
+              show_whatsapp_pass: true,
+              show_monthly_offers: true,
+              show_referral_claim: true,
+              login_method: 'phone_otp'
+            },
+            rewards_config: {
+              referral_vehicle_purchase_reward: 2500,
+              referral_service_visit_reward: 500,
+              gift_card_bonus_pct: 10,
+              kyc_verification_bonus: 500
+            },
             is_published: false
           }
         });
@@ -98,12 +128,16 @@ class AppBuilderController {
    */
   static async saveConfig(req, res, next) {
     try {
-      const tenantId = req.params.tenantId || req.body.tenant_id || req.user?.tenant_id || 'bellad_and_company';
+      const tenantId = req.params.tenantId || req.body.tenant_id || req.user?.tenant_id || 'trident_automobiles';
       const {
         theme_config,
         tabs_config,
         buttons_config,
         logic_config,
+        branches_config,
+        users_config,
+        portal_config,
+        rewards_config,
         is_published = false
       } = req.body;
 
@@ -114,17 +148,25 @@ class AppBuilderController {
           tabs_config,
           buttons_config,
           logic_config,
+          branches_config,
+          users_config,
+          portal_config,
+          rewards_config,
           is_published,
           published_at,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6 = TRUE THEN NOW() ELSE NULL END, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $10 = TRUE THEN NOW() ELSE NULL END, NOW())
         ON CONFLICT (tenant_id)
         DO UPDATE SET
           theme_config = EXCLUDED.theme_config,
           tabs_config = EXCLUDED.tabs_config,
           buttons_config = EXCLUDED.buttons_config,
           logic_config = EXCLUDED.logic_config,
+          branches_config = EXCLUDED.branches_config,
+          users_config = EXCLUDED.users_config,
+          portal_config = EXCLUDED.portal_config,
+          rewards_config = EXCLUDED.rewards_config,
           is_published = EXCLUDED.is_published,
           published_at = CASE WHEN EXCLUDED.is_published = TRUE THEN NOW() ELSE app_builder_configs.published_at END,
           updated_at = NOW()
@@ -137,6 +179,10 @@ class AppBuilderController {
         JSON.stringify(tabs_config || []),
         JSON.stringify(buttons_config || []),
         JSON.stringify(logic_config || {}),
+        JSON.stringify(branches_config || []),
+        JSON.stringify(users_config || []),
+        JSON.stringify(portal_config || {}),
+        JSON.stringify(rewards_config || {}),
         Boolean(is_published)
       ];
 
@@ -145,7 +191,7 @@ class AppBuilderController {
       res.status(200).json({
         status: 'success',
         message: is_published
-          ? 'Configuration successfully published to live loyalty app!'
+          ? `Configuration successfully published live for ${tenantId}!`
           : 'App draft successfully saved.',
         data: result.rows[0]
       });
@@ -159,7 +205,7 @@ class AppBuilderController {
    */
   static async getPublishedConfig(req, res, next) {
     try {
-      const tenantId = req.params.tenantId || req.query.tenant_id || 'bellad_and_company';
+      const tenantId = req.params.tenantId || req.query.tenant_id || 'trident_automobiles';
       const result = await pool.query(
         `SELECT 
           tenant_id,
@@ -167,6 +213,10 @@ class AppBuilderController {
           tabs_config,
           buttons_config,
           logic_config,
+          branches_config,
+          users_config,
+          portal_config,
+          rewards_config,
           published_at
          FROM app_builder_configs
          WHERE tenant_id = $1 AND is_published = TRUE
@@ -197,7 +247,7 @@ class AppBuilderController {
    */
   static async resetConfig(req, res, next) {
     try {
-      const tenantId = req.params.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const tenantId = req.params.tenantId || req.user?.tenant_id || 'trident_automobiles';
       
       const resetQuery = `
         DELETE FROM app_builder_configs

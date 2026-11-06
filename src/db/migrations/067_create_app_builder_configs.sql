@@ -97,3 +97,4 @@ VALUES
     NOW()
   )
 ON CONFLICT (tenant_id) DO NOTHING;
+
