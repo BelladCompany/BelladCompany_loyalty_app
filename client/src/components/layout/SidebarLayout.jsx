@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import ApiService from '../../services/api';
+import React, { useState } from 'react';
 import {
   Search,
   LayoutDashboard,
@@ -40,26 +39,6 @@ export const SidebarLayout = ({
   children,
 }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [publishedConfig, setPublishedConfig] = useState(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    ApiService.getPublishedAppConfig(user?.tenant_id || 'bellad_and_company')
-      .then((res) => {
-        if (isMounted && res && res.data) {
-          setPublishedConfig(res.data);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      isMounted = false;
-    };
-  }, [user?.tenant_id]);
-
-  const dealershipName = publishedConfig?.theme_config?.dealership_name || 'Bellad CRM';
-  const logoUrl = publishedConfig?.theme_config?.logo_url || '/bellad-logo.png';
-  const tagline = publishedConfig?.theme_config?.tagline || 'Loyalty Platform';
-
   const isCashier = user?.role === 'cashier';
   const isManager = ['branch_manager', 'manager'].includes(user?.role);
   const isAccountsHead = ['accounts_head', 'account_head'].includes(user?.role);
@@ -172,16 +151,11 @@ export const SidebarLayout = ({
         <div className="h-16 sm:h-20 px-5 sm:px-6 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-14 h-14 items-center justify-center">
-              <img
-                src={logoUrl}
-                alt={dealershipName}
-                className="w-full h-full object-contain"
-                onError={(e) => { e.target.src = '/bellad-logo.png'; }}
-              />
+              <img src="/bellad-logo.png" alt="Bellad & Company" className="w-full h-full object-contain" />
             </div>
             <div>
-              <span className="font-black text-base sm:text-lg text-slate-900 tracking-tight block leading-tight">{dealershipName}</span>
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500">{tagline}</span>
+              <span className="font-black text-base sm:text-lg text-slate-900 tracking-tight block leading-tight">Bellad CRM</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-500">Loyalty Platform</span>
             </div>
           </div>
           {isMobile && (
@@ -240,9 +214,7 @@ export const SidebarLayout = ({
                       `}
                     >
                       <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                      <span className="truncate">
-                        {publishedConfig?.tabs_config?.find((t) => t.id === item.id)?.label || item.label}
-                      </span>
+                      <span className="truncate">{item.label}</span>
                       {item.isBuilder && (
                         <span className="ml-auto text-[10px] uppercase font-mono px-2 py-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full font-black shadow-xs">
                           No-Code

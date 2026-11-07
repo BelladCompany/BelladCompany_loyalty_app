@@ -1,36 +1,26 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import SidebarLayout from './components/layout/SidebarLayout';
 import LoginScreen from './screens/LoginScreen';
+import CashierDashboard from './screens/CashierDashboard';
+import AdminDuplicateScreen from './screens/AdminDuplicateScreen';
+import ReferralsScreen from './screens/ReferralsScreen';
+import KycApprovalsScreen from './screens/KycApprovalsScreen';
+import CorrectionsQueueScreen from './screens/CorrectionsQueueScreen';
+import PublicBalancePassScreen from './screens/PublicBalancePassScreen';
+import PublicReferralLeadScreen from './screens/PublicReferralLeadScreen';
+import ReportsScreen from './screens/ReportsScreen';
+import GiftCardsScreen from './screens/GiftCardsScreen';
+import TenantManagementScreen from './screens/TenantManagementScreen';
+import MasterRuleEditorScreen from './screens/MasterRuleEditorScreen';
+import StandaloneMasterEditorPortal from './screens/StandaloneMasterEditorPortal';
+import LoyaltyAppBuilder from './screens/LoyaltyAppBuilder';
+import CustomerPortalScreen from './pages/CustomerPortalScreen';
+import PublicOffersScreen from './pages/PublicOffersScreen';
+import PublicGiftClaimScreen from './screens/PublicGiftClaimScreen';
+import CustomerRedemptionsScreen from './screens/CustomerRedemptionsScreen';
+import DirectorCommandCenter from './screens/DirectorCommandCenter';
+import UserManagementScreen from './screens/UserManagementScreen';
 import ApiService from './services/api';
-
-// Code-split / lazy-load screens on demand for lightning-fast mobile & desktop loading speed (>90 Lighthouse score)
-const CashierDashboard = lazy(() => import('./screens/CashierDashboard'));
-const AdminDuplicateScreen = lazy(() => import('./screens/AdminDuplicateScreen'));
-const ReferralsScreen = lazy(() => import('./screens/ReferralsScreen'));
-const KycApprovalsScreen = lazy(() => import('./screens/KycApprovalsScreen'));
-const CorrectionsQueueScreen = lazy(() => import('./screens/CorrectionsQueueScreen'));
-const PublicBalancePassScreen = lazy(() => import('./screens/PublicBalancePassScreen'));
-const PublicReferralLeadScreen = lazy(() => import('./screens/PublicReferralLeadScreen'));
-const ReportsScreen = lazy(() => import('./screens/ReportsScreen'));
-const GiftCardsScreen = lazy(() => import('./screens/GiftCardsScreen'));
-const TenantManagementScreen = lazy(() => import('./screens/TenantManagementScreen'));
-const MasterRuleEditorScreen = lazy(() => import('./screens/MasterRuleEditorScreen'));
-const StandaloneMasterEditorPortal = lazy(() => import('./screens/StandaloneMasterEditorPortal'));
-const LoyaltyAppBuilder = lazy(() => import('./screens/LoyaltyAppBuilder'));
-const CustomerPortalScreen = lazy(() => import('./pages/CustomerPortalScreen'));
-const PublicOffersScreen = lazy(() => import('./pages/PublicOffersScreen'));
-const PublicGiftClaimScreen = lazy(() => import('./screens/PublicGiftClaimScreen'));
-const CustomerRedemptionsScreen = lazy(() => import('./screens/CustomerRedemptionsScreen'));
-const DirectorCommandCenter = lazy(() => import('./screens/DirectorCommandCenter'));
-const UserManagementScreen = lazy(() => import('./screens/UserManagementScreen'));
-
-// Minimal, smooth loading placeholder during chunk fetch
-const ScreenLoader = () => (
-  <div className="flex-1 flex flex-col items-center justify-center p-12 min-h-[350px]">
-    <div className="w-9 h-9 border-3 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin mb-3" />
-    <span className="text-[11px] font-bold text-slate-400 font-mono tracking-wider uppercase">Loading Workspace...</span>
-  </div>
-);
 
 class BuilderErrorBoundary extends React.Component {
   constructor(props) {
@@ -158,47 +148,27 @@ export function App() {
 
   // Public offers page does not require user authentication
   if (isPublicOffers) {
-    return (
-      <Suspense fallback={<ScreenLoader />}>
-        <PublicOffersScreen />
-      </Suspense>
-    );
+    return <PublicOffersScreen />;
   }
 
   // Public balance pass does not require user authentication
   if (isPublicBalancePass) {
-    return (
-      <Suspense fallback={<ScreenLoader />}>
-        <PublicBalancePassScreen />
-      </Suspense>
-    );
+    return <PublicBalancePassScreen />;
   }
 
   // Public referral lead form does not require user authentication
   if (isPublicReferralLead) {
-    return (
-      <Suspense fallback={<ScreenLoader />}>
-        <PublicReferralLeadScreen />
-      </Suspense>
-    );
+    return <PublicReferralLeadScreen />;
   }
 
   // Public gift claim link does not require user authentication
   if (isPublicGiftClaim) {
-    return (
-      <Suspense fallback={<ScreenLoader />}>
-        <PublicGiftClaimScreen />
-      </Suspense>
-    );
+    return <PublicGiftClaimScreen />;
   }
 
   // Customer Portal route or logged-in customer role
   if (isCustomerPortal || user?.role === 'customer') {
-    return (
-      <Suspense fallback={<ScreenLoader />}>
-        <CustomerPortalScreen />
-      </Suspense>
-    );
+    return <CustomerPortalScreen />;
   }
 
   const handleLoginSuccess = (loggedInUser) => {
@@ -241,15 +211,13 @@ export function App() {
           setIsBuilderMode(false);
         }}
       >
-        <Suspense fallback={<ScreenLoader />}>
-          <LoyaltyAppBuilder
-            user={user}
-            onExitToCounterApp={() => {
-              window.history.pushState({}, '', '/');
-              setIsBuilderMode(false);
-            }}
-          />
-        </Suspense>
+        <LoyaltyAppBuilder
+          user={user}
+          onExitToCounterApp={() => {
+            window.history.pushState({}, '', '/');
+            setIsBuilderMode(false);
+          }}
+        />
       </BuilderErrorBoundary>
     );
   }
@@ -292,15 +260,13 @@ export function App() {
       );
     }
     return (
-      <Suspense fallback={<ScreenLoader />}>
-        <StandaloneMasterEditorPortal
-          user={user}
-          onExitToCounterApp={() => {
-            window.history.pushState({}, '', '/');
-            setIsStudioMode(false);
-          }}
-        />
-      </Suspense>
+      <StandaloneMasterEditorPortal
+        user={user}
+        onExitToCounterApp={() => {
+          window.history.pushState({}, '', '/');
+          setIsStudioMode(false);
+        }}
+      />
     );
   }
 
@@ -319,61 +285,59 @@ export function App() {
         setIsBuilderMode(true);
       }}
     >
-      <Suspense fallback={<ScreenLoader />}>
-        {activeTab === 'director_command_center' ? (
-          <DirectorCommandCenter
-            user={user}
-            onSwitchToStaffView={() => setActiveTab('dashboard')}
-            onOpenUserManagement={() => setActiveTab('user_management')}
-          />
-        ) : activeTab === 'user_management' ? (
-          <UserManagementScreen user={user} />
-        ) : activeTab === 'dashboard' || activeTab === 'search' || activeTab === 'redemptions' ? (
-          <CashierDashboard
-            user={user}
-            activeTab={activeTab}
-            resetNonce={searchResetNonce}
-          />
-        ) : activeTab === 'customer_redemptions' ? (
-          isAdmin ? (
-            <CustomerRedemptionsScreen user={user} />
-          ) : (
-            <div className="p-8 bg-white rounded-3xl border border-rose-200 shadow-sm text-center max-w-lg mx-auto mt-12 space-y-4">
-              <h2 className="text-xl font-black text-slate-900">Restricted Admin Access</h2>
-              <p className="text-sm text-slate-600">
-                The Customer Redemptions list is restricted to Administrator privileges only.
-              </p>
-            </div>
-          )
-        ) : activeTab === 'gift_cards' ? (
-          <GiftCardsScreen user={user} />
-        ) : activeTab === 'referrals' ? (
-          <ReferralsScreen user={user} />
-        ) : activeTab === 'master_editor' ? (
-          <MasterRuleEditorScreen user={user} />
-        ) : activeTab === 'reports' ? (
-          <ReportsScreen user={user} />
-        ) : activeTab === 'kyc_approvals' ? (
-          isManager ? (
-            <CorrectionsQueueScreen />
-          ) : (
-            <KycApprovalsScreen />
-          )
-        ) : activeTab === 'corrections_queue' ? (
-          <CorrectionsQueueScreen />
-        ) : activeTab === 'tenants' ? (
-          <TenantManagementScreen user={user} />
-        ) : activeTab === 'admin' ? (
-          <AdminDuplicateScreen />
+      {activeTab === 'director_command_center' ? (
+        <DirectorCommandCenter
+          user={user}
+          onSwitchToStaffView={() => setActiveTab('dashboard')}
+          onOpenUserManagement={() => setActiveTab('user_management')}
+        />
+      ) : activeTab === 'user_management' ? (
+        <UserManagementScreen user={user} />
+      ) : activeTab === 'dashboard' || activeTab === 'search' || activeTab === 'redemptions' ? (
+        <CashierDashboard
+          user={user}
+          activeTab={activeTab}
+          resetNonce={searchResetNonce}
+        />
+      ) : activeTab === 'customer_redemptions' ? (
+        isAdmin ? (
+          <CustomerRedemptionsScreen user={user} />
         ) : (
-          <div className="p-8 sonexo-glass rounded-3xl space-y-4">
-            <h2 className="text-xl font-bold text-white">Administration</h2>
-            <p className="text-sm text-slate-400">
-              Select a management view from the navigation menu.
+          <div className="p-8 bg-white rounded-3xl border border-rose-200 shadow-sm text-center max-w-lg mx-auto mt-12 space-y-4">
+            <h2 className="text-xl font-black text-slate-900">Restricted Admin Access</h2>
+            <p className="text-sm text-slate-600">
+              The Customer Redemptions list is restricted to Administrator privileges only.
             </p>
           </div>
-        )}
-      </Suspense>
+        )
+      ) : activeTab === 'gift_cards' ? (
+        <GiftCardsScreen user={user} />
+      ) : activeTab === 'referrals' ? (
+        <ReferralsScreen user={user} />
+      ) : activeTab === 'master_editor' ? (
+        <MasterRuleEditorScreen user={user} />
+      ) : activeTab === 'reports' ? (
+        <ReportsScreen user={user} />
+      ) : activeTab === 'kyc_approvals' ? (
+        isManager ? (
+          <CorrectionsQueueScreen />
+        ) : (
+          <KycApprovalsScreen />
+        )
+      ) : activeTab === 'corrections_queue' ? (
+        <CorrectionsQueueScreen />
+      ) : activeTab === 'tenants' ? (
+        <TenantManagementScreen user={user} />
+      ) : activeTab === 'admin' ? (
+        <AdminDuplicateScreen />
+      ) : (
+        <div className="p-8 sonexo-glass rounded-3xl space-y-4">
+          <h2 className="text-xl font-bold text-white">Administration</h2>
+          <p className="text-sm text-slate-400">
+            Select a management view from the navigation menu.
+          </p>
+        </div>
+      )}
     </SidebarLayout>
   );
 }
