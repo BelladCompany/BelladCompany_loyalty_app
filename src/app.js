@@ -31,7 +31,6 @@ const giftRoutes = require('./routes/gift.routes');
 const offerRoutes = require('./routes/offer.routes');
 const directorRoutes = require('./routes/director.routes');
 const integrationRoutes = require('./routes/integration.routes');
-const appBuilderRoutes = require('./routes/appBuilder.routes');
 const importRoutes = require('./routes/import.routes');
 const errorHandler = require('./middleware/errorHandler');
 
