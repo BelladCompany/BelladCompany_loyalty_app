@@ -373,15 +373,18 @@ export default function LoyaltyAppBuilder({ user, onExitToCounterApp }) {
   }, [rules, searchFilter, schemeFilter, spendFilter]);
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-100 font-sans text-slate-800 antialiased">
-      {/* ========================================================
-          1. TOP APP BUILDER HEADER (Clean, Unclipped, Live)
-          ======================================================== */}
-      <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
-        {/* Software Title & Brand */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-sm">
-            <Sparkles className="w-5 h-5" />
+    <div className="flex flex-col h-screen w-screen bg-[#f0f0f1] text-[#2c3338] overflow-hidden font-sans select-text">
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 1. WORDPRESS TOP TOOLBAR                                   */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <header className="h-[48px] bg-[#1d2327] text-[#c3c4c7] px-3 sm:px-4 flex items-center justify-between z-40 shrink-0 border-b border-[#2c3338]">
+        {/* Left: WordPress Icon & Blueprint Mode */}
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-[#1d2327] font-black text-sm tracking-tighter shadow-xs cursor-pointer hover:bg-slate-100"
+            title="WordPress App Builder"
+          >
+            W
           </div>
           <div>
             <div className="flex items-center gap-2">

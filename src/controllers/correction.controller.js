@@ -77,12 +77,14 @@ class CorrectionController {
     try {
       const tenantId = req.tenantId;
       const status = req.query.status || 'pending';
+      const customerId = req.query.customer_id;
       const userRole = req.user?.role;
       const userBranchId = req.user?.branch_id;
 
       const requests = await CorrectionService.listCorrectionRequests({
         tenant_id: tenantId,
         status,
+        customer_id: customerId,
         user_role: userRole,
         user_branch_id: userBranchId,
       });

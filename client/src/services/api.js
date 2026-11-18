@@ -89,13 +89,16 @@ export class ApiService {
     };
 
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const requestTimeout = options.timeoutMs || 18000;
+    const fallbackTimeout = options.timeoutMs ? Math.min(options.timeoutMs, 60000) : 12000;
+
     let res;
     try {
-      res = await this.fetchWithTimeout(`${API_BASE}${cleanEndpoint}`, config, 18000);
+      res = await this.fetchWithTimeout(`${API_BASE}${cleanEndpoint}`, config, requestTimeout);
     } catch (fetchErr) {
       if ((fetchErr.name === 'TypeError' || fetchErr.message === 'Failed to fetch' || fetchErr.isTimeout) && API_BASE.startsWith('http')) {
         try {
-          res = await this.fetchWithTimeout(`/api${cleanEndpoint}`, config, 12000);
+          res = await this.fetchWithTimeout(`/api${cleanEndpoint}`, config, fallbackTimeout);
         } catch (proxyErr) {
           // both direct and proxy failed
         }
@@ -119,8 +122,20 @@ export class ApiService {
 
     if (!res.ok) {
       if (res.status === 401 || (res.status === 403 && String(data?.error || '').toLowerCase().includes('token'))) {
-        localStorage.removeItem('bac_loyalty_token');
-        localStorage.removeItem('bac_loyalty_user');
+        this.setToken(null);
+        this.setUser(null);
+        if (data?.code === 'SESSION_SUPERSEDED' || String(data?.error || '').includes('another browser')) {
+          try {
+            window.dispatchEvent(
+              new CustomEvent('bac_session_superseded', {
+                detail: {
+                  code: 'SESSION_SUPERSEDED',
+                  message: data?.error || 'Your account was logged in from another browser or device. You have been logged out to prevent unauthorized multiple logins.',
+                },
+              })
+            );
+          } catch (e) {}
+        }
       }
       let errorMsg = data?.error || data?.message || data?.details?.[0]?.message;
       if (!errorMsg) {
@@ -160,9 +175,19 @@ export class ApiService {
     return this.request('/auth/me');
   }
 
-  static logout() {
-    this.setToken(null);
-    this.setUser(null);
+  static async validateSession() {
+    return this.request('/auth/validate-session');
+  }
+
+  static async logout() {
+    try {
+      await this.request('/auth/logout', { method: 'POST' }).catch(() => {});
+    } catch (e) {
+      // ignore network errors on logout
+    } finally {
+      this.setToken(null);
+      this.setUser(null);
+    }
   }
 
   // Customer Portal /v1 Endpoints
@@ -301,6 +326,7 @@ export class ApiService {
     return this.request('/redemptions/realbooks/push', {
       method: 'POST',
       body: payload,
+      timeoutMs: 45000,
     });
   }
 
@@ -440,9 +466,12 @@ export class ApiService {
     });
   }
 
-  static async getCorrectionRequests(status = 'pending') {
-    const query = status ? `?status=${encodeURIComponent(status)}` : '';
-    return this.request(`/admin/corrections/list${query}`);
+  static async getCorrectionRequests(status = 'pending', customerId = null) {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (customerId) params.append('customer_id', customerId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/admin/corrections/list${queryString}`);
   }
 
   static async approveCorrection(id, reviewNotes) {
@@ -569,6 +598,30 @@ export class ApiService {
     window.URL.revokeObjectURL(url);
   }
 
+  // Order Form & Excel Workbook Importer
+  static async inspectWorkbook(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.request('/import/inspect', {
+      method: 'POST',
+      body: formData,
+      timeoutMs: 300000, // 5 min for large files (up to 250MB)
+    });
+  }
+
+  static async importOrderWorkbook(file, { sheetName, allowHistorical = true, customCutoffDate = '2020-01-01' } = {}) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (sheetName) formData.append('sheetName', sheetName);
+    formData.append('allowHistorical', String(allowHistorical));
+    formData.append('customCutoffDate', customCutoffDate);
+    return this.request('/import/order-form', {
+      method: 'POST',
+      body: formData,
+      timeoutMs: 600000, // 10 min for large batches (33,000+ rows)
+    });
+  }
+
   // Reports
   static async getPointsSummaryReport(params = {}) {
     const query = new URLSearchParams(params).toString();
@@ -595,7 +648,7 @@ export class ApiService {
     return this.request(`/reports/kyc-audit${query ? `?${query}` : ''}`);
   }
 
-  static async downloadReportCsv(reportEndpoint, params = {}) {
+  static async downloadReportCsv(reportEndpoint, params = {}, customFilename = null) {
     const token = this.getToken();
     const queryParams = new URLSearchParams({ ...params, format: 'csv' }).toString();
     const res = await fetch(`${API_BASE}/reports/${reportEndpoint}?${queryParams}`, {
@@ -610,7 +663,7 @@ export class ApiService {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${reportEndpoint}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = customFilename || `${reportEndpoint}_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();

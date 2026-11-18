@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FileText,
   AlertCircle,
@@ -28,6 +28,18 @@ export const RaiseCorrectionModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successResult, setSuccessResult] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setReference(initialReference || '');
+      setWrongAmount('');
+      setCorrectAmount('');
+      setExplanation('');
+      setSelectedFile(null);
+      setError('');
+      setSuccessResult(null);
+    }
+  }, [isOpen, initialReference]);
 
   if (!isOpen) return null;
 

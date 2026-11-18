@@ -3,9 +3,13 @@ import EnrollmentScreen from '../components/portal/EnrollmentScreen';
 import PortalDashboardScreen from '../components/portal/PortalDashboardScreen';
 import ApiService from '../services/api';
 
-export default function CustomerPortalScreen() {
+export default function CustomerPortalScreen({ portalVersion }) {
   const [customer, setCustomer] = useState(() => ApiService.getUser());
   const [token, setToken] = useState(() => ApiService.getToken());
+
+  const effectiveVersion = portalVersion || (
+    window.location.pathname.includes('v2') || window.location.pathname.includes('portalv2') ? 'v2' : 'v1'
+  );
 
   useEffect(() => {
     // If token exists, sync state
@@ -30,5 +34,11 @@ export default function CustomerPortalScreen() {
     return <EnrollmentScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
-  return <PortalDashboardScreen customerInfo={customer} onSignOut={handleSignOut} />;
+  return (
+    <PortalDashboardScreen
+      customerInfo={customer}
+      onSignOut={handleSignOut}
+      portalVersion={effectiveVersion}
+    />
+  );
 }

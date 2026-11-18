@@ -254,10 +254,10 @@ class PointsService {
         earnedPoints = await this.calculatePoints(activeCategory, amount, tenant_id, client);
       }
 
-      // 4. Insert immutable record into points_ledger (clean: Receipt No and Type only)
+      // 4. Insert immutable record into points_ledger (clean: Receipt No, Type and Bill Amount)
       const formattedCategory = (activeCategory || 'service').charAt(0).toUpperCase() + (activeCategory || 'service').slice(1).toLowerCase();
       const cleanRef = (receipt_no || reference_id || '').trim();
-      const sourceRef = cleanRef ? `${cleanRef} | ${formattedCategory}` : `${formattedCategory} transaction earning`;
+      const sourceRef = cleanRef ? `${cleanRef} | ${formattedCategory} (Bill: ₹${amount})` : `${formattedCategory} transaction earning (Bill: ₹${amount})`;
 
       let insertCols = ['customer_id', 'vehicle_id', 'branch_id', typeCol, 'points', refCol, actorCol, 'tenant_id'];
       let insertVals = [customer_id, vehicle_id || null, branch_id, ledgerType, earnedPoints, sourceRef, created_by || null, tenant_id];
@@ -273,6 +273,14 @@ class PointsService {
       if (hasRateSnapshotCol) {
         insertCols.push('redemption_rate_snapshot');
         insertVals.push(0.2500);
+      }
+      if (cols.has('calc_snapshot')) {
+        insertCols.push('calc_snapshot');
+        insertVals.push(JSON.stringify({ bill_amount: amount }));
+      }
+      if (cols.has('amount_paise')) {
+        insertCols.push('amount_paise');
+        insertVals.push(amount * 100);
       }
       if (cols.has('receipt_no') && receipt_no) {
         insertCols.push('receipt_no');

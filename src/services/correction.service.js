@@ -236,7 +236,7 @@ class CorrectionService {
   /**
    * Lists correction requests for admin queue
    */
-  static async listCorrectionRequests({ tenant_id, status = 'pending', user_role, user_branch_id }) {
+  static async listCorrectionRequests({ tenant_id, status = 'pending', customer_id, user_role, user_branch_id }) {
     let query = `
       SELECT cr.id, cr.customer_id, c.customer_name, cr.points_ledger_reference,
              cr.cashier_user_id, u.username AS cashier_name,
@@ -254,6 +254,11 @@ class CorrectionService {
     `;
     const params = [tenant_id];
     let idx = 2;
+
+    if (customer_id) {
+      query += ` AND cr.customer_id = $${idx++}`;
+      params.push(customer_id);
+    }
 
     if (status && status !== 'all') {
       query += ` AND cr.status = $${idx++}`;
@@ -335,113 +340,16 @@ class CorrectionService {
         throw { statusCode: 400, message: `Correction request #${request_id} is already ${reqRecord.status}.` };
       }
 
-      // 2. Fetch original points_ledger entries
-      const origEntries = await this.findOriginalLedgerEntries(reqRecord.points_ledger_reference, tenant_id, client);
-      if (origEntries.length === 0) {
-        throw { statusCode: 404, message: `Original points_ledger entries not found for reference '${reqRecord.points_ledger_reference}'.` };
+      // 2. Fetch original points_ledger entries for audit tracking
+      let origEntries = [];
+      try {
+        origEntries = await this.findOriginalLedgerEntries(reqRecord.points_ledger_reference, tenant_id, client);
+      } catch (e) {
+        origEntries = [];
       }
 
-      // Fetch customer balance before reversal
-      const balRes = await client.query(
-        `SELECT COALESCE(SUM(points), 0) AS total_balance FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
-        [reqRecord.customer_id, tenant_id]
-      );
-      const balanceBefore = parseInt(balRes.rows[0].total_balance, 10);
-
-      // 3. Step A: Insert REVERSAL entries (exact opposite sign, type='correction_reversal')
-      const insertedReversals = [];
-      for (const orig of origEntries) {
-        const revPoints = -parseInt(orig.points, 10);
-        const revRes = await client.query(
-          `INSERT INTO points_ledger (
-             customer_id, vehicle_id, branch_id, type, transaction_category, points,
-             source_ref, cashier_id, tenant_id, receipt_no, account_ledger_no
-           )
-           VALUES ($1, $2, $3, 'correction_reversal', $4, $5, $6, $7, $8, $9, $10)
-           RETURNING *;`,
-          [
-            orig.customer_id,
-            orig.vehicle_id || null,
-            orig.branch_id || reqRecord.branch_id || 1,
-            orig.transaction_category || 'redemption',
-            revPoints,
-            `Reversal of ticket #${request_id}: ${orig.source_ref || 'Original Wrong Transaction'}`,
-            reviewer_user_id || null,
-            tenant_id,
-            orig.receipt_no || null,
-            orig.account_ledger_no || null,
-          ]
-        );
-        insertedReversals.push(revRes.rows[0]);
-      }
-
-      // 4. Step B: Calculate & Insert CORRECTED entries (type='correction_applied')
-      const originalNetPoints = origEntries.reduce((acc, r) => acc + parseInt(r.points, 10), 0);
-      const balanceBeforeWrongTx = balanceBefore - originalNetPoints;
-
-      const correctAmt = parseFloat(reqRecord.correct_bill_amount);
-      const redeemableRupees = Math.max(0, balanceBeforeWrongTx * POINTS_PER_RUPEE_REDEMPTION);
-      const discountApplied = Math.min(redeemableRupees, correctAmt);
-      const pointsRedeemed = Math.round(discountApplied / POINTS_PER_RUPEE_REDEMPTION);
-      const cashPaid = Math.max(0, correctAmt - discountApplied);
-      const newPointsEarned = Math.floor((cashPaid / 100) * POINTS_PER_100_RUPEES_EARNED);
-
-      const mainCategory = origEntries.find((r) => r.type === 'earn')?.transaction_category || 'service';
-      const vehId = origEntries[0].vehicle_id || null;
-      const branchId = origEntries[0].branch_id || reqRecord.branch_id || 1;
-      const receiptNo = origEntries[0].receipt_no || null;
-      const ledgerNo = origEntries[0].account_ledger_no || null;
-
-      const insertedCorrected = [];
-
-      if (pointsRedeemed > 0) {
-        const cRedeem = await client.query(
-          `INSERT INTO points_ledger (
-             customer_id, vehicle_id, branch_id, type, transaction_category, points,
-             source_ref, cashier_id, tenant_id, receipt_no, account_ledger_no
-           )
-           VALUES ($1, $2, $3, 'correction_applied', 'redemption', $4, $5, $6, $7, $8, $9)
-           RETURNING *;`,
-          [
-            reqRecord.customer_id,
-            vehId,
-            branchId,
-            -pointsRedeemed,
-            `Correction ticket #${request_id}: Applied discount ₹${discountApplied} (Bill: ₹${correctAmt})`,
-            reviewer_user_id || null,
-            tenant_id,
-            receiptNo,
-            ledgerNo,
-          ]
-        );
-        insertedCorrected.push(cRedeem.rows[0]);
-      }
-
-      if (newPointsEarned > 0) {
-        const cEarn = await client.query(
-          `INSERT INTO points_ledger (
-             customer_id, vehicle_id, branch_id, type, transaction_category, points,
-             source_ref, cashier_id, tenant_id, receipt_no, account_ledger_no
-           )
-           VALUES ($1, $2, $3, 'correction_applied', $4, $5, $6, $7, $8, $9, $10)
-           RETURNING *;`,
-          [
-            reqRecord.customer_id,
-            vehId,
-            branchId,
-            mainCategory,
-            newPointsEarned,
-            `Correction ticket #${request_id}: Applied points earned on cash paid ₹${cashPaid} (Bill: ₹${correctAmt})`,
-            reviewer_user_id || null,
-            tenant_id,
-            receiptNo,
-            ledgerNo,
-          ]
-        );
-        insertedCorrected.push(cEarn.rows[0]);
-      }
-
-      // 5. Update correction_requests status
+      // 3. Update correction_requests status to 'approved' without injecting duplicate ledger rows
+      // As requested: Cashier will re-bill directly if needed, so approval updates status without re-inserting transactions.
       const updateRes = await client.query(
         `UPDATE correction_requests
          SET status = 'approved',
@@ -455,14 +363,7 @@ class CorrectionService {
 
       const approvedRecord = updateRes.rows[0];
 
-      // Calculate final updated balance
-      const newBalRes = await client.query(
-        `SELECT COALESCE(SUM(points), 0) AS total_balance FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
-        [reqRecord.customer_id, tenant_id]
-      );
-      const finalBalance = parseInt(newBalRes.rows[0].total_balance, 10);
-
-      // 6. Write comprehensive audit_log entry
+      // 4. Write audit log entry
       await AuditLogService.logEvent({
         action: 'points_correction_approved',
         entity_type: 'correction_request',
@@ -470,16 +371,15 @@ class CorrectionService {
         actor_user_id: reviewer_user_id || null,
         before_values: {
           customer_id: reqRecord.customer_id,
-          previous_balance: balanceBefore,
+          status: 'pending',
           wrong_bill_amount: reqRecord.wrong_bill_amount,
           original_entries: origEntries,
         },
         after_values: {
           customer_id: reqRecord.customer_id,
+          status: 'approved',
           correct_bill_amount: reqRecord.correct_bill_amount,
-          reversal_entries: insertedReversals,
-          corrected_entries: insertedCorrected,
-          final_balance: finalBalance,
+          review_notes: (review_notes || 'Approved').trim(),
         },
         metadata: {
           request_id,
@@ -499,10 +399,6 @@ class CorrectionService {
         success: true,
         message: `Correction request #${request_id} approved successfully.`,
         request: approvedRecord,
-        reversals: insertedReversals,
-        corrected: insertedCorrected,
-        previous_balance: balanceBefore,
-        final_balance: finalBalance,
       };
     } catch (err) {
       await client.query('ROLLBACK');

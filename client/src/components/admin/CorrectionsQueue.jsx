@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import ApiService from '../../services/api';
 import Button from '../ui/Button';
+import CopyButton from '../ui/CopyButton';
 
 export const CorrectionsQueue = () => {
   const [requests, setRequests] = useState([]);
@@ -52,7 +53,7 @@ export const CorrectionsQueue = () => {
   }, [statusFilter]);
 
   const handleApprove = async (id) => {
-    if (!window.confirm(`Approve correction request #${id}? This will execute reversal and corrected ledger entries in database.`)) {
+    if (!window.confirm(`Approve correction request #${id}? This will approve the ticket and mark the bill as approved.`)) {
       return;
     }
 
@@ -229,8 +230,14 @@ export const CorrectionsQueue = () => {
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-slate-400 flex-shrink-0" />
                       <div>
-                        <span className="font-extrabold text-slate-900 text-sm">{req.customer_name}</span>
-                        <span className="font-mono text-slate-500 block text-[11px]">{req.customer_id}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-extrabold text-slate-900 text-sm select-text">{req.customer_name}</span>
+                          <CopyButton text={req.customer_name} size="xs" title="Copy Customer Name" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-slate-500 text-[11px] select-text">{req.customer_id}</span>
+                          <CopyButton text={req.customer_id} size="xs" title="Copy Customer ID" />
+                        </div>
                       </div>
                     </div>
 

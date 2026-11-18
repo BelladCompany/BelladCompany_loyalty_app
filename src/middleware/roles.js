@@ -45,18 +45,34 @@ const requireRole = (allowedRoles = []) => {
 };
 
 /**
+ * Check if a user is an Admin or Director with cross-dealership oversight
+ */
+const isAdminOrDirector = (user) => {
+  if (!user) return false;
+  const role = (user.role || '').toLowerCase();
+  const username = (user.username || '').toLowerCase();
+  return (
+    ['admin', 'super_admin', 'director', 'management'].includes(role) ||
+    ['admin', 'director', 'agstya', 'agastya'].includes(username)
+  );
+};
+
+/**
  * Branch scoping helper for queries based on user role and assigned branch_id.
- * If user is a branch_manager, forces branch_id to user.branch_id.
- * If user is regional_admin, admin, or super_admin, allows query-defined branch_id filter or all branches.
+ * - Admin & Director: Can query all branches or filter by any requested branch_id.
+ * - Branch Managers / Staff (e.g. Belgaum, Hubli, Dharwad, Bangalore):
+ *   Strictly forces branch_id to user.branch_id, disallowing cross-branch or all-branch views.
  */
 const scopeBranchAccess = (req) => {
   const user = req.user;
-  const isBranchScopedRole = user && user.role === 'branch_manager' && user.branch_id;
+  const isElevated = isAdminOrDirector(user);
 
-  if (isBranchScopedRole) {
+  if (!isElevated) {
+    const userBranchId = user && user.branch_id ? parseInt(user.branch_id, 10) : null;
     return {
-      branchId: parseInt(user.branch_id, 10),
+      branchId: userBranchId,
       isRestrictedToBranch: true,
+      userBranchId,
     };
   }
 
@@ -65,16 +81,19 @@ const scopeBranchAccess = (req) => {
     return {
       branchId: parseInt(requestedBranch, 10),
       isRestrictedToBranch: false,
+      userBranchId: null,
     };
   }
 
   return {
     branchId: null,
     isRestrictedToBranch: false,
+    userBranchId: null,
   };
 };
 
 requireRole.requireRole = requireRole;
 requireRole.scopeBranchAccess = scopeBranchAccess;
+requireRole.isAdminOrDirector = isAdminOrDirector;
 
 module.exports = requireRole;

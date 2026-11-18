@@ -29,6 +29,20 @@
     font-family: inherit;
   }
 
+  /* Universal text selection & copy enabled across customer names, IDs, usernames and tables */
+  body, p, span, h1, h2, h3, h4, h5, h6, td, th, div, code, pre, label, input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  button, [role="button"] {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+
   /* Custom high-contrast focus rings */
   *:focus-visible {
     outline: 2px solid #4F46E5;

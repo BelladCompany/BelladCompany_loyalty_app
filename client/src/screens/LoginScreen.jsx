@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Car, Lock, User, AlertCircle, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
+import { Car, Lock, User, AlertCircle, ArrowRight, Sparkles, Eye, EyeOff, AlertTriangle, ShieldAlert } from 'lucide-react';
 import ApiService from '../services/api';
 
-export const LoginScreen = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('Admin@123');
+export const LoginScreen = ({ onLoginSuccess, sessionAlert, onClearSessionAlert }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingElapsed, setLoadingElapsed] = useState(0);
@@ -34,18 +35,12 @@ export const LoginScreen = ({ onLoginSuccess }) => {
 
     try {
       const data = await ApiService.login(username, password);
-      onLoginSuccess(data.user);
+      onLoginSuccess(data.user, data.supersededPreviousSession);
     } catch (err) {
       setError(err.message || 'Login failed. Please check credentials.');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleFillDemo = (u, p) => {
-    setUsername(u);
-    setPassword(p);
-    setError('');
   };
 
   return (
@@ -84,6 +79,31 @@ export const LoginScreen = ({ onLoginSuccess }) => {
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="pt-5 sm:pt-6 space-y-3.5 sm:space-y-4">
+          {sessionAlert && (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs sm:text-sm flex items-start gap-3 shadow-xs animate-fadeIn">
+              <div className="p-1.5 rounded-xl bg-amber-200/80 text-amber-900 shrink-0 mt-0.5">
+                <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5 text-amber-900" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-amber-950 text-xs sm:text-sm">Single Active Session Security</h4>
+                  {onClearSessionAlert && (
+                    <button
+                      type="button"
+                      onClick={onClearSessionAlert}
+                      className="text-amber-700 hover:text-amber-950 text-xs font-bold px-1"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                <p className="text-amber-850 text-[11px] sm:text-xs mt-1 leading-relaxed">
+                  {sessionAlert}
+                </p>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="p-3 sm:p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm flex items-start gap-2.5 animate-fadeIn">
               <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -112,14 +132,27 @@ export const LoginScreen = ({ onLoginSuccess }) => {
             <div className="relative mt-1">
               <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 disabled={isLoading}
-                placeholder="••••••••••••"
+                placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3.5 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
+                className="w-full pl-10 sm:pl-11 pr-11 py-2.5 sm:py-3.5 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1 cursor-pointer focus:outline-none"
+                title={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
+                ) : (
+                  <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                )}
+              </button>
             </div>
           </div>
 
@@ -151,79 +184,6 @@ export const LoginScreen = ({ onLoginSuccess }) => {
             </p>
           )}
         </form>
-
-        {/* Demo Credentials Section */}
-        <div className="mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-slate-100 space-y-2">
-          <div className="flex items-center justify-between text-[11px] sm:text-xs text-slate-500 font-bold px-1">
-            <span>QUICK DEMO ACCESS:</span>
-            <span className="text-slate-400">Click to fill</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-2.5">
-            <button
-              type="button"
-              onClick={() => handleFillDemo('admin', 'admin@123')}
-              className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
-                username === 'admin'
-                  ? 'bg-indigo-50 border-indigo-300 text-indigo-900 shadow-sm'
-                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
-              }`}
-            >
-              <div className="text-xs sm:text-sm font-bold flex items-center gap-1 sm:gap-1.5 truncate">
-                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span className="truncate">Admin Full Suite</span>
-              </div>
-              <div className="text-[10px] sm:text-xs text-slate-500 font-mono mt-0.5 truncate">admin / admin@123</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleFillDemo('cashier_belgaum', 'Cashier@123')}
-              className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
-                username === 'cashier_belgaum'
-                  ? 'bg-emerald-50 border-emerald-400 text-emerald-950 shadow-sm ring-2 ring-emerald-500/20'
-                  : 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300 text-emerald-900'
-              }`}
-            >
-              <div className="text-xs sm:text-sm font-black flex items-center gap-1 sm:gap-1.5 truncate text-emerald-700">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="truncate">Cashier Belgaum</span>
-              </div>
-              <div className="text-[10px] sm:text-xs text-emerald-800 font-mono mt-0.5 truncate font-bold">cashier_belgaum / Cashier@123</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleFillDemo('cashier', 'Cashier@123')}
-              className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
-                username === 'cashier'
-                  ? 'bg-indigo-50 border-indigo-300 text-indigo-900 shadow-sm'
-                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
-              }`}
-            >
-              <div className="text-xs sm:text-sm font-bold flex items-center gap-1 sm:gap-1.5 truncate">
-                <Car className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span className="truncate">Cashier Hubli</span>
-              </div>
-              <div className="text-[10px] sm:text-xs text-slate-500 font-mono mt-0.5 truncate">cashier / Cashier@123</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleFillDemo('kavya', 'kav@2026')}
-              className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
-                username === 'kavya'
-                  ? 'bg-purple-50 border-purple-300 text-purple-900 shadow-sm'
-                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
-              }`}
-            >
-              <div className="text-xs sm:text-sm font-bold flex items-center gap-1 sm:gap-1.5 truncate">
-                <User className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                <span className="truncate">Manager Kavya</span>
-              </div>
-              <div className="text-[10px] sm:text-xs text-slate-500 font-mono mt-0.5 truncate">kavya / kav@2026</div>
-            </button>
-          </div>
-        </div>
 
         {/* Bottom Link to Standalone Master Editor */}
         <div className="mt-6 text-center space-y-1">

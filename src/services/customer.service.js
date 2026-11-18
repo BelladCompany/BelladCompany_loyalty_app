@@ -179,12 +179,12 @@ class CustomerService {
         aadhaarLast4 = lastDigits(cleanAadhaar, 4);
         aadhaarLast4Enc = encrypt(aadhaarLast4);
 
-        // Check if a customer with the same Aadhaar hash already exists for this tenant
+        // Check if a customer with the same Aadhaar hash or number already exists for this tenant
         const dupRes = await client.query(
           `SELECT customer_id, customer_name FROM customers
-           WHERE tenant_id = $1 AND aadhaar_hash = $2 AND is_merged = FALSE
+           WHERE tenant_id = $1 AND (aadhaar_hash = $2 OR aadhaar_number = $3) AND is_merged = FALSE
            LIMIT 1;`,
-          [tenant_id, aadhaarHash]
+          [tenant_id, aadhaarHash, cleanAadhaar]
         );
 
         if (dupRes.rows.length > 0) {
@@ -699,7 +699,7 @@ class CustomerService {
        LEFT JOIN LATERAL (
          SELECT tcs_amount_paise, dealer_cash_discount_paise, emps_discount_paise, oem_offers_amount_paise
          FROM sale_transactions
-         WHERE (vehicle_id = v.vehicle_id OR reference_id = REPLACE(v.customer_id, 'BAC-', '')) AND tenant_id = $2
+         WHERE (vehicle_id = v.vehicle_id OR (v.vehicle_id IS NULL AND reference_id = REPLACE(v.customer_id, 'BAC-', ''))) AND tenant_id = $2
          ORDER BY id DESC LIMIT 1
        ) st ON TRUE
        WHERE v.customer_id = $1 AND v.tenant_id = $2

@@ -23,6 +23,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import CopyButton from '../components/ui/CopyButton';
 import ApiService from '../services/api';
 
 export const UserManagementScreen = ({ user }) => {
@@ -645,7 +646,8 @@ export const UserManagementScreen = ({ user }) => {
                           </div>
                           <div>
                             <div className="font-black text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
-                              <span>{u.username}</span>
+                              <span className="select-text">{u.username}</span>
+                              <CopyButton text={u.username} size="xs" title="Copy Username" />
                               {isCurrentLoggedUser && (
                                 <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">
                                   You

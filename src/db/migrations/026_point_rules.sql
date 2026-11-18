@@ -11,7 +11,8 @@ ALTER TABLE point_rules
   ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(16) DEFAULT 'all',
   ADD COLUMN IF NOT EXISTS service_type VARCHAR(32),
   ADD COLUMN IF NOT EXISTS condition_value VARCHAR(100),
-  ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS description TEXT;
 
 -- Unique constraint for service bonus rules per tenant, vehicle_type, and service_type
 DO $$

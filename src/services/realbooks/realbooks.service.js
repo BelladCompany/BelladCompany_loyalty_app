@@ -149,6 +149,45 @@ class RealBooksService {
     // 1. Ensure Customer Ledger is Synced/Pushed to this segment
     const ledgerSync = await realbooksClient.createOrUpdateCustomerLedger(customer, segmentInfo);
 
+    if (!ledgerSync.success) {
+      console.error(`❌ [RealBooks Service] Customer ledger sync failed for ${customer_id}:`, ledgerSync.error || ledgerSync.message);
+      try {
+        await pool.query(
+          `INSERT INTO realbooks_sync_log (
+             entity_type, entity_id, api_status, retry_count, tenant_id, request_payload, response_payload, cid, segid, segment_name, last_error
+           )
+           VALUES ('customer_ledger', $1, 'failed', 0, $2, $3, $4, $5, $6, $7, $8);`,
+          [
+            code,
+            tenant_id,
+            JSON.stringify(ledgerSync.request_payload || {}),
+            JSON.stringify(ledgerSync.response_payload || {}),
+            segmentInfo.cid,
+            segmentInfo.segid,
+            segmentInfo.segment_name,
+            ledgerSync.error || ledgerSync.message || 'RealBooks rejected customer ledger',
+          ]
+        );
+      } catch (_) {}
+
+      return {
+        success: false,
+        status: 'failed',
+        mode: ledgerSync.mode,
+        message: `RealBooks rejected customer ledger: ${ledgerSync.error || ledgerSync.message}`,
+        error: ledgerSync.error || ledgerSync.message,
+        receipt_no: code,
+        cid: segmentInfo.cid,
+        segid: segmentInfo.segid,
+        segment_name: segmentInfo.segment_name,
+        brand: segmentInfo.brand,
+        model_matched: segmentInfo.model_matched,
+        resolution_source: segmentInfo.resolution_source,
+        customer_id,
+        customer_name: customer.name,
+      };
+    }
+
     // 2. Push Double-Entry Account Voucher
     const voucherSync = await realbooksClient.createAccountVoucher({
       receiptNo: code,
@@ -169,9 +208,9 @@ class RealBooksService {
     try {
       await pool.query(
         `INSERT INTO realbooks_sync_log (
-           entity_type, entity_id, api_status, retry_count, tenant_id, request_payload, response_payload, cid, segid, segment_name
+           entity_type, entity_id, api_status, retry_count, tenant_id, request_payload, response_payload, cid, segid, segment_name, last_error
          )
-         VALUES ('receipt_voucher', $1, $2, 0, $3, $4, $5, $6, $7, $8);`,
+         VALUES ('receipt_voucher', $1, $2, 0, $3, $4, $5, $6, $7, $8, $9);`,
         [
           code,
           voucherSync.status,
@@ -181,6 +220,7 @@ class RealBooksService {
           segmentInfo.cid,
           segmentInfo.segid,
           segmentInfo.segment_name,
+          voucherSync.error || null,
         ]
       );
     } catch (e) {
@@ -191,7 +231,8 @@ class RealBooksService {
       success: voucherSync.success,
       status: voucherSync.status,
       mode: voucherSync.mode,
-      message: voucherSync.message,
+      message: voucherSync.message || voucherSync.error,
+      error: voucherSync.error,
       receipt_no: code,
       voucher_id: voucherSync.realbooks_voucher_id,
       ledger_id: ledgerSync.realbooks_ledger_id,

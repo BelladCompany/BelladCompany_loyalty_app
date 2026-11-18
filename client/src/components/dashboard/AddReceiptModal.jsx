@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Lock,
 } from 'lucide-react';
+import CopyButton from '../ui/CopyButton';
 import ApiService from '../../services/api';
 
 // Categories configuration (Service, Bodyshop, Accessories)
@@ -121,7 +122,7 @@ export const AddReceiptModal = ({
         setSelectedVehicleId(String(vehicles[0].id || vehicles[0].vehicle_id || ''));
       }
     }
-  }, [isOpen, customer, user, branches]);
+  }, [isOpen]);
 
   // Fetch redemption eligibility when vehicle or category changes
   useEffect(() => {
@@ -248,6 +249,7 @@ export const AddReceiptModal = ({
           model: selectedVeh?.model || null,
           brandName: selectedVeh?.brand_name || null,
           firmName: selectedVeh?.firm_name || null,
+          branchName: selectedVeh?.branch_name || null,
         });
       } else {
         // Standard Points Earning Flow (NO OTP)
@@ -284,6 +286,7 @@ export const AddReceiptModal = ({
           model: selectedVeh?.model || null,
           brandName: selectedVeh?.brand_name || null,
           firmName: selectedVeh?.firm_name || null,
+          branchName: selectedVeh?.branch_name || null,
         });
       }
     } catch (err) {
@@ -294,7 +297,7 @@ export const AddReceiptModal = ({
   };
 
   const handlePushToRealbooks = async () => {
-    if (!successData || pushingToRealbooks || realbooksSynced) return;
+    if (!successData || pushingToRealbooks || (realbooksSynced && realbooksSynced.success !== false && realbooksSynced.status !== 'failed')) return;
     setPushingToRealbooks(true);
 
     try {
@@ -305,6 +308,7 @@ export const AddReceiptModal = ({
         model: successData.model || selectedVeh?.model || null,
         brand_name: successData.brandName || selectedVeh?.brand_name || null,
         firm_name: successData.firmName || selectedVeh?.firm_name || null,
+        branch_name: successData.branchName || selectedVeh?.branch_name || null,
         bill_amount: successData.billAmount,
         discount_amount: successData.discountAmount,
         points_redeemed: successData.pointsRedeemed,
@@ -312,9 +316,14 @@ export const AddReceiptModal = ({
         branch_id: successData.branchId || branchId || 1,
         job_card: successData.jobCard || notes.trim() || '',
       });
-      setRealbooksSynced(res.data || { voucher_id: 'RB-' + Date.now() });
+      const data = res.data || res;
+      setRealbooksSynced(data);
     } catch (err) {
-      alert('Failed to push to RealBooks: ' + (err.message || 'Network error'));
+      setRealbooksSynced({
+        success: false,
+        status: 'failed',
+        error: err.message || 'Failed to push to RealBooks',
+      });
     } finally {
       setPushingToRealbooks(false);
     }
@@ -322,6 +331,13 @@ export const AddReceiptModal = ({
 
   const handleFinish = () => {
     if (onSuccess) onSuccess();
+    onClose();
+  };
+
+  const handleClose = () => {
+    if (successData && onSuccess) {
+      try { onSuccess(); } catch (err) { console.warn('[AddReceiptModal] Close refresh warning:', err); }
+    }
     onClose();
   };
 
@@ -346,7 +362,7 @@ export const AddReceiptModal = ({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer shrink-0 ml-2"
           >
             <X className="w-4 h-4" />
@@ -356,10 +372,14 @@ export const AddReceiptModal = ({
         {/* ── Customer Context Strip ── */}
         <div className="bg-slate-50 border-b border-slate-200/80 px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between text-xs gap-1.5 flex-shrink-0">
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            <span className="font-mono font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 text-[10px] sm:text-[11px]">
-              {customer.customer_id}
+            <span className="font-mono font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 text-[10px] sm:text-[11px] inline-flex items-center gap-1 select-text">
+              <span>{customer.customer_id}</span>
+              <CopyButton text={customer.customer_id} size="xs" title="Copy Customer ID" />
             </span>
-            <span className="font-black text-slate-900 text-xs sm:text-sm">{customer.name || customer.customer_name}</span>
+            <div className="inline-flex items-center gap-1">
+              <span className="font-black text-slate-900 text-xs sm:text-sm select-text">{customer.name || customer.customer_name}</span>
+              <CopyButton text={customer.name || customer.customer_name} size="xs" title="Copy Customer Name" />
+            </div>
             <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
               {customer.tier_name || 'Silver'}
             </span>
@@ -426,52 +446,41 @@ export const AddReceiptModal = ({
             </div>
 
             {/* Auto WhatsApp Notification Banner */}
-            <div className="p-3 sm:p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-left gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                  <MessageSquare className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-xs font-bold text-emerald-950 block truncate">
-                    Automated WhatsApp Alert Dispatched
-                  </span>
-                  <span className="text-[11px] text-emerald-800 font-medium block truncate">
-                    Receipt details &amp; updated balance sent to customer ({primaryPhone || 'registered phone'})
-                  </span>
-                </div>
+            <div className="p-3 sm:p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center text-left gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <MessageSquare className="w-4 h-4" />
               </div>
-              {primaryPhone && (
-                <a
-                  href={`https://api.whatsapp.com/send?phone=${encodeURIComponent(
-                    primaryPhone.replace(/[^\d]/g, '')
-                  )}&text=${encodeURIComponent(
-                    `Dear ${customer.name || 'Valued Customer'},\nThank you for visiting Bellad & Company!\nReceipt: #${successData.receiptNo}\nBill Amount: ₹${Number(
-                      successData.billAmount
-                    ).toLocaleString('en-IN')}\nDiscount Applied: ₹${Number(successData.discountAmount).toLocaleString(
-                      'en-IN'
-                    )}\nPoints Earned: +${successData.pointsEarned} PTS\nNew Balance: ${successData.newBalance
-                    } PTS (≈ ₹${(successData.newBalance * 0.25).toFixed(2)})`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shrink-0 shadow-xs cursor-pointer"
-                >
-                  Share WhatsApp
-                </a>
-              )}
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-emerald-950 block truncate">
+                  Automated WhatsApp Alert Dispatched
+                </span>
+                <span className="text-[11px] text-emerald-800 font-medium block truncate">
+                  Receipt details &amp; updated balance sent to customer ({primaryPhone || 'registered phone'})
+                </span>
+              </div>
             </div>
 
             {/* Actions: Push to RealBooks + Done */}
             <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2 pb-4">
               <button
                 type="button"
-                disabled={pushingToRealbooks || realbooksSynced}
+                disabled={pushingToRealbooks || (realbooksSynced && realbooksSynced.success !== false && realbooksSynced.status !== 'failed')}
                 onClick={handlePushToRealbooks}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-md disabled:opacity-60 cursor-pointer"
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 font-bold text-xs sm:text-sm rounded-xl transition shadow-md cursor-pointer ${
+                  realbooksSynced?.status === 'failed' || realbooksSynced?.success === false
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                    : realbooksSynced
+                    ? 'bg-indigo-600 text-white opacity-90'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                }`}
               >
                 {pushingToRealbooks ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" /> Pushing to RealBooks...
+                  </>
+                ) : realbooksSynced?.status === 'failed' || realbooksSynced?.success === false ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 text-white animate-none" /> Resend to RealBooks
                   </>
                 ) : realbooksSynced ? (
                   <>
@@ -495,8 +504,28 @@ export const AddReceiptModal = ({
               </button>
             </div>
 
-            {/* RealBooks Dynamic Model & Segment Routing Info */}
-            {realbooksSynced && (
+            {/* RealBooks Failure Note / Diagnostic Feedback */}
+            {realbooksSynced?.status === 'failed' || realbooksSynced?.success === false ? (
+              <div className="p-3.5 sm:p-4 bg-rose-50 border-2 border-rose-300 rounded-xl text-left flex flex-col gap-2 text-xs animate-fadeIn">
+                <div className="flex items-center gap-2 text-rose-900 font-black">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>RealBooks Push Failed (Note / Reason):</span>
+                </div>
+                <div className="bg-white p-2.5 rounded-lg border border-rose-200 text-rose-800 font-semibold text-xs leading-relaxed">
+                  {realbooksSynced.error || realbooksSynced.message || 'Accounting server rejected the transaction voucher.'}
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-rose-700 font-medium">
+                  {realbooksSynced.segment_name && (
+                    <span className="font-mono bg-rose-100/70 px-2 py-0.5 rounded border border-rose-200">
+                      Target Segment: {realbooksSynced.segment_name} (CID: {realbooksSynced.cid}, SEGID: {realbooksSynced.segid})
+                    </span>
+                  )}
+                  <span className="text-slate-600">
+                    Click <strong>"Resend to RealBooks"</strong> above to retry posting voucher.
+                  </span>
+                </div>
+              </div>
+            ) : realbooksSynced ? (
               <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
@@ -515,9 +544,15 @@ export const AddReceiptModal = ({
                       <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded font-bold">{realbooksSynced.brand}</span>
                     </>
                   )}
+                  {realbooksSynced.ledger_id && (
+                    <>
+                      <span>•</span>
+                      <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">Ledger #{realbooksSynced.ledger_id}</span>
+                    </>
+                  )}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         ) : (
           /* ── Main Receipt Form ── */

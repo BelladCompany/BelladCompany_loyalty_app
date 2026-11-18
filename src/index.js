@@ -6,6 +6,14 @@ const { startRedemptionStatusCron } = require('./cron/redemption_status_cron');
 const { startAppSheetPullCron } = require('./cron/appsheet_pull_cron');
 const { startGiftExpiryCron } = require('./cron/gift_expiry_cron');
 
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ [Process Resilience] Unhandled Promise Rejection:', reason?.message || reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('❌ [Process Resilience] Uncaught Exception:', err?.message || err);
+});
+
 // 1. Immediately bind and start listening so Render, Vercel proxy & health checks succeed instantly
 const server = app.listen(env.port, '0.0.0.0', () => {
   console.log(`🚀 Loyalty Backend Server running on port ${env.port} [${env.nodeEnv}]`);

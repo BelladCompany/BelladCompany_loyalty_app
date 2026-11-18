@@ -31,6 +31,8 @@ const giftRoutes = require('./routes/gift.routes');
 const offerRoutes = require('./routes/offer.routes');
 const directorRoutes = require('./routes/director.routes');
 const integrationRoutes = require('./routes/integration.routes');
+const appBuilderRoutes = require('./routes/appBuilder.routes');
+const importRoutes = require('./routes/import.routes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -141,6 +143,7 @@ app.use('/api/v1/integration', integrationRoutes);
 app.use('/api/integration', integrationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/appsheet', appsheetRoutes);
+app.use('/api/import', importRoutes);
 app.use('/api/public', publicBalanceRoutes);
 app.use('/api/public', publicReferralRoutes);
 app.use('/api', publicBalanceRoutes);
@@ -149,7 +152,17 @@ app.use('/api', kycRoutes);
 // Serve static uploads (proofs, attachments)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Serve static client assets if client/dist exists (production fullstack deploy)
+// Download full backup archive endpoint
+app.get(['/download-backup', '/api/download-backup'], (req, res) => {
+  const fs = require('fs');
+  const backupZip = path.join(__dirname, '../Bellad_Loyalty_Rewards_Full_Backup_16-11-2026.zip');
+  if (fs.existsSync(backupZip)) {
+    return res.download(backupZip, 'Bellad_Loyalty_Rewards_Full_Backup_16-11-2026.zip');
+  }
+  return res.status(404).json({ error: 'Backup archive not found' });
+});
+
+// Serve static client assets if client/dist exists (production fullstack deploy) with high-speed immutable browser cache
 const fs = require('fs');
 const clientDistPath = path.join(__dirname, '../client/dist');
 if (fs.existsSync(clientDistPath)) {

@@ -82,10 +82,10 @@ class RealBooksClient {
       };
     }
 
-    // Live mode: Perform real HTTPS request with timeout
+    // Live mode: Perform real HTTPS request with timeout (35 seconds for reliable cloud sync)
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const timeoutId = setTimeout(() => controller.abort(), 35000);
 
       const response = await fetch(fullUrl, {
         method: 'POST',
@@ -102,13 +102,40 @@ class RealBooksClient {
         throw new Error(json.message || json.error || `RealBooks HTTP Error ${response.status}`);
       }
 
+      // If creating/syncing a customer ledger and RealBooks reports it already exists, treat as existing synced ledger
+      if (
+        actionName.toLowerCase().includes('ledger') &&
+        (json.msg?.toLowerCase().includes('already exist') || json.errorMsg?.toLowerCase().includes('already exist'))
+      ) {
+        return {
+          success: true,
+          mode: 'live',
+          simulated: false,
+          message: `Customer ledger verified in RealBooks (${json.msg || json.errorMsg}).`,
+          realbooks_voucher_id: `RB-EXISTING-${Date.now()}`,
+          realbooks_ledger_id: json.data?.id || json.lid || json.ledgerId,
+          cid: targetCid,
+          segid: targetSegid,
+          segment_name: meta.segment_name,
+          status: 'synced',
+          synced_at: new Date().toISOString(),
+          request_payload: payload,
+          response_payload: json,
+        };
+      }
+
+      if (json.type === 'error' || (json.type && json.type !== 'success') || json.status === 'error') {
+        const errMsg = json.msg || json.errorMsg || json.message || json.error || 'RealBooks API Error';
+        throw new Error(errMsg);
+      }
+
       return {
         success: true,
         mode: 'live',
         simulated: false,
         message: `RealBooks ${actionName} posted successfully.`,
-        realbooks_voucher_id: json.id || json.vid || `RB-LIVE-${Date.now()}`,
-        realbooks_ledger_id: json.lid || json.ledgerId,
+        realbooks_voucher_id: json.id || json.vid || json.data?.id || `RB-LIVE-${Date.now()}`,
+        realbooks_ledger_id: json.data?.id || json.lid || json.ledgerId,
         cid: targetCid,
         segid: targetSegid,
         segment_name: meta.segment_name,
@@ -119,6 +146,10 @@ class RealBooksClient {
       };
     } catch (err) {
       console.error(`❌ [RealBooks API Error]:`, err.message);
+      const isTimeout = err.name === 'AbortError' || err.message?.includes('aborted');
+      const errorMsg = isTimeout
+        ? 'RealBooks accounting server timed out. Please click "Resend to RealBooks" to retry.'
+        : err.message;
       return {
         success: false,
         mode: 'live',
@@ -126,11 +157,12 @@ class RealBooksClient {
         cid: targetCid,
         segid: targetSegid,
         segment_name: meta.segment_name,
-        error: err.message,
+        error: errorMsg,
+        message: errorMsg,
         status: 'failed',
         synced_at: new Date().toISOString(),
         request_payload: payload,
-        response_payload: { error: err.message },
+        response_payload: { error: errorMsg },
       };
     }
   }
@@ -145,13 +177,20 @@ class RealBooksClient {
     const targetSegid = segmentOptions.segid || this.segid;
     const endpoint = `/AMSSERVICE/api/ledger/update/ledgerdetails/${targetCid}/${targetSegid}`;
 
+    // Sanitize GSTIN and PAN: RealBooks strictly rejects "NA", "N/A", or malformed GST numbers
+    const rawGst = String(customer.gst_number || customer.gstin || '').trim().toUpperCase();
+    const isValidGst = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(rawGst);
+
+    const rawPan = String(customer.pan_no || customer.pan || '').trim().toUpperCase();
+    const isValidPan = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(rawPan);
+
     const partyDet = {
       contactPerson: customer.name || customer.customer_name || 'Customer',
       address: customer.address || 'Dealership Customer',
       phone: customer.phone || customer.phone_number || '',
       email: customer.email || '',
-      pan: customer.pan_no || '',
-      gstin: customer.gst_number || '',
+      pan: isValidPan ? rawPan : '',
+      gstin: isValidGst ? rawGst : '',
       city: customer.city || 'Hubli',
       stateName: customer.state || 'Karnataka',
       country: 'India',

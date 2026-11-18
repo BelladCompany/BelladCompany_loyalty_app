@@ -293,9 +293,6 @@ class RedemptionService {
         if (statusRes.status === 'locked' && !isAccessories) {
           throw { statusCode: 400, message: statusRes.message || 'Points redemption is locked for vehicles purchased less than 12 months ago.' };
         }
-        if (statusRes.status === 'expired') {
-          throw { statusCode: 400, message: statusRes.message || 'Points for this vehicle have expired.' };
-        }
       }
 
       // 4. Calculate redemption & earning strictly using named constants

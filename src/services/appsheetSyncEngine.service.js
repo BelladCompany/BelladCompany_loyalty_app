@@ -11,35 +11,51 @@ const CUTOFF_DATE = '2026-04-01';
 
 class AppSheetSyncEngine {
   /**
-   * Parse various date strings into standard YYYY-MM-DD format
-   * Supports MM/DD/YYYY, DD/MM/YYYY, ISO, and standard Date strings
+   * Parse various date strings and Excel serial numbers into standard YYYY-MM-DD format
+   * Supports Excel serial (e.g. 45508), DD-MM-YYYY, DD/MM/YYYY, MM/DD/YYYY, ISO, and standard Date strings
    */
   static parseDmsDate(str) {
-    if (!str || typeof str !== 'string') return null;
-    const trimmed = str.trim();
-    if (!trimmed) return null;
+    if (str === null || str === undefined || str === '') return null;
 
-    // YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
-      const d = new Date(trimmed);
+    // 1. Excel serial date (e.g. 45508 or "45508.00011574074")
+    const num = Number(str);
+    if (!isNaN(num) && num >= 30000 && num <= 65000) {
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const ms = Math.round(num * 86400 * 1000);
+      const d = new Date(excelEpoch.getTime() + ms);
       return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
     }
 
-    // MM/DD/YYYY or DD/MM/YYYY
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(trimmed)) {
-      const parts = trimmed.split('/');
+    const trimmed = String(str).trim();
+    if (!trimmed) return null;
+
+    // 2. YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
+    if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/.test(trimmed)) {
+      const parts = trimmed.split(/[-/.]/);
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      const dObj = new Date(Date.UTC(y, m - 1, d));
+      return isNaN(dObj.getTime()) ? null : dObj.toISOString().split('T')[0];
+    }
+
+    // 3. DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY or MM/DD/YYYY
+    if (/^\d{1,2}[-/.]\d{1,2}[-/.]\d{4}/.test(trimmed)) {
+      const parts = trimmed.split(/[-/.]/);
       const p1 = parseInt(parts[0], 10);
       const p2 = parseInt(parts[1], 10);
       const y = parseInt(parts[2], 10);
 
-      // In AppSheet en-US format, p1 is month, p2 is day.
-      // If p1 > 12, it is definitely DD/MM/YYYY
-      if (p1 > 12) {
-        const d = new Date(y, p2 - 1, p1);
-        return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+      let day = p1;
+      let month = p2;
+      // In India, standard format is DD-MM-YYYY
+      // Only if p2 > 12 and p1 <= 12 is it US format MM/DD/YYYY
+      if (p2 > 12 && p1 <= 12) {
+        day = p2;
+        month = p1;
       }
-      const d = new Date(y, p1 - 1, p2);
-      return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+      const dObj = new Date(Date.UTC(y, month - 1, day));
+      return isNaN(dObj.getTime()) ? null : dObj.toISOString().split('T')[0];
     }
 
     const d = new Date(trimmed);
@@ -63,8 +79,13 @@ class AppSheetSyncEngine {
       billingStatus.includes('pr done') ||
       billingStatus.includes('ok for pr payment') ||
       billingStatus.includes('accounts updated for pr') ||
+      billingStatus.includes('billed') ||
+      billingStatus.includes('delivered') ||
       status.includes('pr done') ||
+      status.includes('billed') ||
+      status.includes('delivered') ||
       orderStatus.includes('pr done') ||
+      orderStatus.includes('freeze') ||
       prStatus.includes('pr done');
 
     // Negative indicators (cancelled/rejected)
@@ -78,9 +99,10 @@ class AppSheetSyncEngine {
   }
 
   /**
-   * Resolves the primary date of an AppSheet row and verifies it is >= 2026-04-01
+   * Resolves the primary date of an AppSheet row and verifies it is >= cutoff date
+   * Supports options.allowHistorical and options.customCutoffDate
    */
-  static getEligibleDate(row) {
+  static getEligibleDate(row, options = {}) {
     const rawDate =
       row['DMS Invoice Date'] ||
       row['Invoice Date'] ||
@@ -96,8 +118,9 @@ class AppSheetSyncEngine {
       return { eligible: false, parsedDate: null, reason: 'Missing or unparseable date' };
     }
 
-    if (parsed < CUTOFF_DATE) {
-      return { eligible: false, parsedDate: parsed, reason: `Date ${parsed} is before cutoff ${CUTOFF_DATE}` };
+    const minCutoff = options.allowHistorical ? (options.customCutoffDate || '2020-01-01') : CUTOFF_DATE;
+    if (parsed < minCutoff) {
+      return { eligible: false, parsedDate: parsed, reason: `Date ${parsed} is before cutoff ${minCutoff}` };
     }
 
     return { eligible: true, parsedDate: parsed };
@@ -192,7 +215,10 @@ class AppSheetSyncEngine {
       }
     }
 
-    const ageVal = parseInt(row['CX Age'] || row['Age'] || '0', 10) || null;
+    let ageVal = parseInt(row['CX Age'] || row['Age'] || '0', 10);
+    if (isNaN(ageVal) || ageVal <= 0 || ageVal > 120) {
+      ageVal = null;
+    }
     const addressVal = row['Address 1'] || row['Rental Address'] || row['Customer Address'] || null;
     const firmVal = row['Firm'] || row['Firm Name'] || null;
     const gstVal = row['GST Number'] || row['GST_Number'] || null;
@@ -348,7 +374,7 @@ class AppSheetSyncEngine {
        )
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::date,
                CASE WHEN $16::date IS NOT NULL THEN ($16::date + INTERVAL '12 months')::TIMESTAMPTZ ELSE NULL END,
-               CASE WHEN $16::date IS NOT NULL THEN ($16::date + INTERVAL '24 months')::TIMESTAMPTZ ELSE NULL END,
+               NULL,
                $17)
        RETURNING vehicle_id;`,
       [
@@ -362,12 +388,16 @@ class AppSheetSyncEngine {
   }
 
   /**
-   * Process a single line item pulled or received from AppSheet
+   * Process a single line item pulled or received from AppSheet or Excel Importer
    * Strictly READ-ONLY with respect to AppSheet: never writes, edits, or pushes anything to AppSheet.
    */
-  static async processSingleRow(row, tenantId = DEFAULT_TENANT_ID) {
+  static async processSingleRow(row, tenantId = DEFAULT_TENANT_ID, options = {}) {
+    const isManualOrExcel = options.alwaysCreateCustomer || options.skipPrCheck;
+    const hasIdentity = Boolean((row['Customer Name'] || '').trim() || (row['Customer Number'] || '').trim() || (row['VIN Number'] || '').trim());
+
     // 1. Verify PR Done
-    if (!this.isPrDone(row)) {
+    const prValid = options.skipPrCheck || this.isPrDone(row);
+    if (!prValid && !options.alwaysCreateCustomer) {
       return {
         status: 'skipped',
         reason: 'Row is not in PR Done status',
@@ -375,9 +405,9 @@ class AppSheetSyncEngine {
       };
     }
 
-    // 2. Verify Date Eligibility (>= 2026-04-01)
-    const dateCheck = this.getEligibleDate(row);
-    if (!dateCheck.eligible) {
+    // 2. Verify Date Eligibility (>= CUTOFF_DATE or custom cutoff)
+    const dateCheck = this.getEligibleDate(row, options);
+    if (!dateCheck.eligible && !options.alwaysCreateCustomer) {
       return {
         status: 'skipped',
         reason: dateCheck.reason,
@@ -390,7 +420,7 @@ class AppSheetSyncEngine {
       row['Ex-Showroom Price'] || row['Ex Showroom Price'] || row['Net Ex-Showroom Price'] || row['Total Vehicle Billing Amount'] || 0
     );
 
-    if (exShowroomAmount <= 0) {
+    if (exShowroomAmount <= 0 && !options.alwaysCreateCustomer) {
       return {
         status: 'skipped',
         reason: 'Ex-Showroom price is missing or zero',
@@ -398,63 +428,104 @@ class AppSheetSyncEngine {
       };
     }
 
+    const effectiveDate = dateCheck.parsedDate || this.parseDmsDate(row['DMS Invoice Date']) || new Date().toISOString().split('T')[0];
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // 3. Resolve / Upsert Customer
+      // 3. Resolve / Upsert Customer (ALWAYS created in PostgreSQL if name/phone is present)
       const customerId = await this.resolveOrCreateCustomer(row, tenantId, client);
 
-      // 4. Resolve / Upsert Vehicle
-      const vehicleId = await this.resolveOrCreateVehicle(row, customerId, tenantId, dateCheck.parsedDate, client);
+      // 4. Resolve / Upsert Vehicle (ALWAYS created in PostgreSQL)
+      const vehicleId = await this.resolveOrCreateVehicle(row, customerId, tenantId, effectiveDate, client);
 
       // 5. Resolve Branch
       const branchId = await this.resolveBranchId(row['Branch'] || row['Branch Name'], tenantId);
 
-      // 6. Calculate Vehicle Points via Engine
-      const tcsAmount = VehiclePointsEngine.cleanNumber(row['TCS % Amount'] || row['TCS Amount'] || row['TCS'] || 0);
-      const dealerDiscount = VehiclePointsEngine.cleanNumber(row['Dealer Cash Discount'] || row['Dealer Discount'] || row['Discount/FAIM'] || 0);
-      const empsDiscount = VehiclePointsEngine.cleanNumber(row['EMPS Discount'] || row['EMPS'] || row['Other Discount Amount'] || 0);
-      const oemOffers = VehiclePointsEngine.cleanNumber(row['OEM Offers Amount'] || row['OEM Offers Total Amount'] || row['Offers Amount'] || 0);
+      // Check if points should be calculated and credited
+      const canAwardPoints = prValid && (dateCheck.eligible || options.allowHistorical) && exShowroomAmount > 0;
 
-      const calcResult = VehiclePointsEngine.calculatePoints(
-        {
-          ex_showroom_price: exShowroomAmount,
-          tcs_amount: tcsAmount,
-          dealer_cash_discount: dealerDiscount,
-          emps_discount: empsDiscount,
-          oem_offers_amount: oemOffers,
-        },
-        0.01
-      );
-
-      const salesPoints = calcResult.points;
-      const sourceRef = `PR Done Sales Sync: ${orderId}`;
-
-      // 7. Check if already credited in points_ledger (Idempotent guard)
-      const existingLedger = await client.query(
-        `SELECT entry_id, points FROM points_ledger
-         WHERE customer_id = $1 AND tenant_id = $2 AND (source_ref = $3 OR (vehicle_id = $4 AND transaction_category = 'sale'))
-         LIMIT 1;`,
-        [customerId, tenantId, sourceRef, vehicleId]
-      );
-
+      let salesPoints = 0;
       let pointsCredited = 0;
       let isNewCredit = false;
 
-      if (existingLedger.rows.length === 0 && salesPoints > 0) {
-        // Insert points credit into points_ledger
-        await client.query(
-          `INSERT INTO points_ledger (
-             customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, tenant_id, reason_type, reason_text
-           )
-           VALUES ($1, $2, $3, 'earn_sale', 'sale', $4, $5, $6, 'purchase', $7);`,
-          [customerId, vehicleId, branchId, salesPoints, sourceRef, tenantId, calcResult.reason_text]
+      if (canAwardPoints) {
+        // 6. Calculate Vehicle Points via Engine
+        const tcsAmount = VehiclePointsEngine.cleanNumber(row['TCS % Amount'] || row['TCS Amount'] || row['TCS'] || 0);
+        const dealerDiscount = VehiclePointsEngine.cleanNumber(row['Dealer Cash Discount'] || row['Dealer Discount'] || row['Discount/FAIM'] || 0);
+        const empsDiscount = VehiclePointsEngine.cleanNumber(row['EMPS Discount'] || row['EMPS'] || row['Other Discount Amount'] || 0);
+        const oemOffers = VehiclePointsEngine.cleanNumber(row['OEM Offers Amount'] || row['OEM Offers Total Amount'] || row['Offers Amount'] || 0);
+
+        const calcResult = VehiclePointsEngine.calculatePoints(
+          {
+            ex_showroom_price: exShowroomAmount,
+            tcs_amount: tcsAmount,
+            dealer_cash_discount: dealerDiscount,
+            emps_discount: empsDiscount,
+            oem_offers_amount: oemOffers,
+          },
+          0.01
         );
-        pointsCredited = salesPoints;
-        isNewCredit = true;
-      } else if (existingLedger.rows.length > 0) {
-        pointsCredited = existingLedger.rows[0].points;
+
+        salesPoints = calcResult.points;
+        const sourceRef = `PR Done Sales Sync: ${orderId}`;
+
+        // 6b. Record sale transaction with exact discount amounts for Customer 360 & Analytics
+        const orderRef = (orderId || '').trim();
+        if (orderRef) {
+          await client.query(
+            `INSERT INTO sale_transactions (
+               customer_id, vehicle_id, branch_id, ex_showroom_price_paise,
+               tcs_amount_paise, dealer_cash_discount_paise, emps_discount_paise, oem_offers_amount_paise,
+               is_invoice_finalized, points_calculated, source, reference_id, tenant_id, created_at, updated_at
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, TRUE, 'appsheet_bot', $9, $10, NOW(), NOW())
+             ON CONFLICT (tenant_id, reference_id)
+             DO UPDATE SET
+               vehicle_id = EXCLUDED.vehicle_id,
+               branch_id = EXCLUDED.branch_id,
+               ex_showroom_price_paise = EXCLUDED.ex_showroom_price_paise,
+               dealer_cash_discount_paise = EXCLUDED.dealer_cash_discount_paise,
+               emps_discount_paise = EXCLUDED.emps_discount_paise,
+               oem_offers_amount_paise = EXCLUDED.oem_offers_amount_paise,
+               updated_at = NOW();`,
+            [
+              customerId,
+              vehicleId,
+              branchId || 1,
+              Math.round(exShowroomAmount * 100),
+              Math.round(tcsAmount * 100),
+              Math.round(dealerDiscount * 100),
+              Math.round(empsDiscount * 100),
+              Math.round(oemOffers * 100),
+              orderRef,
+              tenantId,
+            ]
+          );
+        }
+
+        // 7. Check if already credited in points_ledger (Idempotent guard)
+        const existingLedger = await client.query(
+          `SELECT entry_id, points FROM points_ledger
+           WHERE customer_id = $1 AND tenant_id = $2 AND (source_ref = $3 OR (vehicle_id = $4 AND transaction_category = 'sale'))
+           LIMIT 1;`,
+          [customerId, tenantId, sourceRef, vehicleId]
+        );
+
+        if (existingLedger.rows.length === 0 && salesPoints > 0) {
+          await client.query(
+            `INSERT INTO points_ledger (
+               customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, tenant_id, reason_type, reason_text
+             )
+             VALUES ($1, $2, $3, 'earn_sale', 'sale', $4, $5, $6, 'purchase', $7);`,
+            [customerId, vehicleId, branchId, salesPoints, sourceRef, tenantId, calcResult.reason_text]
+          );
+          pointsCredited = salesPoints;
+          isNewCredit = true;
+        } else if (existingLedger.rows.length > 0) {
+          pointsCredited = existingLedger.rows[0].points;
+        }
       }
 
       await client.query('COMMIT');
@@ -465,6 +536,18 @@ class AppSheetSyncEngine {
         [customerId, tenantId]
       );
       const newBalance = parseInt(balRes.rows[0]?.balance || 0, 10);
+
+      return {
+        status: 'success',
+        isNewCredit,
+        orderId,
+        customerId,
+        vehicleId,
+        pointsCredited,
+        newBalance,
+        date: effectiveDate,
+        customerCreated: true
+      };
       const custName = (row['Customer Name'] || row['Customer Ledger Name'] || 'Customer').trim();
 
       return {

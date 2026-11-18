@@ -21,7 +21,7 @@ VALUES (
   (SELECT id FROM branches LIMIT 1),
   'bellad_and_company'
 )
-ON CONFLICT (tenant_id, username) DO UPDATE 
+ON CONFLICT (username) DO UPDATE 
 SET password_hash = EXCLUDED.password_hash, role = 'director', tenant_id = 'bellad_and_company';
 
 -- Also ensure username 'agstya' is recognized with role 'director' (Password: Admin@123)
@@ -33,6 +33,6 @@ VALUES (
   (SELECT id FROM branches LIMIT 1),
   'bellad_and_company'
 )
-ON CONFLICT (tenant_id, username) DO UPDATE 
+ON CONFLICT (username) DO UPDATE 
 SET password_hash = EXCLUDED.password_hash, role = 'director', tenant_id = 'bellad_and_company';
 

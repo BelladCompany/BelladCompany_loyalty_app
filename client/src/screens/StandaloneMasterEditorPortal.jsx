@@ -1039,7 +1039,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
   const activeDealer = DEALERSHIPS.find((d) => d.id === selectedTenant) || DEALERSHIPS[0];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans select-none antialiased">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans select-text antialiased">
       {/* ── TOP NAV BAR ── */}
       <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40 shadow-xs">
         <div className="flex items-center gap-4">

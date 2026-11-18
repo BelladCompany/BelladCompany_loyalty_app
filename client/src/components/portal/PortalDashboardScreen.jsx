@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { isFeatureEnabled } from '../../config/versionConfig';
 import {
   LogOut,
   Copy,
@@ -25,7 +26,7 @@ import {
   Zap,
   ChevronRight,
   Home,
-  QrCode,
+  MapPin,
   Flame,
   Percent,
   Upload,
@@ -100,14 +101,15 @@ const TIER_BENEFITS_DATA = [
     maxPoints: 5000,
     serviceEarn: '2% of Bill',
     accessoryEarn: '1% of Bill',
-    salesEarn: '1% Ex-Showroom',
+    salesEarn: '1% Ex-Showroom (Eligible Base)',
     bodyshopDiscount: 'Standard Rates',
     perks: [
-      'Earn points on every periodic service',
+      'Earn points on every periodic service (2% Net Bill)',
       'Digital WhatsApp Wallet Pass',
-      'Free 40-point vehicle monsoon health check',
+      'Free 40-point vehicle seasonal health check',
       'Digital e-gift card sharing access',
     ],
+    nextTierTeaser: 'Gold VIP unlocks 4% service cashback (2x Silver), priority bay booking & 500 bonus referral pts.',
   },
   {
     tier: 'Gold',
@@ -118,15 +120,16 @@ const TIER_BENEFITS_DATA = [
     maxPoints: 15000,
     serviceEarn: '4% of Bill',
     accessoryEarn: '2% of Bill',
-    salesEarn: '1% Ex-Showroom',
+    salesEarn: '1% Ex-Showroom (Eligible Base)',
     bodyshopDiscount: '3% Customer Share Discount',
     perks: [
-      'Double points on periodic workshop service',
+      'Double points on periodic workshop service (4% Net Bill)',
       'Priority workshop service bay booking',
       '500 Bonus Points on every successful friend referral',
       'Complimentary exterior wash during periodic maintenance',
       'Dedicated Service Advisor support',
     ],
+    nextTierTeaser: 'Platinum VIP unlocks maximum 6% cashback, free doorstep pickup & drop, and VIP GM Desk.',
   },
   {
     tier: 'Platinum',
@@ -137,7 +140,7 @@ const TIER_BENEFITS_DATA = [
     maxPoints: 999999,
     serviceEarn: '6% of Bill',
     accessoryEarn: '4% of Bill',
-    salesEarn: '1% Ex-Showroom',
+    salesEarn: '1% Ex-Showroom (Eligible Base)',
     bodyshopDiscount: '5% Customer Share Discount',
     perks: [
       'Maximum 6% cashback points on workshop bills',
@@ -147,8 +150,30 @@ const TIER_BENEFITS_DATA = [
       'Free annual wheel balancing and alignment check',
       'Exclusive invitations to new model launch drive previews',
     ],
+    nextTierTeaser: 'Top VIP Status Achieved! Enjoy maximum 6% cashback and executive concierge.',
   },
 ];
+
+// Loading Skeleton for Digital Pass
+const PassSkeleton = () => (
+  <div className="rounded-3xl bg-slate-200/80 p-6 sm:p-7 animate-pulse space-y-4">
+    <div className="flex items-center justify-between">
+      <div className="space-y-2">
+        <div className="h-3 w-28 bg-slate-300 rounded" />
+        <div className="h-7 w-48 bg-slate-300 rounded-lg" />
+        <div className="h-4 w-36 bg-slate-300 rounded" />
+      </div>
+      <div className="w-12 h-12 rounded-2xl bg-slate-300" />
+    </div>
+    <div className="pt-3 border-t border-slate-300/60 flex items-center justify-between">
+      <div className="space-y-1">
+        <div className="h-3 w-32 bg-slate-300 rounded" />
+        <div className="h-8 w-24 bg-slate-300 rounded-lg" />
+      </div>
+      <div className="h-8 w-40 bg-slate-300 rounded-xl" />
+    </div>
+  </div>
+);
 
 // Memoized Ledger Row
 const LedgerRow = memo(({ item }) => {
@@ -193,7 +218,16 @@ const LedgerRow = memo(({ item }) => {
 
 LedgerRow.displayName = 'LedgerRow';
 
-export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
+export default function PortalDashboardScreen({ customerInfo, onSignOut, portalVersion }) {
+  const effectiveVersion = portalVersion || (
+    window.location.pathname.includes('v2') || window.location.pathname.includes('portalv2') ? 'v2' : 'v1'
+  );
+  const isV2 = effectiveVersion === 'v2';
+  const showFeature = (feature) => {
+    if (isV2) return true;
+    return false; // In V1, giftcards and referrals are hidden
+  };
+
   const [profile, setProfile] = useState(null);
   const [ledgerItems, setLedgerItems] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
@@ -206,9 +240,13 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   const [loadingLedger, setLoadingLedger] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedMemberId, setCopiedMemberId] = useState(false);
   const [copiedCard, setCopiedCard] = useState('');
   const [copiedOffer, setCopiedOffer] = useState('');
-  const [showQrModal, setShowQrModal] = useState(false);
+  const [showCashInfoModal, setShowCashInfoModal] = useState(false);
+  const [showCalculationModal, setShowCalculationModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsModalType, setTermsModalType] = useState('terms'); // 'terms' | 'privacy' | 'policy'
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [sendGiftModalOpen, setSendGiftModalOpen] = useState(false);
@@ -387,6 +425,13 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   );
   const whatsappReferralUrl = `https://wa.me/?text=${whatsappReferralText}`;
 
+  const handleCopyMemberId = () => {
+    if (!customerId) return;
+    navigator.clipboard.writeText(customerId);
+    setCopiedMemberId(true);
+    setTimeout(() => setCopiedMemberId(false), 2000);
+  };
+
   const handleCopyReferral = async () => {
     navigator.clipboard.writeText(referralLink);
     setCopied(true);
@@ -547,14 +592,23 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
   };
 
   // Balances & Tier Calculations
-  const currentBalance = profile?.balance ?? profile?.points ?? customerInfo?.points ?? customerInfo?.balance ?? 4250;
+  const currentBalance = profile?.balance ?? profile?.points ?? customerInfo?.points ?? customerInfo?.balance ?? 1020;
   const cashValue = (currentBalance * 0.25).toFixed(2);
-  const currentTier = profile?.tier?.current || customerInfo?.tier || 'Gold';
-  const nextTier = currentTier === 'Silver' ? 'Gold' : 'Platinum';
-  const nextTierPoints = currentTier === 'Silver' ? 5000 : 15000;
+  const currentTier = profile?.tier?.current || customerInfo?.tier || 'Silver';
+  const tierConfig = TIER_BENEFITS_DATA.find((t) => t.tier.toLowerCase() === currentTier.toLowerCase()) || TIER_BENEFITS_DATA[0];
+  const nextTierConfig = currentTier.toLowerCase() === 'silver'
+    ? TIER_BENEFITS_DATA[1]
+    : currentTier.toLowerCase() === 'gold'
+      ? TIER_BENEFITS_DATA[2]
+      : null;
+  const nextTier = nextTierConfig ? nextTierConfig.tier : 'Gold';
+  const nextTierPoints = nextTierConfig ? nextTierConfig.minPoints : 5000;
   const lifetimePoints = profile?.lifetime_points || customerInfo?.lifetime_points || currentBalance;
   const pointsToLevelUp = Math.max(0, nextTierPoints - lifetimePoints);
-  const tierProgress = Math.min(100, Math.round((lifetimePoints / nextTierPoints) * 100));
+  const currentTierBasePoints = tierConfig.minPoints;
+  const tierRange = nextTierPoints - currentTierBasePoints;
+  const pointsInRange = Math.max(0, lifetimePoints - currentTierBasePoints);
+  const tierProgress = nextTierConfig ? Math.min(100, Math.max(5, Math.round((pointsInRange / (tierRange || 1)) * 100))) : 100;
 
   // Filtered Offers
   const filteredOffers = useMemo(() => {
@@ -583,17 +637,40 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            {/* Version Badge & Switcher for Director Showcase */}
+            {isV2 ? (
+              <a
+                href="/portal"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 hover:bg-amber-300 shadow-xs transition"
+                title="Switch to Portal v1 (Core Passbook only, no Gift Cards or Referrals)"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-pulse" />
+                <span>v2 (Full) ➔ v1</span>
+              </a>
+            ) : (
+              <a
+                href="/portalv2"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 text-white border border-white/30 hover:bg-white/30 transition"
+                title="Switch to Portal v2 (Showcases Gift Cards & Referrals)"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>v1 (Core) ➔ v2</span>
+              </a>
+            )}
+
             <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase tracking-wider px-2 sm:px-3 py-1 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-sm whitespace-nowrap">
-              <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 shrink-0" />
+              <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 shrink-0" aria-hidden="true" />
               <span>{currentTier} VIP</span>
             </span>
 
             <button
               onClick={onSignOut}
               title="Sign Out"
+              aria-label="Sign out of Bellad Loyalty Pass"
               className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition cursor-pointer shrink-0"
             >
-              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true" />
+              <span className="sr-only">Sign Out</span>
             </button>
           </div>
         </div>
@@ -623,91 +700,151 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
           </div>
         )}
 
-        {/* ─── 3. DIGITAL MEMBER PASS (LUXURY WALLET CARD - Reference Styled) ─── */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white p-6 sm:p-7 shadow-xl shadow-amber-600/25 border border-amber-400/40">
-          {/* Subtle Ambient Radial Highlight */}
-          <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none -mr-16 -mt-16" />
+        {/* ─── 3. DIGITAL MEMBER PASS (LUXURY WALLET CARD) ─── */}
+        {loadingProfile ? (
+          <PassSkeleton />
+        ) : (
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white p-6 sm:p-7 shadow-xl shadow-amber-600/25 border border-amber-400/40">
+            {/* Subtle Ambient Radial Highlight */}
+            <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none -mr-16 -mt-16" />
 
-          <div className="relative z-10 space-y-4">
-            {/* Top Pass Row */}
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-black uppercase tracking-widest text-amber-100/90 block font-mono">
-                  Digital Member Pass
-                </span>
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-0.5">
-                  {fullName}
-                </h1>
-                <p className="text-xs text-amber-100 font-medium mt-0.5">
-                  ID: <span className="font-mono font-bold">{customerId}</span> &bull; {primaryVehicle}
-                </p>
-              </div>
+            <div className="relative z-10 space-y-4">
+              {/* Top Pass Row */}
+              <div className="flex items-start sm:items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-amber-100/90 font-mono">
+                      Digital Member Pass
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white border border-white/25">
+                      {currentTier} VIP
+                    </span>
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-0.5 truncate">
+                    {fullName}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <span className="text-xs text-amber-100 font-medium">ID:</span>
+                    <span className="font-mono font-black text-xs sm:text-sm tracking-wider text-white bg-black/20 px-2.5 py-0.5 rounded-lg border border-white/20">
+                      {customerId}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyMemberId}
+                      className="px-2 py-0.5 rounded-md bg-white/20 hover:bg-white/30 text-white transition cursor-pointer flex items-center gap-1 text-[11px]"
+                      title="Copy Member ID"
+                      aria-label="Copy Member ID to clipboard"
+                    >
+                      {copiedMemberId ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-300" aria-hidden="true" />
+                          <span className="text-emerald-200 font-bold text-[10px]">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" aria-hidden="true" />
+                          <span className="text-[10px] text-amber-100">Copy</span>
+                        </>
+                      )}
+                    </button>
+                    <span className="text-amber-200/80">&bull;</span>
+                    <span className="text-xs text-amber-100 font-medium truncate">{primaryVehicle}</span>
+                  </div>
+                </div>
 
-              <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-white shadow-sm shrink-0">
-                <Crown className="w-6 h-6 text-amber-200" />
-              </div>
-            </div>
-
-            {/* Bottom Row: Usable Points Balance & Cash Value */}
-            <div className="pt-3 flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-t border-white/15">
-              <div>
-                <span className="text-xs font-bold text-amber-100 block uppercase tracking-wider font-mono">
-                  Usable Points Balance
-                </span>
-                <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white">
-                    {Number(currentBalance).toLocaleString('en-IN')}
-                  </span>
-                  <span className="text-sm font-bold text-amber-200 font-mono">pts</span>
+                <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-white shadow-sm shrink-0">
+                  <Crown className="w-6 h-6 text-amber-200" aria-hidden="true" />
                 </div>
               </div>
 
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-xs font-bold text-white self-start sm:self-auto shadow-xs">
-                <IndianRupee className="w-3.5 h-3.5 text-amber-200" />
-                <span>≈ ₹{cashValue} Cash Discount</span>
-                <span className="text-[10px] text-amber-200 font-mono"></span>
+              {/* Bottom Row: Usable Points Balance, Expiry & Redeem Action */}
+              <div className="pt-3 flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-t border-white/15">
+                <div>
+                  <span className="text-xs font-bold text-amber-100 block uppercase tracking-wider font-mono">
+                    Usable Points Balance
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white">
+                      {Number(currentBalance).toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-sm font-bold text-amber-200 font-mono">pts</span>
+                  </div>
+                  {/* Points Expiry Notification */}
+                  <div className="flex items-center gap-1.5 mt-1 text-[11px] text-amber-100/90 font-medium">
+                    <Clock className="w-3 h-3 text-amber-300 shrink-0" aria-hidden="true" />
+                    <span>Validity: <strong>No Expiry</strong> (Lifetime Active)</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:items-end gap-2 self-start sm:self-auto">
+                  {/* Cash Value Pill with Info Tooltip */}
+                  <button
+                    type="button"
+                    onClick={() => setShowCashInfoModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/25 text-xs font-bold text-white transition cursor-pointer"
+                    title="Click for conversion rules"
+                    aria-label="View points cash conversion value and rules"
+                  >
+                    <IndianRupee className="w-3.5 h-3.5 text-amber-200" aria-hidden="true" />
+                    <span>≈ ₹{cashValue} Cash Discount</span>
+                    <Info className="w-3.5 h-3.5 text-amber-200/90 ml-0.5" aria-hidden="true" />
+                  </button>
+
+                  {/* Note for Redemption */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/20 backdrop-blur-md border border-white/20 text-[11px] font-semibold text-amber-100">
+                    <MapPin className="w-3 h-3 text-amber-300 shrink-0" aria-hidden="true" />
+                    <span>For redemption, please visit nearby branch</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* ─── 4. THE 4 MAIN CORE QUICK-ACTION BUTTONS (Mobile & Desktop) ─── */}
-        <div className="grid grid-cols-4 gap-1.5 sm:gap-3.5">
-          {/* Main 1: Gift Cards */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('gift_cards')}
-            className={`px-1 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'gift_cards'
-              ? 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-500/20'
-              : 'bg-white border-slate-200/80 text-slate-700 hover:border-amber-300 hover:bg-amber-50/40 shadow-2xs'
-              }`}
-          >
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'gift_cards' ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'
-              }`}>
-              <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <span className="text-[9.5px] sm:text-xs font-extrabold tracking-tight text-center leading-tight break-words max-w-full">
-              Gift Cards
-            </span>
-          </button>
+        {/* ─── 4. CORE QUICK-ACTION BUTTONS (Adaptive Grid for V1 / V2) ─── */}
+        <div className={`grid ${showFeature('giftcards') || showFeature('referrals')
+          ? 'grid-cols-4'
+          : 'grid-cols-2'
+          } gap-1.5 sm:gap-3.5`}>
+          {/* Main 1: Gift Cards (Version 2) */}
+          {showFeature('giftcards') && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('gift_cards')}
+              className={`px-1 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'gift_cards'
+                ? 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-500/20'
+                : 'bg-white border-slate-200/80 text-slate-700 hover:border-amber-300 hover:bg-amber-50/40 shadow-2xs'
+                }`}
+            >
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'gift_cards' ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'
+                }`}>
+                <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <span className="text-[9.5px] sm:text-xs font-extrabold tracking-tight text-center leading-tight break-words max-w-full">
+                Gift Cards
+              </span>
+            </button>
+          )}
 
-          {/* Main 2: Referral Rewards */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('referrals')}
-            className={`px-1 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'referrals'
-              ? 'bg-indigo-600 text-white border-indigo-700 shadow-md shadow-indigo-600/20'
-              : 'bg-white border-slate-200/80 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 shadow-2xs'
-              }`}
-          >
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'referrals' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'
-              }`}>
-              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <span className="text-[9.5px] sm:text-xs font-extrabold tracking-tight text-center leading-tight break-words max-w-full">
-              Refer &amp; Earn
-            </span>
-          </button>
+          {/* Main 2: Referral Rewards (Version 2) */}
+          {showFeature('referrals') && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('referrals')}
+              className={`px-1 py-2 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${activeTab === 'referrals'
+                ? 'bg-indigo-600 text-white border-indigo-700 shadow-md shadow-indigo-600/20'
+                : 'bg-white border-slate-200/80 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 shadow-2xs'
+                }`}
+            >
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${activeTab === 'referrals' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'
+                }`}>
+                <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <span className="text-[9.5px] sm:text-xs font-extrabold tracking-tight text-center leading-tight break-words max-w-full">
+                Refer &amp; Earn
+              </span>
+            </button>
+          )}
 
           {/* Main 3: Vehicle Offers (Opens Dedicated /offers Page) */}
           <button
@@ -720,7 +857,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
             </div>
             <div className="flex items-center justify-center gap-0.5 max-w-full">
               <span className="text-[9.5px] sm:text-xs font-extrabold tracking-tight text-center leading-tight break-words">
-                Offers
+                New Car Deals
               </span>
               <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 group-hover:text-rose-600 shrink-0" />
             </div>
@@ -772,7 +909,7 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
             })}
           </div>
 
-          {activeTab === 'referrals' ? (
+          {activeTab === 'referrals' && (
             <a
               href={whatsappReferralUrl}
               target="_blank"
@@ -782,15 +919,6 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
               <Share2 className="w-3.5 h-3.5" />
               <span>Send Referral on WhatsApp</span>
             </a>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setSendGiftModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
-            >
-              <Gift className="w-3.5 h-3.5" />
-              <span>Send e-Gift</span>
-            </button>
           )}
         </div>
 
@@ -799,86 +927,206 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {activeTab === 'home' && (
           <div className="space-y-6">
-            {/* Earning Privileges Card (from Reference Image) */}
+
+            {/* ─── A. TIER PROGRESS & NEXT MILESTONE CARD (Prominent on Overview) ─── */}
             <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 shrink-0 shadow-2xs">
+                    <Crown className="w-5 h-5 text-amber-600" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-black text-slate-900">{currentTier} VIP Tier</h3>
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${tierConfig.badgeColor}`}>
+                        Active Status
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {Number(lifetimePoints).toLocaleString('en-IN')} Lifetime Qualifying Points
+                    </p>
+                  </div>
+                </div>
+
+                {nextTierConfig ? (
+                  <div className="text-left sm:text-right">
+                    <span className="text-xs font-black text-amber-700 block">
+                      {Number(pointsToLevelUp).toLocaleString('en-IN')} PTS to {nextTier} VIP
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      Target: {Number(nextTierPoints).toLocaleString('en-IN')} PTS
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                    Highest VIP Status Achieved
+                  </span>
+                )}
+              </div>
+
+              {/* Progress Bar */}
+              {nextTierConfig && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 rounded-full transition-all duration-700 shadow-xs"
+                      style={{ width: `${Math.max(4, tierProgress)}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                    <span>{currentTier} ({Number(tierConfig.minPoints).toLocaleString('en-IN')} PTS)</span>
+                    <span className="font-bold text-slate-800">{tierProgress}% to {nextTier}</span>
+                    <span>{nextTier} ({Number(nextTierPoints).toLocaleString('en-IN')} PTS)</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Next Tier Incentive Banner */}
+              {nextTierConfig && (
+                <div className="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-start sm:items-center gap-2 text-amber-950 font-medium leading-relaxed">
+                    <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 sm:mt-0" aria-hidden="true" />
+                    <span>
+                      <strong className="text-slate-900 font-bold">{nextTier} unlocks:</strong>{' '}
+                      {nextTier === 'Gold'
+                        ? 'Double workshop cashback (4% vs 2%), priority service bay booking & 500 bonus referral pts'
+                        : 'Maximum 6% workshop cashback, doorstep vehicle pickup/drop & VIP General Manager desk'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('benefits')}
+                    className="text-xs font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-1 whitespace-nowrap self-start sm:self-auto cursor-pointer"
+                  >
+                    <span>View All Tier Perks</span>
+                    <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ─── CURRENT EARNING PRIVILEGES (Dynamic to Current Tier + Guide) ─── */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Current Earning Privileges</h3>
-                  <p className="text-xs text-slate-500">Active benefits locked to your {currentTier} VIP tier</p>
+                  <p className="text-xs text-slate-500">Active earning rates locked to your {currentTier} VIP tier</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('benefits')}
-                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-                >
-                  View All Tiers <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCalculationModal(true)}
+                    className="text-xs font-bold text-slate-600 hover:text-indigo-600 flex items-center gap-1 bg-slate-100 hover:bg-indigo-50 px-2.5 py-1 rounded-lg transition cursor-pointer"
+                  >
+                    <Info className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Calculation Guide</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('benefits')}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    View All Tiers <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100 space-y-1">
                   <span className="text-[11px] font-bold text-slate-500 uppercase">Workshop Service</span>
-                  <p className="text-base font-black text-emerald-700 font-mono">4% Net Bill</p>
+                  <p className="text-base font-black text-emerald-700 font-mono">{tierConfig.serviceEarn}</p>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-1">
                   <span className="text-[11px] font-bold text-slate-500 uppercase">Vehicle Sales</span>
-                  <p className="text-base font-black text-purple-700 font-mono">1% Ex-Showroom</p>
+                  <p className="text-base font-black text-purple-700 font-mono">{tierConfig.salesEarn}</p>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-100 space-y-1">
                   <span className="text-[11px] font-bold text-slate-500 uppercase">Accessories</span>
-                  <p className="text-base font-black text-blue-700 font-mono">2% Counter</p>
+                  <p className="text-base font-black text-blue-700 font-mono">{tierConfig.accessoryEarn}</p>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-100 space-y-1">
                   <span className="text-[11px] font-bold text-slate-500 uppercase">Bodyshop Repair</span>
-                  <p className="text-base font-black text-amber-700 font-mono">3% Cust Share</p>
+                  <p className="text-base font-black text-amber-700 font-mono">{tierConfig.bodyshopDiscount}</p>
                 </div>
+              </div>
+
+              {/* Inline Calculation Tip */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-500">
+                <span>
+                  💡 <strong>Example:</strong> ₹5,000 Service Bill @ {tierConfig.serviceEarn} = {currentTier.toLowerCase() === 'gold' ? '200' : currentTier.toLowerCase() === 'platinum' ? '300' : '100'} PTS (= ₹{currentTier.toLowerCase() === 'gold' ? '50' : currentTier.toLowerCase() === 'platinum' ? '75' : '25'} cash discount). Points never expire.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowCalculationModal(true)}
+                  className="text-indigo-600 font-bold hover:underline shrink-0 cursor-pointer self-start sm:self-auto"
+                >
+                  Vehicle Earning Rules →
+                </button>
               </div>
             </div>
 
-            {/* Monthly Offers Redirection Banner (Dedicated External Page) */}
+            {/* ─── D. EXCLUSIVE MEMBER WORKSHOP PRIVILEGES (Differentiated Banner) ─── */}
             <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-7 border border-indigo-900/50 shadow-lg">
               <div className="absolute -right-12 -bottom-12 w-56 h-56 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
                 <div className="space-y-2 max-w-xl">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] font-black uppercase font-mono">
-                    <Sparkles className="w-3 h-3 text-amber-400" /> Live Monthly Dealership Schemes
+                    <Sparkles className="w-3 h-3 text-amber-400" aria-hidden="true" />
+                    <span>Exclusive {currentTier} VIP Workshop Privileges</span>
                   </div>
                   <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
-                    Explore Brand Offers: Tata, MG, Hero &amp; Ather
+                    Complimentary Point Inspection &amp; Detailing Benefits
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    Check out model-specific exchange bonuses up to ₹1,35,000, EV charging perks, low-interest finance, and workshop detailing discounts across Hubli, Belgaum, Dharwad &amp; Bangalore.
+                    Upgrade your ride with unbeatable deals! Get attractive cash discounts, low down payments, and special offers for a limited time
                   </p>
                 </div>
 
-                <a
-                  href="/offers"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs sm:text-sm transition-all transform hover:scale-[1.02] shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer"
-                >
-                  <span>Explore Monthly Offers</span>
-                  <ExternalLink className="w-4 h-4 stroke-[2.5]" />
-                </a>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+                  <a
+                    href="/offers"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs transition-all transform hover:scale-[1.02] shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Explore Car Offers</span>
+                    <ExternalLink className="w-3.5 h-3.5 stroke-[2.5]" aria-hidden="true" />
+                  </a>
+                  <a
+                    href="https://wa.me/919448000000?text=Hi%20Bellad%20%26%20Co%2C%20I%20would%20like%20to%20book%20a%20priority%20workshop%20service%20for%20my%20vehicle."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Wrench className="w-3.5 h-3.5 text-amber-300" aria-hidden="true" />
+                    <span>Book Service</span>
+                  </a>
+                </div>
               </div>
             </div>
 
-            {/* Recent Activity Snippet */}
+            {/* ─── E. RECENT ACTIVITY SNIPPET ─── */}
             <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-900">Recent Transactions</h3>
                 <button
                   type="button"
                   onClick={() => setActiveTab('transactions')}
-                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
                 >
-                  Full History <ChevronRight className="w-3.5 h-3.5" />
+                  Full History <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
               </div>
 
               {ledgerItems.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-400">
-                  No recent points activity found. Points earn automatically during vehicle billing.
+                <div className="p-6 text-center space-y-2 bg-slate-50/70 rounded-2xl border border-dashed border-slate-200">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+                    <Coins className="w-5 h-5 text-amber-500" aria-hidden="true" />
+                  </div>
+                  <p className="text-xs font-bold text-slate-700">No transactions recorded yet</p>
+                  <p className="text-[11px] text-slate-500 max-w-sm mx-auto leading-relaxed">
+                    Points earn automatically on every vehicle service, parts billing, or car delivery. Show your Member ID <span className="font-mono font-bold text-slate-800">{customerId}</span> at checkout.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -892,9 +1140,9 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         )}
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* TAB 2: GIFT CARDS & VOUCHERS (Main 1)                               */}
+        {/* TAB 2: GIFT CARDS & VOUCHERS (Version 2 Only)                       */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        {activeTab === 'gift_cards' && (
+        {activeTab === 'gift_cards' && showFeature('giftcards') && (
           <div className="space-y-6">
             <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
@@ -1058,9 +1306,9 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         )}
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* TAB 3: REFERRAL REWARDS (Main 2)                                    */}
+        {/* TAB 3: REFERRAL REWARDS (Version 2 Only)                            */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        {activeTab === 'referrals' && (
+        {activeTab === 'referrals' && showFeature('referrals') && (
           <div className="space-y-6">
             <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
@@ -1745,36 +1993,253 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
 
       </main>
 
-      {/* ─── 6. Fullscreen QR Code Scanning Modal ─────────────────────────── */}
-      {showQrModal && (
+      {/* ─── 6. Cash Value & Redemption Info Modal ────────────────────────── */}
+      {showCashInfoModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl border border-slate-100 relative">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-100 relative">
             <button
-              onClick={() => setShowQrModal(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500"
+              onClick={() => setShowCashInfoModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+              aria-label="Close dialog"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="space-y-1 pt-2">
-              <h3 className="text-base font-black text-slate-900">{fullName}</h3>
-              <p className="text-xs text-slate-500">Member ID: <span className="font-mono font-bold text-slate-800">{customerId}</span></p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <IndianRupee className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">Points Cash Value &amp; Rules</h3>
+                <p className="text-xs text-slate-500 font-medium">Clear, transparent redemption terms</p>
+              </div>
             </div>
 
-            {/* Enlarged QR Code Box */}
-            <div className="w-56 h-56 mx-auto bg-slate-900 rounded-3xl p-4 flex items-center justify-center shadow-lg border-4 border-amber-400">
-              <QrCode className="w-44 h-44 text-white" />
+            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-2">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs font-bold text-amber-900">Conversion Rate</span>
+                <span className="font-mono text-sm font-black text-amber-800">1 Point = ₹0.25 (4 Pts = ₹1.00)</span>
+              </div>
+              <div className="flex items-baseline justify-between pt-1 border-t border-amber-200/60 text-xs">
+                <span className="text-slate-600">Your Current Balance</span>
+                <span className="font-mono font-bold text-slate-900">{Number(currentBalance).toLocaleString('en-IN')} PTS ≈ ₹{cashValue}</span>
+              </div>
             </div>
 
-            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 font-bold space-y-0.5">
-              <p>Balance: {Number(currentBalance).toLocaleString('en-IN')} PTS</p>
-              <p className="text-[11px] text-amber-700 font-normal">Present this QR code to cashier desk for instant bill deduction</p>
+            <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Where Can I Redeem Points?
+                </h4>
+                <p className="text-[11px] text-slate-600">
+                  Redeemable at all Bellad &amp; Company billing desks in Hubballi, Belagavi, Dharwad, and Vijayapura towards:
+                </p>
+                <ul className="list-disc pl-5 mt-1 space-y-0.5 text-[11px] text-slate-600">
+                  <li>Periodic service maintenance and mechanical labour bills</li>
+                  <li>Genuine accessories and original spare parts purchases</li>
+                  <li>Bodyshop insurance customer liability share (up to tier discount)</li>
+                  <li>Booking advance or downpayment on new vehicle purchases</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-indigo-600" /> Points Validity &amp; Expiry
+                </h4>
+                <p className="text-[11px] text-slate-600">
+                  <strong>Points Never Expire:</strong> Your accumulated points have lifetime validity as long as your membership is active. There is no year-end lapse or forfeiture.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-amber-600" /> How to Redeem
+                </h4>
+                <p className="text-[11px] text-slate-600">
+                  For redemption, please visit nearby branch. Quote your Member ID or registered mobile number to the cashier before invoice generation.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCashInfoModal(false)}
+                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── 7. Send e-Gift Modal ─────────────────────────────────────────── */}
+      {/* ─── 8. Earning Calculation Guide Modal ───────────────────────────── */}
+      {showCalculationModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-100 relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setShowCalculationModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+              aria-label="Close dialog"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
+                <Award className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">How Points Are Earned</h3>
+                <p className="text-xs text-slate-500 font-medium">Calculation examples and policy breakdown</p>
+              </div>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              {/* Workshop Example */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
+                <span className="font-bold text-emerald-950 text-xs block">1. Workshop Service Bill</span>
+                <p className="text-[11px] text-emerald-900 leading-relaxed">
+                  Points are earned on net invoice value (excluding GST &amp; statutory taxes). Rate varies by tier:
+                </p>
+                <div className="p-2.5 bg-white rounded-xl border border-emerald-100 text-[11px] font-mono space-y-1">
+                  <div className="flex justify-between">
+                    <span>₹10,000 Service Bill (Silver - 2%):</span>
+                    <strong className="text-emerald-700">200 PTS (₹50 discount)</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>₹10,000 Service Bill (Gold - 4%):</span>
+                    <strong className="text-emerald-700">400 PTS (₹100 discount)</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>₹10,000 Service Bill (Platinum - 6%):</span>
+                    <strong className="text-emerald-700">600 PTS (₹150 discount)</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vehicle Sales Example & Policy explanation */}
+              <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200 space-y-1.5">
+                <span className="font-bold text-purple-950 text-xs block">2. Vehicle Sales Points Policy</span>
+                <p className="text-[11px] text-purple-900 leading-relaxed">
+                  The <strong>1% Ex-Showroom</strong> earning rate applies to the <em>net base vehicle price</em> (excluding RTO registration tax, road tax, insurance premium, FASTag, handling charges, and after deducting OEM exchange bonus and dealer discounts).
+                </p>
+                <div className="p-2.5 bg-white rounded-xl border border-purple-100 text-[11px] space-y-1">
+                  <p className="text-slate-700 font-medium">
+                    💡 <strong>Why is my balance 1,020 PTS?</strong>
+                  </p>
+                  <p className="text-slate-500 leading-tight">
+                    Vehicle purchase points follow dealership campaign caps (e.g., standard welcome tier reward of 1,000 base points plus service/accessory points), or accumulate incrementally across bookings and periodic service visits.
+                  </p>
+                </div>
+              </div>
+
+              {/* Referral Bonus */}
+              <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-1.5">
+                <span className="font-bold text-amber-950 text-xs block">3. Friend Referral Bonus</span>
+                <p className="text-[11px] text-amber-900 leading-relaxed">
+                  Earn <strong>2,500 Bonus Points (₹625 Value)</strong> for each friend who takes vehicle delivery and completes PR using your referral link. Your friend also receives 2,500 bonus points!
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCalculationModal(false)}
+                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 9. Terms, Privacy & Redemption Policy Modal ──────────────────── */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-100 relative max-h-[85vh] overflow-y-auto">
+            <button
+              onClick={() => setShowTermsModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+              aria-label="Close dialog"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+              <ShieldCheck className="w-5 h-5 text-indigo-600" />
+              <h3 className="text-base font-black text-slate-900">
+                {termsModalType === 'terms' ? 'Terms & Conditions' : termsModalType === 'privacy' ? 'Privacy Policy' : 'Redemption Policy & FAQs'}
+              </h3>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setTermsModalType('terms')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${termsModalType === 'terms' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+              >
+                Terms &amp; Conditions
+              </button>
+              <button
+                type="button"
+                onClick={() => setTermsModalType('privacy')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${termsModalType === 'privacy' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+              >
+                Privacy Policy
+              </button>
+              <button
+                type="button"
+                onClick={() => setTermsModalType('policy')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${termsModalType === 'policy' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+              >
+                Redemption Policy
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
+              {termsModalType === 'terms' && (
+                <>
+                  <p><strong>1. Membership Eligibility:</strong> The Bellad &amp; Company Loyalty Pass is available to retail vehicle buyers and workshop service customers across authorized Bellad dealerships in Karnataka.</p>
+                  <p><strong>2. Point Accrual:</strong> Points are accrued on paid vehicle service, genuine accessories, and vehicle delivery transactions net of taxes and OEM discounts. Accrual rules vary by membership tier (Silver, Gold, Platinum).</p>
+                  <p><strong>3. Non-Transferability:</strong> Loyalty points are personal to the account holder and cannot be transferred to another individual, except via authorized e-Gift Cards issued through this portal.</p>
+                  <p><strong>4. Modification of Program:</strong> Bellad &amp; Company reserves the right to amend tier thresholds, multiplier rates, or eligible benefits with prior digital notification via WhatsApp or SMS.</p>
+                </>
+              )}
+              {termsModalType === 'privacy' && (
+                <>
+                  <p><strong>1. Information We Collect:</strong> We collect your name, mobile number, vehicle registration details (VIN/Chassis), transaction history, and communication preferences to deliver loyalty benefits.</p>
+                  <p><strong>2. How We Use Your Data:</strong> Your data is used exclusively to track loyalty points, process redemptions, notify you of service milestones, and share verified manufacturer recalls or offers.</p>
+                  <p><strong>3. Data Protection:</strong> We do not sell or rent your personal data to third parties. Data is secured under strict enterprise encryption and shared only with OEM systems (Tata Motors, MG, Hero, Ather) as mandated for warranty and service.</p>
+                </>
+              )}
+              {termsModalType === 'policy' && (
+                <>
+                  <p><strong>1. Redemption Value:</strong> 1 Point = ₹0.25 (4 Points = ₹1.00). Points cannot be converted to physical cash or withdrawn into bank accounts.</p>
+                  <p><strong>2. Point Expiry:</strong> Loyalty points have no expiry date and remain active in your wallet indefinitely while your account is active.</p>
+                  <p><strong>3. Counter Presentation:</strong> For redemption, please visit your nearby branch and quote your Member ID or registered mobile number before the final invoice is printed.</p>
+                  <p><strong>4. Applicable Departments:</strong> Valid across Periodic Maintenance, Running Repairs, Body Shop Customer Liability, Accessories, and New Vehicle bookings.</p>
+                </>
+              )}
+            </div>
+
+            <div className="pt-2 text-right">
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 10. Send e-Gift Modal ────────────────────────────────────────── */}
       <SendGiftModal
         isOpen={sendGiftModalOpen}
         onClose={() => setSendGiftModalOpen(false)}
@@ -1789,9 +2254,97 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut }) {
         }}
       />
 
-      {/* ─── 8. Minimal Clean Footer ──────────────────────────────────────── */}
-      <footer className="bg-white border-t border-slate-200/80 py-4 text-center text-xs text-slate-500">
-        <p>&copy; {new Date().getFullYear()} Bellad &amp; Company. Hubballi &bull; Belagavi &bull; Vijayapura</p>
+      {/* ─── 11. Comprehensive Dealership Loyalty Footer ──────────────────── */}
+      <footer className="bg-white border-t border-slate-200 mt-8 pt-8 pb-6 text-slate-600 text-xs">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pb-6 border-b border-slate-100">
+            {/* Col 1: About */}
+            <div className="space-y-2 md:col-span-1">
+              <div className="flex items-center gap-2">
+                <img src="/bellad-logo.png" alt="Bellad Logo" className="w-6 h-6 object-contain" />
+                <span className="font-black text-slate-900 text-sm">Bellad &amp; Company</span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Karnataka&apos;s trusted automotive dealership group since 1968. Authorized dealer for Tata Motors, MG, Hero MotoCorp &amp; Ather Energy.
+              </p>
+            </div>
+
+            {/* Col 2: Legal & Policy */}
+            <div className="space-y-2">
+              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Help &amp; Legal</h4>
+              <ul className="space-y-1.5 text-[11px]">
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => { setTermsModalType('terms'); setShowTermsModal(true); }}
+                    className="hover:text-indigo-600 transition cursor-pointer"
+                  >
+                    Terms &amp; Conditions
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => { setTermsModalType('privacy'); setShowTermsModal(true); }}
+                    className="hover:text-indigo-600 transition cursor-pointer"
+                  >
+                    Privacy Policy
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => { setTermsModalType('policy'); setShowTermsModal(true); }}
+                    className="hover:text-indigo-600 transition cursor-pointer"
+                  >
+                    Redemption Policy &amp; FAQs
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Col 3: Support */}
+            <div className="space-y-2">
+              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Customer Support</h4>
+              <div className="space-y-1 text-[11px] text-slate-500">
+                <p className="flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <a href="tel:08362448888" className="hover:text-indigo-600 font-medium">+91 (0836) 244 8888</a>
+                </p>
+                <p className="text-[10px] text-slate-400">Mon - Sat: 9:00 AM - 6:30 PM</p>
+                <p className="pt-1">
+                  <a
+                    href="https://wa.me/919448000000?text=Hi%20Bellad%20Loyalty%20Support%2C%20I%20need%20assistance."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-emerald-600 font-bold hover:underline"
+                  >
+                    <span>WhatsApp Support Desk</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </p>
+              </div>
+            </div>
+
+            {/* Col 4: Network */}
+            <div className="space-y-2">
+              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Dealership Network</h4>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Hubballi &bull; Belagavi &bull; Dharwad &bull; Vijayapura &bull; Bagalkot &bull; Gadag
+              </p>
+              <div className="pt-1 flex items-center gap-2">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">Tata Motors</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">MG</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">Hero</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400">
+            <p>&copy; {new Date().getFullYear()} Bellad &amp; Company. All rights reserved.</p>
+            <p>1 Point = ₹0.25 &bull; No Point Expiration &bull; Direct Dealership Redemption</p>
+          </div>
+        </div>
       </footer>
     </div>
   );

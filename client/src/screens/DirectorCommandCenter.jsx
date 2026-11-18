@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { isFeatureEnabled } from '../config/versionConfig';
 import {
   Coins,
   Users,
@@ -34,7 +35,6 @@ import {
 } from 'lucide-react';
 import ApiService from '../services/api';
 import { useToast } from '../components/ui';
-import ComboVelocityChart from '../components/dashboard/ComboVelocityChart';
 import DistributionPieChart from '../components/dashboard/DistributionPieChart';
 import BranchNetworkChart from '../components/dashboard/BranchNetworkChart';
 
@@ -354,6 +354,7 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpe
   const kpis = overviewData?.kpis;
   const charts = overviewData?.charts || {};
   const modelsList = overviewData?.models || charts?.model_breakdown || [];
+  const brandsList = overviewData?.brands || charts?.brand_breakdown || [];
   const departmentsList = overviewData?.departments || [];
   const branchesList = overviewData?.branches || charts?.top_branches || [];
   const totalPages = Math.ceil((recordsData.total || 0) / recordsPerPage) || 1;
@@ -617,8 +618,12 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpe
         </div>
       </div>
 
-      {/* ── 2. The 6 Core Executive KPI Cards (Neat, Aligned & Responsive Fonts) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4">
+      {/* ── 2. The Core Executive KPI Cards (Neat, Aligned & Responsive Fonts) ── */}
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${
+        isFeatureEnabled('giftcards') || isFeatureEnabled('referrals')
+          ? 'lg:grid-cols-3 xl:grid-cols-6'
+          : 'lg:grid-cols-4 xl:grid-cols-4'
+      } gap-3.5 sm:gap-4`}>
         {/* Card 1: Enrolled Members */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-indigo-300 transition-all hover:shadow-md group min-h-[148px]">
           <div className="flex items-center justify-between text-slate-500 mb-2">
@@ -726,69 +731,69 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpe
           </div>
         </div>
 
-        {/* Card 5: Gift Cards */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-purple-300 transition-all hover:shadow-md group min-h-[148px]">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold text-slate-600">Gift Cards</span>
-            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Gift className="w-3.5 h-3.5" />
+        {/* Card 5: Gift Cards (Version 2) */}
+        {isFeatureEnabled('giftcards') && (
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-purple-300 transition-all hover:shadow-md group min-h-[148px]">
+            <div className="flex items-center justify-between text-slate-500 mb-2">
+              <span className="text-xs font-bold text-slate-600">Gift Cards</span>
+              <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Gift className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+                <span className="text-lg sm:text-xl font-black font-mono text-slate-900 group-hover:text-purple-600 transition tracking-tight">
+                  {loadingOverview ? '...' : totalGiftCards}
+                </span>
+                <span className="text-[11px] font-bold text-purple-600 font-sans">Cards</span>
+              </div>
+              <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug truncate">
+                Volume: <span className="font-bold text-slate-900 font-mono">{formatInr(totalGiftVolume)}</span>
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
+              <span className="text-slate-400">Active Unclaimed:</span>
+              <span className="font-mono font-bold text-purple-700">{activeUnclaimedGifts} Passes</span>
             </div>
           </div>
-          <div>
-            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-              <span className="text-lg sm:text-xl font-black font-mono text-slate-900 group-hover:text-purple-600 transition tracking-tight">
-                {loadingOverview ? '...' : totalGiftCards}
-              </span>
-              <span className="text-[11px] font-bold text-purple-600 font-sans">Cards</span>
-            </div>
-            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug truncate">
-              Volume: <span className="font-bold text-slate-900 font-mono">{formatInr(totalGiftVolume)}</span>
-            </div>
-          </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
-            <span className="text-slate-400">Active Unclaimed:</span>
-            <span className="font-mono font-bold text-purple-700">{activeUnclaimedGifts} Passes</span>
-          </div>
-        </div>
+        )}
 
-        {/* Card 6: Referrals */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-sky-300 transition-all hover:shadow-md group min-h-[148px]">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold text-slate-600">Customer Referrals</span>
-            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Share2 className="w-3.5 h-3.5" />
+        {/* Card 6: Referrals (Version 2) */}
+        {isFeatureEnabled('referrals') && (
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-sky-300 transition-all hover:shadow-md group min-h-[148px]">
+            <div className="flex items-center justify-between text-slate-500 mb-2">
+              <span className="text-xs font-bold text-slate-600">Customer Referrals</span>
+              <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Share2 className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+                <span className="text-lg sm:text-xl font-black font-mono text-slate-900 group-hover:text-sky-600 transition tracking-tight">
+                  {loadingOverview ? '...' : totalReferrals}
+                </span>
+                <span className="text-[11px] font-bold text-sky-600 font-sans">Given</span>
+              </div>
+              <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug truncate">
+                Purchased: <span className="font-bold text-emerald-600 font-mono">{purchasedReferrals} Vehicles</span>
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
+              <span className="text-slate-400">Reward Got:</span>
+              <span className="font-mono font-bold text-sky-700">{formatInr(Number(referralPointsAwarded || 0) * 0.25)}</span>
             </div>
           </div>
-          <div>
-            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-              <span className="text-lg sm:text-xl font-black font-mono text-slate-900 group-hover:text-sky-600 transition tracking-tight">
-                {loadingOverview ? '...' : totalReferrals}
-              </span>
-              <span className="text-[11px] font-bold text-sky-600 font-sans">Given</span>
-            </div>
-            <div className="text-[11px] text-slate-500 font-medium mt-1 leading-snug truncate">
-              Purchased: <span className="font-bold text-emerald-600 font-mono">{purchasedReferrals} Vehicles</span>
-            </div>
-          </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
-            <span className="text-slate-400">Reward Got:</span>
-            <span className="font-mono font-bold text-sky-700">{formatInr(Number(referralPointsAwarded || 0) * 0.25)}</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* ── 3. Executive Dashboard View ── */}
       {activeSection === 'dashboard' && (
         <div className="space-y-6">
-          {/* Executive Visual Analytics Suite (Dual-Axis Combo Velocity & Dynamic Pie Distribution) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ComboVelocityChart
-              trendData={charts?.monthly_trend}
-              totalTransactions={totalTransactionsCount || 1}
-              currentFilter={dateRangeLabels[dateRange] || 'All Time'}
-            />
+          {/* Executive Visual Analytics Suite (Loyalty Share Distribution by Department & Brand) */}
+          <div>
             <DistributionPieChart
               departments={departmentsList}
+              brands={brandsList}
               models={modelsList}
               totalPointsIssued={totalPointsIssued}
             />
@@ -953,113 +958,119 @@ export default function DirectorCommandCenter({ user, onSwitchToStaffView, onOpe
             currentFilter={dateRangeLabels[dateRange] || 'All Time'}
           />
 
-          {/* Main Visual Row 2: Dedicated Gift Cards & Referral Velocity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Main Visual Row 2: Dedicated Gift Cards & Referral Velocity (Version 2) */}
+          {(isFeatureEnabled('giftcards') || isFeatureEnabled('referrals')) && (
+            <div className={`grid grid-cols-1 ${isFeatureEnabled('giftcards') && isFeatureEnabled('referrals') ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-6`}>
 
-            {/* Panel 1: Dynamic Gift Cards Performance */}
-            <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div>
-                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                    <Gift className="w-4 h-4 text-purple-600" />
-                    <span>Gift Cards Escrow &amp; Utilization</span>
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Counter voucher passes and customer gifting escrow balance
-                  </p>
-                </div>
-                <span className="text-xs font-black font-mono text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200">
-                  {totalGiftCards} Total Cards
-                </span>
-              </div>
+              {/* Panel 1: Dynamic Gift Cards Performance */}
+              {isFeatureEnabled('giftcards') && (
+                <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                        <Gift className="w-4 h-4 text-purple-600" />
+                        <span>Gift Cards Escrow &amp; Utilization</span>
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Counter voucher passes and customer gifting escrow balance
+                      </p>
+                    </div>
+                    <span className="text-xs font-black font-mono text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200">
+                      {totalGiftCards} Total Cards
+                    </span>
+                  </div>
 
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="p-3 bg-purple-50/60 rounded-2xl border border-purple-100">
-                  <span className="text-[10px] font-bold uppercase text-purple-600 block">Total Escrow</span>
-                  <span className="text-base font-black font-mono text-slate-900 mt-0.5 block">
-                    {formatInr(totalGiftVolume)}
-                  </span>
-                </div>
-                <div className="p-3 bg-amber-50/60 rounded-2xl border border-amber-100">
-                  <span className="text-[10px] font-bold uppercase text-amber-700 block">Active Unclaimed</span>
-                  <span className="text-base font-black font-mono text-amber-800 mt-0.5 block">
-                    {activeUnclaimedGifts} Passes
-                  </span>
-                </div>
-                <div className="p-3 bg-emerald-50/60 rounded-2xl border border-emerald-100">
-                  <span className="text-[10px] font-bold uppercase text-emerald-700 block">Claimed / Used</span>
-                  <span className="text-base font-black font-mono text-emerald-800 mt-0.5 block">
-                    {claimedGifts} Passes
-                  </span>
-                </div>
-              </div>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-3 bg-purple-50/60 rounded-2xl border border-purple-100">
+                      <span className="text-[10px] font-bold uppercase text-purple-600 block">Total Escrow</span>
+                      <span className="text-base font-black font-mono text-slate-900 mt-0.5 block">
+                        {formatInr(totalGiftVolume)}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-amber-50/60 rounded-2xl border border-amber-100">
+                      <span className="text-[10px] font-bold uppercase text-amber-700 block">Active Unclaimed</span>
+                      <span className="text-base font-black font-mono text-amber-800 mt-0.5 block">
+                        {activeUnclaimedGifts} Passes
+                      </span>
+                    </div>
+                    <div className="p-3 bg-emerald-50/60 rounded-2xl border border-emerald-100">
+                      <span className="text-[10px] font-bold uppercase text-emerald-700 block">Claimed / Used</span>
+                      <span className="text-base font-black font-mono text-emerald-800 mt-0.5 block">
+                        {claimedGifts} Passes
+                      </span>
+                    </div>
+                  </div>
 
-              {/* Progress Meter */}
-              <div className="space-y-1.5 pt-2">
-                <div className="flex items-center justify-between text-xs font-medium">
-                  <span className="text-slate-600 font-bold">Unclaimed Escrow Proportion</span>
-                  <span className="font-mono font-black text-purple-700">
-                    {totalGiftCards > 0 ? (((totalGiftCards - activeUnclaimedGifts) / totalGiftCards) * 100).toFixed(1) : 0}% Claimed
-                  </span>
+                  {/* Progress Meter */}
+                  <div className="space-y-1.5 pt-2">
+                    <div className="flex items-center justify-between text-xs font-medium">
+                      <span className="text-slate-600 font-bold">Unclaimed Escrow Proportion</span>
+                      <span className="font-mono font-black text-purple-700">
+                        {totalGiftCards > 0 ? (((totalGiftCards - activeUnclaimedGifts) / totalGiftCards) * 100).toFixed(1) : 0}% Claimed
+                      </span>
+                    </div>
+                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex">
+                      <div
+                        className="h-full bg-purple-600 rounded-full transition-all duration-700"
+                        style={{
+                          width: `${totalGiftCards > 0 ? Math.max((activeUnclaimedGifts / totalGiftCards) * 100, 10) : 50}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex">
-                  <div
-                    className="h-full bg-purple-600 rounded-full transition-all duration-700"
-                    style={{
-                      width: `${totalGiftCards > 0 ? Math.max((activeUnclaimedGifts / totalGiftCards) * 100, 10) : 50}%`,
-                    }}
-                  />
+              )}
+
+              {/* Panel 2: Customer Referral Performance */}
+              {isFeatureEnabled('referrals') && (
+                <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                        <Share2 className="w-4 h-4 text-sky-600" />
+                        <span>Customer Referrals</span>
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Referrals given, vehicle purchases &amp; reward amount credited
+                      </p>
+                    </div>
+                    <span className="text-xs font-black font-mono text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-200">
+                      {purchasedReferrals} of {totalReferrals} Purchased
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                    <div className="p-4 bg-sky-50/70 rounded-2xl border border-sky-100/90 flex flex-col justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600 block">Referrals Given</span>
+                      <span className="text-2xl font-black font-mono text-slate-900 my-1 block">
+                        {totalReferrals}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-medium">Customer leads referred</span>
+                    </div>
+
+                    <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-100/90 flex flex-col justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Vehicles Purchased</span>
+                      <span className="text-2xl font-black font-mono text-emerald-800 my-1 block">
+                        {purchasedReferrals}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 font-medium">Delivered using referral</span>
+                    </div>
+
+                    <div className="p-4 bg-indigo-50/70 rounded-2xl border border-indigo-100/90 flex flex-col justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 block">Reward Amount Got</span>
+                      <span className="text-2xl font-black font-mono text-indigo-900 my-1 block">
+                        {formatInr(Number(referralPointsAwarded || 0) * 0.25)}
+                      </span>
+                      <span className="text-[10px] text-indigo-600 font-mono font-bold">
+                        {Number(referralPointsAwarded || 0).toLocaleString('en-IN')} PTS Credited
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
             </div>
-
-            {/* Panel 2: Customer Referral Performance */}
-            <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div>
-                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                    <Share2 className="w-4 h-4 text-sky-600" />
-                    <span>Customer Referrals</span>
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Referrals given, vehicle purchases &amp; reward amount credited
-                  </p>
-                </div>
-                <span className="text-xs font-black font-mono text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-200">
-                  {purchasedReferrals} of {totalReferrals} Purchased
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
-                <div className="p-4 bg-sky-50/70 rounded-2xl border border-sky-100/90 flex flex-col justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600 block">Referrals Given</span>
-                  <span className="text-2xl font-black font-mono text-slate-900 my-1 block">
-                    {totalReferrals}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-medium">Customer leads referred</span>
-                </div>
-
-                <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-100/90 flex flex-col justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Vehicles Purchased</span>
-                  <span className="text-2xl font-black font-mono text-emerald-800 my-1 block">
-                    {purchasedReferrals}
-                  </span>
-                  <span className="text-[10px] text-emerald-600 font-medium">Delivered using referral</span>
-                </div>
-
-                <div className="p-4 bg-indigo-50/70 rounded-2xl border border-indigo-100/90 flex flex-col justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 block">Reward Amount Got</span>
-                  <span className="text-2xl font-black font-mono text-indigo-900 my-1 block">
-                    {formatInr(Number(referralPointsAwarded || 0) * 0.25)}
-                  </span>
-                  <span className="text-[10px] text-indigo-600 font-mono font-bold">
-                    {Number(referralPointsAwarded || 0).toLocaleString('en-IN')} PTS Credited
-                  </span>
-                </div>
-              </div>
-            </div>
-
-          </div>
+          )}
         </div>
       )}
 

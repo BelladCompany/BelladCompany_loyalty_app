@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Car, AlertCircle, CheckCircle2, UserCheck } from 'lucide-react';
 import { Button } from '../ui';
 import ApiService from '../../services/api';
@@ -44,12 +44,26 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
   const [eccNo, setEccNo] = useState('');
   const [age, setAge] = useState('');
 
-  // Optional Vehicle Details
-  const defaultBranch = user?.branch_name || user?.branch_city || '';
+  // Vehicle Details (Brand & Reg No are mandatory, Branch selectable without default)
+  const [branchList, setBranchList] = useState(branches || []);
   const [brandName, setBrandName] = useState('');
-  const [branchName, setBranchName] = useState(defaultBranch);
+  const [branchName, setBranchName] = useState('');
   const [model, setModel] = useState('');
   const [regNo, setRegNo] = useState('');
+
+  useEffect(() => {
+    if (branches && branches.length > 0) {
+      setBranchList(branches);
+    } else {
+      ApiService.getBranches()
+        .then((res) => {
+          if (res.data && Array.isArray(res.data)) {
+            setBranchList(res.data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [branches]);
 
   const [otp, setOtp] = useState('');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
@@ -84,6 +98,15 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
     }
     if (age.trim() && (isNaN(Number(age)) || Number(age) <= 0 || Number(age) > 120)) {
       errs.age = 'Please enter a valid age between 1 and 120.';
+    }
+    if (!brandName.trim()) {
+      errs.brandName = 'Vehicle brand is required.';
+    }
+    if (!branchName.trim()) {
+      errs.branchName = 'Please select a branch.';
+    }
+    if (!regNo.trim()) {
+      errs.regNo = 'Registration number is required.';
     }
     return errs;
   };
@@ -197,7 +220,7 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
     setAge('');
     setAadhaar('');
     setBrandName('');
-    setBranchName(defaultBranch);
+    setBranchName('');
     setModel('');
     setRegNo('');
     setOtp('');
@@ -622,44 +645,67 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
                     </div>
                 </div>
 
-                {/* ── SECTION 3: Vehicle Details (Optional) ──────────────────── */}
+                {/* ── SECTION 3: Vehicle Details ──────────────────── */}
                 <div>
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-surface-border">
                     <Car className="w-5 h-5 text-ink-secondary" />
                     <h4 className="text-base font-bold text-ink-primary">Vehicle Details</h4>
-                    <span className="text-sm text-ink-muted font-medium">(optional)</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-bold text-ink-primary block mb-1.5">Brand</label>
+                      <label className="text-sm font-bold text-ink-primary block mb-1.5">
+                        Brand <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         id="add-cust-brand"
                         type="text"
                         placeholder="e.g. Maruti Suzuki, Hyundai"
                         value={brandName}
-                        onChange={(e) => setBrandName(e.target.value)}
+                        onChange={(e) => {
+                          setBrandName(e.target.value);
+                          if (errors.brandName) setErrors((prev) => ({ ...prev, brandName: undefined }));
+                        }}
                         disabled={isLoading || isSendingOtp || !!success}
-                        className="w-full h-11 px-4 border border-surface-border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white"
+                        className={`w-full h-11 px-4 border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white ${
+                          errors.brandName ? 'border-rose-500 bg-rose-50/30' : 'border-surface-border'
+                        }`}
                       />
+                      {errors.brandName && (
+                        <p className="text-xs text-rose-500 font-semibold mt-1 animate-fadeIn">{errors.brandName}</p>
+                      )}
                     </div>
 
                     <div>
-                      <label className="text-sm font-bold text-ink-primary block mb-1.5">Branch</label>
-                      <input
+                      <label className="text-sm font-bold text-ink-primary block mb-1.5">
+                        Branch <span className="text-rose-500">*</span>
+                      </label>
+                      <select
                         id="add-cust-branch"
-                        list="add-cust-branch-suggestions"
-                        type="text"
-                        placeholder="e.g. Ather Energy Belgaum, Swaraj Hubli"
                         value={branchName}
-                        onChange={(e) => setBranchName(e.target.value)}
+                        onChange={(e) => {
+                          setBranchName(e.target.value);
+                          if (errors.branchName) setErrors((prev) => ({ ...prev, branchName: undefined }));
+                        }}
                         disabled={isLoading || isSendingOtp || !!success}
-                        className="w-full h-11 px-4 border border-surface-border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white"
-                      />
-                      <datalist id="add-cust-branch-suggestions">
-                        {branches.map((b) => (
-                          <option key={b.id || b.branch_id || b} value={b.name || b.branch_name || b} />
-                        ))}
-                      </datalist>
+                        className={`w-full h-11 px-4 border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white cursor-pointer ${
+                          errors.branchName ? 'border-rose-500 bg-rose-50/30' : 'border-surface-border'
+                        }`}
+                      >
+                        <option value="">Select Branch...</option>
+                        {branchList.map((b) => {
+                          const bName = typeof b === 'string' ? b : (b.branch_name || b.name || b.branch_city || b.code || '');
+                          const bKey = typeof b === 'object' ? (b.branch_id || b.id || bName) : b;
+                          if (!bName) return null;
+                          return (
+                            <option key={bKey} value={bName}>
+                              {bName}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      {errors.branchName && (
+                        <p className="text-xs text-rose-500 font-semibold mt-1 animate-fadeIn">{errors.branchName}</p>
+                      )}
                     </div>
 
                     <div>
@@ -676,16 +722,26 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
                     </div>
 
                     <div>
-                      <label className="text-sm font-bold text-ink-primary block mb-1.5">Registration No.</label>
+                      <label className="text-sm font-bold text-ink-primary block mb-1.5">
+                        Registration No. <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         id="add-cust-regno"
                         type="text"
                         placeholder="e.g. KA-22-AB-1234"
                         value={regNo}
-                        onChange={(e) => setRegNo(e.target.value.toUpperCase())}
+                        onChange={(e) => {
+                          setRegNo(e.target.value.toUpperCase());
+                          if (errors.regNo) setErrors((prev) => ({ ...prev, regNo: undefined }));
+                        }}
                         disabled={isLoading || isSendingOtp || !!success}
-                        className="w-full h-11 px-4 border border-surface-border rounded text-base font-mono font-medium focus:outline-none focus:border-action-primary bg-white"
+                        className={`w-full h-11 px-4 border rounded text-base font-mono font-medium focus:outline-none focus:border-action-primary bg-white uppercase ${
+                          errors.regNo ? 'border-rose-500 bg-rose-50/30' : 'border-surface-border'
+                        }`}
                       />
+                      {errors.regNo && (
+                        <p className="text-xs text-rose-500 font-semibold mt-1 animate-fadeIn">{errors.regNo}</p>
+                      )}
                     </div>
                   </div>
                 </div>

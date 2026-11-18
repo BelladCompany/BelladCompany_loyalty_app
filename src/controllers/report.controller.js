@@ -27,15 +27,18 @@ class ReportController {
   static async getPointsSummary(req, res, next) {
     try {
       const tenantId = req.tenantId || 'bellad_and_company';
-      const { branchId } = scopeBranchAccess(req);
+      const { branchId, isRestrictedToBranch } = scopeBranchAccess(req);
       const { brand_id, brand_name, city, vehicle_type, category, start_date, end_date, format } = req.query;
+
+      // When scoped to a branch manager's branch, prevent city filter overriding or leaking other branch rows
+      const effectiveCity = isRestrictedToBranch ? null : city;
 
       const data = await ReportService.getPointsSummaryReport({
         tenantId,
         branchId,
         brandId: brand_id ? parseInt(brand_id, 10) : null,
         brandName: brand_name,
-        city,
+        city: effectiveCity,
         vehicleType: vehicle_type,
         category,
         startDate: start_date,
@@ -56,7 +59,8 @@ class ReportController {
           Net_Points: r.net_points_balance,
           Discount_Rupees: r.equivalent_redeemed_rs,
         }));
-        return ReportController.respond(res, flatCsv, 'dynamic_loyalty_report');
+        const filePrefix = isRestrictedToBranch ? 'branch_loyalty_report' : 'pan_dealership_report';
+        return ReportController.respond(res, flatCsv, filePrefix);
       }
 
       return res.status(200).json({

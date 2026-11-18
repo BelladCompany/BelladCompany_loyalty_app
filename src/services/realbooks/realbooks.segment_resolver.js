@@ -15,6 +15,43 @@ class RealBooksSegmentResolver {
    * Known brand model patterns for ultra-fast, resilient resolution
    */
   static BRAND_PATTERNS = {
+    'ATHER ENERGY': [
+      'ather',
+      '450x',
+      '450 x',
+      '450',
+      '450 plus',
+      '450 apex',
+      'rizta',
+    ],
+    'TATA MOTORS': [
+      'tata',
+      'harrier',
+      'safari',
+      'nexon',
+      'punch',
+      'tiago',
+      'tigor',
+      'curvv',
+      'altroz',
+      'sierra',
+    ],
+    'MG MOTORS': [
+      'mg',
+      'mg motors',
+      'hector',
+      'astor',
+      'zs ev',
+      'gloster',
+      'comet',
+      'windsor',
+    ],
+    Vida: [
+      'vida',
+      'v1',
+      'v1 pro',
+      'v1 plus',
+    ],
     Hero: [
       'hero',
       'hf deluxe',
@@ -31,7 +68,6 @@ class RealBooksSegmentResolver {
       'maestro',
       'xtreme',
       'xoom',
-      'vida',
       'deluxe',
       'sup spl',
       'hf 100',
@@ -112,7 +148,15 @@ class RealBooksSegmentResolver {
     if (text.includes('gadag')) return 'Gadag';
     if (text.includes('haveri')) return 'Haveri';
     if (text.includes('chitradurga')) return 'Chitradurga';
-    if (text.includes('bangalore') || text.includes('bengaluru')) return 'Bangalore';
+    if (text.includes('belgaum') || text.includes('belagavi')) return 'Belgaum';
+    if (text.includes('bellary') || text.includes('ballari')) return 'Bellary';
+    if (text.includes('raichur')) return 'Raichur';
+    if (text.includes('koppal')) return 'Koppal';
+    if (text.includes('hospet') || text.includes('hosapete')) return 'Hospet';
+    if (text.includes('gulbarga') || text.includes('kalaburagi')) return 'Gulbarga';
+    if (text.includes('gangavathi')) return 'Gangavathi';
+    if (text.includes('sindhnoor')) return 'Sindhnoor';
+    if (text.includes('bangalore') || text.includes('bengaluru') || text.includes('bommasandra') || text.includes('sarjapur')) return 'Bangalore';
     if (text.includes('hubli') || text.includes('hubballi')) return 'Hubli';
     return 'Hubli'; // Default main headquarters location
   }
@@ -133,16 +177,11 @@ class RealBooksSegmentResolver {
   } = {}) {
     let resolvedModel = model;
     let resolvedBrand = brand;
-    let resolvedFirm = firm || 'Bellad and Company';
-    let resolvedCity = this.inferCity(branch_name || '');
+    let resolvedFirm = firm;
+    let resolvedCity = branch_name ? this.inferCity(branch_name) : null;
 
-    // 0. If model was passed, immediately try to infer brand from model
-    if (!resolvedBrand && resolvedModel) {
-      resolvedBrand = this.inferBrandFromModel(resolvedModel);
-    }
-
-    // 1. If vehicle_id is provided, look up vehicle record from DB
-    if (vehicle_id && (!resolvedModel || !resolvedBrand)) {
+    // 0. If vehicle_id is provided, look up full vehicle record from DB to get actual branch, brand, firm, model
+    if (vehicle_id) {
       try {
         const vRes = await pool.query(
           `SELECT v.model, v.brand_name, v.firm_name, v.branch_name, b.branch_city, b.branch_name as b_name
@@ -156,17 +195,19 @@ class RealBooksSegmentResolver {
         if (vRes.rows.length > 0) {
           const v = vRes.rows[0];
           resolvedModel = resolvedModel || v.model;
-          resolvedBrand = resolvedBrand || v.brand_name;
-          resolvedFirm = resolvedFirm || v.firm_name;
-          resolvedCity = resolvedCity || this.inferCity(v.branch_city || v.b_name || v.branch_name);
+          resolvedBrand = v.brand_name || resolvedBrand;
+          resolvedFirm = v.firm_name || resolvedFirm;
+          if (v.branch_name || v.b_name || v.branch_city) {
+            resolvedCity = resolvedCity || this.inferCity(v.branch_city || v.b_name || v.branch_name);
+          }
         }
       } catch (e) {
         console.warn('[RealBooksSegmentResolver] Vehicle lookup error:', e.message);
       }
     }
 
-    // 2. If model AND brand are still missing, check customer's most recent vehicle from DB
-    if (customer_id && (!resolvedModel && !resolvedBrand)) {
+    // 1. If customer_id is provided and brand/model still missing, check customer's most recent vehicle
+    if (customer_id && (!resolvedModel || !resolvedBrand)) {
       try {
         const cvRes = await pool.query(
           `SELECT v.model, v.brand_name, v.firm_name, v.branch_name, b.branch_city, b.branch_name as b_name
@@ -190,8 +231,13 @@ class RealBooksSegmentResolver {
       }
     }
 
+    // 2. If model was passed, try inferring brand from model
+    if (!resolvedBrand && resolvedModel) {
+      resolvedBrand = this.inferBrandFromModel(resolvedModel);
+    }
+
     // 3. If branch_id is provided, resolve branch details
-    if (branch_id && (!resolvedCity || resolvedCity === 'Hubli')) {
+    if (branch_id && !resolvedCity) {
       try {
         const bRes = await pool.query(
           `SELECT branch_name, branch_city FROM branches WHERE branch_id = $1 LIMIT 1;`,
@@ -203,36 +249,33 @@ class RealBooksSegmentResolver {
       } catch (_) { }
     }
 
-    // 4. Infer brand from model name if brand is not directly identified
-    if (!resolvedBrand && resolvedModel) {
-      resolvedBrand = this.inferBrandFromModel(resolvedModel);
-
-      // Try database lookup if static dictionary didn't catch it
-      if (!resolvedBrand) {
-        try {
-          const dbBrand = await pool.query(
-            `SELECT b.brand_name
-             FROM master_models m
-             JOIN brands b ON m.brand_id = b.brand_id
-             WHERE LOWER(m.name) = LOWER($1) OR $1 ILIKE '%' || m.name || '%'
-             LIMIT 1;`,
-            [resolvedModel]
-          );
-          if (dbBrand.rows.length > 0) {
-            resolvedBrand = dbBrand.rows[0].brand_name;
-          }
-        } catch (_) { }
-      }
+    if (!resolvedCity) {
+      resolvedCity = 'Hubli';
     }
 
     // Standardize brand name
     if (resolvedBrand) {
       const bNorm = this.normalize(resolvedBrand);
-      if (bNorm.includes('hero')) resolvedBrand = 'Hero';
+      if (bNorm.includes('ather')) resolvedBrand = 'ATHER ENERGY';
+      else if (bNorm.includes('tata')) resolvedBrand = 'TATA MOTORS';
+      else if (bNorm.includes('mg')) resolvedBrand = 'MG MOTORS';
+      else if (bNorm.includes('vida')) resolvedBrand = 'Vida';
+      else if (bNorm.includes('hero')) resolvedBrand = 'Hero';
       else if (bNorm.includes('hyundai')) resolvedBrand = 'Hyundai';
       else if (bNorm.includes('swaraj')) resolvedBrand = 'Swaraj';
       else if (bNorm.includes('claas')) resolvedBrand = 'Claas';
       else if (bNorm.includes('sony')) resolvedBrand = 'Sony';
+    }
+
+    // Standardize firm name
+    if (!resolvedFirm && resolvedBrand) {
+      if (resolvedBrand === 'ATHER ENERGY' || resolvedBrand === 'TATA MOTORS') {
+        resolvedFirm = 'Bellad Enterprises Pvt Ltd';
+      } else if (resolvedBrand === 'MG MOTORS') {
+        resolvedFirm = 'Bellad and company pvt ltd';
+      } else {
+        resolvedFirm = 'Bellad and Company';
+      }
     }
 
     // 5. Determine Transaction Category Type:
@@ -263,7 +306,7 @@ class RealBooksSegmentResolver {
             cid: row.cid,
             segid: row.segid,
             company_name: row.company_name,
-            firm_name: row.firm_name,
+            firm_name: row.firm_name || resolvedFirm,
             brand: row.brand,
             sname: row.sname,
             segment_name: row.segment_name,
@@ -293,7 +336,7 @@ class RealBooksSegmentResolver {
             cid: row.cid,
             segid: row.segid,
             company_name: row.company_name,
-            firm_name: row.firm_name,
+            firm_name: row.firm_name || resolvedFirm,
             brand: row.brand,
             sname: row.sname,
             segment_name: row.segment_name,
@@ -320,7 +363,7 @@ class RealBooksSegmentResolver {
             cid: row.cid,
             segid: row.segid,
             company_name: row.company_name,
-            firm_name: row.firm_name,
+            firm_name: row.firm_name || resolvedFirm,
             brand: row.brand,
             sname: row.sname,
             segment_name: row.segment_name,
@@ -335,22 +378,25 @@ class RealBooksSegmentResolver {
       console.warn('[RealBooksSegmentResolver] Segment resolution query error:', err.message);
     }
 
-    // Default Fallback (Hero Hubli WS_Demo / Default from config)
+    // Dynamic Default Fallback (never say Hero Hubli for non-Hero vehicles!)
     const defaultCid = env.realbooks?.cid || '6460';
     const defaultSegid = env.realbooks?.segid || '6476';
+    const displayBrand = resolvedBrand || 'Dealership';
+    const displayFirm = resolvedFirm || (displayBrand === 'ATHER ENERGY' || displayBrand === 'TATA MOTORS' ? 'Bellad Enterprises Pvt Ltd' : displayBrand === 'MG MOTORS' ? 'Bellad and company pvt ltd' : 'Bellad and Company');
+    const displaySegName = `${displayBrand} ${resolvedCity || 'Hubli'} ${targetCategoryType === 'sale' ? 'SR' : 'WS'}`;
 
     return {
       cid: defaultCid,
       segid: defaultSegid,
-      company_name: 'Bellad and Company_Demo',
-      firm_name: 'Bellad and Company',
-      brand: resolvedBrand || 'Hero',
-      sname: 'HHWS_D',
-      segment_name: 'Hero Hubli WS_Demo (Default Fallback)',
+      company_name: displayFirm,
+      firm_name: displayFirm,
+      brand: displayBrand,
+      sname: `${displayBrand.slice(0, 3).toUpperCase()}_${(resolvedCity || 'HUB').slice(0, 3).toUpperCase()}`,
+      segment_name: displaySegName,
       city: resolvedCity || 'Hubli',
       model_matched: resolvedModel,
       category_matched: targetCategoryType,
-      resolution_source: 'default_fallback',
+      resolution_source: 'dynamic_fallback',
     };
   }
 

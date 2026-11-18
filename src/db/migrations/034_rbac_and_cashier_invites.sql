@@ -85,7 +85,7 @@ ON CONFLICT DO NOTHING;
 -- 3. Expand Users Table Role Check Constraint
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check
-  CHECK (role IN ('cashier', 'branch_manager', 'regional_admin', 'admin', 'super_admin'));
+  CHECK (role IN ('cashier', 'branch_manager', 'regional_admin', 'admin', 'super_admin', 'director', 'manager'));
 
 -- 4. User Invites Table (Cashier Self-Service Tokenized Invites Flow)
 CREATE TABLE IF NOT EXISTS user_invites (

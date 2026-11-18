@@ -42,10 +42,19 @@ BEGIN
     ALTER TABLE points_ledger ADD COLUMN IF NOT EXISTS created_by INTEGER;
     ALTER TABLE points_ledger ALTER COLUMN type DROP NOT NULL;
     ALTER TABLE points_ledger ALTER COLUMN points DROP NOT NULL;
+
+    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_prevent_points_ledger_modification') THEN
+      ALTER TABLE points_ledger DISABLE TRIGGER trg_prevent_points_ledger_modification;
+    END IF;
+
     UPDATE points_ledger SET entry_id = id WHERE entry_id IS NULL AND id IS NOT NULL;
     UPDATE points_ledger SET id = entry_id WHERE id IS NULL AND entry_id IS NOT NULL;
     UPDATE points_ledger SET cashier_id = created_by WHERE cashier_id IS NULL AND created_by IS NOT NULL;
     UPDATE points_ledger SET created_by = cashier_id WHERE created_by IS NULL AND cashier_id IS NOT NULL;
+
+    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_prevent_points_ledger_modification') THEN
+      ALTER TABLE points_ledger ENABLE TRIGGER trg_prevent_points_ledger_modification;
+    END IF;
 
     -- Harmonize sync trigger for cashier_id/created_by and type/transaction_type
     CREATE OR REPLACE FUNCTION public.sync_points_ledger_id_columns()
@@ -102,6 +111,7 @@ BEGIN
   -- 7. otp_requests harmonization
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'otp_requests') THEN
     ALTER TABLE otp_requests ADD COLUMN IF NOT EXISTS otp_id INTEGER;
+    ALTER TABLE otp_requests ADD COLUMN IF NOT EXISTS id INTEGER;
     ALTER TABLE otp_requests ADD COLUMN IF NOT EXISTS purpose VARCHAR(100);
     ALTER TABLE otp_requests ADD COLUMN IF NOT EXISTS attempts INTEGER DEFAULT 0;
     UPDATE otp_requests SET otp_id = id WHERE otp_id IS NULL AND id IS NOT NULL;

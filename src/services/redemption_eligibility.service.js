@@ -19,12 +19,12 @@ const { pool } = require('../config/db');
  */
 class RedemptionEligibilityService {
   /**
-   * Derives locked/eligible/expired from two date anchors.
-   * Pure function — no DB access, testable independently.
+   * Derives locked/eligible from anchor date.
+   * Bellad & Co points NEVER expire.
    *
    * @param {Date|null} anchorDate  purchase_date (or last redemption date)
    * @param {Date}      now         current timestamp (injectable for testing)
-   * @returns {{ status, eligible_at, expires_at }}
+   * @returns {{ status, eligible_at, expires_at: null }}
    */
   static computeStatusFromAnchor(anchorDate, now = new Date()) {
     if (!anchorDate) {
@@ -36,27 +36,20 @@ class RedemptionEligibilityService {
     const eligible_at = new Date(anchor);
     eligible_at.setMonth(eligible_at.getMonth() + 12);
 
-    const expires_at = new Date(anchor);
-    expires_at.setMonth(expires_at.getMonth() + 24);
-
-    if (now < eligible_at) return { status: 'locked', eligible_at, expires_at };
-    if (now < expires_at) return { status: 'eligible', eligible_at, expires_at };
-    return { status: 'expired', eligible_at, expires_at };
+    if (now < eligible_at) return { status: 'locked', eligible_at, expires_at: null };
+    return { status: 'eligible', eligible_at, expires_at: null };
   }
 
   /**
    * Returns the full redemption status for a specific vehicle.
-   *
-   * Anchor priority:
-   *   1. vehicles.redemption_expires_at / redemption_eligible_at (set after a redemption)
-   *   2. vehicles.purchase_date (original anchor for vehicles that have never redeemed)
+   * Points NEVER expire.
    *
    * @returns {{
-   *   status: 'locked'|'eligible'|'expired',
+   *   status: 'locked'|'eligible',
    *   eligible_at: Date|null,
-   *   expires_at: Date|null,
-   *   points_balance: number,         // non-expired points only
-   *   expired_points: number,         // points that have already forfeited
+   *   expires_at: null,
+   *   points_balance: number,
+   *   expired_points: 0,
    *   vehicle_id: number,
    *   registration_number: string,
    *   purchase_date: Date|null,
@@ -87,17 +80,12 @@ class RedemptionEligibilityService {
       if (!isNaN(d.getTime())) purchaseDateObj = d;
     }
 
-    // 2. Determine eligibility & expiration dates
+    // 2. Determine eligibility date (12 months from purchase/anchor date)
     let eligible_at = vehicle.redemption_eligible_at ? new Date(vehicle.redemption_eligible_at) : null;
-    let expires_at = vehicle.redemption_expires_at ? new Date(vehicle.redemption_expires_at) : null;
 
     if (!eligible_at && purchaseDateObj) {
       eligible_at = new Date(purchaseDateObj);
       eligible_at.setMonth(eligible_at.getMonth() + 12);
-    }
-    if (!expires_at && purchaseDateObj) {
-      expires_at = new Date(purchaseDateObj);
-      expires_at.setMonth(expires_at.getMonth() + 24);
     }
 
     const now = new Date();
@@ -105,8 +93,6 @@ class RedemptionEligibilityService {
 
     if (!purchaseDateObj && !vehicle.redemption_eligible_at) {
       baseStatus = 'eligible';
-    } else if (expires_at && now >= expires_at) {
-      baseStatus = 'expired';
     } else if (eligible_at && now >= eligible_at) {
       baseStatus = 'eligible';
     } else if (vehicle.redemption_status === 'eligible') {
@@ -115,11 +101,10 @@ class RedemptionEligibilityService {
       baseStatus = 'locked';
     }
 
-    // 4. Compute live non-expired points balance for this vehicle
+    // 4. Compute live points balance for this vehicle (Points Never Expire!)
     const balanceRes = await pool.query(
       `SELECT
-         COALESCE(SUM(CASE WHEN pl.created_at > NOW() - INTERVAL '24 months' AND pl.points > 0 THEN pl.points ELSE 0 END), 0) AS non_expired_earned,
-         COALESCE(SUM(CASE WHEN pl.created_at <= NOW() - INTERVAL '24 months' AND pl.points > 0 THEN pl.points ELSE 0 END), 0) AS expired_earned,
+         COALESCE(SUM(CASE WHEN pl.points > 0 THEN pl.points ELSE 0 END), 0) AS total_earned,
          COALESCE(SUM(CASE WHEN pl.points < 0 THEN pl.points ELSE 0 END), 0) AS total_deductions
        FROM points_ledger pl
        WHERE pl.vehicle_id = $1 AND pl.tenant_id = $2 AND pl.type != 'expire';`,
@@ -127,13 +112,12 @@ class RedemptionEligibilityService {
     );
 
     const row = balanceRes.rows[0];
-    const nonExpiredEarned = parseInt(row.non_expired_earned, 10);
-    const expiredEarned = parseInt(row.expired_earned, 10);
+    const totalEarned = parseInt(row.total_earned, 10);
     const totalDeductions = Math.abs(parseInt(row.total_deductions, 10));
 
-    // Apply deductions to non-expired balance first (FIFO: oldest redeemed first)
-    const points_balance = Math.max(0, nonExpiredEarned - totalDeductions);
-    const expired_points = expiredEarned;
+    // Points balance (Never expires!)
+    const points_balance = Math.max(0, totalEarned - totalDeductions);
+    const expired_points = 0;
 
     // ACCESSORIES EXEMPTION: Accessories redemption is allowed ANYTIME without the 12-month lock!
     const isAccessories = ['accessories', 'accessory'].includes(String(category || '').trim().toLowerCase());
@@ -156,16 +140,8 @@ class RedemptionEligibilityService {
         ? eligible_at.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
         : '—';
       message = `Points are locked for Service / Sales until ${eligibleStr}. (Accessories redemption is unlocked anytime).`;
-    } else if (status === 'eligible') {
-      const expiresStr = expires_at
-        ? expires_at.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
-        : '—';
-      message = `Eligible to redeem! Valid until ${expiresStr} (${points_balance.toLocaleString()} pts available).`;
     } else {
-      const expiredStr = expires_at
-        ? expires_at.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
-        : '—';
-      message = `Points expired on ${expiredStr}. All accumulated points have been permanently forfeited.`;
+      message = `Eligible to redeem! (${points_balance.toLocaleString()} pts available - Points never expire).`;
     }
 
     return {
@@ -175,11 +151,11 @@ class RedemptionEligibilityService {
       purchase_date: vehicle.purchase_date,
       status,
       base_status: baseStatus,
-      accessories_eligible: baseStatus !== 'expired' && points_balance > 0,
+      accessories_eligible: points_balance > 0,
       eligible_at: eligible_at?.toISOString() ?? null,
-      expires_at: expires_at?.toISOString() ?? null,
+      expires_at: null,
       points_balance,
-      expired_points,
+      expired_points: 0,
       message,
     };
   }
@@ -241,49 +217,37 @@ class RedemptionEligibilityService {
       `UPDATE vehicles
        SET redemption_status        = $1,
            redemption_eligible_at   = COALESCE(redemption_eligible_at, $2),
-           redemption_expires_at    = $3,
+           redemption_expires_at    = NULL,
            redemption_notified_3m   = FALSE,
            redemption_notified_1m   = FALSE,
            updated_at               = NOW()
-       WHERE vehicle_id = $4 AND tenant_id = $5;`,
-      [newStatus, (eligible_at ? eligible_at.toISOString() : anchor.toISOString()), newExpiresAt.toISOString(), vehicleId, tenantId]
+       WHERE vehicle_id = $3 AND tenant_id = $4;`,
+      [newStatus, (eligible_at ? eligible_at.toISOString() : anchor.toISOString()), vehicleId, tenantId]
     );
   }
 
   /**
-   * Updates the cached `redemption_status` column on all vehicles for a tenant
-   * based on the current date vs. their stored eligible_at / expires_at.
-   *
-   * Intended to be called by the daily cron job.
-   * Returns counts of vehicles moved into each status.
+   * Updates the cached `redemption_status` column on all vehicles for a tenant.
+   * Locked → Eligible (12 months passed).
+   * Points never expire. Any vehicles previously marked 'expired' are restored to 'eligible'.
    *
    * @param {string} tenantId
-   * @returns {{ locked: number, eligible: number, expired: number }}
+   * @returns {{ to_eligible: number, to_expired: 0 }}
    */
   static async refreshAllVehicleStatuses(tenantId) {
     const now = new Date().toISOString();
 
-    // Transition: locked → eligible (12 months passed)
+    // Transition: locked or expired → eligible (12 months passed or points restored)
     const toEligible = await pool.query(
       `UPDATE vehicles
-       SET redemption_status = 'eligible', updated_at = NOW()
+       SET redemption_status = 'eligible',
+           redemption_expires_at = NULL,
+           updated_at = NOW()
        WHERE tenant_id = $1
-         AND redemption_status = 'locked'
-         AND purchase_date IS NOT NULL
-         AND redemption_eligible_at IS NOT NULL
-         AND redemption_eligible_at <= $2
-       RETURNING vehicle_id;`,
-      [tenantId, now]
-    );
-
-    // Transition: eligible → expired (24 months passed)
-    const toExpired = await pool.query(
-      `UPDATE vehicles
-       SET redemption_status = 'expired', updated_at = NOW()
-       WHERE tenant_id = $1
-         AND redemption_status = 'eligible'
-         AND redemption_expires_at IS NOT NULL
-         AND redemption_expires_at <= $2
+         AND (
+           (redemption_status = 'locked' AND redemption_eligible_at IS NOT NULL AND redemption_eligible_at <= $2)
+           OR redemption_status = 'expired'
+         )
        RETURNING vehicle_id;`,
       [tenantId, now]
     );
@@ -292,7 +256,7 @@ class RedemptionEligibilityService {
     await pool.query(
       `UPDATE vehicles
        SET redemption_eligible_at = (purchase_date + INTERVAL '12 months')::TIMESTAMPTZ,
-           redemption_expires_at  = (purchase_date + INTERVAL '24 months')::TIMESTAMPTZ,
+           redemption_expires_at  = NULL,
            updated_at = NOW()
        WHERE tenant_id = $1
          AND purchase_date IS NOT NULL
@@ -302,91 +266,29 @@ class RedemptionEligibilityService {
 
     return {
       to_eligible: toEligible.rowCount,
-      to_expired: toExpired.rowCount,
+      to_expired: 0,
     };
   }
 
   /**
-   * Writes forfeiture ledger entries ('expire' type, negative points) for all
-   * points_ledger batches that are older than 24 months and have not yet been
-   * written off.
-   *
-   * A batch is considered written off if there is already an 'expire' entry
-   * with the same vehicle_id referencing the original entry via source_ref.
-   *
-   * This function is idempotent — safe to run multiple times.
+   * Points never expire per Bellad & Co business policy.
+   * No forfeiture entries are created.
    *
    * @param {string} tenantId
-   * @param {object} [dbClient]  optional pg client for transaction use
-   * @returns {number} number of forfeiture entries created
+   * @param {object} [dbClient]
+   * @returns {number} 0
    */
   static async writeOffExpiredBatches(tenantId, dbClient = pool) {
-    // Find all earning entries older than 24 months that haven't been forfeited
-    const expiredBatches = await dbClient.query(
-      `SELECT pl.entry_id, pl.customer_id, pl.vehicle_id, pl.branch_id, pl.points, pl.tenant_id
-       FROM points_ledger pl
-       WHERE pl.tenant_id = $1
-         AND pl.points > 0
-         AND pl.type IN ('earn_sale', 'earn_service', 'earn_referral', 'adjust')
-         AND pl.created_at <= NOW() - INTERVAL '24 months'
-         AND NOT EXISTS (
-           SELECT 1 FROM points_ledger ex
-           WHERE ex.tenant_id = pl.tenant_id
-             AND ex.type = 'expire'
-             AND ex.source_ref = 'Forfeiture: entry#' || pl.entry_id::text
-         );`,
-      [tenantId]
-    );
-
-    let count = 0;
-    for (const batch of expiredBatches.rows) {
-      // Insert a forfeiture entry (negative points) to offset the original earning
-      await dbClient.query(
-        `INSERT INTO points_ledger (customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, tenant_id)
-         VALUES ($1, $2, $3, 'expire', 'expiry', $4, $5, $6);`,
-        [
-          batch.customer_id,
-          batch.vehicle_id || null,
-          batch.branch_id || null,
-          -batch.points, // Reverse the earning
-          `Forfeiture: entry#${batch.entry_id}`,
-          tenantId,
-        ]
-      );
-      count++;
-    }
-
-    return count;
+    // Points never expire — writeOff is permanently disabled
+    return 0;
   }
 
   /**
-   * Returns vehicles whose expiry date falls within a given number of days from now.
-   * Used by the cron job to identify which customers to send reminder notifications.
-   *
-   * @param {string} tenantId
-   * @param {number} daysAhead  e.g. 90 (3 months) or 30 (1 month)
-   * @param {'notified_3m'|'notified_1m'} notifiedFlag  column to check/set
-   * @returns {Array} rows with vehicle_id, customer_id, registration_number, expires_at
+   * Returns vehicles nearing expiry. Points never expire, returns empty array.
    */
   static async getVehiclesNearingExpiry(tenantId, daysAhead, notifiedFlag) {
-    const flagColumn = notifiedFlag === 'notified_3m'
-      ? 'redemption_notified_3m'
-      : 'redemption_notified_1m';
-
-    const res = await pool.query(
-      `SELECT v.vehicle_id, v.customer_id, v.chassis_no AS registration_number,
-              v.redemption_expires_at, v.redemption_status
-       FROM vehicles v
-       WHERE v.tenant_id = $1
-         AND v.redemption_status = 'eligible'
-         AND v.redemption_expires_at IS NOT NULL
-         AND v.redemption_expires_at <= NOW() + ($2 || ' days')::INTERVAL
-         AND v.redemption_expires_at > NOW()
-         AND ${flagColumn} = FALSE;`,
-      [tenantId, daysAhead]
-    );
-
-    return res.rows;
+    // Points never expire
+    return [];
   }
 
   /**

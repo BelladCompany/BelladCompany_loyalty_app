@@ -25,11 +25,11 @@ const useSsl =
       );
 
 const poolOptions = {
-  max: parseInt(process.env.DB_POOL_MAX || '25', 10),
-  min: parseInt(process.env.DB_POOL_MIN || '2', 10),
+  max: parseInt(process.env.DB_POOL_MAX || '50', 10),
+  min: parseInt(process.env.DB_POOL_MIN || '5', 10),
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
-  statement_timeout: 30000,
+  connectionTimeoutMillis: 10000,
+  statement_timeout: 45000,
 };
 
 const poolConfig = connectionString

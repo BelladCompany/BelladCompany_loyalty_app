@@ -7,3 +7,5 @@ export { CustomerSummaryCard } from './CustomerSummaryCard';
 export { ConfirmationModal } from './ConfirmationModal';
 export { ToastProvider, useToast } from './Toast';
 export { Skeleton } from './Skeleton';
+export { CopyButton } from './CopyButton';
+

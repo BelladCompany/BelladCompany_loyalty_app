@@ -16,4 +16,20 @@ router.post('/register', authenticateToken, requireRole(['admin']), validate(reg
 // Protected route: Current user details
 router.get('/me', authenticateToken, AuthController.me);
 
+// Protected route: Validate active single-session (used by client heartbeat & tab focus checks)
+router.get('/validate-session', authenticateToken, (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    data: {
+      valid: true,
+      user_id: req.user?.id || req.user?.user_id,
+      username: req.user?.username,
+      sessionId: req.user?.sessionId,
+    },
+  });
+});
+
+// Protected route: Explicit user logout (clears active session in database)
+router.post('/logout', authenticateToken, AuthController.logout);
+
 module.exports = router;

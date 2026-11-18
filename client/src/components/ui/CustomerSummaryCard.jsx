@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, Phone, Car, Award, ShieldCheck, CheckCircle2, PlusCircle, Lock, Sparkles } from 'lucide-react';
 import StatusBadge from './StatusBadge';
+import CopyButton from './CopyButton';
 
 /**
  * Clean Light Mode Customer Summary Card
@@ -29,21 +30,40 @@ export const CustomerSummaryCard = ({
   let eligibleDateStr = '';
 
   if (vehicles.length > 0) {
-    for (const v of vehicles) {
+    // If ANY linked vehicle is eligible (or bought >= 12 months ago), redemption is unlocked!
+    const hasEligibleVehicle = vehicles.some((v) => {
+      if (v.redemption_status === 'eligible') return true;
       const rawDate = v.purchase_date || v.dms_invoice_date || v.purchaseDate;
-      if (rawDate) {
-        const pDate = new Date(rawDate);
-        if (!isNaN(pDate.getTime())) {
-          const eligibleAt = new Date(pDate);
-          eligibleAt.setMonth(eligibleAt.getMonth() + 12);
-          if (new Date() < eligibleAt) {
-            redemptionEligible = false;
-            eligibleDateStr = eligibleAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-            lockReason = `Redemption is locked until 12 months after vehicle purchase date (Eligible on ${eligibleDateStr}). Points can still be earned for service!`;
-            break;
-          }
-        }
+      if (!rawDate) return true; // No purchase date = active / eligible
+      const pDate = new Date(rawDate);
+      if (isNaN(pDate.getTime())) return true;
+      const eligibleAt = new Date(pDate);
+      eligibleAt.setMonth(eligibleAt.getMonth() + 12);
+      return new Date() >= eligibleAt;
+    });
+
+    if (!hasEligibleVehicle) {
+      redemptionEligible = false;
+      const unlockDates = vehicles
+        .map((v) => {
+          const rawDate = v.purchase_date || v.dms_invoice_date || v.purchaseDate;
+          if (!rawDate) return null;
+          const p = new Date(rawDate);
+          if (isNaN(p.getTime())) return null;
+          p.setMonth(p.getMonth() + 12);
+          return p;
+        })
+        .filter(Boolean)
+        .sort((a, b) => a - b);
+
+      if (unlockDates.length > 0) {
+        eligibleDateStr = unlockDates[0].toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        lockReason = `Redemption is locked until 12 months after vehicle purchase date (Eligible on ${eligibleDateStr}). Points can still be earned for service!`;
+      } else {
+        lockReason = 'Redemption is locked until 12 months after vehicle purchase date.';
       }
+    } else {
+      redemptionEligible = true;
     }
   } else if (customer.dms_invoice_date || customer.purchase_date) {
     const rawDate = customer.dms_invoice_date || customer.purchase_date;
@@ -66,15 +86,19 @@ export const CustomerSummaryCard = ({
         {/* Left: Customer Identity & Key Badges */}
         <div className="flex-1 space-y-3 sm:space-y-4">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-slate-900 text-white font-mono font-bold text-xs sm:text-sm rounded-xl shadow-xs shrink-0">
-              {customer.customer_id}
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-slate-900 text-white font-mono font-bold text-xs sm:text-sm rounded-xl shadow-xs shrink-0 select-text">
+              <span>{customer.customer_id}</span>
+              <CopyButton text={customer.customer_id} size="xs" className="text-slate-300 hover:text-white hover:bg-slate-800" title="Copy Customer ID" />
             </span>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight break-words">
-              {customer.name || customer.customer_name}
-            </h2>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight break-words select-text">
+                {customer.name || customer.customer_name}
+              </h2>
+              <CopyButton text={customer.name || customer.customer_name} size="sm" title="Copy Customer Name" />
+            </div>
             <StatusBadge value={tierName} type="tier" />
             {(customer.pr_status || customer.billing_status) && (
-              <span className="inline-flex items-center text-[10px] sm:text-xs font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 uppercase tracking-wider shrink-0 whitespace-nowrap leading-none">
+              <span className="inline-flex items-center text-[10px] sm:text-xs font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 uppercase tracking-wider shrink-0 whitespace-nowrap leading-none select-text">
                 PR Status: {customer.pr_status || customer.billing_status}
               </span>
             )}
@@ -88,9 +112,10 @@ export const CustomerSummaryCard = ({
                 phones.map((p, idx) => (
                   <span
                     key={idx}
-                    className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-xs sm:text-sm text-slate-800"
+                    className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-0.5 sm:py-1 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-xs sm:text-sm text-slate-800 select-text"
                   >
-                    {p.phone_number || p}
+                    <span>{p.phone_number || p}</span>
+                    <CopyButton text={p.phone_number || p} size="xs" title="Copy Phone Number" />
                     {p.is_primary && <span className="ml-1 text-[11px] sm:text-xs text-indigo-600 font-extrabold">(Primary)</span>}
                   </span>
                 ))
@@ -104,7 +129,8 @@ export const CustomerSummaryCard = ({
               <div className="flex items-center gap-1.5 sm:gap-2 bg-amber-50 border border-amber-200 text-amber-900 px-3 py-0.5 sm:py-1 rounded-xl">
                 <ShieldCheck className="w-4 h-4 text-amber-600 flex-shrink-0" />
                 <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-700">Aadhaar:</span>
-                <span className="font-mono font-bold text-xs sm:text-sm text-slate-900">{aadhaarDisplay}</span>
+                <span className="font-mono font-bold text-xs sm:text-sm text-slate-900 select-text">{aadhaarDisplay}</span>
+                <CopyButton text={aadhaarDisplay} size="xs" title="Copy Aadhaar" />
               </div>
             )}
           </div>
@@ -117,9 +143,10 @@ export const CustomerSummaryCard = ({
               vehicles.map((v, idx) => (
                 <span
                   key={idx}
-                  className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-indigo-50 border border-indigo-200/80 rounded-xl text-xs font-bold text-indigo-800"
+                  className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-0.5 sm:py-1 bg-indigo-50 border border-indigo-200/80 rounded-xl text-xs font-bold text-indigo-800 select-text"
                 >
-                  {v.registration_number || v.reg_no || v.vin || v.chassis_no} {v.model ? `(${v.model})` : ''}
+                  <span>{v.registration_number || v.reg_no || v.vin || v.chassis_no} {v.model ? `(${v.model})` : ''}</span>
+                  <CopyButton text={v.registration_number || v.reg_no || v.vin || v.chassis_no} size="xs" title="Copy Registration/VIN" />
                 </span>
               ))
             ) : (

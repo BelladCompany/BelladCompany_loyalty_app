@@ -46,8 +46,8 @@ const env = {
     accessKey: process.env.REALBOOKS_ACCESS_KEY || realbooksApiKey || 'rb_access_test_key',
     secretKey: process.env.REALBOOKS_SECRET_KEY || 'rb_secret_test_key',
     emailId: process.env.REALBOOKS_EMAIL || 'accounts@bellad.in',
-    cid: process.env.REALBOOKS_CID || '1001',
-    segid: process.env.REALBOOKS_SEGID || '1',
+    cid: process.env.REALBOOKS_CID || '6460',
+    segid: process.env.REALBOOKS_SEGID || '6476',
   },
   db: {
     connectionString: process.env.DATABASE_URL,

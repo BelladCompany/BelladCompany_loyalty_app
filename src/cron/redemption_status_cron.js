@@ -48,9 +48,8 @@ async function runRedemptionStatusCron() {
       try {
         const statusCounts = await RedemptionEligibilityService.refreshAllVehicleStatuses(tenantId);
         totalToEligible += statusCounts.to_eligible;
-        totalToExpired  += statusCounts.to_expired;
         console.log(
-          `      ✅ Status refresh: ${statusCounts.to_eligible} → eligible, ${statusCounts.to_expired} → expired`
+          `      ✅ Status refresh: ${statusCounts.to_eligible} → eligible (Points never expire)`
         );
       } catch (err) {
         console.error(`      ❌ Status refresh failed for tenant '${tenantId}':`, err.message);

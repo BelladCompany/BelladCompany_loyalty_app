@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { isFeatureEnabled } from '../config/versionConfig';
 import {
   BarChart3,
   Download,
@@ -22,6 +23,8 @@ import {
   Sparkles,
   ShoppingBag,
   Layers,
+  Lock,
+  Shield,
 } from 'lucide-react';
 import ApiService from '../services/api';
 import { useToast, Skeleton } from '../components/ui';
@@ -47,8 +50,56 @@ export default function ReportsScreen({ user }) {
   const [branches, setBranches] = useState([]);
   const [brands, setBrands] = useState([]);
 
-  // Active Parameter Filters
-  const [selectedBranch, setSelectedBranch] = useState('');
+  // Resolve current active user & elevated privileges
+  const currentUser = user || ApiService.getUser();
+  const isAdminOrDirector = useMemo(() => {
+    if (!currentUser) return false;
+    const role = (currentUser.role || '').toLowerCase();
+    const username = (currentUser.username || '').toLowerCase();
+    return (
+      ['admin', 'super_admin', 'director', 'management'].includes(role) ||
+      ['admin', 'director', 'agstya', 'agastya'].includes(username)
+    );
+  }, [currentUser]);
+
+  // Branch Manager assigned branch info
+  const assignedBranchId = currentUser?.branch_id ? String(currentUser.branch_id) : '';
+  const assignedBranchObj = useMemo(() => {
+    if (!assignedBranchId) return null;
+    return branches.find((b) => String(b.id || b.branch_id) === String(assignedBranchId)) || null;
+  }, [branches, assignedBranchId]);
+
+  const assignedBranchName =
+    assignedBranchObj?.name ||
+    assignedBranchObj?.branch_name ||
+    currentUser?.branch_name ||
+    (assignedBranchId ? `Branch #${assignedBranchId}` : 'Assigned Branch');
+
+  const assignedBranchCity =
+    assignedBranchObj?.address ||
+    assignedBranchObj?.branch_city ||
+    currentUser?.branch_city ||
+    '';
+
+  // Active Parameter Filters: locked to assigned branch for branch managers
+  const [selectedBranch, setSelectedBranch] = useState(() => {
+    const u = user || ApiService.getUser();
+    const isElevated =
+      ['admin', 'super_admin', 'director', 'management'].includes((u?.role || '').toLowerCase()) ||
+      ['admin', 'director', 'agstya', 'agastya'].includes((u?.username || '').toLowerCase());
+    if (!isElevated && u?.branch_id) {
+      return String(u.branch_id);
+    }
+    return '';
+  });
+
+  // Ensure selectedBranch stays synchronized with assigned branch for branch managers
+  useEffect(() => {
+    if (!isAdminOrDirector && assignedBranchId) {
+      setSelectedBranch(assignedBranchId);
+    }
+  }, [isAdminOrDirector, assignedBranchId]);
+
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -93,7 +144,11 @@ export default function ReportsScreen({ user }) {
 
   const buildFilterParams = useCallback(() => {
     const params = {};
-    if (selectedBranch && selectedBranch !== 'all') params.branch_id = selectedBranch;
+    // Strictly lock branch_id for non-admin/non-director users (branch managers)
+    const effectiveBranch = !isAdminOrDirector && assignedBranchId ? assignedBranchId : selectedBranch;
+    if (effectiveBranch && effectiveBranch !== 'all') {
+      params.branch_id = effectiveBranch;
+    }
     if (selectedBrand && selectedBrand !== 'all') {
       // Check if numeric brand ID or text brand name
       if (!isNaN(selectedBrand)) {
@@ -106,7 +161,7 @@ export default function ReportsScreen({ user }) {
     if (startDate) params.start_date = startDate;
     if (endDate) params.end_date = endDate;
     return params;
-  }, [selectedBranch, selectedBrand, selectedCategory, startDate, endDate]);
+  }, [isAdminOrDirector, assignedBranchId, selectedBranch, selectedBrand, selectedCategory, startDate, endDate]);
 
   const fetchReportData = useCallback(async () => {
     setLoading(true);
@@ -192,7 +247,11 @@ export default function ReportsScreen({ user }) {
   };
 
   const handleResetFilters = () => {
-    setSelectedBranch('');
+    if (!isAdminOrDirector && assignedBranchId) {
+      setSelectedBranch(assignedBranchId);
+    } else {
+      setSelectedBranch('');
+    }
     setSelectedBrand('');
     setSelectedCategory('');
     setStartDate('');
@@ -203,8 +262,21 @@ export default function ReportsScreen({ user }) {
   const handleExportCsv = async () => {
     const params = buildFilterParams();
     try {
-      await ApiService.downloadReportCsv('points-summary', params);
-      showSuccess('Dynamic report CSV exported successfully.');
+      const branchLabel = !isAdminOrDirector
+        ? assignedBranchName.toLowerCase().replace(/[^a-z0-9]/g, '_')
+        : selectedBranch
+        ? (branches.find((b) => String(b.id || b.branch_id) === String(selectedBranch))?.name || 'branch')
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '_')
+        : 'pan_dealership_all_branches';
+
+      const customFilename = `bellad_${branchLabel}_report_${new Date().toISOString().slice(0, 10)}.csv`;
+      await ApiService.downloadReportCsv('points-summary', params, customFilename);
+      showSuccess(
+        `Dynamic report CSV exported successfully for ${
+          !isAdminOrDirector ? assignedBranchName : selectedBranch ? 'selected branch' : 'all dealership branches'
+        }.`
+      );
     } catch (err) {
       showError(`CSV Export Error: ${err.message}`);
     }
@@ -300,11 +372,24 @@ export default function ReportsScreen({ user }) {
               <BarChart3 className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                Report &amp; Analytics
-              </h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  Report &amp; Analytics
+                </h1>
+                {isAdminOrDirector ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-mono">
+                    <Shield className="w-3 h-3 text-emerald-600" /> Director &amp; Admin All-Branch Access
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-mono">
+                    <Lock className="w-3 h-3 text-indigo-600" /> {assignedBranchName} Manager View
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Dynamic customer redemption tracking across all Karnataka branches, cities, brands, and categories.
+                {isAdminOrDirector
+                  ? 'Consolidated pan-dealership redemption tracking and report generation across all Karnataka branches (Hubballi, Belagavi, Dharwad, Bangalore, etc.).'
+                  : `Dedicated operational redemption and points report generation scoped exclusively to ${assignedBranchName}${assignedBranchCity ? ` (${assignedBranchCity})` : ''}.`}
               </p>
             </div>
           </div>
@@ -328,12 +413,12 @@ export default function ReportsScreen({ user }) {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
+            <span>{isAdminOrDirector && !selectedBranch ? 'Export All Branches CSV' : 'Export Branch CSV'}</span>
           </button>
         </div>
       </div>
 
-      {/* ─── 2. Parameter Filters (Fully Unlocked & Interactive) ─────────── */}
+      {/* ─── 2. Parameter Filters (Branch-Scoped for Managers, All-Access for Admin/Director) ─── */}
       <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -374,22 +459,59 @@ export default function ReportsScreen({ user }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5 text-xs">
           {/* Dealership Branch Filter */}
           <div className="lg:col-span-2">
-            <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-              <Building2 className="w-3 h-3 text-indigo-600" />
-              <span>Dealership Branch</span>
+            <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Building2 className="w-3 h-3 text-indigo-600" />
+                <span>Dealership Branch</span>
+              </span>
+              {!isAdminOrDirector ? (
+                <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md font-mono font-bold flex items-center gap-1 border border-amber-200/60">
+                  <Lock className="w-2.5 h-2.5 text-amber-600" /> Branch Manager Scoped
+                </span>
+              ) : (
+                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md font-mono font-bold flex items-center gap-1 border border-emerald-200/60">
+                  <Shield className="w-2.5 h-2.5 text-emerald-600" /> All-Branch Mode
+                </span>
+              )}
             </label>
-            <select
-              value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
-              className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white focus:bg-white focus:ring-2 focus:ring-indigo-500 font-medium text-slate-800 transition"
-            >
-              <option value="">All Dealership Branches ({branches.length} Locations)</option>
-              {branches.map((b) => (
-                <option key={b.id || b.branch_id} value={b.id || b.branch_id}>
-                  {b.name || b.branch_name} {b.address || b.branch_city ? `(${b.address || b.branch_city})` : ''}
-                </option>
-              ))}
-            </select>
+
+            {!isAdminOrDirector ? (
+              <div>
+                <div className="p-2.5 text-xs rounded-xl border border-indigo-200 bg-indigo-50/60 font-bold text-indigo-950 flex items-center justify-between">
+                  <div className="truncate flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                    <span className="truncate">{assignedBranchName}</span>
+                    {assignedBranchCity && (
+                      <span className="text-indigo-700 font-medium shrink-0">({assignedBranchCity})</span>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 shrink-0 font-bold">
+                    Assigned
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  🔒 Locked to your assigned branch. Cross-branch reporting is restricted to Admin &amp; Director.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <select
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white focus:bg-white focus:ring-2 focus:ring-indigo-500 font-medium text-slate-800 transition"
+                >
+                  <option value="">🌐 All Dealership Branches ({branches.length} Locations - Network Wide)</option>
+                  {branches.map((b) => (
+                    <option key={b.id || b.branch_id} value={b.id || b.branch_id}>
+                      {b.name || b.branch_name} {b.address || b.branch_city ? `(${b.address || b.branch_city})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Select 'All Dealership Branches' for network-wide consolidated report or pick a specific branch.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Vehicle Brand Filter */}
@@ -429,7 +551,7 @@ export default function ReportsScreen({ user }) {
               <option value="bodyshop">🛠️ Bodyshop &amp; Repairs</option>
               <option value="accessory">🛍️ Accessories &amp; Spares</option>
               <option value="redemption">💎 Points Redemptions</option>
-              <option value="referral">👥 Referrals</option>
+              {isFeatureEnabled('referrals') && <option value="referral">👥 Referrals</option>}
               <option value="adjust">⚙️ Manual Adjustments</option>
             </select>
           </div>
@@ -696,10 +818,16 @@ export default function ReportsScreen({ user }) {
         <div className="p-4 sm:p-5 bg-slate-50/70 border-b border-slate-200/80 flex items-center justify-between flex-wrap gap-2">
           <div>
             <h3 className="text-sm font-black text-slate-900 tracking-tight">
-              Branch &amp; Brand Points &amp; Redemption Breakdown
+              {!isAdminOrDirector
+                ? `${assignedBranchName} Points & Redemption Breakdown`
+                : selectedBranch
+                ? `${branches.find((b) => String(b.id || b.branch_id) === String(selectedBranch))?.name || 'Branch'} Points & Redemption Breakdown`
+                : 'All-Branch Network Points & Redemption Breakdown'}
             </h3>
             <p className="text-xs text-slate-500">
-              Showing aggregated performance based on current parameter filters.
+              {!isAdminOrDirector
+                ? `Operational performance segment data scoped exclusively to ${assignedBranchName} (${assignedBranchCity || 'Karnataka'}).`
+                : 'Aggregated cross-dealership performance metrics across all Karnataka network branches or selected branch filter.'}
             </p>
           </div>
           <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-700">
@@ -789,10 +917,14 @@ export default function ReportsScreen({ user }) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <h3 className="text-sm font-black text-slate-900 tracking-tight">
-              Customer Activity Drilldown &amp; Recent Transactions
+              {!isAdminOrDirector
+                ? `${assignedBranchName} Activity & Transactions Drilldown`
+                : 'Customer Activity Drilldown & Recent Transactions'}
             </h3>
             <p className="text-xs text-slate-500">
-              Individual customer redemptions and point issuances matching your filter parameters.
+              {!isAdminOrDirector
+                ? `Customer point transactions and counter redemptions conducted at ${assignedBranchName}.`
+                : 'Individual customer redemptions and point issuances matching your filter parameters.'}
             </p>
           </div>
 

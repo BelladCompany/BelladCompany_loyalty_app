@@ -21,6 +21,7 @@ import CustomerRedemptionsScreen from './screens/CustomerRedemptionsScreen';
 import DirectorCommandCenter from './screens/DirectorCommandCenter';
 import UserManagementScreen from './screens/UserManagementScreen';
 import ApiService from './services/api';
+import { isFeatureEnabled, getAppVersion, setAppVersion } from './config/versionConfig';
 
 class BuilderErrorBoundary extends React.Component {
   constructor(props) {
@@ -78,6 +79,9 @@ class BuilderErrorBoundary extends React.Component {
 
 export function App() {
   const [user, setUser] = useState(ApiService.getUser());
+  const [sessionAlertMessage, setSessionAlertMessage] = useState(null);
+  const [sessionSwitchedNotice, setSessionSwitchedNotice] = useState(false);
+  const [appVersion, setAppVersionState] = useState(getAppVersion());
   const [activeTab, setActiveTab] = useState(() => {
     const u = ApiService.getUser();
     if (
@@ -99,7 +103,8 @@ export function App() {
   const isPublicReferralLead = path.startsWith('/refer/');
   const isPublicGiftClaim = path.startsWith('/gift/') || path.startsWith('/claim-gift/');
   const isPublicOffers = path.startsWith('/offers') || path.startsWith('/deals') || path.startsWith('/monthly-offers');
-  const isCustomerPortal = path.startsWith('/portal') || path.startsWith('/customer-portal');
+  const isCustomerPortalV2 = path.startsWith('/portalv2') || path.startsWith('/portal-v2') || path.startsWith('/customer-portal-v2');
+  const isCustomerPortal = isCustomerPortalV2 || path.startsWith('/portal') || path.startsWith('/customer-portal');
   const isEditorPath = path.startsWith('/editor') || path.startsWith('/studio');
   const isBuilderPath = path.startsWith('/builder') || path.startsWith('/app-builder') || path.startsWith('/create-app');
 
@@ -136,6 +141,67 @@ export function App() {
     }
   }, [isPublicBalancePass, isPublicReferralLead, isPublicGiftClaim, isPublicOffers, isCustomerPortal]);
 
+  // Listen for single-session invalidation (triggered when account is logged in from another browser/profile)
+  useEffect(() => {
+    const handleSessionSuperseded = (e) => {
+      const msg = e.detail?.message || 'Your account was logged in from another browser or device. For security reasons, concurrent logins are not permitted.';
+      ApiService.logout();
+      setUser(null);
+      setSessionAlertMessage(msg);
+    };
+
+    window.addEventListener('bac_session_superseded', handleSessionSuperseded);
+    return () => window.removeEventListener('bac_session_superseded', handleSessionSuperseded);
+  }, []);
+
+  // Listen for Version 1 (Core) vs Version 2 (Full) edition changes
+  useEffect(() => {
+    const handleVersionChange = (e) => {
+      const newVer = e.detail?.version || getAppVersion();
+      setAppVersionState(newVer);
+      if (newVer === 'v1') {
+        if (['gift_cards', 'referrals'].includes(activeTab)) {
+          setActiveTab('dashboard');
+        }
+        if (isBuilderMode && isFeatureEnabled('builder', user)) {
+          setIsBuilderMode(false);
+          window.history.pushState({}, '', '/');
+        }
+      }
+    };
+    window.addEventListener('bac_version_changed', handleVersionChange);
+    return () => window.removeEventListener('bac_version_changed', handleVersionChange);
+  }, [activeTab, isBuilderMode]);
+
+  // Periodic heartbeat & tab-focus session check to instantly detect logins on another browser
+  useEffect(() => {
+    if (!user || isPublicBalancePass || isPublicReferralLead || isPublicGiftClaim || isPublicOffers || isCustomerPortal) return;
+
+    const checkActiveSession = async () => {
+      const token = ApiService.getToken();
+      if (!token) return;
+      try {
+        await ApiService.validateSession();
+      } catch (err) {
+        // ApiService request interceptor catches 401 SESSION_SUPERSEDED and dispatches event
+      }
+    };
+
+    // Heartbeat check every 10 seconds
+    const intervalId = setInterval(checkActiveSession, 10000);
+
+    // Instant check when switching to this tab/window
+    const handleFocus = () => {
+      checkActiveSession();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user, isPublicBalancePass, isPublicReferralLead, isPublicGiftClaim, isPublicOffers, isCustomerPortal]);
+
   // Handle browser back/forward buttons for /editor & /builder navigation
   useEffect(() => {
     const handlePopState = () => {
@@ -168,11 +234,21 @@ export function App() {
 
   // Customer Portal route or logged-in customer role
   if (isCustomerPortal || user?.role === 'customer') {
-    return <CustomerPortalScreen />;
+    const forcedPortalVersion = isCustomerPortalV2 ? 'v2' : 'v1';
+    return (
+      <Suspense fallback={<ScreenLoader />}>
+        <CustomerPortalScreen portalVersion={forcedPortalVersion} />
+      </Suspense>
+    );
   }
 
-  const handleLoginSuccess = (loggedInUser) => {
+  const handleLoginSuccess = (loggedInUser, supersededPreviousSession) => {
+    setSessionAlertMessage(null);
     setUser(loggedInUser);
+    if (supersededPreviousSession) {
+      setSessionSwitchedNotice(true);
+      setTimeout(() => setSessionSwitchedNotice(false), 7000);
+    }
     if (
       loggedInUser?.role === 'director' ||
       loggedInUser?.role === 'management' ||
@@ -200,10 +276,16 @@ export function App() {
   };
 
   if (!user) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <LoginScreen
+        onLoginSuccess={handleLoginSuccess}
+        sessionAlert={sessionAlertMessage}
+        onClearSessionAlert={() => setSessionAlertMessage(null)}
+      />
+    );
   }
 
-  if (isBuilderMode) {
+  if (isBuilderMode && isFeatureEnabled('builder', user)) {
     return (
       <BuilderErrorBoundary
         onExit={() => {
@@ -271,7 +353,29 @@ export function App() {
   }
 
   return (
-    <SidebarLayout
+    <>
+      {sessionSwitchedNotice && (
+        <div className="fixed top-5 right-5 z-[9999] max-w-sm bg-slate-900/95 backdrop-blur-md text-white p-3.5 rounded-2xl shadow-2xl border border-slate-700/80 flex items-start gap-3 animate-fadeIn">
+          <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div className="flex-1 pr-2">
+            <p className="font-bold text-xs text-white">Active Session Assigned Here</p>
+            <p className="text-slate-300 text-[11px] leading-snug mt-0.5">
+              Any other active browser session with this account has been safely logged out.
+            </p>
+          </div>
+          <button
+            onClick={() => setSessionSwitchedNotice(false)}
+            className="text-slate-400 hover:text-white text-xs font-bold p-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      <SidebarLayout
       activeTab={activeTab}
       onTabChange={handleTabChange}
       user={user}
@@ -285,60 +389,63 @@ export function App() {
         setIsBuilderMode(true);
       }}
     >
-      {activeTab === 'director_command_center' ? (
-        <DirectorCommandCenter
-          user={user}
-          onSwitchToStaffView={() => setActiveTab('dashboard')}
-          onOpenUserManagement={() => setActiveTab('user_management')}
-        />
-      ) : activeTab === 'user_management' ? (
-        <UserManagementScreen user={user} />
-      ) : activeTab === 'dashboard' || activeTab === 'search' || activeTab === 'redemptions' ? (
-        <CashierDashboard
-          user={user}
-          activeTab={activeTab}
-          resetNonce={searchResetNonce}
-        />
-      ) : activeTab === 'customer_redemptions' ? (
-        isAdmin ? (
-          <CustomerRedemptionsScreen user={user} />
+      <Suspense fallback={<ScreenLoader />}>
+        {activeTab === 'director_command_center' ? (
+          <DirectorCommandCenter
+            user={user}
+            onSwitchToStaffView={() => setActiveTab('dashboard')}
+            onOpenUserManagement={() => setActiveTab('user_management')}
+          />
+        ) : activeTab === 'user_management' ? (
+          <UserManagementScreen user={user} />
+        ) : activeTab === 'dashboard' || activeTab === 'search' || activeTab === 'redemptions' ? (
+          <CashierDashboard
+            user={user}
+            activeTab={activeTab}
+            resetNonce={searchResetNonce}
+          />
+        ) : activeTab === 'customer_redemptions' ? (
+          isAdmin ? (
+            <CustomerRedemptionsScreen user={user} />
+          ) : (
+            <div className="p-8 bg-white rounded-3xl border border-rose-200 shadow-sm text-center max-w-lg mx-auto mt-12 space-y-4">
+              <h2 className="text-xl font-black text-slate-900">Restricted Admin Access</h2>
+              <p className="text-sm text-slate-600">
+                The Customer Redemptions list is restricted to Administrator privileges only.
+              </p>
+            </div>
+          )
+        ) : activeTab === 'gift_cards' && isFeatureEnabled('gift_cards', user) ? (
+          <GiftCardsScreen user={user} />
+        ) : activeTab === 'referrals' && isFeatureEnabled('referrals', user) ? (
+          <ReferralsScreen user={user} />
+        ) : activeTab === 'master_editor' ? (
+          <MasterRuleEditorScreen user={user} />
+        ) : activeTab === 'reports' ? (
+          <ReportsScreen user={user} />
+        ) : activeTab === 'kyc_approvals' ? (
+          isManager ? (
+            <CorrectionsQueueScreen />
+          ) : (
+            <KycApprovalsScreen />
+          )
+        ) : activeTab === 'corrections_queue' ? (
+          <CorrectionsQueueScreen />
+        ) : activeTab === 'tenants' ? (
+          <TenantManagementScreen user={user} />
+        ) : activeTab === 'admin' ? (
+          <AdminDuplicateScreen />
         ) : (
-          <div className="p-8 bg-white rounded-3xl border border-rose-200 shadow-sm text-center max-w-lg mx-auto mt-12 space-y-4">
-            <h2 className="text-xl font-black text-slate-900">Restricted Admin Access</h2>
-            <p className="text-sm text-slate-600">
-              The Customer Redemptions list is restricted to Administrator privileges only.
+          <div className="p-8 sonexo-glass rounded-3xl space-y-4">
+            <h2 className="text-xl font-bold text-white">Administration</h2>
+            <p className="text-sm text-slate-400">
+              Select a management view from the navigation menu.
             </p>
           </div>
-        )
-      ) : activeTab === 'gift_cards' ? (
-        <GiftCardsScreen user={user} />
-      ) : activeTab === 'referrals' ? (
-        <ReferralsScreen user={user} />
-      ) : activeTab === 'master_editor' ? (
-        <MasterRuleEditorScreen user={user} />
-      ) : activeTab === 'reports' ? (
-        <ReportsScreen user={user} />
-      ) : activeTab === 'kyc_approvals' ? (
-        isManager ? (
-          <CorrectionsQueueScreen />
-        ) : (
-          <KycApprovalsScreen />
-        )
-      ) : activeTab === 'corrections_queue' ? (
-        <CorrectionsQueueScreen />
-      ) : activeTab === 'tenants' ? (
-        <TenantManagementScreen user={user} />
-      ) : activeTab === 'admin' ? (
-        <AdminDuplicateScreen />
-      ) : (
-        <div className="p-8 sonexo-glass rounded-3xl space-y-4">
-          <h2 className="text-xl font-bold text-white">Administration</h2>
-          <p className="text-sm text-slate-400">
-            Select a management view from the navigation menu.
-          </p>
-        </div>
-      )}
+        )}
+      </Suspense>
     </SidebarLayout>
+    </>
   );
 }
 

@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import ApiService from '../../services/api';
+import CopyButton from '../ui/CopyButton';
+import { isFeatureEnabled, getAppVersion, setAppVersion } from '../../config/versionConfig';
 import {
   Search,
   LayoutDashboard,
@@ -39,6 +42,34 @@ export const SidebarLayout = ({
   children,
 }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [publishedConfig, setPublishedConfig] = useState(null);
+  const [appVersion, setAppVersionState] = useState(getAppVersion());
+
+  useEffect(() => {
+    const handleVerChange = (e) => {
+      setAppVersionState(e.detail?.version || getAppVersion());
+    };
+    window.addEventListener('bac_version_changed', handleVerChange);
+    return () => window.removeEventListener('bac_version_changed', handleVerChange);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    ApiService.getPublishedAppConfig(user?.tenant_id || 'bellad_and_company')
+      .then((res) => {
+        if (isMounted && res && res.data) {
+          setPublishedConfig(res.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.tenant_id]);
+
+  const dealershipName = publishedConfig?.theme_config?.dealership_name || 'Bellad CRM';
+  const logoUrl = publishedConfig?.theme_config?.logo_url || '/bellad-logo.png';
+  const tagline = publishedConfig?.theme_config?.tagline || 'Loyalty Platform';
   const isCashier = user?.role === 'cashier';
   const isManager = ['branch_manager', 'manager'].includes(user?.role);
   const isAccountsHead = ['accounts_head', 'account_head'].includes(user?.role);
@@ -144,6 +175,22 @@ export const SidebarLayout = ({
           },
         ];
 
+  // Dynamically filter sections based on Version 1 (Core) vs Version 2 (Full Suite)
+  const filteredNavSections = navSections
+    .map((section) => {
+      const items = section.items.filter((item) => isFeatureEnabled(item.id, user));
+      let groupLabel = section.group;
+      if (groupLabel === 'Rewards & Referrals') {
+        groupLabel = isFeatureEnabled('gift_cards', user) ? 'Rewards & Referrals' : 'Brand Offers';
+      }
+      return {
+        ...section,
+        group: groupLabel,
+        items,
+      };
+    })
+    .filter((section) => section.items.length > 0);
+
   const SidebarContent = ({ handleNavigate, handleLogout, isMobile = false }) => (
     <div className="flex flex-col h-full justify-between bg-white border-r border-slate-200/80">
       {/* Brand Header */}
@@ -179,9 +226,51 @@ export const SidebarLayout = ({
           </span>
         </div>
 
+        {/* Version 1 vs Version 2 Edition Switcher Pill - STRICTLY ADMIN ONLY */}
+        {isAdmin && (
+          <div className="mx-4 my-2.5 px-3 py-2 rounded-2xl bg-slate-50/90 border border-slate-200/90 shadow-2xs">
+            <div className="flex items-center justify-between mb-1.5 px-0.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">App Edition</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                appVersion === 'v1' 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+              }`}>
+                {appVersion === 'v1' ? 'v1.0 (Core)' : 'v2.0 (Full)'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-1 bg-slate-200/60 p-0.5 rounded-xl text-center">
+              <button
+                type="button"
+                onClick={() => setAppVersion('v1')}
+                className={`py-1 text-[11px] font-bold rounded-lg transition-all ${
+                  appVersion === 'v1'
+                    ? 'bg-white text-emerald-800 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Version 1: Core Dealership Loyalty (Gift Cards, Referrals, and Builder hidden)"
+              >
+                v1 Core
+              </button>
+              <button
+                type="button"
+                onClick={() => setAppVersion('v2')}
+                className={`py-1 text-[11px] font-bold rounded-lg transition-all ${
+                  appVersion === 'v2'
+                    ? 'bg-white text-indigo-800 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Version 2: Full Suite (Includes Gift Cards, Referrals, and Builder)"
+              >
+                v2 Full
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Categorized Navigation (Smart CRM Style) */}
         <div className="p-4 space-y-6 flex-shrink-0">
-          {navSections.map((section, sIdx) => (
+          {filteredNavSections.map((section, sIdx) => (
             <div key={sIdx} className="space-y-1.5">
               <span className="px-3 text-xs font-black uppercase tracking-wider text-slate-400 block">
                 {section.group}
@@ -238,7 +327,10 @@ export const SidebarLayout = ({
       <div className="p-4 border-t border-slate-100 bg-slate-50/70 space-y-3 flex-shrink-0">
         <div className="space-y-0.5 px-2">
           <div className="text-[11px] text-slate-400 uppercase font-bold tracking-wider">Operator</div>
-          <div className="text-sm font-bold text-slate-900 truncate">{user?.username}</div>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-sm font-bold text-slate-900 truncate select-text">{user?.username}</span>
+            <CopyButton text={user?.username} size="xs" title="Copy Username" />
+          </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
             <Store className="w-3.5 h-3.5 text-indigo-600" />
             <span>{user?.branch_code || 'Main Showroom'}</span>
@@ -364,9 +456,12 @@ export const SidebarLayout = ({
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-sm">
                 {user?.username?.slice(0, 2).toUpperCase()}
               </div>
-              <div className="hidden sm:block text-left">
-                <span className="text-xs font-bold text-slate-900 block leading-tight">{user?.username}</span>
-                <span className="text-[11px] font-semibold text-slate-500">{user?.branch_code || 'Counter'}</span>
+              <div className="hidden sm:flex items-center gap-1.5 text-left">
+                <div>
+                  <span className="text-xs font-bold text-slate-900 block leading-tight select-text">{user?.username}</span>
+                  <span className="text-[11px] font-semibold text-slate-500">{user?.branch_code || 'Counter'}</span>
+                </div>
+                <CopyButton text={user?.username} size="xs" title="Copy Username" />
               </div>
             </div>
           </div>

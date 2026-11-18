@@ -24,7 +24,7 @@ import {
   Building,
   Award
 } from 'lucide-react';
-import { Button, DataTable, useToast, Skeleton } from '../components/ui';
+import { Button, DataTable, useToast, Skeleton, CopyButton } from '../components/ui';
 import Customer360View from '../components/dashboard/Customer360View';
 import AddCustomerModal from '../components/dashboard/AddCustomerModal';
 import MessageLogModal from '../components/dashboard/MessageLogModal';
@@ -98,10 +98,12 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
   }, [activeTab, resetNonce]);
 
   // Load customer full profile
-  const loadCustomerProfile = async (customerId) => {
+  const loadCustomerProfile = async (customerId, isBackground = false) => {
     if (!customerId) return;
     setError('');
-    setIsLoadingProfile(true);
+    if (!isBackground) {
+      setIsLoadingProfile(true);
+    }
     try {
       const [custRes, ledgerRes] = await Promise.all([
         ApiService.getCustomer(customerId),
@@ -116,7 +118,9 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
       setError(err.message || 'Failed to load customer profile.');
       showError(err.message || 'Failed to load customer profile.');
     } finally {
-      setIsLoadingProfile(false);
+      if (!isBackground) {
+        setIsLoadingProfile(false);
+      }
     }
   };
 
@@ -192,23 +196,39 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
       header: 'Customer ID',
       sortable: true,
       cellClassName: 'font-mono font-bold text-slate-900 whitespace-nowrap min-w-[120px]',
+      render: (val) => (
+        <div className="flex items-center gap-1 select-text">
+          <span>{val}</span>
+          <CopyButton text={val} size="xs" title="Copy Customer ID" />
+        </div>
+      ),
     },
     { 
       field: 'name', 
       header: 'Customer Name', 
       sortable: true, 
-      cellClassName: 'font-bold text-slate-900 break-words sm:whitespace-nowrap min-w-[140px] max-w-[220px] leading-snug' 
+      cellClassName: 'font-bold text-slate-900 break-words sm:whitespace-nowrap min-w-[140px] max-w-[220px] leading-snug',
+      render: (val) => (
+        <div className="flex items-center gap-1 select-text">
+          <span>{val}</span>
+          <CopyButton text={val} size="xs" title="Copy Customer Name" />
+        </div>
+      ),
     },
     {
       field: 'phones',
       header: 'Registered Phone(s)',
       render: (val) => (
         <div className="flex flex-wrap gap-1 font-mono text-xs sm:text-sm whitespace-nowrap min-w-[130px]">
-          {(val || []).map((p, idx) => (
-            <span key={idx} className="bg-slate-100 px-2 py-0.5 border border-slate-200 rounded-lg text-slate-800">
-              {p.phone_number || p}
-            </span>
-          ))}
+          {(val || []).map((p, idx) => {
+            const num = p.phone_number || p;
+            return (
+              <span key={idx} className="bg-slate-100 px-2 py-0.5 border border-slate-200 rounded-lg text-slate-800 inline-flex items-center gap-1 select-text">
+                <span>{num}</span>
+                <CopyButton text={num} size="xs" title="Copy Phone Number" />
+              </span>
+            );
+          })}
         </div>
       ),
     },
@@ -380,7 +400,7 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
           tierInfo={tierInfo}
           branches={branches}
           user={user}
-          onRefresh={() => loadCustomerProfile(customerData.customer_id)}
+          onRefresh={() => loadCustomerProfile(customerData.customer_id, true)}
         />
       )}
 

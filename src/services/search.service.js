@@ -74,6 +74,7 @@ class SearchService {
       LEFT JOIN vehicles v ON c.customer_id = v.customer_id AND v.tenant_id = c.tenant_id
       LEFT JOIN sale_transactions st ON v.vehicle_id = st.vehicle_id AND st.tenant_id = v.tenant_id
       WHERE c.tenant_id = $1
+        AND c.is_merged = FALSE
         AND (
           c.customer_name ILIKE $2
           OR c.name ILIKE $2
@@ -186,6 +187,7 @@ class SearchService {
       LEFT JOIN vehicles v ON c.customer_id = v.customer_id AND v.tenant_id = c.tenant_id
       LEFT JOIN sale_transactions st ON v.vehicle_id = st.vehicle_id AND st.tenant_id = v.tenant_id
       WHERE c.tenant_id = $1
+        AND c.is_merged = FALSE
       GROUP BY c.customer_id
       ORDER BY c.created_at DESC
       LIMIT $2 OFFSET $3;
