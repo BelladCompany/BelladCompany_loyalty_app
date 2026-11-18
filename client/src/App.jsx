@@ -235,11 +235,7 @@ export function App() {
   // Customer Portal route or logged-in customer role
   if (isCustomerPortal || user?.role === 'customer') {
     const forcedPortalVersion = isCustomerPortalV2 ? 'v2' : 'v1';
-    return (
-      <Suspense fallback={<ScreenLoader />}>
-        <CustomerPortalScreen portalVersion={forcedPortalVersion} />
-      </Suspense>
-    );
+    return <CustomerPortalScreen portalVersion={forcedPortalVersion} />;
   }
 
   const handleLoginSuccess = (loggedInUser, supersededPreviousSession) => {
@@ -389,8 +385,7 @@ export function App() {
         setIsBuilderMode(true);
       }}
     >
-      <Suspense fallback={<ScreenLoader />}>
-        {activeTab === 'director_command_center' ? (
+      {activeTab === 'director_command_center' ? (
           <DirectorCommandCenter
             user={user}
             onSwitchToStaffView={() => setActiveTab('dashboard')}
@@ -443,7 +438,6 @@ export function App() {
             </p>
           </div>
         )}
-      </Suspense>
     </SidebarLayout>
     </>
   );
