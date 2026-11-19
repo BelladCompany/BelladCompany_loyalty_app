@@ -53,7 +53,7 @@ export const CorrectionsQueue = () => {
   }, [statusFilter]);
 
   const handleApprove = async (id) => {
-    if (!window.confirm(`Approve correction request #${id}? This will approve the ticket and mark the bill as approved.`)) {
+    if (!window.confirm(`Approve correction request #${id}? This will execute reversal and corrected ledger entries in database.`)) {
       return;
     }
 

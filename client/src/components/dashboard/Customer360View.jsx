@@ -20,9 +20,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  FileEdit,
-  Eye,
-  X,
 } from 'lucide-react';
 import EarnPointsModal from './EarnPointsModal';
 import RedemptionModal from './RedemptionModal';
@@ -43,31 +40,26 @@ export const Customer360View = ({
   const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
   const [selectedCorrectionRef, setSelectedCorrectionRef] = useState('');
   const [customerCorrections, setCustomerCorrections] = useState([]);
-  const [viewingRejection, setViewingRejection] = useState(null);
   const [earnModalOpen, setEarnModalOpen] = useState(false);
   const [redeemModalOpen, setRedeemModalOpen] = useState(false);
   const [vehicleStatuses, setVehicleStatuses] = useState({});
 
   // Fetch all correction requests for customer (pending, approved, rejected)
-  const fetchCustomerCorrections = () => {
+  useEffect(() => {
     if (!customer?.customer_id) return;
-    ApiService.getCorrectionRequests('all', customer.customer_id)
+    ApiService.getCorrectionRequests('all')
       .then((res) => {
         const list = res.data || [];
-        const userCorrections = list.filter((r) => !r.customer_id || r.customer_id === customer.customer_id);
+        const userCorrections = list.filter((r) => r.customer_id === customer.customer_id);
         setCustomerCorrections(userCorrections);
       })
       .catch(() => setCustomerCorrections([]));
-  };
-
-  useEffect(() => {
-    fetchCustomerCorrections();
   }, [customer?.customer_id, ledgerData]);
 
   // Robust matcher to link ledger rows with corresponding correction tickets
   const getCorrectionForRow = (row) => {
     if (!row || !customerCorrections.length) return null;
-    const rowId = String(row.id || row.entry_id || '').trim().toLowerCase();
+    const rowId = String(row.id || row.entry_id || '').trim();
     const receiptNo = String(row.receipt_no || '').trim().toLowerCase();
     const sourceRef = String(row.source_ref || row.reference_id || '').trim().toLowerCase();
 
@@ -79,10 +71,10 @@ export const Customer360View = ({
     return customerCorrections.find((c) => {
       const cRef = String(c.points_ledger_reference || '').trim().toLowerCase();
       if (!cRef) return false;
-      if (receiptNo && cRef === receiptNo) return true;
-      if (extractedRec && cRef === extractedRec) return true;
       if (rowId && (cRef === rowId || cRef === `#${rowId}`)) return true;
-      if (sourceRef && cRef === sourceRef) return true;
+      if (receiptNo && (cRef === receiptNo || cRef.includes(receiptNo) || receiptNo.includes(cRef))) return true;
+      if (extractedRec && (cRef === extractedRec || cRef.includes(extractedRec))) return true;
+      if (sourceRef && (cRef === sourceRef || sourceRef.includes(cRef) || cRef.includes(sourceRef))) return true;
       return false;
     });
   };
@@ -330,17 +322,14 @@ export const Customer360View = ({
     },
     {
       field: 'actions',
-      header: 'Correction Status',
+      header: 'Action / Status',
       align: 'right',
       render: (_, row) => {
-        if (row.type === 'expire' || row.type === 'correction_reversal' || row.type === 'correction_applied') {
-          return <span className="text-slate-400 text-xs">—</span>;
-        }
+        if (row.type === 'expire' || row.type === 'correction_reversal' || row.type === 'correction_applied') return null;
 
         const rowCorrection = getCorrectionForRow(row);
         const status = rowCorrection?.status;
 
-        // 1. Pending: Cashier sent for correction
         if (status === 'pending') {
           return (
             <div className="flex flex-col items-end gap-1">
@@ -353,7 +342,6 @@ export const Customer360View = ({
           );
         }
 
-        // 2. Approved: Manager approved
         if (status === 'approved') {
           return (
             <div className="flex flex-col items-end gap-0.5">
@@ -370,63 +358,47 @@ export const Customer360View = ({
           );
         }
 
-        // 3. Rejected: Manager rejected - cashier can view rejection note & validate
         if (status === 'rejected') {
           return (
-            <div className="flex flex-col items-end gap-1">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold text-rose-900 bg-rose-100 rounded border border-rose-300 shadow-2xs">
-                  <XCircle className="w-3.5 h-3.5 text-rose-700" />
-                  Rejected
-                </span>
+            <div className="flex flex-col items-end gap-1 max-w-[220px]">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-rose-900 bg-rose-100 rounded-md border border-rose-300 shadow-2xs">
+                <XCircle className="w-3.5 h-3.5 text-rose-700" />
+                Rejected
+              </span>
+              <div className="text-[11px] text-left p-1.5 bg-rose-50 border border-rose-200 rounded text-rose-900 w-full">
+                <div className="flex items-center gap-1 font-bold text-[10px] text-rose-700 uppercase">
+                  <AlertTriangle className="w-3 h-3 text-rose-600" />
+                  <span>Validation Note:</span>
+                </div>
+                <p className="text-rose-800 break-words font-medium">
+                  {rowCorrection.review_notes || 'Rejection reason was not specified by reviewer.'}
+                </p>
                 <button
                   type="button"
-                  onClick={() => setViewingRejection(rowCorrection)}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold text-rose-700 bg-white hover:bg-rose-50 border border-rose-300 hover:border-rose-400 rounded transition cursor-pointer shadow-2xs"
-                  title="View manager rejection note and validate"
+                  onClick={() => {
+                    setSelectedCorrectionRef(row.receipt_no || row.reference_id || row.entry_id || customer.customer_id);
+                    setCorrectionModalOpen(true);
+                  }}
+                  className="mt-1 w-full text-center px-2 py-1 bg-rose-700 hover:bg-rose-800 text-white rounded font-bold text-[10px] transition cursor-pointer shadow-xs"
                 >
-                  <Eye className="w-3 h-3 text-rose-600" />
-                  View
+                  Validate &amp; Re-submit
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCorrectionRef(rowCorrection.points_ledger_reference || row.receipt_no || row.reference_id || customer.customer_id);
-                  setCorrectionModalOpen(true);
-                }}
-                className="text-[10px] font-bold text-rose-700 hover:text-rose-900 underline cursor-pointer"
-              >
-                Validate &amp; Re-submit
-              </button>
             </div>
           );
-        }
-
-        // 4. Default: No correction ticket raised yet
-        const isEligible = Boolean(
-          row.receipt_no ||
-          ['service', 'bodyshop', 'accessory', 'spares'].some((c) =>
-            String(row.transaction_category || row.type || row.transaction_type || '').toLowerCase().includes(c)
-          )
-        );
-
-        if (!isEligible || row.type === 'earn_sale') {
-          return <span className="text-slate-400 text-xs">—</span>;
         }
 
         return (
           <button
             type="button"
             onClick={() => {
-              setSelectedCorrectionRef(row.receipt_no || row.reference_id || row.entry_id || customer.customer_id);
+              setSelectedCorrectionRef(row.receipt_no || row.reference_id || row.entry_id || customer.vehicles?.[0]?.registration_number || customer.customer_id);
               setCorrectionModalOpen(true);
             }}
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-amber-800 bg-slate-50 hover:bg-amber-50 rounded-md border border-slate-200 hover:border-amber-300 transition shadow-2xs cursor-pointer"
-            title="Request bill correction for this transaction"
+            className="px-2.5 py-1 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-md border border-amber-300 shadow-xs cursor-pointer transition"
+            title="Raise bill correction for this transaction"
           >
-            <FileEdit className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600" />
-            Request Correction
+            Bill Correction
           </button>
         );
       },
@@ -818,97 +790,9 @@ export const Customer360View = ({
         onClose={() => setCorrectionModalOpen(false)}
         onSuccess={() => {
           setCorrectionModalOpen(false);
-          fetchCustomerCorrections();
           if (onRefresh) onRefresh();
         }}
       />
-
-      {/* Manager Rejection Detail & Validation Modal */}
-      {viewingRejection && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 bg-rose-50 border-b border-rose-100">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-rose-100 text-rose-700 rounded-lg">
-                  <XCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-rose-950 text-sm">Correction Rejected</h3>
-                  <p className="text-[11px] text-rose-700 font-medium">Ticket #{viewingRejection.id} &bull; {viewingRejection.points_ledger_reference}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewingRejection(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-white/80 transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="p-5 space-y-4 text-xs">
-              {/* Manager Rejection Note */}
-              <div className="p-3 bg-rose-50/80 border border-rose-200 rounded-xl space-y-1.5">
-                <div className="flex items-center gap-1.5 font-bold text-rose-900 uppercase tracking-wider text-[10px]">
-                  <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                  <span>Manager's Rejection Note / Reason</span>
-                </div>
-                <p className="text-rose-950 font-bold text-xs leading-relaxed break-words">
-                  {viewingRejection.review_notes || 'Rejection reason was not specified by reviewer.'}
-                </p>
-                {viewingRejection.reviewer_name && (
-                  <p className="text-[10px] text-rose-700 pt-1 border-t border-rose-200/60">
-                    Reviewed by <span className="font-semibold">{viewingRejection.reviewer_name}</span> on{' '}
-                    {viewingRejection.reviewed_at ? new Date(viewingRejection.reviewed_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'recently'}
-                  </p>
-                )}
-              </div>
-
-              {/* Original Request Details */}
-              <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <div>
-                  <span className="text-[10px] text-slate-500 font-medium">Wrong Amount:</span>
-                  <div className="font-bold font-mono text-rose-700">₹{Number(viewingRejection.wrong_bill_amount || 0).toLocaleString('en-IN')}</div>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-medium">Correct Amount:</span>
-                  <div className="font-bold font-mono text-emerald-700">₹{Number(viewingRejection.correct_bill_amount || 0).toLocaleString('en-IN')}</div>
-                </div>
-                <div className="col-span-2 pt-1 border-t border-slate-200">
-                  <span className="text-[10px] text-slate-500 font-medium">Original Cashier Reason:</span>
-                  <div className="font-medium text-slate-800 text-[11px] mt-0.5">{viewingRejection.explanation || '—'}</div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setViewingRejection(null)}
-                  className="px-3.5 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition cursor-pointer"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const ref = viewingRejection.points_ledger_reference;
-                    setViewingRejection(null);
-                    setSelectedCorrectionRef(ref);
-                    setCorrectionModalOpen(true);
-                  }}
-                  className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-xs flex items-center gap-1.5 cursor-pointer"
-                >
-                  <FileEdit className="w-3.5 h-3.5" />
-                  Validate &amp; Re-submit
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

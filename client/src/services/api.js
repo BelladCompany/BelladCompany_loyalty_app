@@ -466,12 +466,9 @@ export class ApiService {
     });
   }
 
-  static async getCorrectionRequests(status = 'pending', customerId = null) {
-    const params = new URLSearchParams();
-    if (status) params.append('status', status);
-    if (customerId) params.append('customer_id', customerId);
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    return this.request(`/admin/corrections/list${queryString}`);
+  static async getCorrectionRequests(status = 'pending') {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request(`/admin/corrections/list${query}`);
   }
 
   static async approveCorrection(id, reviewNotes) {
