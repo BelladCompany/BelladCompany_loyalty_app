@@ -475,19 +475,47 @@ class ExcelOrderImportService {
           }
 
           if (targetCustomerId) {
-            const updRes = await client.query(
-              `UPDATE customers
-               SET aadhaar_number = $1,
-                   aadhaar_hash = $2,
-                   aadhaar_last4_enc = $3,
-                   updated_at = NOW()
-               WHERE customer_id = $4 AND tenant_id = $5 AND (aadhaar_number IS NULL OR aadhaar_number = '' OR aadhaar_number ~ '000000$')`,
-              [cleanAadhaar, aHash, aLast4Enc, targetCustomerId, tenantId]
+            // Check if this Aadhaar is already registered to someone in the database
+            const existingOwner = await client.query(
+              `SELECT customer_id FROM customers WHERE tenant_id = $1 AND (aadhaar_hash = $2 OR aadhaar_number = $3) LIMIT 1`,
+              [tenantId, aHash, cleanAadhaar]
             );
-            if (updRes.rowCount > 0) {
-              updatedCount++;
-            } else {
-              alreadyHasCount++;
+
+            if (existingOwner.rows.length > 0) {
+              const existingId = existingOwner.rows[0].customer_id;
+              if (existingId === targetCustomerId) {
+                alreadyHasCount++;
+              } else {
+                // Aadhaar is already owned by existingId; cannot duplicate on targetCustomerId due to unique constraint
+                skippedCount++;
+                summary.skippedReasons['Aadhaar already assigned to customer ' + existingId] =
+                  (summary.skippedReasons['Aadhaar already assigned to customer ' + existingId] || 0) + 1;
+              }
+              continue;
+            }
+
+            await client.query('SAVEPOINT row_update');
+            try {
+              const updRes = await client.query(
+                `UPDATE customers
+                 SET aadhaar_number = $1,
+                     aadhaar_hash = $2,
+                     aadhaar_last4_enc = $3,
+                     updated_at = NOW()
+                 WHERE customer_id = $4 AND tenant_id = $5 AND (aadhaar_number IS NULL OR aadhaar_number = '' OR aadhaar_number ~ '000000$')`,
+                [cleanAadhaar, aHash, aLast4Enc, targetCustomerId, tenantId]
+              );
+              await client.query('RELEASE SAVEPOINT row_update');
+              if (updRes.rowCount > 0) {
+                updatedCount++;
+              } else {
+                alreadyHasCount++;
+              }
+            } catch (rowErr) {
+              await client.query('ROLLBACK TO SAVEPOINT row_update');
+              skippedCount++;
+              summary.skippedReasons['Duplicate Aadhaar unique constraint conflict'] =
+                (summary.skippedReasons['Duplicate Aadhaar unique constraint conflict'] || 0) + 1;
             }
           } else {
             skippedCount++;
