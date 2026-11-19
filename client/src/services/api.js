@@ -616,12 +616,13 @@ export class ApiService {
     });
   }
 
-  static async importOrderWorkbook(file, { sheetName, allowHistorical = true, customCutoffDate = '2020-01-01' } = {}) {
+  static async importOrderWorkbook(file, { sheetName, allowHistorical = true, customCutoffDate = '2020-01-01', updateAadhaarOnly = false } = {}) {
     const formData = new FormData();
     formData.append('file', file);
     if (sheetName) formData.append('sheetName', sheetName);
     formData.append('allowHistorical', String(allowHistorical));
     formData.append('customCutoffDate', customCutoffDate);
+    formData.append('updateAadhaarOnly', String(updateAadhaarOnly));
     return this.request('/import/order-form', {
       method: 'POST',
       body: formData,

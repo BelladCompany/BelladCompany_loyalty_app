@@ -29,6 +29,7 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
   const [inspectionData, setInspectionData] = useState(null);
   const [selectedSheet, setSelectedSheet] = useState('');
   const [allowHistorical, setAllowHistorical] = useState(true);
+  const [updateAadhaarOnly, setUpdateAadhaarOnly] = useState(false);
   const [importSummary, setImportSummary] = useState(null);
   const [showErrorTable, setShowErrorTable] = useState(true);
 
@@ -72,13 +73,22 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
         sheetName: selectedSheet,
         allowHistorical,
         customCutoffDate: '2020-01-01',
+        updateAadhaarOnly,
       });
 
       setImportSummary(res.summary);
-      if (res.summary.imported > 0) {
-        showSuccess(`Import complete: ${res.summary.imported} sales imported with ${res.summary.totalPointsCredited?.toLocaleString()} points awarded!`);
+      if (updateAadhaarOnly) {
+        if (res.summary.imported > 0) {
+          showSuccess(`Aadhaar sync complete: ${res.summary.imported} customer Aadhaar numbers updated! (Zero points / zero duplicate transactions)`);
+        } else {
+          showWarning(`Aadhaar sync finished: 0 updated, ${res.summary.skipped} skipped.`);
+        }
       } else {
-        showWarning(`Import finished: 0 imported, ${res.summary.skipped} skipped. Check the missing fields error report.`);
+        if (res.summary.imported > 0) {
+          showSuccess(`Import complete: ${res.summary.imported} sales imported with ${res.summary.totalPointsCredited?.toLocaleString()} points awarded!`);
+        } else {
+          showWarning(`Import finished: 0 imported, ${res.summary.skipped} skipped. Check the missing fields error report.`);
+        }
       }
       if (onImportSuccess) onImportSuccess(res.summary);
     } catch (err) {
@@ -306,6 +316,50 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
                 </div>
               )}
 
+              {/* Import Mode Selector: Normal vs Aadhaar-Only Sync */}
+              <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-2xl space-y-2.5">
+                <div className="text-xs font-black text-indigo-950 uppercase tracking-wider flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                  Select Import Action Mode
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className={`p-3 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${!updateAadhaarOnly ? 'bg-white border-indigo-600 ring-2 ring-indigo-600/20 shadow-xs' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
+                    <input
+                      type="radio"
+                      name="importMode"
+                      checked={!updateAadhaarOnly}
+                      onChange={() => setUpdateAadhaarOnly(false)}
+                      className="mt-0.5 text-indigo-600 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-xs text-slate-900">Normal Order Import</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                        Creates new customers, vehicles &amp; credits loyalty points.
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className={`p-3 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${updateAadhaarOnly ? 'bg-white border-indigo-600 ring-2 ring-indigo-600/20 shadow-xs' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
+                    <input
+                      type="radio"
+                      name="importMode"
+                      checked={updateAadhaarOnly}
+                      onChange={() => setUpdateAadhaarOnly(true)}
+                      className="mt-0.5 text-indigo-600 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-xs text-indigo-950 flex items-center gap-1.5">
+                        <span>⚡ Update Aadhaar Only</span>
+                        <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-mono font-bold">Safe Mode</span>
+                      </div>
+                      <div className="text-[11px] text-indigo-900 mt-0.5 leading-relaxed">
+                        Safely updates customer Aadhaar numbers ONLY. Zero new points, zero duplicate ledger entries.
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               {/* Historical Sync Options */}
               <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-2xl flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -461,15 +515,19 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
               <button
                 onClick={handleRunOrderImport}
                 disabled={loading || !selectedSheet}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition disabled:opacity-50 cursor-pointer"
+                className={`inline-flex items-center gap-2 px-5 py-2.5 text-white text-xs font-bold rounded-xl shadow-sm transition disabled:opacity-50 cursor-pointer ${
+                  updateAadhaarOnly ? 'bg-indigo-700 hover:bg-indigo-800' : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
               >
                 {loading ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Processing Orders &amp; Points...
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />{' '}
+                    {updateAadhaarOnly ? 'Updating Customer Aadhaar Numbers...' : 'Processing Orders & Points...'}
                   </>
                 ) : (
                   <>
-                    <FileCheck className="w-3.5 h-3.5 text-amber-300" /> Start Order Import ({selectedSheet})
+                    <FileCheck className="w-3.5 h-3.5 text-amber-300" />{' '}
+                    {updateAadhaarOnly ? 'Sync & Update Customer Aadhaar Only' : `Start Order Import (${selectedSheet})`}
                   </>
                 )}
               </button>
