@@ -239,6 +239,13 @@ export class ApiService {
     return this.request(`/customers/${customerId}`);
   }
 
+  static async updateCustomer(customerId, payload) {
+    return this.request(`/customers/${customerId}`, {
+      method: 'PUT',
+      body: payload,
+    });
+  }
+
   static async getCustomerLedger(customerId) {
     return this.request(`/customers/${customerId}/ledger?limit=100`);
   }

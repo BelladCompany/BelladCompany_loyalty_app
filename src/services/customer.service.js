@@ -785,7 +785,7 @@ class CustomerService {
    * DB NOTE: email is no longer persisted (column removed); the value is accepted for API
    * compatibility but silently ignored.
    */
-  static async updateCustomer(customerId, { name, email }, tenantId) {
+  static async updateCustomer(customerId, { name, email, aadhaar_number }, tenantId) {
     const fields = [];
     const values = [];
     let idx = 1;
@@ -793,6 +793,25 @@ class CustomerService {
     if (name !== undefined) {
       fields.push(`customer_name = $${idx++}`);
       values.push(name);
+    }
+
+    if (aadhaar_number !== undefined) {
+      const cleanAadhaar = aadhaar_number ? String(aadhaar_number).replace(/\D/g, '') : null;
+      if (cleanAadhaar && cleanAadhaar.length === 12) {
+        const aHash = hashIdentifier(cleanAadhaar);
+        const aLast4 = lastDigits(cleanAadhaar, 4);
+        const aLast4Enc = encrypt(aLast4);
+        fields.push(`aadhaar_number = $${idx++}`);
+        values.push(cleanAadhaar);
+        fields.push(`aadhaar_hash = $${idx++}`);
+        values.push(aHash);
+        fields.push(`aadhaar_last4_enc = $${idx++}`);
+        values.push(aLast4Enc);
+      } else if (cleanAadhaar === null || cleanAadhaar === '') {
+        fields.push(`aadhaar_number = NULL`);
+        fields.push(`aadhaar_hash = NULL`);
+        fields.push(`aadhaar_last4_enc = NULL`);
+      }
     }
 
     if (fields.length === 0) {

@@ -100,6 +100,12 @@ const createCustomerSchema = z.object({
 const updateCustomerSchema = z.object({
   name: z.string().trim().min(1, 'Customer name cannot be empty').optional(),
   email: z.string().email('Invalid email address').optional().nullable(),
+  aadhaar_number: z
+    .string()
+    .trim()
+    .refine((val) => !val || val.replace(/\D/g, '').length === 12, 'Aadhaar number must contain exactly 12 digits')
+    .optional()
+    .nullable(),
 });
 
 const addPhoneSchema = z.object({
