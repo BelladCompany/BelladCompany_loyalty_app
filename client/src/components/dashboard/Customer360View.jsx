@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   XCircle,
   Eye,
+  RefreshCw,
 } from 'lucide-react';
 import EarnPointsModal from './EarnPointsModal';
 import RedemptionModal from './RedemptionModal';
@@ -46,8 +47,44 @@ export const Customer360View = ({
   const [earnModalOpen, setEarnModalOpen] = useState(false);
   const [redeemModalOpen, setRedeemModalOpen] = useState(false);
   const [vehicleStatuses, setVehicleStatuses] = useState({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
 
-  // Fetch all correction requests for customer (pending, approved, rejected)
+  // Central refresh logic for customer profile, ledger, and billing corrections
+  const handleRefreshProfile = async (silent = false) => {
+    if (!customer?.customer_id) return;
+    if (!silent) setIsRefreshing(true);
+    try {
+      if (typeof onRefresh === 'function') {
+        await onRefresh();
+      }
+      const res = await ApiService.getCorrectionRequests('all', customer.customer_id);
+      const list = res.data || [];
+      const userCorrections = list.filter((r) => r.customer_id === customer.customer_id);
+      setCustomerCorrections(userCorrections);
+
+      // Refresh vehicles status if any
+      const vehicles = customer?.vehicles || [];
+      if (vehicles.length > 0) {
+        vehicles.forEach((v) => {
+          const vid = v.id || v.vehicle_id;
+          if (!vid) return;
+          ApiService.getVehicleRedemptionStatus(vid)
+            .then((vRes) => {
+              setVehicleStatuses((prev) => ({ ...prev, [vid]: vRes.data }));
+            })
+            .catch(() => {});
+        });
+      }
+      setLastRefreshedAt(new Date());
+    } catch (err) {
+      console.warn('Customer profile refresh failed:', err);
+    } finally {
+      if (!silent) setIsRefreshing(false);
+    }
+  };
+
+  // Fetch all correction requests for customer on initial load or ledger change
   useEffect(() => {
     if (!customer?.customer_id) return;
     ApiService.getCorrectionRequests('all', customer.customer_id)
@@ -58,6 +95,29 @@ export const Customer360View = ({
       })
       .catch(() => setCustomerCorrections([]));
   }, [customer?.customer_id, ledgerData]);
+
+  // Smart polling: Auto-check for updates every 8 seconds if there are pending correction tickets
+  useEffect(() => {
+    const hasPending = customerCorrections.some((c) => c.status === 'pending');
+    if (!hasPending || !customer?.customer_id) return;
+
+    const intervalId = setInterval(() => {
+      handleRefreshProfile(true);
+    }, 8000);
+
+    return () => clearInterval(intervalId);
+  }, [customerCorrections, customer?.customer_id]);
+
+  // Auto-refresh when cashier focuses back on the window
+  useEffect(() => {
+    const handleFocus = () => {
+      if (customer?.customer_id) {
+        handleRefreshProfile(true);
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [customer?.customer_id]);
 
   // Strict matcher to link ledger rows with their exact correction ticket
   // Guarantees ONLY that particular receipt number gets the status!
@@ -445,6 +505,9 @@ export const Customer360View = ({
           tier_name: tierName,
         }}
         onAddReceipt={() => setAddReceiptModalOpen(true)}
+        onRefresh={() => handleRefreshProfile(false)}
+        isRefreshing={isRefreshing}
+        hasPendingCorrection={customerCorrections.some((c) => c.status === 'pending')}
       />
 
       {/* 2. Key Metrics Glanceable Strip */}
@@ -724,10 +787,27 @@ export const Customer360View = ({
         {activeProfileTab === 'ledger' && (
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Transaction Audit Trail ({ledgerData.length} entries)
-              </h4>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Transaction Audit Trail ({ledgerData.length} entries)
+                </h4>
+                {lastRefreshedAt && (
+                  <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
+                    (Updated {lastRefreshedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })})
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRefreshProfile(false)}
+                  disabled={isRefreshing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg transition shadow-xs cursor-pointer disabled:opacity-50"
+                  title="Refresh customer profile, transaction audit trail, and correction statuses"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-indigo-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setAddReceiptModalOpen(true)}
@@ -810,7 +890,7 @@ export const Customer360View = ({
         branches={branches}
         user={user}
         onClose={() => setAddReceiptModalOpen(false)}
-        onSuccess={() => onRefresh && onRefresh()}
+        onSuccess={() => handleRefreshProfile(false)}
       />
 
       <RaiseCorrectionModal
@@ -820,7 +900,7 @@ export const Customer360View = ({
         onClose={() => setCorrectionModalOpen(false)}
         onSuccess={() => {
           setCorrectionModalOpen(false);
-          if (onRefresh) onRefresh();
+          handleRefreshProfile(false);
         }}
       />
 

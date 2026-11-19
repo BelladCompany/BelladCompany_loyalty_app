@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Phone, Car, Award, ShieldCheck, CheckCircle2, PlusCircle, Lock, Sparkles } from 'lucide-react';
+import { User, Phone, Car, Award, ShieldCheck, CheckCircle2, PlusCircle, Lock, Sparkles, RefreshCw } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import CopyButton from './CopyButton';
 
@@ -12,6 +12,8 @@ export const CustomerSummaryCard = ({
   onAddReceipt,
   onRecordEarning,
   onRedeemPoints,
+  onRefresh,
+  isRefreshing = false,
   hasPendingCorrection = false,
   className = '',
 }) => {
@@ -168,6 +170,21 @@ export const CustomerSummaryCard = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+            {/* Quick Refresh Profile Button */}
+            {onRefresh && (
+              <button
+                type="button"
+                id="refresh-profile-btn"
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="h-11 sm:h-12 px-4 font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 transition-all border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh customer profile, points balance, and correction status"
+              >
+                <RefreshCw className={`w-4 h-4 text-indigo-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isRefreshing ? 'Refreshing...' : 'Refresh Profile'}</span>
+              </button>
+            )}
+
             {/* Combined Add Receipt Button */}
             <button
               type="button"
