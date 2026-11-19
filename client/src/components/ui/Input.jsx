@@ -43,6 +43,10 @@ export const Input = ({
           type={type}
           value={value}
           onChange={onChange}
+          onWheel={(e) => {
+            if (type === 'number') e.target.blur();
+            props.onWheel?.(e);
+          }}
           placeholder={placeholder}
           disabled={disabled}
           required={required}
@@ -50,6 +54,7 @@ export const Input = ({
             w-full min-h-[44px] h-12 bg-white text-ink-primary text-base font-medium rounded border
             ${error ? 'border-action-danger bg-action-danger-light focus:border-action-danger' : 'border-surface-border focus:border-action-primary'}
             ${Icon ? 'pl-11 pr-4' : 'px-4'}
+            ${type === 'number' ? '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none' : ''}
             placeholder:text-ink-muted
             focus:outline-none focus:ring-2 focus:ring-action-primary/20
             disabled:bg-slate-100 disabled:text-ink-muted disabled:cursor-not-allowed

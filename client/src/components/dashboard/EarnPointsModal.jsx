@@ -553,7 +553,8 @@ export const EarnPointsModal = ({
                     placeholder="e.g. 5400"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full h-13 pl-9 pr-4 font-mono font-black text-xl rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-indigo-600"
+                    onWheel={(e) => e.target.blur()}
+                    className="w-full h-13 pl-9 pr-4 font-mono font-black text-xl rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-indigo-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
               </div>

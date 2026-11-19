@@ -643,7 +643,8 @@ export const AddReceiptModal = ({
                       placeholder="Enter total invoice amount e.g. 2000"
                       value={billAmount}
                       onChange={(e) => setBillAmount(e.target.value)}
-                      className="w-full h-11 sm:h-12 pl-8 sm:pl-9 pr-4 py-2 text-sm sm:text-base font-black font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                      onWheel={(e) => e.target.blur()}
+                      className="w-full h-11 sm:h-12 pl-8 sm:pl-9 pr-4 py-2 text-sm sm:text-base font-black font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                 </div>

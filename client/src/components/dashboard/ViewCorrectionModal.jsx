@@ -36,7 +36,7 @@ export default function ViewCorrectionModal({ isOpen, correction, onClose, onRev
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm overflow-hidden animate-fadeIn">
       <div className="w-full max-w-xl bg-white border border-slate-200 rounded-2xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
-        
+
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex-shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -63,15 +63,14 @@ export default function ViewCorrectionModal({ isOpen, correction, onClose, onRev
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
-          
+
           {/* Status Banner */}
-          <div className={`p-4 rounded-xl border flex items-center justify-between ${
-            status === 'approved'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-              : status === 'rejected'
+          <div className={`p-4 rounded-xl border flex items-center justify-between ${status === 'approved'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+            : status === 'rejected'
               ? 'bg-rose-50 border-rose-200 text-rose-950'
               : 'bg-amber-50 border-amber-200 text-amber-950'
-          }`}>
+            }`}>
             <div className="flex items-center gap-2.5 font-bold text-sm">
               {status === 'approved' && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
               {status === 'rejected' && <XCircle className="w-5 h-5 text-rose-600" />}
@@ -82,13 +81,12 @@ export default function ViewCorrectionModal({ isOpen, correction, onClose, onRev
                 {status === 'pending' && 'Sent for Billing Correction (Under Review)'}
               </span>
             </div>
-            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-              status === 'approved'
-                ? 'bg-emerald-200/70 text-emerald-900 border border-emerald-300'
-                : status === 'rejected'
+            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${status === 'approved'
+              ? 'bg-emerald-200/70 text-emerald-900 border border-emerald-300'
+              : status === 'rejected'
                 ? 'bg-rose-200/70 text-rose-900 border border-rose-300'
                 : 'bg-amber-200/70 text-amber-900 border border-amber-300'
-            }`}>
+              }`}>
               {status}
             </span>
           </div>
@@ -127,7 +125,7 @@ export default function ViewCorrectionModal({ isOpen, correction, onClose, onRev
               <div className="p-2 bg-amber-50 rounded-lg border border-amber-200 flex items-center gap-2 text-amber-900 text-[11px] font-medium">
                 <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>
-                  Anti-Theft Notice: Bill amount increased. Manager verified genuine customer bill proof.
+                  Notice: Bill amount increased. Manager verified genuine customer bill proof.
                 </span>
               </div>
             )}
@@ -158,11 +156,10 @@ export default function ViewCorrectionModal({ isOpen, correction, onClose, onRev
 
           {/* Manager Review Decision (if reviewed) */}
           {(status === 'approved' || status === 'rejected' || correction.review_notes) && (
-            <div className={`space-y-2 p-4 rounded-2xl border ${
-              status === 'approved'
-                ? 'bg-emerald-50/60 border-emerald-200'
-                : 'bg-rose-50/60 border-rose-200'
-            }`}>
+            <div className={`space-y-2 p-4 rounded-2xl border ${status === 'approved'
+              ? 'bg-emerald-50/60 border-emerald-200'
+              : 'bg-rose-50/60 border-rose-200'
+              }`}>
               <div className="flex items-center justify-between">
                 <span className="font-bold text-slate-900 text-xs">
                   {status === 'approved' ? 'Manager Approval Note' : 'Manager Rejection Reason'}
