@@ -55,13 +55,15 @@ export const SidebarLayout = ({
 
   useEffect(() => {
     let isMounted = true;
-    ApiService.getPublishedAppConfig(user?.tenant_id || 'bellad_and_company')
-      .then((res) => {
-        if (isMounted && res && res.data) {
-          setPublishedConfig(res.data);
-        }
-      })
-      .catch(() => {});
+    if (typeof ApiService.getPublishedAppConfig === 'function') {
+      ApiService.getPublishedAppConfig(user?.tenant_id || 'bellad_and_company')
+        .then((res) => {
+          if (isMounted && res && res.data) {
+            setPublishedConfig(res.data);
+          }
+        })
+        .catch(() => {});
+    }
     return () => {
       isMounted = false;
     };

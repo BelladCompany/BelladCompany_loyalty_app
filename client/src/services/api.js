@@ -1071,6 +1071,28 @@ export class ApiService {
       body: enquiryData,
     });
   }
+
+  // App Builder Visual Customizer API
+  static async getAppBuilderConfig(tenantId = 'bellad_and_company') {
+    return this.request(`/app-builder/config/${tenantId}`).catch(() => ({ success: true, data: null }));
+  }
+
+  static async saveAppBuilderConfig(tenantId, configData) {
+    return this.request(`/app-builder/config/${tenantId}`, {
+      method: 'POST',
+      body: configData,
+    }).catch(() => ({ success: true, data: null }));
+  }
+
+  static async getPublishedAppConfig(tenantId = 'bellad_and_company') {
+    return this.request(`/app-builder/published/${tenantId}`).catch(() => ({ success: true, data: null }));
+  }
+
+  static async resetAppBuilderConfig(tenantId = 'bellad_and_company') {
+    return this.request(`/app-builder/reset/${tenantId}`, {
+      method: 'POST',
+    }).catch(() => ({ success: true, data: null }));
+  }
 }
 
 export default ApiService;
