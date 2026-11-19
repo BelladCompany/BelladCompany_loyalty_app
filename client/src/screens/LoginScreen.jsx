@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Car, Lock, User, AlertCircle, ArrowRight, Sparkles, Eye, EyeOff, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Car, Lock, User, AlertCircle, ArrowRight, Eye, EyeOff, AlertTriangle, ShieldAlert } from 'lucide-react';
 import ApiService from '../services/api';
 
 export const LoginScreen = ({ onLoginSuccess, sessionAlert, onClearSessionAlert }) => {
@@ -53,25 +53,21 @@ export const LoginScreen = ({ onLoginSuccess, sessionAlert, onClearSessionAlert 
       <div className="w-full max-w-md relative z-10 bg-white rounded-3xl sm:rounded-4xl p-5 sm:p-8 lg:p-10 shadow-island border border-slate-200/80">
         
         {/* Brand Header */}
-        <div className="text-center space-y-2.5 pb-5 sm:pb-6 border-b border-slate-100">
-          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-indigo-50 border border-indigo-100 shadow-sm mb-1">
+        <div className="text-center space-y-2 pb-5 sm:pb-6 border-b border-slate-100">
+          <div className="flex items-center justify-center mb-2">
             <img
               src="/bellad-logo.png"
-              alt="Bellad Logo"
-              className="w-9 h-9 sm:w-10 sm:h-10 object-contain drop-shadow"
+              alt="Bellad & Company Logo"
+              className="h-16 sm:h-20 w-auto max-w-[220px] object-contain drop-shadow-sm"
               onError={(e) => {
                 e.target.style.display = 'none';
               }}
             />
-            <Car className="w-7 h-7 sm:w-8 sm:h-8 text-indigo-600" style={{ display: 'none' }} />
           </div>
 
           <div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center justify-center gap-2">
-              Bellad &amp; Co
-              <span className="text-[10px] sm:text-[11px] uppercase font-mono px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200">
-                POS
-              </span>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Bellad &amp; Company
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">Dealership Loyalty &amp; Customer Rewards Counter</p>
           </div>
@@ -185,22 +181,11 @@ export const LoginScreen = ({ onLoginSuccess, sessionAlert, onClearSessionAlert 
           )}
         </form>
 
-        {/* Bottom Link to Standalone Master Editor */}
-        <div className="mt-6 text-center space-y-1">
-          <div>
-            <a
-              href="/editor"
-              className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-bold transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Open Standalone Master Studio Editor ↗
-            </a>
-          </div>
-          <div>
-            <span className="text-[10px] text-slate-400 font-mono tracking-tight">
-              Backend API: {ApiService.getApiBase()}
-            </span>
-          </div>
+        {/* Footer info */}
+        <div className="mt-6 text-center">
+          <span className="text-[10px] text-slate-400 font-mono tracking-tight">
+            Backend API: {ApiService.getApiBase()}
+          </span>
         </div>
       </div>
     </div>
