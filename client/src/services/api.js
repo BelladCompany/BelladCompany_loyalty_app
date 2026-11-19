@@ -466,8 +466,11 @@ export class ApiService {
     });
   }
 
-  static async getCorrectionRequests(status = 'pending') {
-    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  static async getCorrectionRequests(status = 'pending', customerId = null) {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (customerId) params.append('customer_id', customerId);
+    const query = params.toString() ? `?${params.toString()}` : '';
     return this.request(`/admin/corrections/list${query}`);
   }
 

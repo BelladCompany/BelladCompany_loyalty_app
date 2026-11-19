@@ -53,7 +53,7 @@ export const CorrectionsQueue = () => {
   }, [statusFilter]);
 
   const handleApprove = async (id) => {
-    if (!window.confirm(`Approve correction request #${id}? This will execute reversal and corrected ledger entries in database.`)) {
+    if (!window.confirm(`Approve correction request #${id}? This will update the status to Approved without creating duplicate ledger transactions.`)) {
       return;
     }
 
@@ -280,6 +280,20 @@ export const CorrectionsQueue = () => {
                         "{req.explanation}"
                       </p>
                     </div>
+
+                    {req.fraud_flags && req.fraud_flags.length > 0 && (
+                      <div className="p-2 bg-rose-50 border border-rose-200 rounded-lg space-y-1">
+                        <div className="flex items-center gap-1.5 text-[10px] font-black text-rose-800 uppercase">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          <span>Anti-Theft Fraud Detection Alert:</span>
+                        </div>
+                        {req.fraud_flags.map((flag, fIdx) => (
+                          <div key={fIdx} className="text-[11px] font-bold text-rose-700 pl-4">
+                            • {flag}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Col 3: Proof Screenshot & Computed Diff Preview */}

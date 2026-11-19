@@ -83,6 +83,7 @@ class CorrectionController {
       const requests = await CorrectionService.listCorrectionRequests({
         tenant_id: tenantId,
         status,
+        customer_id: req.query.customer_id || null,
         user_role: userRole,
         user_branch_id: userBranchId,
       });

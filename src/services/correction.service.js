@@ -172,6 +172,28 @@ class CorrectionService {
     const resolvedCustomerId = customer_id || origEntries[0].customer_id;
     const resolvedBranchId = branch_id || origEntries[0].branch_id || 1;
 
+    // Anti-Fraud Check 1: Ensure receipt belongs to the customer
+    if (customer_id && origEntries[0].customer_id && customer_id !== origEntries[0].customer_id) {
+      throw {
+        statusCode: 400,
+        message: `Receipt '${points_ledger_reference}' does not belong to customer ${customer_id}. Cross-customer correction is strictly prohibited.`,
+      };
+    }
+
+    // Anti-Fraud Check 2: Prevent duplicate pending correction requests for the same receipt
+    const dupCheck = await pool.query(
+      `SELECT id, status FROM correction_requests
+       WHERE tenant_id = $1 AND LOWER(points_ledger_reference) = LOWER($2) AND status = 'pending'
+       LIMIT 1;`,
+      [tenant_id, points_ledger_reference.trim()]
+    );
+    if (dupCheck.rows.length > 0) {
+      throw {
+        statusCode: 400,
+        message: `Receipt '${points_ledger_reference.trim()}' already has an active correction request (#${dupCheck.rows[0].id}) under review.`,
+      };
+    }
+
     const wrongAmt = parseFloat(wrong_bill_amount || '0');
     const correctAmt = parseFloat(correct_bill_amount || '0');
 
@@ -234,9 +256,9 @@ class CorrectionService {
   }
 
   /**
-   * Lists correction requests for admin queue
+   * Lists correction requests for admin queue and cashier customer views
    */
-  static async listCorrectionRequests({ tenant_id, status = 'pending', user_role, user_branch_id }) {
+  static async listCorrectionRequests({ tenant_id, status = 'pending', customer_id, user_role, user_branch_id }) {
     let query = `
       SELECT cr.id, cr.customer_id, c.customer_name, cr.points_ledger_reference,
              cr.cashier_user_id, u.username AS cashier_name,
@@ -255,6 +277,11 @@ class CorrectionService {
     const params = [tenant_id];
     let idx = 2;
 
+    if (customer_id) {
+      query += ` AND cr.customer_id = $${idx++}`;
+      params.push(customer_id);
+    }
+
     if (status && status !== 'all') {
       query += ` AND cr.status = $${idx++}`;
       params.push(status);
@@ -265,7 +292,7 @@ class CorrectionService {
     const res = await pool.query(query, params);
     const requests = res.rows;
 
-    // Attach cashier 7-day request frequency & diff preview
+    // Attach cashier 7-day request frequency & anti-fraud audit flags
     const enriched = await Promise.all(
       requests.map(async (req) => {
         let weeklyCount = 0;
@@ -277,22 +304,28 @@ class CorrectionService {
           weeklyCount = parseInt(countRes.rows[0].total, 10);
         }
 
-        let preview = null;
-        try {
-          preview = await this.previewCorrection({
-            points_ledger_reference: req.points_ledger_reference,
-            correct_bill_amount: req.correct_bill_amount,
-            tenant_id,
-          });
-        } catch (e) {
-          preview = null;
-        }
+        const wrongNum = parseFloat(req.wrong_bill_amount || 0);
+        const correctNum = parseFloat(req.correct_bill_amount || 0);
+        const amountDiff = correctNum - wrongNum;
+        const percentChange = wrongNum > 0 ? ((amountDiff / wrongNum) * 100).toFixed(1) : '0';
+        const isPointsInflation = correctNum > wrongNum;
+        const isHighVariance = Math.abs(amountDiff) >= 10000 || (wrongNum > 0 && Math.abs(amountDiff) / wrongNum >= 0.5);
+
+        const fraudFlags = [];
+        if (isPointsInflation) fraudFlags.push(`⚠️ Bill amount increase (+₹${amountDiff.toLocaleString('en-IN')})`);
+        if (isHighVariance) fraudFlags.push(`🚨 High variance (${percentChange}%)`);
+        if (weeklyCount > 3) fraudFlags.push(`🚨 Frequent cashier tickets (${weeklyCount} this week)`);
 
         return {
           ...req,
           cashier_weekly_count: weeklyCount,
-          is_unusual_frequency: weeklyCount > 5,
-          diff_preview: preview,
+          is_unusual_frequency: weeklyCount > 3,
+          amount_diff: amountDiff,
+          percent_change: percentChange,
+          is_points_inflation: isPointsInflation,
+          is_high_variance: isHighVariance,
+          fraud_flags: fraudFlags,
+          risk_level: isHighVariance || isPointsInflation || weeklyCount > 3 ? 'HIGH' : 'LOW',
         };
       })
     );
@@ -301,11 +334,9 @@ class CorrectionService {
   }
 
   /**
-   * Approves a correction request in ONE atomic DB transaction:
-   * 1. Inserts reversal entries for original wrong transaction (type='correction_reversal').
-   * 2. Recalculates exact corrected points & inserts corrected entries (type='correction_applied').
-   * 3. Updates correction_requests status to 'approved'.
-   * 4. Logs complete audit_log entry.
+   * Approves a correction request:
+   * Updates status to 'approved' and records reviewer details & audit log.
+   * Strictly NO points_ledger insertions (cashier will enter new receipt separately if required).
    */
   static async approveCorrectionRequest({
     request_id,
@@ -335,75 +366,8 @@ class CorrectionService {
         throw { statusCode: 400, message: `Correction request #${request_id} is already ${reqRecord.status}.` };
       }
 
-      // 2. Fetch original points_ledger entries and calculate reversal + corrected rows
-      const preview = await this.previewCorrection({
-        points_ledger_reference: reqRecord.points_ledger_reference,
-        correct_bill_amount: reqRecord.correct_bill_amount,
-        tenant_id,
-      });
-
-      const origEntries = preview.original_entries;
-      const reversalEntries = preview.reversal_entries;
-      const correctedEntries = preview.corrected_entries;
-
-      // Current balance before reversal
-      const currentBalRes = await client.query(
-        `SELECT COALESCE(SUM(points), 0) AS total_balance FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
-        [reqRecord.customer_id, tenant_id]
-      );
-      const balanceBefore = parseInt(currentBalRes.rows[0].total_balance, 10);
-
-      // 3. Insert Reversal Entries into points_ledger
-      const insertedReversals = [];
-      for (const rev of reversalEntries) {
-        const ins = await client.query(
-          `INSERT INTO points_ledger (
-             customer_id, type, points, transaction_category, reason,
-             reference_id, receipt_no, branch_id, tenant_id, created_by
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-           RETURNING *;`,
-          [
-            reqRecord.customer_id,
-            rev.type,
-            rev.points,
-            rev.transaction_category,
-            rev.reason,
-            `REV-${reqRecord.points_ledger_reference}`,
-            null,
-            reqRecord.branch_id,
-            tenant_id,
-            reviewer_user_id || null,
-          ]
-        );
-        insertedReversals.push(ins.rows[0]);
-      }
-
-      // 4. Insert Corrected Entries into points_ledger
-      const insertedCorrected = [];
-      for (const cor of correctedEntries) {
-        const ins = await client.query(
-          `INSERT INTO points_ledger (
-             customer_id, type, points, transaction_category, reason,
-             reference_id, receipt_no, branch_id, tenant_id, created_by
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-           RETURNING *;`,
-          [
-            reqRecord.customer_id,
-            cor.type,
-            cor.points,
-            cor.transaction_category,
-            cor.reason,
-            `CORR-${reqRecord.points_ledger_reference}`,
-            null,
-            reqRecord.branch_id,
-            tenant_id,
-            reviewer_user_id || null,
-          ]
-        );
-        insertedCorrected.push(ins.rows[0]);
-      }
-
-      // 5. Update correction_requests status to 'approved'
+      // 2. Update correction_requests status to 'approved'
+      // Strictly NO duplicate points_ledger insertions!
       const updateRes = await client.query(
         `UPDATE correction_requests
          SET status = 'approved',
@@ -412,19 +376,12 @@ class CorrectionService {
              review_notes = $2
          WHERE id = $3 AND tenant_id = $4
          RETURNING *;`,
-        [reviewer_user_id || null, (review_notes || 'Approved').trim(), request_id, tenant_id]
+        [reviewer_user_id || null, (review_notes || 'Approved by Manager').trim(), request_id, tenant_id]
       );
 
       const approvedRecord = updateRes.rows[0];
 
-      // Calculate final updated balance
-      const newBalRes = await client.query(
-        `SELECT COALESCE(SUM(points), 0) AS total_balance FROM points_ledger WHERE customer_id = $1 AND tenant_id = $2;`,
-        [reqRecord.customer_id, tenant_id]
-      );
-      const finalBalance = parseInt(newBalRes.rows[0].total_balance, 10);
-
-      // 6. Write comprehensive audit_log entry
+      // 3. Write comprehensive audit_log entry
       await AuditLogService.logEvent({
         action: 'points_correction_approved',
         entity_type: 'correction_request',
@@ -432,16 +389,17 @@ class CorrectionService {
         actor_user_id: reviewer_user_id || null,
         before_values: {
           customer_id: reqRecord.customer_id,
-          previous_balance: balanceBefore,
+          receipt_no: reqRecord.points_ledger_reference,
           wrong_bill_amount: reqRecord.wrong_bill_amount,
-          original_entries: origEntries,
+          correct_bill_amount: reqRecord.correct_bill_amount,
+          status: 'pending',
         },
         after_values: {
           customer_id: reqRecord.customer_id,
-          correct_bill_amount: reqRecord.correct_bill_amount,
-          reversal_entries: insertedReversals,
-          corrected_entries: insertedCorrected,
-          final_balance: finalBalance,
+          receipt_no: reqRecord.points_ledger_reference,
+          status: 'approved',
+          reviewed_by: reviewer_user_id,
+          review_notes: approvedRecord.review_notes,
         },
         metadata: {
           request_id,
@@ -449,7 +407,7 @@ class CorrectionService {
           cashier_user_id: reqRecord.cashier_user_id,
           explanation: reqRecord.explanation,
           screenshot_file_url: reqRecord.screenshot_file_url,
-          review_notes: (review_notes || 'Approved').trim(),
+          review_notes: approvedRecord.review_notes,
         },
         tenant_id,
         client,
@@ -459,12 +417,8 @@ class CorrectionService {
 
       return {
         success: true,
-        message: `Correction request #${request_id} approved successfully.`,
+        message: `Correction for receipt #${reqRecord.points_ledger_reference} approved successfully. (Status updated to Approved; no duplicate transaction entered).`,
         request: approvedRecord,
-        reversals: insertedReversals,
-        corrected: insertedCorrected,
-        previous_balance: balanceBefore,
-        final_balance: finalBalance,
       };
     } catch (err) {
       await client.query('ROLLBACK');

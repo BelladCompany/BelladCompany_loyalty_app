@@ -30,15 +30,10 @@ router.get(
   CorrectionController.streamCorrectionProof
 );
 
-// Manager / Admin queue listing requests (gracefully handles cashier with empty queue to avoid 403s)
+// Manager / Admin / Cashier queue listing requests (cashiers can inspect customer tickets & validation messages)
 router.get(
   ['/list', '/admin/list'],
-  (req, res, next) => {
-    if (req.user?.role === 'cashier') {
-      return res.json({ success: true, data: [] });
-    }
-    return requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager'])(req, res, next);
-  },
+  requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'manager', 'cashier']),
   CorrectionController.listCorrections
 );
 
