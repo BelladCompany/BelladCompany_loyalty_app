@@ -164,17 +164,19 @@ class AppSheetSyncEngine {
     const custName = (row['Customer Name'] || row['Customer Ledger Name'] || 'Customer').trim();
     const mainPhone = (row['Customer Number'] || row['Customer Alt Number'] || '').trim().replace(/\D/g, '');
     const altPhone = (row['Customer Alt Number'] || '').trim().replace(/\D/g, '');
-    const aadhaarRaw = (row['Aadhar Card No'] || row['Aadhaar Card No'] || '').trim().replace(/\D/g, '');
-    const aadhaarNumber = aadhaarRaw.length >= 8 ? aadhaarRaw : null;
+    const rawAadhaarStr = String(row['Aadhar Card No'] || row['Aadhaar Card No'] || '').trim();
+    const hasScientific = /e[+-]/i.test(rawAadhaarStr);
+    const aadhaarRaw = rawAadhaarStr.replace(/\D/g, '');
+    const aadhaarNumber = (!hasScientific && aadhaarRaw.length === 12 && !/^0+$/.test(aadhaarRaw) && !aadhaarRaw.endsWith('00000') && !/^(.)\1{11}$/.test(aadhaarRaw)) ? aadhaarRaw : null;
 
     const orderId = row['Order Unique ID'] || row['DMS Booking ID'] || row['_RowNumber'];
     const preferredId = orderId ? `BAC-${orderId}` : null;
 
     let aadhaarHash = null;
     let aadhaarLast4Enc = null;
-    if (aadhaarRaw && aadhaarRaw.length === 12) {
-      aadhaarHash = hashIdentifier(aadhaarRaw);
-      aadhaarLast4Enc = encrypt(lastDigits(aadhaarRaw, 4));
+    if (aadhaarNumber) {
+      aadhaarHash = hashIdentifier(aadhaarNumber);
+      aadhaarLast4Enc = encrypt(lastDigits(aadhaarNumber, 4));
     }
 
     let resolvedCustomerId = null;
@@ -232,15 +234,15 @@ class AppSheetSyncEngine {
     const salesConsultant = row['Sales Consultant'] || null;
 
     if (resolvedCustomerId) {
-      // Update existing customer record with any missing profile details
+      // Update existing customer record with any missing profile details or new valid Aadhaar
       await client.query(
         `UPDATE customers
          SET customer_name = COALESCE(customers.customer_name, $1),
-             age = COALESCE(customers.age, $2),
-             aadhaar_number = COALESCE(customers.aadhaar_number, $3),
-             aadhaar_hash = COALESCE(customers.aadhaar_hash, $4),
-             aadhaar_last4_enc = COALESCE(customers.aadhaar_last4_enc, $5),
-             address = COALESCE(customers.address, $6),
+             age = COALESCE($2, customers.age),
+             aadhaar_number = COALESCE($3, customers.aadhaar_number),
+             aadhaar_hash = COALESCE($4, customers.aadhaar_hash),
+             aadhaar_last4_enc = COALESCE($5, customers.aadhaar_last4_enc),
+             address = COALESCE($6, customers.address),
              firm_name = COALESCE(customers.firm_name, $7),
              branch_name = COALESCE(customers.branch_name, $8),
              branch_address = COALESCE(customers.branch_address, $9),
@@ -265,7 +267,19 @@ class AppSheetSyncEngine {
            )
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
            ON CONFLICT (customer_id) DO UPDATE SET
-             customer_name = EXCLUDED.customer_name
+             customer_name = EXCLUDED.customer_name,
+             aadhaar_number = COALESCE(EXCLUDED.aadhaar_number, customers.aadhaar_number),
+             aadhaar_hash = COALESCE(EXCLUDED.aadhaar_hash, customers.aadhaar_hash),
+             aadhaar_last4_enc = COALESCE(EXCLUDED.aadhaar_last4_enc, customers.aadhaar_last4_enc),
+             age = COALESCE(EXCLUDED.age, customers.age),
+             address = COALESCE(EXCLUDED.address, customers.address),
+             firm_name = COALESCE(EXCLUDED.firm_name, customers.firm_name),
+             branch_name = COALESCE(EXCLUDED.branch_name, customers.branch_name),
+             branch_address = COALESCE(EXCLUDED.branch_address, customers.branch_address),
+             dms_invoice_number = COALESCE(EXCLUDED.dms_invoice_number, customers.dms_invoice_number),
+             dms_invoice_date = COALESCE(EXCLUDED.dms_invoice_date, customers.dms_invoice_date),
+             sales_consultant = COALESCE(EXCLUDED.sales_consultant, customers.sales_consultant),
+             updated_at = NOW()
            RETURNING customer_id;`,
           [
             preferredId, custName, ageVal, aadhaarNumber, aadhaarHash, aadhaarLast4Enc,

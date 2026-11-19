@@ -22,36 +22,37 @@ class ExcelOrderImportService {
     ],
     customer_name: [
       'customer name', 'customer_name', 'customer ledger name', 'cust_name', 'party name',
-      'party_name', 'client name', 'name'
+      'party_name', 'client name', 'name', 'cx name', 'customer'
     ],
     phone: [
       'customer number', 'customer_number', 'phone', 'phone no', 'phone_no', 'mobile',
-      'mobile no', 'mobile_no', 'contact', 'contact no', 'contact_no', 'customer mobile'
+      'mobile no', 'mobile_no', 'contact', 'contact no', 'contact_no', 'customer mobile', 'whatsapp no', 'mobile number', 'cust phone'
     ],
     alt_phone: [
       'customer alt number', 'customer_alt_number', 'alt number', 'alt phone', 'alternate mobile', 'alt_phone'
     ],
     aadhaar: [
       'aadhar card no', 'aadhar_card_no', 'aadhaar card no', 'aadhaar_card_no', 'aadhar no',
-      'aadhaar no', 'aadhar number', 'aadhaar number', 'uid', 'uidai'
+      'aadhaar no', 'aadhar number', 'aadhaar number', 'uid', 'uidai', 'adhar', 'adhar no', 'adhar card no',
+      'adhar card', 'aadhaar', 'aadhar', 'customer aadhaar', 'customer aadhar', 'cx aadhaar', 'cx aadhar'
     ],
     email: ['email', 'email id', 'email_id', 'mail'],
-    address: ['rental address', 'address 1', 'address', 'customer address', 'residence address'],
-    pin_code: ['pin code', 'pincode', 'pin_code', 'postal code'],
+    address: ['rental address', 'address 1', 'address', 'customer address', 'residence address', 'full address', 'address1'],
+    pin_code: ['pin code', 'pincode', 'pin_code', 'postal code', 'pin'],
     age: ['cx age', 'age', 'customer age'],
     nominee_name: ['nominee name', 'nominee_name', 'nominee'],
     nominee_relation: ['relation', 'nominee relation', 'relationship'],
     gst_number: ['gst number', 'gst_number', 'gstin', 'gst no'],
     vin: [
       'vin number', 'vin_number', 'vin no', 'vin_no', 'chassis number', 'chassis_number',
-      'chassis no', 'chassis_no', 'chassis', 'vin'
+      'chassis no', 'chassis_no', 'chassis', 'vin', 'frame no', 'chasis no'
     ],
     reg_number: [
       'reg number', 'reg_number', 'reg no', 'reg_no', 'registration number',
-      'registration_number', 'registration no', 'rc no', 'vehicle no', 'vehicle number'
+      'registration_number', 'registration no', 'rc no', 'vehicle no', 'vehicle number', 'vehicle registration no'
     ],
     brand: ['brand', 'brand name', 'make', 'oem'],
-    model: ['model', 'vehicle model', 'model name', 'car model'],
+    model: ['model', 'vehicle model', 'model name', 'car model', 'bike model', 'scooter model', 'product'],
     variant: ['variant', 'varient', 'vehicle variant', 'trim'],
     fuel_type: ['fuel type', 'fuel', 'engine type'],
     branch: ['branch', 'branch name', 'dealership branch', 'location', 'showroom'],
@@ -61,11 +62,11 @@ class ExcelOrderImportService {
     dms_invoice_no: ['dms invoice number', 'dms_invoice_number', 'invoice number', 'invoice no', 'bill no'],
     dms_invoice_date: [
       'dms invoice date', 'dms_invoice_date', 'invoice date', 'billing date', 'delivery date',
-      'vehicle delivery date', 'order date', 'dms booking date', 'date'
+      'vehicle delivery date', 'order date', 'dms booking date', 'date', 'purchase date', 'bill date'
     ],
     ex_showroom: [
       'ex-showroom price', 'ex showroom price', 'ex_showroom_price', 'ex showroom', 'exshowroom',
-      'gross ex-showroom', 'gross ex showroom', 'total vehicle billing amount'
+      'gross ex-showroom', 'gross ex showroom', 'total vehicle billing amount', 'ex showroom value', 'vehicle price', 'base exshowrrom'
     ],
     net_ex_showroom: ['net ex-showroom price', 'net ex showroom price', 'net ex showroom', 'net exshowroom'],
     dealer_discount: [
@@ -85,6 +86,7 @@ class ExcelOrderImportService {
 
   /**
    * Helper to extract best-matched field value from raw row object
+   * Formats integers as string without scientific notation or floating-point rounding
    */
   static extractFieldValue(rawRow, aliases) {
     if (!rawRow || typeof rawRow !== 'object') return '';
@@ -94,11 +96,94 @@ class ExcelOrderImportService {
       const targetNorm = this.normalizeKey(alias);
       const match = normKeys.find(item => item.norm === targetNorm);
       if (match && rawRow[match.raw] !== undefined && rawRow[match.raw] !== null) {
-        const val = String(rawRow[match.raw]).trim();
+        const rawCell = rawRow[match.raw];
+        let val;
+        if (typeof rawCell === 'number') {
+          if (Number.isInteger(rawCell)) {
+            val = BigInt(Math.trunc(rawCell)).toString();
+          } else {
+            val = String(rawCell);
+          }
+        } else {
+          val = String(rawCell).trim();
+        }
         if (val !== '') return val;
       }
     }
     return '';
+  }
+
+  /**
+   * Validate 6 mandatory fields required for loyalty import:
+   * 1. Customer Name (>= 2 chars, not dummy)
+   * 2. Phone Number (10 valid digits)
+   * 3. Vehicle Details (VIN/Chassis, Reg No, or Model)
+   * 4. Purchase Date / DMS Invoice Date (valid parsed date)
+   * 5. Aadhaar Card No (12 valid digits, rejects scientific notation, rejects trailing 00000)
+   * 6. Ex-Showroom Price (> ₹0)
+   */
+  static validateMandatoryFields(normRow, rowIndex) {
+    const missing = [];
+
+    // 1. Customer Name
+    const name = String(normRow['Customer Name'] || '').trim();
+    if (!name || name.length < 2 || /^(na|n\/a|null|undefined|none|-|\.)$/i.test(name)) {
+      missing.push('Customer Name');
+    }
+
+    // 2. Phone Number (10 digits)
+    let phone = String(normRow['Customer Number'] || '').replace(/\D/g, '');
+    if (phone.length === 12 && phone.startsWith('91')) phone = phone.slice(2);
+    if (phone.length === 11 && phone.startsWith('0')) phone = phone.slice(1);
+    if (phone.length !== 10 || /^0+$/.test(phone) || /^(.)\1{9}$/.test(phone)) {
+      missing.push('Phone Number (10 valid digits)');
+    }
+
+    // 3. Vehicle Details (VIN, Reg No, or Model)
+    const vin = String(normRow['VIN Number'] || '').trim();
+    const regNo = String(normRow['Reg Number'] || '').trim();
+    const model = String(normRow['Model'] || '').trim();
+    const hasVehicle = (vin.length >= 5 && !/^(na|n\/a|null|undefined|-)$/i.test(vin)) ||
+                      (regNo.length >= 5 && !/^(na|n\/a|null|undefined|-)$/i.test(regNo)) ||
+                      (model.length >= 2 && !/^(na|n\/a|null|undefined|-)$/i.test(model));
+    if (!hasVehicle) {
+      missing.push('Vehicle Details (VIN / Chassis / Reg No / Model)');
+    }
+
+    // 4. Purchase Date
+    const rawDate = String(normRow['DMS Invoice Date'] || '').trim();
+    const parsedDate = AppSheetSyncEngine.parseDmsDate(rawDate) || rawDate;
+    const dateTimestamp = Date.parse(parsedDate);
+    if (!rawDate || isNaN(dateTimestamp) || /^(na|n\/a|null|undefined|-)$/i.test(rawDate)) {
+      missing.push('Purchase Date (DMS Invoice Date)');
+    }
+
+    // 5. Aadhaar Card No (12 digits, no scientific notation, not ending in 00000)
+    const rawAadhaar = String(normRow['Aadhar Card No'] || '').trim();
+    const aadhaarDigits = rawAadhaar.replace(/\D/g, '');
+    const isScientific = /e[+-]/i.test(rawAadhaar);
+    const isTruncatedFloat = aadhaarDigits.length === 12 && aadhaarDigits.endsWith('00000');
+
+    if (!rawAadhaar || /^(na|n\/a|null|undefined|-)$/i.test(rawAadhaar)) {
+      missing.push('Aadhaar Card No (12 digits required)');
+    } else if (isScientific || isTruncatedFloat) {
+      missing.push('Aadhaar Card No (corrupted scientific notation / truncated to 0000; format column as Plain Text or upload original .xlsx)');
+    } else if (aadhaarDigits.length !== 12 || /^0+$/.test(aadhaarDigits) || /^(.)\1{11}$/.test(aadhaarDigits)) {
+      missing.push('Aadhaar Card No (must be exactly 12 valid digits)');
+    }
+
+    // 6. Ex-Showroom Price (> 0)
+    const rawPrice = String(normRow['Ex-Showroom Price'] || '').replace(/[₹,Rs\s]/gi, '').trim();
+    const price = parseFloat(rawPrice);
+    if (!rawPrice || isNaN(price) || price <= 0) {
+      missing.push('Ex-Showroom Price (positive amount > ₹0)');
+    }
+
+    return {
+      isValid: missing.length === 0,
+      missingFields: missing,
+      row: rowIndex
+    };
   }
 
   /**
@@ -140,7 +225,7 @@ class ExcelOrderImportService {
       // Check how many of our essential loyalty aliases are present in this sheet
       const normHeaders = headers.map(h => this.normalizeKey(h));
       let matchScore = 0;
-      const keyFields = ['customer_name', 'phone', 'vin', 'ex_showroom', 'billing_status', 'model'];
+      const keyFields = ['customer_name', 'phone', 'vin', 'ex_showroom', 'billing_status', 'model', 'aadhaar', 'dms_invoice_date'];
       for (const field of keyFields) {
         const aliases = this.FIELD_ALIASES[field] || [];
         if (aliases.some(a => normHeaders.includes(this.normalizeKey(a)))) {
@@ -151,13 +236,40 @@ class ExcelOrderImportService {
       const isOrderSheetName = /order|vin|sale|billing|booking/i.test(sheetName);
       if (isOrderSheetName) matchScore += 3;
 
+      // Check mandatory columns present in header
+      const mandatoryColumns = {
+        customerName: (this.FIELD_ALIASES.customer_name || []).some(a => normHeaders.includes(this.normalizeKey(a))),
+        phone: (this.FIELD_ALIASES.phone || []).some(a => normHeaders.includes(this.normalizeKey(a))),
+        vehicle: (this.FIELD_ALIASES.vin || []).some(a => normHeaders.includes(this.normalizeKey(a))) ||
+                 (this.FIELD_ALIASES.reg_number || []).some(a => normHeaders.includes(this.normalizeKey(a))) ||
+                 (this.FIELD_ALIASES.model || []).some(a => normHeaders.includes(this.normalizeKey(a))),
+        purchaseDate: (this.FIELD_ALIASES.dms_invoice_date || []).some(a => normHeaders.includes(this.normalizeKey(a))),
+        aadhaar: (this.FIELD_ALIASES.aadhaar || []).some(a => normHeaders.includes(this.normalizeKey(a))),
+        exShowroom: (this.FIELD_ALIASES.ex_showroom || []).some(a => normHeaders.includes(this.normalizeKey(a)))
+      };
+
+      // Check a sample of rows for scientific notation in Aadhaar
+      let hasScientificAadhaar = false;
+      try {
+        const sampleRows = xlsx.utils.sheet_to_json(sheet, { range: 0, defval: '' }).slice(0, 30);
+        for (const sr of sampleRows) {
+          const rawAadhaar = String(this.extractFieldValue(sr, this.FIELD_ALIASES.aadhaar) || '').trim();
+          if (/e[+-]/i.test(rawAadhaar) || (rawAadhaar.length === 12 && rawAadhaar.endsWith('00000'))) {
+            hasScientificAadhaar = true;
+            break;
+          }
+        }
+      } catch (e) {}
+
       sheetSummaries.push({
         sheetName,
         rowCount,
         columnCount: headers.length,
         headersSample: headers.slice(0, 20),
         matchScore,
-        isRecommended: false
+        isRecommended: false,
+        mandatoryColumns,
+        hasScientificAadhaar
       });
     }
 
@@ -214,7 +326,7 @@ class ExcelOrderImportService {
     const dmsInvoiceNo = getVal(this.FIELD_ALIASES.dms_invoice_no);
     const rawInvoiceDate = getVal(this.FIELD_ALIASES.dms_invoice_date);
     const parsedInvoiceDate = AppSheetSyncEngine.parseDmsDate(rawInvoiceDate);
-    const dmsInvoiceDate = parsedInvoiceDate || rawInvoiceDate || new Date().toISOString().split('T')[0];
+    const dmsInvoiceDate = parsedInvoiceDate || rawInvoiceDate || '';
 
     const exShowroom = getVal(this.FIELD_ALIASES.ex_showroom) || '0';
     const netExShowroom = getVal(this.FIELD_ALIASES.net_ex_showroom);
@@ -267,6 +379,13 @@ class ExcelOrderImportService {
   /**
    * Import rows from chosen sheet into Loyalty Database
    * Completely ignores unwanted tabs and unwanted columns!
+   * Strictly enforces 6 mandatory fields:
+   * 1. Customer Name
+   * 2. Phone Number (10 digits)
+   * 3. Vehicle Details (Chassis/VIN, Reg No, or Model)
+   * 4. Purchase Date / DMS Invoice Date
+   * 5. Aadhaar Card No (12 digits, no scientific notation, not ending in 00000)
+   * 6. Ex-Showroom Price (> 0)
    */
   static async importOrders(fileBufferOrPath, options = {}) {
     const tenantId = options.tenantId || process.env.DEFAULT_TENANT_ID || 'bellad_and_company';
@@ -297,6 +416,7 @@ class ExcelOrderImportService {
       processed: 0,
       imported: 0,
       skipped: 0,
+      totalFailedMandatory: 0,
       errors: [],
       skippedReasons: {},
       totalPointsCredited: 0,
@@ -312,14 +432,36 @@ class ExcelOrderImportService {
         const normRow = this.normalizeOrderRow(raw, i);
         const orderId = normRow['Order Unique ID'];
 
-        // Quick row-level skip check if completely empty
-        if (!normRow['Customer Name'] && !normRow['Customer Number'] && !normRow['VIN Number']) {
+        // 1. Quick row-level skip check if completely empty
+        if (!normRow['Customer Name'] && !normRow['Customer Number'] && !normRow['VIN Number'] && !normRow['Aadhar Card No']) {
           summary.skipped++;
           summary.skippedReasons['Empty row'] = (summary.skippedReasons['Empty row'] || 0) + 1;
           continue;
         }
 
-        // Run through AppSheetSyncEngine logic with allowHistorical, skipPrCheck and alwaysCreateCustomer enabled
+        // 2. Strict validation of 6 mandatory fields
+        const validation = this.validateMandatoryFields(normRow, i + 2);
+        if (!validation.isValid) {
+          summary.skipped++;
+          summary.totalFailedMandatory++;
+          for (const field of validation.missingFields) {
+            const reasonKey = `Missing mandatory: ${field}`;
+            summary.skippedReasons[reasonKey] = (summary.skippedReasons[reasonKey] || 0) + 1;
+          }
+          if (summary.errors.length < 500) {
+            summary.errors.push({
+              row: i + 2,
+              orderId,
+              customerName: normRow['Customer Name'] || 'Unknown',
+              phone: normRow['Customer Number'] || 'N/A',
+              missingFields: validation.missingFields,
+              error: `Row ${i + 2}: Missing mandatory field(s): ${validation.missingFields.join(', ')}`
+            });
+          }
+          continue;
+        }
+
+        // 3. Process through AppSheetSyncEngine
         const result = await AppSheetSyncEngine.processSingleRow(normRow, tenantId, {
           allowHistorical,
           skipPrCheck: true,
@@ -343,7 +485,7 @@ class ExcelOrderImportService {
       }
     }
 
-    console.log(`✅ [ExcelOrderImport] Completed sheet '${targetSheetName}': ${summary.imported} imported, ${summary.skipped} skipped, ${summary.errors.length} errors.`);
+    console.log(`✅ [ExcelOrderImport] Completed sheet '${targetSheetName}': ${summary.imported} imported, ${summary.skipped} skipped (${summary.totalFailedMandatory} failed mandatory checks), ${summary.errors.length} error reports.`);
     return summary;
   }
 }
