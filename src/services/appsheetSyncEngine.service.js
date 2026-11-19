@@ -233,77 +233,143 @@ class AppSheetSyncEngine {
     const dmsInvoiceDate = row['DMS Invoice Date'] || null;
     const salesConsultant = row['Sales Consultant'] || null;
 
+    // Safety check for Aadhaar hash uniqueness to prevent idx_customers_tenant_aadhaar_hash violation
+    let safeAadhaarNumber = aadhaarNumber;
+    let safeAadhaarHash = aadhaarHash;
+    let safeAadhaarLast4Enc = aadhaarLast4Enc;
+
+    if (aadhaarHash) {
+      const aOwner = await client.query(
+        `SELECT customer_id FROM customers WHERE tenant_id = $1 AND aadhaar_hash = $2 LIMIT 1;`,
+        [tenantId, aadhaarHash]
+      );
+      if (aOwner.rows.length > 0) {
+        if (!resolvedCustomerId) {
+          resolvedCustomerId = aOwner.rows[0].customer_id;
+        } else if (aOwner.rows[0].customer_id !== resolvedCustomerId) {
+          // Another customer already owns this aadhaar_hash; do not duplicate
+          safeAadhaarNumber = null;
+          safeAadhaarHash = null;
+          safeAadhaarLast4Enc = null;
+        }
+      }
+    }
+
     if (resolvedCustomerId) {
       // Update existing customer record with any missing profile details or new valid Aadhaar
-      await client.query(
-        `UPDATE customers
-         SET customer_name = COALESCE(customers.customer_name, $1),
-             age = COALESCE($2, customers.age),
-             aadhaar_number = COALESCE($3, customers.aadhaar_number),
-             aadhaar_hash = COALESCE($4, customers.aadhaar_hash),
-             aadhaar_last4_enc = COALESCE($5, customers.aadhaar_last4_enc),
-             address = COALESCE($6, customers.address),
-             firm_name = COALESCE(customers.firm_name, $7),
-             branch_name = COALESCE(customers.branch_name, $8),
-             branch_address = COALESCE(customers.branch_address, $9),
-             dms_invoice_number = COALESCE(customers.dms_invoice_number, $10),
-             dms_invoice_date = COALESCE(customers.dms_invoice_date, $11),
-             sales_consultant = COALESCE(customers.sales_consultant, $12),
-             updated_at = NOW()
-         WHERE customer_id = $13 AND tenant_id = $14;`,
-        [
-          custName, ageVal, aadhaarNumber, aadhaarHash, aadhaarLast4Enc, addressVal, firmVal,
-          branchName, branchAddress, dmsInvoiceNo, dmsInvoiceDate, salesConsultant, resolvedCustomerId, tenantId
-        ]
-      );
+      await client.query('SAVEPOINT customer_upd_savepoint');
+      try {
+        await client.query(
+          `UPDATE customers
+           SET customer_name = COALESCE(customers.customer_name, $1),
+               age = COALESCE($2, customers.age),
+               aadhaar_number = CASE
+                 WHEN (customers.aadhaar_number IS NULL OR customers.aadhaar_number = '' OR customers.aadhaar_number ~ '000000$') AND $3 IS NOT NULL
+                 THEN $3
+                 ELSE customers.aadhaar_number
+               END,
+               aadhaar_hash = CASE
+                 WHEN customers.aadhaar_hash IS NULL AND $4 IS NOT NULL
+                 THEN $4
+                 ELSE customers.aadhaar_hash
+               END,
+               aadhaar_last4_enc = CASE
+                 WHEN customers.aadhaar_last4_enc IS NULL AND $5 IS NOT NULL
+                 THEN $5
+                 ELSE customers.aadhaar_last4_enc
+               END,
+               address = COALESCE($6, customers.address),
+               firm_name = COALESCE(customers.firm_name, $7),
+               branch_name = COALESCE(customers.branch_name, $8),
+               branch_address = COALESCE(customers.branch_address, $9),
+               dms_invoice_number = COALESCE(customers.dms_invoice_number, $10),
+               dms_invoice_date = COALESCE(customers.dms_invoice_date, $11),
+               sales_consultant = COALESCE(customers.sales_consultant, $12),
+               updated_at = NOW()
+           WHERE customer_id = $13 AND tenant_id = $14;`,
+          [
+            custName, ageVal, safeAadhaarNumber, safeAadhaarHash, safeAadhaarLast4Enc, addressVal, firmVal,
+            branchName, branchAddress, dmsInvoiceNo, dmsInvoiceDate, salesConsultant, resolvedCustomerId, tenantId
+          ]
+        );
+        await client.query('RELEASE SAVEPOINT customer_upd_savepoint');
+      } catch (updErr) {
+        await client.query('ROLLBACK TO SAVEPOINT customer_upd_savepoint');
+        console.warn(`[AppSheetSyncEngine] Safe Aadhaar update conflict ignored for customer ${resolvedCustomerId}:`, updErr.message);
+      }
     } else {
-      // Insert new customer
-      if (preferredId) {
-        const cRes = await client.query(
+      // Insert new customer with savepoint protection
+      await client.query('SAVEPOINT customer_ins_savepoint');
+      try {
+        if (preferredId) {
+          const cRes = await client.query(
+            `INSERT INTO customers (
+               customer_id, customer_name, age, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
+               address, firm_name, gst_number, nominee_name, nominee_relation, email,
+               branch_name, branch_address, dms_invoice_number, dms_invoice_date, sales_consultant, tenant_id
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+             ON CONFLICT (customer_id) DO UPDATE SET
+               customer_name = EXCLUDED.customer_name,
+               aadhaar_number = COALESCE(customers.aadhaar_number, EXCLUDED.aadhaar_number),
+               aadhaar_hash = COALESCE(customers.aadhaar_hash, EXCLUDED.aadhaar_hash),
+               aadhaar_last4_enc = COALESCE(customers.aadhaar_last4_enc, EXCLUDED.aadhaar_last4_enc),
+               age = COALESCE(EXCLUDED.age, customers.age),
+               address = COALESCE(EXCLUDED.address, customers.address),
+               firm_name = COALESCE(EXCLUDED.firm_name, customers.firm_name),
+               branch_name = COALESCE(EXCLUDED.branch_name, customers.branch_name),
+               branch_address = COALESCE(EXCLUDED.branch_address, customers.branch_address),
+               dms_invoice_number = COALESCE(EXCLUDED.dms_invoice_number, customers.dms_invoice_number),
+               dms_invoice_date = COALESCE(EXCLUDED.dms_invoice_date, customers.dms_invoice_date),
+               sales_consultant = COALESCE(EXCLUDED.sales_consultant, customers.sales_consultant),
+               updated_at = NOW()
+             RETURNING customer_id;`,
+            [
+              preferredId, custName, ageVal, safeAadhaarNumber, safeAadhaarHash, safeAadhaarLast4Enc,
+              addressVal, firmVal, gstVal, nomineeVal, relationVal, emailVal,
+              branchName, branchAddress, dmsInvoiceNo, dmsInvoiceDate, salesConsultant, tenantId
+            ]
+          );
+          resolvedCustomerId = cRes.rows[0].customer_id;
+        } else {
+          const cRes = await client.query(
+            `INSERT INTO customers (
+               customer_name, age, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
+               address, firm_name, gst_number, nominee_name, nominee_relation, email,
+               branch_name, branch_address, dms_invoice_number, dms_invoice_date, sales_consultant, tenant_id
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+             RETURNING customer_id;`,
+            [
+              custName, ageVal, safeAadhaarNumber, safeAadhaarHash, safeAadhaarLast4Enc,
+              addressVal, firmVal, gstVal, nomineeVal, relationVal, emailVal,
+              branchName, branchAddress, dmsInvoiceNo, dmsInvoiceDate, salesConsultant, tenantId
+            ]
+          );
+          resolvedCustomerId = cRes.rows[0].customer_id;
+        }
+        await client.query('RELEASE SAVEPOINT customer_ins_savepoint');
+      } catch (insErr) {
+        await client.query('ROLLBACK TO SAVEPOINT customer_ins_savepoint');
+        console.warn(`[AppSheetSyncEngine] Customer insert fallback without aadhaar_hash for ${preferredId || custName}:`, insErr.message);
+        const fallbackRes = await client.query(
           `INSERT INTO customers (
-             customer_id, customer_name, age, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
+             customer_id, customer_name, age,
              address, firm_name, gst_number, nominee_name, nominee_relation, email,
              branch_name, branch_address, dms_invoice_number, dms_invoice_date, sales_consultant, tenant_id
            )
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
            ON CONFLICT (customer_id) DO UPDATE SET
              customer_name = EXCLUDED.customer_name,
-             aadhaar_number = COALESCE(EXCLUDED.aadhaar_number, customers.aadhaar_number),
-             aadhaar_hash = COALESCE(EXCLUDED.aadhaar_hash, customers.aadhaar_hash),
-             aadhaar_last4_enc = COALESCE(EXCLUDED.aadhaar_last4_enc, customers.aadhaar_last4_enc),
-             age = COALESCE(EXCLUDED.age, customers.age),
-             address = COALESCE(EXCLUDED.address, customers.address),
-             firm_name = COALESCE(EXCLUDED.firm_name, customers.firm_name),
-             branch_name = COALESCE(EXCLUDED.branch_name, customers.branch_name),
-             branch_address = COALESCE(EXCLUDED.branch_address, customers.branch_address),
-             dms_invoice_number = COALESCE(EXCLUDED.dms_invoice_number, customers.dms_invoice_number),
-             dms_invoice_date = COALESCE(EXCLUDED.dms_invoice_date, customers.dms_invoice_date),
-             sales_consultant = COALESCE(EXCLUDED.sales_consultant, customers.sales_consultant),
              updated_at = NOW()
            RETURNING customer_id;`,
           [
-            preferredId, custName, ageVal, aadhaarNumber, aadhaarHash, aadhaarLast4Enc,
+            preferredId || `BAC-CUST-${Date.now()}`, custName, ageVal,
             addressVal, firmVal, gstVal, nomineeVal, relationVal, emailVal,
             branchName, branchAddress, dmsInvoiceNo, dmsInvoiceDate, salesConsultant, tenantId
           ]
         );
-        resolvedCustomerId = cRes.rows[0].customer_id;
-      } else {
-        const cRes = await client.query(
-          `INSERT INTO customers (
-             customer_name, age, aadhaar_number, aadhaar_hash, aadhaar_last4_enc,
-             address, firm_name, gst_number, nominee_name, nominee_relation, email,
-             branch_name, branch_address, dms_invoice_number, dms_invoice_date, sales_consultant, tenant_id
-           )
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-           RETURNING customer_id;`,
-          [
-            custName, ageVal, aadhaarNumber, aadhaarHash, aadhaarLast4Enc,
-            addressVal, firmVal, gstVal, nomineeVal, relationVal, emailVal,
-            branchName, branchAddress, dmsInvoiceNo, dmsInvoiceDate, salesConsultant, tenantId
-          ]
-        );
-        resolvedCustomerId = cRes.rows[0].customer_id;
+        resolvedCustomerId = fallbackRes.rows[0].customer_id;
       }
     }
 

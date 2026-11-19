@@ -53,7 +53,6 @@ class ImportController {
 
       const sheetName = req.body.sheetName || undefined;
       const allowHistorical = req.body.allowHistorical === 'false' || req.body.allowHistorical === false ? false : true;
-      const updateAadhaarOnly = req.body.updateAadhaarOnly === 'true' || req.body.updateAadhaarOnly === true;
       const customCutoffDate = req.body.customCutoffDate || '2020-01-01';
       const tenantId = req.headers['x-tenant-id'] || process.env.DEFAULT_TENANT_ID || 'bellad_and_company';
 
@@ -62,8 +61,7 @@ class ImportController {
         sheetName,
         allowHistorical,
         customCutoffDate,
-        tenantId,
-        updateAadhaarOnly
+        tenantId
       });
 
       return res.status(200).json({

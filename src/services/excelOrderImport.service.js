@@ -1,6 +1,5 @@
 const xlsx = require('xlsx');
 const { pool } = require('../config/db');
-const { encrypt, hashIdentifier, lastDigits } = require('../utils/crypto.util');
 const AppSheetSyncEngine = require('./appsheetSyncEngine.service');
 
 class ExcelOrderImportService {
@@ -424,120 +423,6 @@ class ExcelOrderImportService {
       totalGrossExShowroomPaise: 0,
       totalDiscountsPaise: 0
     };
-
-    // Dedicated Safe Aadhaar Update Mode (Zero Points, Zero Duplicate Transactions)
-    if (options.updateAadhaarOnly) {
-      console.log(`\n🛡️ [ExcelOrderImport] Running in AADHAAR UPDATE ONLY MODE: zero points, zero duplicate transactions`);
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        let updatedCount = 0;
-        let skippedCount = 0;
-        let alreadyHasCount = 0;
-
-        for (let i = 0; i < rawRows.length; i++) {
-          const raw = rawRows[i];
-          summary.processed++;
-
-          const normRow = this.normalizeOrderRow(raw, i);
-          const rawAadhaar = String(normRow['Aadhar Card No'] || '').trim();
-          const cleanAadhaar = rawAadhaar.replace(/\D/g, '');
-          const phone = String(normRow['Customer Number'] || '').replace(/\D/g, '').slice(-10);
-          const vin = String(normRow['VIN Number'] || '').trim();
-
-          // Validate genuine 12 digits, not scientific (not ending in 00000), not all zeros
-          if (cleanAadhaar.length !== 12 || /^0+$/.test(cleanAadhaar) || cleanAadhaar.endsWith('00000')) {
-            skippedCount++;
-            summary.skippedReasons['Invalid or corrupted Aadhaar (scientific notation / empty)'] = (summary.skippedReasons['Invalid or corrupted Aadhaar (scientific notation / empty)'] || 0) + 1;
-            continue;
-          }
-
-          const aHash = hashIdentifier(cleanAadhaar);
-          const aLast4 = lastDigits(cleanAadhaar, 4);
-          const aLast4Enc = encrypt(aLast4);
-
-          // Find customer by phone or VIN
-          let targetCustomerId = null;
-          if (phone && phone.length === 10) {
-            const pRes = await client.query(
-              `SELECT customer_id FROM customer_phones WHERE phone_number = $1 AND tenant_id = $2 LIMIT 1`,
-              [phone, tenantId]
-            );
-            if (pRes.rows.length > 0) targetCustomerId = pRes.rows[0].customer_id;
-          }
-
-          if (!targetCustomerId && vin) {
-            const vRes = await client.query(
-              `SELECT customer_id FROM customer_vehicles WHERE chassis_no = $1 AND tenant_id = $2 LIMIT 1`,
-              [vin, tenantId]
-            );
-            if (vRes.rows.length > 0) targetCustomerId = vRes.rows[0].customer_id;
-          }
-
-          if (targetCustomerId) {
-            // Check if this Aadhaar is already registered to someone in the database
-            const existingOwner = await client.query(
-              `SELECT customer_id FROM customers WHERE tenant_id = $1 AND (aadhaar_hash = $2 OR aadhaar_number = $3) LIMIT 1`,
-              [tenantId, aHash, cleanAadhaar]
-            );
-
-            if (existingOwner.rows.length > 0) {
-              const existingId = existingOwner.rows[0].customer_id;
-              if (existingId === targetCustomerId) {
-                alreadyHasCount++;
-              } else {
-                // Aadhaar is already owned by existingId; cannot duplicate on targetCustomerId due to unique constraint
-                skippedCount++;
-                summary.skippedReasons['Aadhaar already assigned to customer ' + existingId] =
-                  (summary.skippedReasons['Aadhaar already assigned to customer ' + existingId] || 0) + 1;
-              }
-              continue;
-            }
-
-            await client.query('SAVEPOINT row_update');
-            try {
-              const updRes = await client.query(
-                `UPDATE customers
-                 SET aadhaar_number = $1,
-                     aadhaar_hash = $2,
-                     aadhaar_last4_enc = $3,
-                     updated_at = NOW()
-                 WHERE customer_id = $4 AND tenant_id = $5 AND (aadhaar_number IS NULL OR aadhaar_number = '' OR aadhaar_number ~ '000000$')`,
-                [cleanAadhaar, aHash, aLast4Enc, targetCustomerId, tenantId]
-              );
-              await client.query('RELEASE SAVEPOINT row_update');
-              if (updRes.rowCount > 0) {
-                updatedCount++;
-              } else {
-                alreadyHasCount++;
-              }
-            } catch (rowErr) {
-              await client.query('ROLLBACK TO SAVEPOINT row_update');
-              skippedCount++;
-              summary.skippedReasons['Duplicate Aadhaar unique constraint conflict'] =
-                (summary.skippedReasons['Duplicate Aadhaar unique constraint conflict'] || 0) + 1;
-            }
-          } else {
-            skippedCount++;
-            summary.skippedReasons['Customer not found by Phone or VIN'] = (summary.skippedReasons['Customer not found by Phone or VIN'] || 0) + 1;
-          }
-        }
-
-        await client.query('COMMIT');
-        summary.imported = updatedCount;
-        summary.skipped = skippedCount;
-        summary.alreadyHasCount = alreadyHasCount;
-        summary.totalPointsCredited = 0;
-        summary.isAadhaarOnlyMode = true;
-        console.log(`✅ [ExcelOrderImport] Aadhaar sync finished: ${updatedCount} customers updated, 0 points created.`);
-        return summary;
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
-      }
-    }
 
     for (let i = 0; i < rawRows.length; i++) {
       const raw = rawRows[i];
