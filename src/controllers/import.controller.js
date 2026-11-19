@@ -53,6 +53,10 @@ class ImportController {
 
       const sheetName = req.body.sheetName || undefined;
       const allowHistorical = req.body.allowHistorical === 'false' || req.body.allowHistorical === false ? false : true;
+      const updateAadhaarAndDateOnly = req.body.updateAadhaarAndDateOnly === 'true' ||
+                                      req.body.updateAadhaarAndDateOnly === true ||
+                                      req.body.updateAadhaarOnly === 'true' ||
+                                      req.body.updateAadhaarOnly === true;
       const customCutoffDate = req.body.customCutoffDate || '2020-01-01';
       const tenantId = req.headers['x-tenant-id'] || process.env.DEFAULT_TENANT_ID || 'bellad_and_company';
 
@@ -61,12 +65,17 @@ class ImportController {
         sheetName,
         allowHistorical,
         customCutoffDate,
-        tenantId
+        tenantId,
+        updateAadhaarAndDateOnly
       });
+
+      const message = updateAadhaarAndDateOnly
+        ? `Successfully synced Aadhaar & DMS Date for ${summary.imported} customers (${summary.skipped} skipped, 0 points created)`
+        : `Successfully processed ${summary.processed} rows (${summary.imported} imported, ${summary.skipped} skipped)`;
 
       return res.status(200).json({
         success: true,
-        message: `Successfully processed ${summary.processed} rows (${summary.imported} imported, ${summary.skipped} skipped)`,
+        message,
         summary
       });
     } catch (err) {

@@ -29,6 +29,7 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
   const [inspectionData, setInspectionData] = useState(null);
   const [selectedSheet, setSelectedSheet] = useState('');
   const [allowHistorical, setAllowHistorical] = useState(true);
+  const [updateAadhaarAndDateOnly, setUpdateAadhaarAndDateOnly] = useState(true);
   const [importSummary, setImportSummary] = useState(null);
   const [showErrorTable, setShowErrorTable] = useState(true);
 
@@ -72,13 +73,22 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
         sheetName: selectedSheet,
         allowHistorical,
         customCutoffDate: '2020-01-01',
+        updateAadhaarAndDateOnly,
       });
 
       setImportSummary(res.summary);
-      if (res.summary.imported > 0) {
-        showSuccess(`Import complete: ${res.summary.imported} sales imported with ${res.summary.totalPointsCredited?.toLocaleString()} points awarded!`);
+      if (updateAadhaarAndDateOnly) {
+        if (res.summary.imported > 0) {
+          showSuccess(`Sync complete: ${res.summary.imported} customers updated with Aadhaar & DMS Date! (Zero points / zero duplicate ledger entries)`);
+        } else {
+          showWarning(`Sync finished: 0 updated, ${res.summary.skipped} skipped.`);
+        }
       } else {
-        showWarning(`Import finished: 0 imported, ${res.summary.skipped} skipped. Check the missing fields error report.`);
+        if (res.summary.imported > 0) {
+          showSuccess(`Import complete: ${res.summary.imported} sales imported with ${res.summary.totalPointsCredited?.toLocaleString()} points awarded!`);
+        } else {
+          showWarning(`Import finished: 0 imported, ${res.summary.skipped} skipped. Check the missing fields error report.`);
+        }
       }
       if (onImportSuccess) onImportSuccess(res.summary);
     } catch (err) {
@@ -148,58 +158,7 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
 
         {/* Body Content */}
         <div className="p-6 overflow-y-auto flex-1 space-y-5">
-          {/* Mandatory Fields Requirements Banner */}
-          <div className="p-4 bg-indigo-50/60 border border-indigo-200/80 rounded-2xl">
-            <div className="flex items-center gap-2 font-bold text-indigo-950 text-xs mb-2">
-              <ShieldCheck className="w-4 h-4 text-indigo-600" />
-              6 Mandatory Fields Required For Every Row:
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-indigo-100 font-semibold text-slate-800">
-                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>1. Customer Name</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-indigo-100 font-semibold text-slate-800">
-                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>2. Phone No (10 digits)</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-indigo-100 font-semibold text-slate-800">
-                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>3. Vehicle (VIN/Reg/Model)</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-indigo-100 font-semibold text-slate-800">
-                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>4. Purchase Date</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-indigo-100 font-semibold text-slate-800">
-                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>5. Aadhaar No (12 digits)</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-indigo-100 font-semibold text-slate-800">
-                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>6. Ex-Showroom Price</span>
-              </div>
-            </div>
-            <p className="text-[11px] text-indigo-900 mt-2 font-medium">
-              Rows missing any of these 6 fields will be safely skipped, and the exact missed fields will be reported row-by-row.
-            </p>
-          </div>
 
-          {/* Aadhaar Format & Scientific Notation Warning Banner */}
-          <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-900 space-y-1">
-              <span className="font-bold">Aadhaar Card "0000" Prevention Notice:</span>
-              <p>
-                When exporting Excel sheets to CSV, 12-digit Aadhaar numbers get converted into scientific notation (e.g. <code>2.38096E+11</code>), which strips the last 6 digits into <code>000000</code>.
-              </p>
-              <p className="font-semibold text-amber-950">
-                💡 Best Practice: Upload your original <code>.xlsx</code> file directly, or format the Aadhaar column as "Plain Text" in Excel before saving.
-              </p>
-            </div>
-          </div>
-
-          {/* File Upload Zone */}
           {!inspectionData && !importSummary && (
             <div className="border-2 border-dashed border-indigo-200 bg-indigo-50/20 hover:bg-indigo-50/40 rounded-2xl p-8 text-center transition">
               <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
@@ -264,17 +223,15 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
                         key={s.sheetName}
                         type="button"
                         onClick={() => setSelectedSheet(s.sheetName)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${
-                          isSelected
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                        }`}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${isSelected
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
                       >
                         <span>{s.sheetName}</span>
                         <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded-md ${
-                            isSelected ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-100 text-slate-500'
-                          }`}
+                          className={`text-[10px] px-1.5 py-0.5 rounded-md ${isSelected ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-100 text-slate-500'
+                            }`}
                         >
                           {s.rowCount?.toLocaleString()} rows
                         </span>
@@ -306,6 +263,56 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
                 </div>
               )}
 
+              {/* Import Action Mode Selector */}
+              <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-2xl space-y-2.5">
+                <div className="text-xs font-black text-indigo-950 uppercase tracking-wider flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                    Select Import Action Mode
+                  </span>
+                  {updateAadhaarAndDateOnly && (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                      Safe Mode Active (0 Points)
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className={`p-3.5 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${updateAadhaarAndDateOnly ? 'bg-white border-indigo-600 ring-2 ring-indigo-600/20 shadow-xs' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
+                    <input
+                      type="radio"
+                      name="syncMode"
+                      checked={updateAadhaarAndDateOnly}
+                      onChange={() => setUpdateAadhaarAndDateOnly(true)}
+                      className="mt-0.5 text-indigo-600 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-xs text-indigo-950 flex items-center gap-1.5">
+                        <span>⚡ Update Aadhaar &amp; DMS Date Only</span>
+                      </div>
+                      <div className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                        Matches existing customers and updates Aadhaar &amp; DMS Invoice Date. <strong className="text-emerald-700">Zero new points, zero ledger entries.</strong>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className={`p-3.5 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${!updateAadhaarAndDateOnly ? 'bg-white border-indigo-600 ring-2 ring-indigo-600/20 shadow-xs' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}>
+                    <input
+                      type="radio"
+                      name="syncMode"
+                      checked={!updateAadhaarAndDateOnly}
+                      onChange={() => setUpdateAadhaarAndDateOnly(false)}
+                      className="mt-0.5 text-indigo-600 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-xs text-slate-900">Normal Order Import</div>
+                      <div className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                        Creates new customers, vehicles &amp; credits purchase loyalty points to ledger.
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               {/* Historical Sync Options */}
               <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-2xl flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -336,10 +343,14 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
               <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-2xl">
                 <div className="flex items-center gap-2 text-emerald-900 font-bold text-base mb-1">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  Order Form Import Completed
+                  {importSummary.isAadhaarAndDateOnlyMode
+                    ? 'Aadhaar & DMS Invoice Date Sync Completed'
+                    : 'Order Form Import Completed'}
                 </div>
                 <p className="text-xs text-emerald-700">
-                  Processed tab <code>{importSummary.sheetName}</code> with mandatory field validation.
+                  {importSummary.isAadhaarAndDateOnlyMode
+                    ? `Processed tab ${importSummary.sheetName}: Safely updated customer Aadhaar and DMS date. Zero points credited, zero duplicate ledger entries.`
+                    : `Processed tab ${importSummary.sheetName} with mandatory field validation.`}
                 </p>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
@@ -348,15 +359,25 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
                     <div className="text-lg font-black text-slate-900">{importSummary.processed?.toLocaleString()}</div>
                   </div>
                   <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-xs">
-                    <div className="text-[10px] text-emerald-600 font-bold uppercase">Valid &amp; Imported</div>
+                    <div className="text-[10px] text-emerald-600 font-bold uppercase">
+                      {importSummary.isAadhaarAndDateOnlyMode ? 'Customers Updated' : 'Valid & Imported'}
+                    </div>
                     <div className="text-lg font-black text-emerald-600">{importSummary.imported?.toLocaleString()}</div>
                   </div>
                   <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-xs">
-                    <div className="text-[10px] text-indigo-600 font-bold uppercase">Points Credited</div>
-                    <div className="text-lg font-black text-indigo-600">+{importSummary.totalPointsCredited?.toLocaleString()} PTS</div>
+                    <div className="text-[10px] text-indigo-600 font-bold uppercase">
+                      {importSummary.isAadhaarAndDateOnlyMode ? 'Vehicles Date Updated' : 'Points Credited'}
+                    </div>
+                    <div className="text-lg font-black text-indigo-600">
+                      {importSummary.isAadhaarAndDateOnlyMode
+                        ? `${importSummary.updatedVehiclesCount || 0} VEHICLES`
+                        : `+${importSummary.totalPointsCredited?.toLocaleString()} PTS`}
+                    </div>
                   </div>
                   <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-xs">
-                    <div className="text-[10px] text-amber-600 font-bold uppercase">Skipped / Missed Fields</div>
+                    <div className="text-[10px] text-amber-600 font-bold uppercase">
+                      {importSummary.isAadhaarAndDateOnlyMode ? 'Skipped / Unmatched' : 'Skipped / Missed Fields'}
+                    </div>
                     <div className="text-lg font-black text-amber-600">{importSummary.skipped?.toLocaleString()}</div>
                   </div>
                 </div>
@@ -461,15 +482,23 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
               <button
                 onClick={handleRunOrderImport}
                 disabled={loading || !selectedSheet}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition disabled:opacity-50 cursor-pointer"
+                className={`inline-flex items-center gap-2 px-5 py-2.5 text-white text-xs font-bold rounded-xl shadow-sm transition disabled:opacity-50 cursor-pointer ${
+                  updateAadhaarAndDateOnly ? 'bg-indigo-700 hover:bg-indigo-800' : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
               >
                 {loading ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Processing Orders &amp; Points...
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />{' '}
+                    {updateAadhaarAndDateOnly
+                      ? 'Updating Aadhaar & DMS Date...'
+                      : 'Processing Orders & Points...'}
                   </>
                 ) : (
                   <>
-                    <FileCheck className="w-3.5 h-3.5 text-amber-300" /> Start Order Import ({selectedSheet})
+                    <FileCheck className="w-3.5 h-3.5 text-amber-300" />{' '}
+                    {updateAadhaarAndDateOnly
+                      ? `Sync Aadhaar & DMS Date (${selectedSheet})`
+                      : `Start Order Import (${selectedSheet})`}
                   </>
                 )}
               </button>

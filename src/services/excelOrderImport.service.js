@@ -1,5 +1,6 @@
 const xlsx = require('xlsx');
 const { pool } = require('../config/db');
+const { encrypt, hashIdentifier, lastDigits } = require('../utils/crypto.util');
 const AppSheetSyncEngine = require('./appsheetSyncEngine.service');
 
 class ExcelOrderImportService {
@@ -377,6 +378,242 @@ class ExcelOrderImportService {
   }
 
   /**
+   * Dedicated Aadhaar & DMS Invoice Date Sync
+   * Strictly updates existing customers' Aadhaar details and DMS Invoice Date.
+   * Zero points credited, zero ledger entries created, zero duplicate transactions.
+   * Fully protected against idx_customers_tenant_aadhaar_hash unique constraint collisions.
+   */
+  static async updateAadhaarAndDateOnly(rawRows, tenantId, summary) {
+    const client = await pool.connect();
+    try {
+      console.log(`\n🛡️ [ExcelOrderImport] Starting Aadhaar & DMS Date Sync (${rawRows.length} rows)`);
+      let updatedCustomersCount = 0;
+      let updatedVehiclesCount = 0;
+      let skippedCount = 0;
+      let alreadyHasCount = 0;
+
+      // In-memory map to prevent collisions within the current file
+      const seenAadhaarHashInBatch = new Map();
+
+      const BATCH_SIZE = 250;
+      let inTransaction = false;
+
+      for (let i = 0; i < rawRows.length; i++) {
+        if (i % BATCH_SIZE === 0) {
+          if (inTransaction) {
+            await client.query('COMMIT');
+            inTransaction = false;
+          }
+          await client.query('BEGIN');
+          inTransaction = true;
+        }
+
+        const raw = rawRows[i];
+        summary.processed++;
+
+        const normRow = this.normalizeOrderRow(raw, i);
+        const orderId = String(normRow['Order Unique ID'] || '').trim();
+        const rawAadhaar = String(normRow['Aadhar Card No'] || '').trim();
+        const cleanAadhaar = rawAadhaar.replace(/\D/g, '');
+        const isScientific = /e[+-]/i.test(rawAadhaar);
+        const isCorrupted = cleanAadhaar.length === 12 && cleanAadhaar.endsWith('00000');
+        const isValidAadhaar = !isScientific && !isCorrupted && cleanAadhaar.length === 12 && !/^0+$/.test(cleanAadhaar) && !/^(.)\1{11}$/.test(cleanAadhaar);
+
+        const rawDate = String(normRow['DMS Invoice Date'] || '').trim();
+        const parsedDate = AppSheetSyncEngine.parseDmsDate(rawDate);
+        const dmsDateToStore = parsedDate || (rawDate ? rawDate : null);
+
+        const phone = String(normRow['Customer Number'] || '').replace(/\D/g, '').slice(-10);
+        const altPhone = String(normRow['Customer Alt Number'] || '').replace(/\D/g, '').slice(-10);
+        const vin = String(normRow['VIN Number'] || '').trim();
+        const regNo = String(normRow['Reg Number'] || '').trim();
+
+        // 1. Resolve Target Customer ID
+        let targetCustomerId = null;
+
+        if (phone && phone.length === 10) {
+          const pRes = await client.query(
+            `SELECT customer_id FROM customer_phones WHERE phone_number = $1 AND tenant_id = $2 LIMIT 1`,
+            [phone, tenantId]
+          );
+          if (pRes.rows.length > 0) targetCustomerId = pRes.rows[0].customer_id;
+        }
+
+        if (!targetCustomerId && altPhone && altPhone.length === 10) {
+          const pRes = await client.query(
+            `SELECT customer_id FROM customer_phones WHERE phone_number = $1 AND tenant_id = $2 LIMIT 1`,
+            [altPhone, tenantId]
+          );
+          if (pRes.rows.length > 0) targetCustomerId = pRes.rows[0].customer_id;
+        }
+
+        if (!targetCustomerId && vin) {
+          const vRes = await client.query(
+            `SELECT customer_id FROM vehicles WHERE (chassis_no = $1 OR vin = $1) AND tenant_id = $2 LIMIT 1`,
+            [vin, tenantId]
+          );
+          if (vRes.rows.length > 0) targetCustomerId = vRes.rows[0].customer_id;
+        }
+
+        if (!targetCustomerId && regNo && regNo.length >= 5) {
+          const rRes = await client.query(
+            `SELECT customer_id FROM vehicles WHERE registration_number = $1 AND tenant_id = $2 LIMIT 1`,
+            [regNo, tenantId]
+          );
+          if (rRes.rows.length > 0) targetCustomerId = rRes.rows[0].customer_id;
+        }
+
+        if (!targetCustomerId && orderId) {
+          const oRes = await client.query(
+            `SELECT customer_id FROM customers WHERE (customer_id = $1 OR customer_id = $2) AND tenant_id = $3 LIMIT 1`,
+            [orderId, `BAC-${orderId}`, tenantId]
+          );
+          if (oRes.rows.length > 0) targetCustomerId = oRes.rows[0].customer_id;
+        }
+
+        if (!targetCustomerId) {
+          skippedCount++;
+          summary.skippedReasons['Customer not found by Phone, VIN, or Order ID'] =
+            (summary.skippedReasons['Customer not found by Phone, VIN, or Order ID'] || 0) + 1;
+          continue;
+        }
+
+        // 2. Validate Aadhaar assignment without unique constraint conflict
+        let canUpdateAadhaar = false;
+        let aHash = null;
+        let aLast4Enc = null;
+
+        if (isValidAadhaar) {
+          aHash = hashIdentifier(cleanAadhaar);
+          const aLast4 = lastDigits(cleanAadhaar, 4);
+          aLast4Enc = encrypt(aLast4);
+
+          const batchOwner = seenAadhaarHashInBatch.get(aHash);
+          if (batchOwner && batchOwner !== targetCustomerId) {
+            canUpdateAadhaar = false;
+          } else {
+            const existingOwner = await client.query(
+              `SELECT customer_id FROM customers WHERE tenant_id = $1 AND aadhaar_hash = $2 LIMIT 1`,
+              [tenantId, aHash]
+            );
+
+            if (existingOwner.rows.length > 0) {
+              const existingId = existingOwner.rows[0].customer_id;
+              if (existingId === targetCustomerId) {
+                canUpdateAadhaar = true;
+                seenAadhaarHashInBatch.set(aHash, targetCustomerId);
+              } else {
+                canUpdateAadhaar = false;
+                summary.skippedReasons['Aadhaar conflict: already assigned to another customer'] =
+                  (summary.skippedReasons['Aadhaar conflict: already assigned to another customer'] || 0) + 1;
+              }
+            } else {
+              canUpdateAadhaar = true;
+              seenAadhaarHashInBatch.set(aHash, targetCustomerId);
+            }
+          }
+        }
+
+        // 3. Update customer and vehicle within a SAVEPOINT
+        await client.query('SAVEPOINT row_sync');
+        try {
+          let customerModified = false;
+
+          if (canUpdateAadhaar && dmsDateToStore) {
+            const upd = await client.query(
+              `UPDATE customers
+               SET aadhaar_number = COALESCE($1, aadhaar_number),
+                   aadhaar_hash = COALESCE($2, aadhaar_hash),
+                   aadhaar_last4_enc = COALESCE($3, aadhaar_last4_enc),
+                   dms_invoice_date = COALESCE($4, dms_invoice_date),
+                   updated_at = NOW()
+               WHERE customer_id = $5 AND tenant_id = $6`,
+              [cleanAadhaar, aHash, aLast4Enc, dmsDateToStore, targetCustomerId, tenantId]
+            );
+            if (upd.rowCount > 0) customerModified = true;
+          } else if (canUpdateAadhaar) {
+            const upd = await client.query(
+              `UPDATE customers
+               SET aadhaar_number = COALESCE($1, aadhaar_number),
+                   aadhaar_hash = COALESCE($2, aadhaar_hash),
+                   aadhaar_last4_enc = COALESCE($3, aadhaar_last4_enc),
+                   updated_at = NOW()
+               WHERE customer_id = $4 AND tenant_id = $5`,
+              [cleanAadhaar, aHash, aLast4Enc, targetCustomerId, tenantId]
+            );
+            if (upd.rowCount > 0) customerModified = true;
+          } else if (dmsDateToStore) {
+            const upd = await client.query(
+              `UPDATE customers
+               SET dms_invoice_date = COALESCE($1, dms_invoice_date),
+                   updated_at = NOW()
+               WHERE customer_id = $2 AND tenant_id = $3`,
+              [dmsDateToStore, targetCustomerId, tenantId]
+            );
+            if (upd.rowCount > 0) customerModified = true;
+          }
+
+          if (dmsDateToStore) {
+            if (vin) {
+              await client.query(
+                `UPDATE vehicles
+                 SET dms_invoice_date = COALESCE($1, dms_invoice_date),
+                     purchase_date = CASE WHEN $2::date IS NOT NULL THEN $2::date ELSE purchase_date END,
+                     updated_at = NOW()
+                 WHERE tenant_id = $3 AND (chassis_no = $4 OR vin = $4 OR customer_id = $5)`,
+                [dmsDateToStore, parsedDate || null, tenantId, vin, targetCustomerId]
+              );
+            } else {
+              await client.query(
+                `UPDATE vehicles
+                 SET dms_invoice_date = COALESCE($1, dms_invoice_date),
+                     purchase_date = CASE WHEN $2::date IS NOT NULL THEN $2::date ELSE purchase_date END,
+                     updated_at = NOW()
+                 WHERE customer_id = $3 AND tenant_id = $4`,
+                [dmsDateToStore, parsedDate || null, targetCustomerId, tenantId]
+              );
+            }
+            updatedVehiclesCount++;
+          }
+
+          await client.query('RELEASE SAVEPOINT row_sync');
+
+          if (customerModified) {
+            updatedCustomersCount++;
+          } else {
+            alreadyHasCount++;
+          }
+        } catch (rowErr) {
+          await client.query('ROLLBACK TO SAVEPOINT row_sync');
+          skippedCount++;
+          console.warn(`[Sync Aadhaar/Date Warning] Row ${i + 2}:`, rowErr.message);
+          summary.skippedReasons['Row update warning: ' + rowErr.message] =
+            (summary.skippedReasons['Row update warning: ' + rowErr.message] || 0) + 1;
+        }
+      }
+
+      if (inTransaction) {
+        await client.query('COMMIT');
+      }
+
+      summary.imported = updatedCustomersCount;
+      summary.updatedVehiclesCount = updatedVehiclesCount;
+      summary.skipped = skippedCount;
+      summary.alreadyHasCount = alreadyHasCount;
+      summary.totalPointsCredited = 0; // Strictly zero points
+      summary.isAadhaarAndDateOnlyMode = true;
+
+      console.log(`✅ [ExcelOrderImport] Aadhaar & DMS Date sync finished: ${updatedCustomersCount} customers updated, ${updatedVehiclesCount} vehicles updated, 0 points created, 0 ledger entries.`);
+      return summary;
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Import rows from chosen sheet into Loyalty Database
    * Completely ignores unwanted tabs and unwanted columns!
    * Strictly enforces 6 mandatory fields:
@@ -423,6 +660,11 @@ class ExcelOrderImportService {
       totalGrossExShowroomPaise: 0,
       totalDiscountsPaise: 0
     };
+
+    // Dedicated Safe Aadhaar & DMS Date Sync Mode (Zero Points, Zero New Ledger Entries)
+    if (options.updateAadhaarAndDateOnly || options.updateAadhaarOnly) {
+      return await this.updateAadhaarAndDateOnly(rawRows, tenantId, summary);
+    }
 
     for (let i = 0; i < rawRows.length; i++) {
       const raw = rawRows[i];
