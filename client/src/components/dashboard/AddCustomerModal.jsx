@@ -406,9 +406,8 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
                     </div>
 
                     <div>
-                      <label htmlFor="add-cust-aadhaar" className="text-sm font-bold text-ink-primary block mb-1.5 flex items-center justify-between">
-                        <span>Aadhaar Card No (Individual)</span>
-                        <span className="text-[10px] text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">Aadhaar OR GST</span>
+                      <label htmlFor="add-cust-aadhaar" className="text-sm font-bold text-ink-primary block mb-1.5">
+                        Aadhaar Card Number
                       </label>
                       <input
                         id="add-cust-aadhaar"
@@ -428,10 +427,9 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
                     <div className="md:col-span-1 space-y-1">
                       <label
                         htmlFor="add-cust-gst"
-                        className="text-sm font-bold text-ink-primary block mb-1.5 flex items-center justify-between"
+                        className="text-sm font-bold text-ink-primary block mb-1.5"
                       >
-                        <span>GST Number / GSTIN (Commercial)</span>
-                        <span className="text-[10px] text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">Aadhaar OR GST</span>
+                        GST Number
                       </label>
                       <input
                         type="text"

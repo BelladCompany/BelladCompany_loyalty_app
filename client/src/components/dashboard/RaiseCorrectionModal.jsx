@@ -222,37 +222,27 @@ export const RaiseCorrectionModal = ({
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Input
-                      label="Original Wrong Bill Amount (₹) — Auto-Fetched"
-                      type="number"
-                      placeholder="Auto-fetched from Receipt No"
-                      icon={CreditCard}
-                      value={wrongAmount}
-                      readOnly={true}
-                      disabled={true}
-                      required
-                      className="bg-slate-100 text-slate-700 cursor-not-allowed font-mono font-bold"
-                    />
-                    <p className="mt-1 text-[11px] font-semibold text-slate-500 flex items-center gap-1">
-                      🔒 Auto-fetched from receipt. Locked against manual edits.
-                    </p>
-                  </div>
+                  <Input
+                    label="Wrong Bill Amount (₹)"
+                    type="number"
+                    placeholder="e.g. 2000"
+                    icon={CreditCard}
+                    value={wrongAmount}
+                    readOnly={true}
+                    disabled={true}
+                    required
+                    className="bg-slate-100 text-slate-700 cursor-not-allowed font-mono font-bold"
+                  />
 
-                  <div>
-                    <Input
-                      label="Correct Bill Amount (₹) *"
-                      type="number"
-                      placeholder="e.g. 1200"
-                      icon={CreditCard}
-                      value={correctAmount}
-                      onChange={(e) => setCorrectAmount(e.target.value)}
-                      required
-                    />
-                    <p className="mt-1 text-[11px] font-semibold text-indigo-600">
-                      ✏️ Enter verified accurate amount here.
-                    </p>
-                  </div>
+                  <Input
+                    label="Correct Bill Amount (₹)"
+                    type="number"
+                    placeholder="e.g. 1200"
+                    icon={CreditCard}
+                    value={correctAmount}
+                    onChange={(e) => setCorrectAmount(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
 
