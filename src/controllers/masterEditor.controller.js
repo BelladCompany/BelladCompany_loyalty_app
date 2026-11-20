@@ -786,7 +786,7 @@ class MasterEditorController {
     try {
       const { id } = req.params;
       const { role } = req.body;
-      const validRoles = ['cashier', 'branch_manager', 'manager', 'regional_admin', 'admin', 'super_admin', 'director'];
+      const validRoles = ['cashier', 'branch_manager', 'manager', 'regional_admin', 'admin', 'super_admin', 'director', 'hod'];
       if (!validRoles.includes(role)) {
         return res.status(400).json({ success: false, error: `Invalid role. Allowed: ${validRoles.join(', ')}` });
       }

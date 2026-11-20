@@ -991,6 +991,13 @@ export class ApiService {
     });
   }
 
+  static async sendGiftWhatsAppApi(payload) {
+    return this.request('/gifts/send-whatsapp-api', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
   static async getGiftByClaimToken(token) {
     return this.request(`/gifts/claim/${encodeURIComponent(token)}`);
   }
@@ -1103,6 +1110,69 @@ export class ApiService {
     return this.request(`/app-builder/reset/${tenantId}`, {
       method: 'POST',
     }).catch(() => ({ success: true, data: null }));
+  }
+
+  // ─── CAMPAIGN ADD-ON ENGINE APIS ──────────────────────────────────────────
+  static async getCampaigns(params = {}) {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.append(k, v);
+    });
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return this.request(`/campaigns${query}`);
+  }
+
+  static async getCampaign(id) {
+    return this.request(`/campaigns/${id}`);
+  }
+
+  static async createCampaign(data) {
+    return this.request('/campaigns', {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  static async updateCampaign(id, data) {
+    return this.request(`/campaigns/${id}`, {
+      method: 'PATCH',
+      body: data,
+    });
+  }
+
+  static async activateCampaign(id) {
+    return this.request(`/campaigns/${id}/activate`, {
+      method: 'POST',
+    });
+  }
+
+  static async cancelCampaign(id) {
+    return this.request(`/campaigns/${id}/cancel`, {
+      method: 'POST',
+    });
+  }
+
+  static async duplicateCampaign(id) {
+    return this.request(`/campaigns/${id}/duplicate`, {
+      method: 'POST',
+    });
+  }
+
+  static async previewCampaignSimulation(data) {
+    return this.request('/campaigns/preview', {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  static async getCampaignReport(id) {
+    return this.request(`/campaigns/${id}/report`);
+  }
+
+  static async syncDummyCustomers() {
+    return this.request('/campaigns/sync-dummy-customers', {
+      method: 'POST',
+    });
   }
 }
 

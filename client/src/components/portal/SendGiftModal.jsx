@@ -56,9 +56,16 @@ export const SendGiftModal = ({
     : (currentBalance >= 4 ? Math.floor(currentBalance / 4) * 4 : 40);
   const [pointsInput, setPointsInput] = useState(String(defaultInitialPoints));
 
-  // Sender & Personalization
+  // Sender & Personalization (auto-fetched from customer profile)
   const [senderName, setSenderName] = useState(customer?.name || customer?.customer_name || '');
   const [senderPhone, setSenderPhone] = useState(customer?.phone || customer?.phones?.[0] || '');
+  
+  // Recipient (Friend / Family member for WhatsApp API dispatch)
+  const [recipientName, setRecipientName] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
+  const [sendingApi, setSendingApi] = useState(false);
+  const [apiSentSuccess, setApiSentSuccess] = useState(false);
+
   const [customMessage, setCustomMessage] = useState('Here is a special gift voucher for your vehicle service or new purchase at Bellad & Company!');
   const [cardTheme, setCardTheme] = useState('celebration');
 
@@ -78,7 +85,16 @@ export const SendGiftModal = ({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Sync props when opening
+  // Sync props when opening or when customer profile loads
+  useEffect(() => {
+    if (customer?.name || customer?.customer_name) {
+      setSenderName(customer.name || customer.customer_name);
+    }
+    if (customer?.phone || customer?.phones?.[0]) {
+      setSenderPhone(customer.phone || customer.phones[0]);
+    }
+  }, [customer]);
+
   useEffect(() => {
     if (isOpen) {
       setCurrentStep('form');
@@ -89,17 +105,17 @@ export const SendGiftModal = ({
       setCreatedGift(null);
       setCountdown(600);
       setVerifying(false);
+      setApiSentSuccess(false);
+      setSendingApi(false);
 
       const balPts = Number(currentBalance || 0);
       const smartPts = balPts >= 400 ? 400 : (balPts >= 4 ? Math.floor(balPts / 4) * 4 : 40);
       setPointsInput(String(smartPts));
 
-      if (customer?.name || customer?.customer_name) {
-        setSenderName(customer.name || customer.customer_name);
-      }
-      if (customer?.phone || customer?.phones?.[0]) {
-        setSenderPhone(customer.phone || customer.phones[0]);
-      }
+      const cName = customer?.name || customer?.customer_name || '';
+      const cPhone = customer?.phone || customer?.phones?.[0] || '';
+      if (cName) setSenderName(cName);
+      if (cPhone) setSenderPhone(cPhone);
     }
   }, [isOpen, initialAmount, customer, currentBalance]);
 
@@ -301,6 +317,40 @@ export const SendGiftModal = ({
       setErrorMessage(err.message || 'Failed to create gift from points.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // WhatsApp API Dispatch Helper
+  // ──────────────────────────────────────────────────────────────────────────
+  const handleSendViaWhatsAppApi = async () => {
+    if (!createdGift) return;
+    const phone = (recipientPhone || '').trim();
+    if (!phone) {
+      setErrorMessage('Please enter recipient friend/family phone number for WhatsApp API delivery.');
+      return;
+    }
+    setSendingApi(true);
+    setErrorMessage('');
+    try {
+      const res = await ApiService.sendGiftWhatsAppApi({
+        recipient_phone: phone,
+        recipient_name: recipientName.trim() || 'Friend',
+        sender_name: senderName.trim() || customer?.name || 'A Friend',
+        gift_code: createdGift.gift_code,
+        pin_code: createdGift.pin_code || '4821',
+        amount_inr: createdGift.amount_inr,
+        claim_url: createdGift.claim_url,
+      });
+      if (res.status === 'success' || res.success) {
+        setApiSentSuccess(true);
+      } else {
+        setErrorMessage(res.message || 'WhatsApp API dispatch could not complete.');
+      }
+    } catch (err) {
+      setErrorMessage(err.message || 'Failed to dispatch WhatsApp API template.');
+    } finally {
+      setSendingApi(false);
     }
   };
 
@@ -520,11 +570,44 @@ export const SendGiftModal = ({
                   </div>
                 </div>
 
-                {/* 3. Sender Name & Phone */}
+                {/* 3. Recipient Friend / Family Member Details */}
+                <div className="p-3.5 bg-indigo-50/60 border border-indigo-100 rounded-2xl space-y-2.5">
+                  <span className="text-[11px] font-black uppercase text-indigo-900 tracking-wider block">
+                    Recipient Details (Friend / Family Member)
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Friend / Family Name
+                      </label>
+                      <input
+                        type="text"
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                        placeholder="e.g. Ramesh Patil"
+                        className="w-full h-10 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Friend WhatsApp Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={recipientPhone}
+                        onChange={(e) => setRecipientPhone(e.target.value)}
+                        placeholder="e.g. 9845012345"
+                        className="w-full h-10 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Sender Name & Phone */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Your Name *
+                      Your Name (Auto-Fetched) *
                     </label>
                     <input
                       type="text"
@@ -692,11 +775,44 @@ export const SendGiftModal = ({
                   </div>
                 </div>
 
+                {/* Recipient Details (Friend / Family Member) */}
+                <div className="p-3.5 bg-indigo-50/60 border border-indigo-100 rounded-2xl space-y-2.5">
+                  <span className="text-[11px] font-black uppercase text-indigo-900 tracking-wider block">
+                    Recipient Details (Friend / Family Member)
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Friend / Family Name
+                      </label>
+                      <input
+                        type="text"
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                        placeholder="e.g. Ramesh Patil"
+                        className="w-full h-10 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Friend WhatsApp Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={recipientPhone}
+                        onChange={(e) => setRecipientPhone(e.target.value)}
+                        placeholder="e.g. 9845012345"
+                        className="w-full h-10 px-3 text-xs font-bold text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Sender Details */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Your Name *
+                      Your Name (Auto-Fetched) *
                     </label>
                     <input
                       type="text"
@@ -988,16 +1104,36 @@ export const SendGiftModal = ({
               </div>
             </div>
 
-            {/* Primary Action: Share on WhatsApp */}
+            {/* API Dispatch Banner / Status */}
+            {apiSentSuccess ? (
+              <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-900 text-xs font-bold flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>WhatsApp API template successfully dispatched to {recipientPhone}!</span>
+              </div>
+            ) : null}
+
+            {/* Primary Action: WhatsApp API / Share */}
             <div className="space-y-2 pt-1">
+              {recipientPhone && !apiSentSuccess && (
+                <button
+                  type="button"
+                  onClick={handleSendViaWhatsAppApi}
+                  disabled={sendingApi}
+                  className="w-full py-3.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+                  <span>{sendingApi ? 'Sending API Template...' : `Send Official WhatsApp API to ${recipientPhone}`}</span>
+                </button>
+              )}
+
               <a
                 href={createdGift.whatsapp_share_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-black text-sm transition shadow-md shadow-emerald-600/25 cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-black text-xs transition shadow-md shadow-emerald-600/25 cursor-pointer"
               >
                 <Share2 className="w-4 h-4" />
-                <span>Share Gift Card on WhatsApp</span>
+                <span>Share Gift Card on WhatsApp (Manual / App)</span>
               </a>
 
               {/* Copy Full Link & Message */}

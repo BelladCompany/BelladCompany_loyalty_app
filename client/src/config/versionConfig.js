@@ -47,12 +47,12 @@ export function getAppVersion() {
   } catch (e) {}
 
   const envVer = (import.meta.env.VITE_APP_VERSION || '').toLowerCase().trim();
-  if (envVer === 'v2') {
-    return 'v2';
+  if (envVer === 'v1') {
+    return 'v1';
   }
 
-  // Default to Version 1 (Core Loyalty) as requested
-  return 'v1';
+  // Default to Version 2 (Full Enterprise Suite) as requested by management
+  return 'v2';
 }
 
 export function setAppVersion(ver) {
@@ -70,6 +70,12 @@ export function setAppVersion(ver) {
  */
 export function isFeatureEnabled(featureName, user = null) {
   const normalized = String(featureName || '').toLowerCase().trim();
+
+  // Campaign Add-on Engine is strictly accessible to Director/Admin
+  if (normalized === 'campaigns' || normalized === 'campaign_addons') {
+    return isUserAdmin(user);
+  }
+
   const isV2Feature = [
     'giftcards', 'gift_cards', 'gift_card_rewards', 'gift',
     'referrals', 'referral', 'referral_rewards',

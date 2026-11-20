@@ -178,19 +178,32 @@ const PassSkeleton = () => (
 // Memoized Ledger Row
 const LedgerRow = memo(({ item }) => {
   const isPositive = (item.points || 0) >= 0;
+  const isBonus = Boolean(item.is_bonus || item.source_type === 'CAMPAIGN' || item.type === 'campaign_bonus');
   const formattedPoints = isPositive
     ? `+${(item.points || 0).toLocaleString('en-IN')}`
     : `${(item.points || 0).toLocaleString('en-IN')}`;
 
   return (
-    <div className="flex items-center justify-between py-2.5 sm:py-3.5 px-3 sm:px-4 bg-white border border-slate-100 rounded-xl sm:rounded-2xl hover:border-slate-200 transition shadow-2xs gap-2.5 sm:gap-3">
+    <div className={`flex items-center justify-between py-2.5 sm:py-3.5 px-3 sm:px-4 bg-white border rounded-xl sm:rounded-2xl hover:border-slate-300 transition shadow-2xs gap-2.5 sm:gap-3 ${
+      isBonus ? 'border-amber-200/80 bg-gradient-to-r from-amber-50/20 to-white' : 'border-slate-100'
+    }`}>
       <div className="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0 pr-1 flex-1">
-        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 ${isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-          }`}>
-          {isPositive ? <Coins className="w-4 h-4 sm:w-5 sm:h-5" /> : <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />}
+        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 ${
+          isBonus
+            ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-300'
+            : (isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')
+        }`}>
+          {isBonus ? <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" /> : (isPositive ? <Coins className="w-4 h-4 sm:w-5 sm:h-5" /> : <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />)}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight leading-snug break-words">{item.text}</p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight leading-snug break-words">{item.text}</p>
+            {isBonus && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
+                Bonus
+              </span>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5 text-[10px] sm:text-[11px] text-slate-400 font-medium">
             <span className="whitespace-nowrap">{item.date}</span>
             {item.amount && (
@@ -204,10 +217,13 @@ const LedgerRow = memo(({ item }) => {
       </div>
       <div className="shrink-0 text-right">
         <span
-          className={`text-[11px] sm:text-xs font-bold font-mono px-2 sm:px-3 py-0.5 sm:py-1 rounded-full whitespace-nowrap inline-block ${isPositive
-            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-            : 'bg-rose-50 text-rose-700 border border-rose-200'
-            }`}
+          className={`text-[11px] sm:text-xs font-bold font-mono px-2 sm:px-3 py-0.5 sm:py-1 rounded-full whitespace-nowrap inline-block ${
+            isBonus
+              ? 'bg-amber-50 text-amber-800 border border-amber-300'
+              : (isPositive
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : 'bg-rose-50 text-rose-700 border border-rose-200')
+          }`}
         >
           {formattedPoints} PTS
         </span>
@@ -507,6 +523,36 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut, portalV
     } catch (err) {
       console.error('Error logging WhatsApp share:', err);
       window.open(whatsappReferralUrl, '_blank', 'noopener,noreferrer');
+    } finally {
+      setSharingWhatsApp(false);
+    }
+  };
+
+  const handleSendReferralWhatsAppApi = async () => {
+    if (!friendPhoneInput.trim()) {
+      setError('Please enter your friend’s WhatsApp phone number to send the official invitation.');
+      return;
+    }
+    setSharingWhatsApp(true);
+    try {
+      const res = await ApiService.portalShareReferral({
+        customer_id: customerId,
+        referee_name: friendNameInput.trim() || 'Friend',
+        referee_phone: friendPhoneInput.trim(),
+        share_channel: 'whatsapp_api',
+        referral_code: activeReferralCode,
+        send_via_api: true,
+      });
+      if (res?.referral_code) {
+        setPortalReferralCode(res.referral_code);
+      }
+      setSuccessMsg(`Official WhatsApp invitation sent to ${friendPhoneInput.trim()}! Code: ${res?.referral_code || activeReferralCode}`);
+      await loadReferrals();
+      setFriendNameInput('');
+      setFriendPhoneInput('');
+    } catch (err) {
+      console.error('Error dispatching WhatsApp API referral:', err);
+      setError(err.message || 'Failed to dispatch WhatsApp API invitation.');
     } finally {
       setSharingWhatsApp(false);
     }
@@ -1442,23 +1488,36 @@ export default function PortalDashboardScreen({ customerInfo, onSignOut, portalV
                   </div>
                 </div>
 
-                <div className="pt-1 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <p className="text-[11px] text-emerald-800 font-medium">
                     📱 Code will be sent directly via WhatsApp with one-tap registration link.
                   </p>
-                  <button
-                    type="button"
-                    onClick={handleShareWhatsApp}
-                    disabled={sharingWhatsApp}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-black text-xs flex items-center justify-center gap-2 shadow-md transition shrink-0 cursor-pointer disabled:opacity-50"
-                  >
-                    {sharingWhatsApp ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    ) : (
-                      <Share2 className="w-4 h-4" />
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {friendPhoneInput.trim() && (
+                      <button
+                        type="button"
+                        onClick={handleSendReferralWhatsAppApi}
+                        disabled={sharingWhatsApp}
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md transition shrink-0 cursor-pointer disabled:opacity-50"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                        <span>Send WhatsApp API</span>
+                      </button>
                     )}
-                    <span>{sharingWhatsApp ? 'Tracking & Opening...' : 'Share on WhatsApp'}</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={handleShareWhatsApp}
+                      disabled={sharingWhatsApp}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-black text-xs flex items-center justify-center gap-2 shadow-md transition shrink-0 cursor-pointer disabled:opacity-50"
+                    >
+                      {sharingWhatsApp ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      ) : (
+                        <Share2 className="w-4 h-4" />
+                      )}
+                      <span>{sharingWhatsApp ? 'Tracking...' : 'Share on WhatsApp'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

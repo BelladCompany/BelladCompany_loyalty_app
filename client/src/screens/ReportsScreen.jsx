@@ -57,7 +57,7 @@ export default function ReportsScreen({ user }) {
     const role = (currentUser.role || '').toLowerCase();
     const username = (currentUser.username || '').toLowerCase();
     return (
-      ['admin', 'super_admin', 'director', 'management'].includes(role) ||
+      ['admin', 'super_admin', 'director', 'management', 'hod'].includes(role) ||
       ['admin', 'director', 'agstya', 'agastya'].includes(username)
     );
   }, [currentUser]);
@@ -85,7 +85,7 @@ export default function ReportsScreen({ user }) {
   const [selectedBranch, setSelectedBranch] = useState(() => {
     const u = user || ApiService.getUser();
     const isElevated =
-      ['admin', 'super_admin', 'director', 'management'].includes((u?.role || '').toLowerCase()) ||
+      ['admin', 'super_admin', 'director', 'management', 'hod'].includes((u?.role || '').toLowerCase()) ||
       ['admin', 'director', 'agstya', 'agastya'].includes((u?.username || '').toLowerCase());
     if (!isElevated && u?.branch_id) {
       return String(u.branch_id);

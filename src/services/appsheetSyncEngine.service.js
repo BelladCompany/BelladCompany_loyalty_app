@@ -425,7 +425,7 @@ class AppSheetSyncEngine {
       const existingVid = vehCheck.rows[0].vehicle_id;
       await client.query(
         `UPDATE vehicles
-         SET customer_id = $1,
+         SET customer_id = COALESCE(vehicles.customer_id, $1),
              model = COALESCE(model, $2),
              variant = COALESCE(variant, $3),
              brand_name = COALESCE(brand_name, $4),
@@ -549,7 +549,8 @@ class AppSheetSyncEngine {
         );
 
         salesPoints = calcResult.points;
-        const sourceRef = `PR Done Sales Sync: ${orderId}`;
+        const invoiceOrVin = (row['DMS Invoice Number'] || row['VIN Number'] || row['Chassis Number'] || vehicleId || '').trim();
+        const sourceRef = invoiceOrVin ? `PR Done Sales Sync: ${orderId}-${invoiceOrVin}` : `PR Done Sales Sync: ${orderId}`;
 
         // 6b. Record sale transaction with exact discount amounts for Customer 360 & Analytics
         const orderRef = (orderId || '').trim();
@@ -585,12 +586,16 @@ class AppSheetSyncEngine {
           );
         }
 
-        // 7. Check if already credited in points_ledger (Idempotent guard)
+        // 7. Check if already credited in points_ledger (Idempotent guard scoped per vehicle)
         const existingLedger = await client.query(
           `SELECT entry_id, points FROM points_ledger
-           WHERE customer_id = $1 AND tenant_id = $2 AND (source_ref = $3 OR (vehicle_id = $4 AND transaction_category = 'sale'))
+           WHERE customer_id = $1 AND tenant_id = $2 
+             AND (
+               (vehicle_id IS NOT NULL AND vehicle_id = $3 AND transaction_category = 'sale')
+               OR (source_ref = $4)
+             )
            LIMIT 1;`,
-          [customerId, tenantId, sourceRef, vehicleId]
+          [customerId, tenantId, vehicleId, sourceRef]
         );
 
         if (existingLedger.rows.length === 0 && salesPoints > 0) {

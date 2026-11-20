@@ -27,6 +27,8 @@ const requireRole = (allowedRoles = []) => {
       effectiveRoles.push('director', 'management', 'super_admin', 'admin', 'regional_admin', 'branch_manager', 'manager', 'cashier');
     } else if (userRole === 'regional_admin') {
       effectiveRoles.push('branch_manager', 'manager', 'cashier');
+    } else if (userRole === 'hod') {
+      effectiveRoles.push('hod', 'branch_manager', 'manager', 'cashier');
     } else if (userRole === 'branch_manager' || userRole === 'manager') {
       effectiveRoles.push('branch_manager', 'manager', 'cashier');
     }
@@ -45,14 +47,14 @@ const requireRole = (allowedRoles = []) => {
 };
 
 /**
- * Check if a user is an Admin or Director with cross-dealership oversight
+ * Check if a user is an Admin, Director, or HOD with cross-dealership oversight
  */
 const isAdminOrDirector = (user) => {
   if (!user) return false;
   const role = (user.role || '').toLowerCase();
   const username = (user.username || '').toLowerCase();
   return (
-    ['admin', 'super_admin', 'director', 'management'].includes(role) ||
+    ['admin', 'super_admin', 'director', 'management', 'hod'].includes(role) ||
     ['admin', 'director', 'agstya', 'agastya'].includes(username)
   );
 };

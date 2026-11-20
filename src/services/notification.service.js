@@ -558,6 +558,159 @@ class NotificationService {
       return { success: false, error: err.message };
     }
   }
+
+  /**
+   * Direct automated WhatsApp API dispatch for Gift Cards
+   */
+  static async sendGiftCardWhatsApp({
+    toPhone,
+    recipientName = 'Friend',
+    senderName = 'A Friend',
+    giftCode,
+    pinCode,
+    amountInr = 0,
+    claimUrl,
+    tenant_id = 'bellad_and_company',
+  }) {
+    if (!toPhone) {
+      return { success: false, error: 'Recipient phone number is required.' };
+    }
+
+    const cleanPhone = String(toPhone).replace(/[^\d+]/g, '');
+    const messageBody =
+      `🎁 *You received a ₹${Number(amountInr).toLocaleString('en-IN')} Bellad & Co Gift Card from ${senderName}!*\n\n` +
+      `Hi ${recipientName},\n` +
+      `💳 *Card Code:* ${giftCode}\n` +
+      `🔐 *Security PIN:* ${pinCode}\n` +
+      `💰 *Value:* ₹${Number(amountInr).toLocaleString('en-IN')}\n\n` +
+      (claimUrl ? `👉 *Claim online:* ${claimUrl}\n\n` : '') +
+      `Visit any Bellad & Company showroom/workshop to redeem!`;
+
+    const templateName = 'loyalty_gift_card_dispatch';
+    let providerName = 'mock';
+
+    try {
+      const provider = getWhatsAppProvider();
+      providerName = provider.name;
+
+      const result = await provider.sendMessage({
+        toPhone: cleanPhone,
+        templateName,
+        params: [
+          recipientName,
+          senderName,
+          String(amountInr),
+          giftCode,
+          String(pinCode),
+          claimUrl || 'https://loyalty.bellad.in/portal',
+        ],
+      });
+
+      await this._logMessageAttempt({
+        phone_number: cleanPhone,
+        template_name: templateName,
+        message_body: messageBody,
+        status: result.success ? 'sent' : 'failed',
+        error_message: result.success ? null : (result.error || 'Provider returned failure'),
+        provider: result.provider || providerName,
+        tenant_id,
+      });
+
+      return {
+        success: true,
+        to_phone: cleanPhone,
+        gift_code: giftCode,
+        message_id: result.messageId || `WA-GIFT-${Date.now()}`,
+        message: `Gift card successfully dispatched via WhatsApp to ${cleanPhone}.`,
+      };
+    } catch (err) {
+      console.error(`❌ [GiftCard WhatsApp API Error]:`, err.message);
+      await this._logMessageAttempt({
+        phone_number: cleanPhone,
+        template_name: templateName,
+        message_body: messageBody,
+        status: 'failed',
+        error_message: err.message,
+        provider: providerName,
+        tenant_id,
+      });
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Direct automated WhatsApp API dispatch for Referrals
+   */
+  static async sendReferralInviteWhatsApp({
+    toPhone,
+    recipientName = 'Friend',
+    senderName = 'A Friend',
+    referralCode,
+    claimUrl,
+    tenant_id = 'bellad_and_company',
+  }) {
+    if (!toPhone) {
+      return { success: false, error: 'Recipient phone number is required.' };
+    }
+
+    const cleanPhone = String(toPhone).replace(/[^\d+]/g, '');
+    const messageBody =
+      `🎁 *Bellad & Company Loyalty Referral Rewards*\n\n` +
+      `Hi ${recipientName}!\n` +
+      `You have been invited by *${senderName}* to join Bellad & Co Loyalty Rewards.\n\n` +
+      `🌟 *Your Referral Code:* ${referralCode}\n\n` +
+      `Get Bonus Points on your new vehicle purchase at Bellad and Company!\n\n` +
+      (claimUrl ? `👉 *Claim & Register:* ${claimUrl}\n` : '');
+
+    const templateName = 'loyalty_referral_invite';
+    let providerName = 'mock';
+
+    try {
+      const provider = getWhatsAppProvider();
+      providerName = provider.name;
+
+      const result = await provider.sendMessage({
+        toPhone: cleanPhone,
+        templateName,
+        params: [
+          recipientName,
+          senderName,
+          referralCode,
+          claimUrl || 'https://loyalty.bellad.in/portal',
+        ],
+      });
+
+      await this._logMessageAttempt({
+        phone_number: cleanPhone,
+        template_name: templateName,
+        message_body: messageBody,
+        status: result.success ? 'sent' : 'failed',
+        error_message: result.success ? null : (result.error || 'Provider returned failure'),
+        provider: result.provider || providerName,
+        tenant_id,
+      });
+
+      return {
+        success: true,
+        to_phone: cleanPhone,
+        referral_code: referralCode,
+        message_id: result.messageId || `WA-REF-${Date.now()}`,
+        message: `Referral invite successfully dispatched via WhatsApp to ${cleanPhone}.`,
+      };
+    } catch (err) {
+      console.error(`❌ [Referral WhatsApp API Error]:`, err.message);
+      await this._logMessageAttempt({
+        phone_number: cleanPhone,
+        template_name: templateName,
+        message_body: messageBody,
+        status: 'failed',
+        error_message: err.message,
+        provider: providerName,
+        tenant_id,
+      });
+      return { success: false, error: err.message };
+    }
+  }
 }
 
 module.exports = NotificationService;

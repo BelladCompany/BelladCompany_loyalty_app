@@ -55,6 +55,7 @@ import {
   Minus,
 } from 'lucide-react';
 import ApiService from '../services/api';
+import CampaignScreen from './CampaignScreen';
 
 /**
  * Standard Dealerships / Tenants Catalog
@@ -109,7 +110,8 @@ const NAV_GROUPS = [
     title: 'Scheme Types & Campaigns',
     icon: Sparkles,
     items: [
-      { id: 'all_schemes', label: 'All Active Campaigns', icon: Sparkles, countKey: 'all_schemes' },
+      { id: 'campaign_addons', label: 'Campaign Add-ons (v2)', icon: Zap, badge: 'v2' },
+      { id: 'all_schemes', label: 'All Policy Rules', icon: Sparkles, countKey: 'all_schemes' },
       { id: 'scheme_standard', label: 'Standard Loyalty Schemes', icon: Award, countKey: 'standard' },
       { id: 'scheme_festive', label: 'Festive Offers', icon: Calendar, countKey: 'festive' },
       { id: 'scheme_exchange', label: 'In-House Exchange', icon: RotateCcw, countKey: 'exchange' },
@@ -1853,7 +1855,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            {['cashier', 'branch_manager', 'admin'].map((roleOpt) => (
+                            {['cashier', 'branch_manager', 'hod', 'admin'].map((roleOpt) => (
                               <button
                                 key={roleOpt}
                                 type="button"
@@ -2323,13 +2325,19 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
             </div>
           )}
 
+          {/* ── VIEW: PROMOTIONAL CAMPAIGN ADD-ONS (V2) ── */}
+          {activeCategory === 'campaign_addons' && (
+            <CampaignScreen user={user} />
+          )}
+
           {/* ── VIEW 6: RULES LIST & TABLE (Standard Filterable Work Canvas) ── */}
           {activeCategory !== 'dealer_overview' &&
            activeCategory !== 'tier_slabs' &&
            activeCategory !== 'points_formulas' &&
            activeCategory !== 'director_audit' &&
            activeCategory !== 'user_access_matrix' &&
-           activeCategory !== 'simulator_test' && (
+           activeCategory !== 'simulator_test' &&
+           activeCategory !== 'campaign_addons' && (
             <div className="space-y-4">
               {/* Header Title & Sane Filter Bar */}
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
@@ -3028,6 +3036,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                 >
                   <option value="cashier">CASHIER (Counter Billing &amp; Redemptions)</option>
                   <option value="branch_manager">BRANCH MANAGER (Supervisor Approvals)</option>
+                  <option value="hod">HOD (Customer Search &amp; All-Branch Reports)</option>
                   <option value="admin">ADMIN (Full System Administrator)</option>
                 </select>
               </div>

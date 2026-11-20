@@ -308,6 +308,13 @@ export const UserManagementScreen = ({ user }) => {
             Director
           </span>
         );
+      case 'hod':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase bg-cyan-50 text-cyan-800 border border-cyan-200">
+            <ShieldCheck className="w-3 h-3 text-cyan-600" />
+            HOD
+          </span>
+        );
       case 'admin':
       case 'super_admin':
       case 'regional_admin':
@@ -508,6 +515,7 @@ export const UserManagementScreen = ({ user }) => {
                 >
                   <option value="cashier">CASHIER (Counter POS &amp; Redemptions)</option>
                   <option value="branch_manager">BRANCH MANAGER (Supervisor Approvals)</option>
+                  <option value="hod">HOD (Customer Search &amp; All-Branch Reports)</option>
                   <option value="admin">ADMIN (Full System Administration)</option>
                   <option value="director">DIRECTOR (Executive Intelligence Suite)</option>
                 </select>
@@ -693,6 +701,7 @@ export const UserManagementScreen = ({ user }) => {
                           {[
                             { role: 'cashier', label: 'Cashier' },
                             { role: 'branch_manager', label: 'Manager' },
+                            { role: 'hod', label: 'HOD' },
                             { role: 'admin', label: 'Admin' },
                             { role: 'director', label: 'Director' },
                           ].map((btn) => {

@@ -186,6 +186,10 @@ class VehicleSalesPointsService {
         const fields = ['customer_id', 'vehicle_id', 'branch_id', 'type', 'transaction_category', 'points', 'source_ref', 'tenant_id'];
         const vals = [customer_id, vehicle_id || null, branch_id, 'earn_sale', 'sale', finalPoints, txRef, tenantId];
 
+        if (colList.includes('source_type')) {
+          fields.push('source_type');
+          vals.push('STANDARD');
+        }
         if (colList.includes('reason_type')) {
           fields.push('reason_type');
           vals.push('purchase');
@@ -213,6 +217,115 @@ class VehicleSalesPointsService {
           vals
         );
 
+        const stdLedgerRow = ledgerIns.rows[0];
+        let bonusPointsTotal = 0;
+        const appliedCampaigns = [];
+
+        // CAMPAIGN ADD-ON ENGINE EVALUATION
+        // Wrap in try/catch: if it fails, log the error and continue with standard points only.
+        try {
+          const CampaignEngineService = require('./campaignEngine.service');
+          if (CampaignEngineService.isEnabled()) {
+            const custTierRes = await client.query(
+              `SELECT current_tier FROM customer_tier_snapshot WHERE customer_id = $1 AND tenant_id = $2;`,
+              [customer_id, tenantId]
+            );
+            const currentTier = custTierRes.rows[0]?.current_tier || 'silver';
+
+            const invoiceDateVal = saleData.dms_invoice_date || saleData.invoice_date || saleData.purchase_date || new Date();
+            const bookingDateVal = saleData.dms_booking_date || saleData.booking_date || invoiceDateVal;
+            const deliveryDateVal = saleData.delivery_date || invoiceDateVal;
+
+            const campaignEval = await CampaignEngineService.evaluateCampaigns({
+              standard_points: finalPoints,
+              invoice: {
+                tenant_id: tenantId,
+                spend_category: 'sale',
+                category: 'sale',
+                net_ex_showroom_price: calcResult.points_base, // Net Ex-Showroom for sales
+                brand: brandName,
+                vehicle_type: vehicleType,
+                model: modelName,
+                branch_id: branch_id,
+                customer_tier: currentTier,
+                invoice_date: invoiceDateVal,
+                booking_date: bookingDateVal,
+                delivery_date: deliveryDateVal,
+              },
+              tenant_id: tenantId,
+              client,
+            });
+
+            if (campaignEval && campaignEval.campaigns_applied && campaignEval.campaigns_applied.length > 0) {
+              for (const camp of campaignEval.campaigns_applied) {
+                if (camp.bonus_points > 0) {
+                  const bonusFields = [
+                    'customer_id',
+                    'vehicle_id',
+                    'branch_id',
+                    'type',
+                    'transaction_category',
+                    'points',
+                    'source_ref',
+                    'tenant_id',
+                    'source_type',
+                    'campaign_id',
+                    'parent_entry_id',
+                  ];
+                  const bonusVals = [
+                    customer_id,
+                    vehicle_id || null,
+                    branch_id,
+                    'earn_sale',
+                    'sale',
+                    camp.bonus_points,
+                    txRef,
+                    tenantId,
+                    'CAMPAIGN',
+                    camp.campaign_id,
+                    stdLedgerRow.entry_id,
+                  ];
+
+                  const bonusReason = `${camp.campaign_name} (+${camp.bonus_points} pts bonus)`;
+                  if (colList.includes('reason_type')) {
+                    bonusFields.push('reason_type');
+                    bonusVals.push('campaign_bonus');
+                  }
+                  if (colList.includes('reason_text')) {
+                    bonusFields.push('reason_text');
+                    bonusVals.push(bonusReason);
+                  }
+                  if (colList.includes('reason')) {
+                    bonusFields.push('reason');
+                    bonusVals.push(bonusReason);
+                  }
+                  if (colList.includes('amount_paise')) {
+                    bonusFields.push('amount_paise');
+                    bonusVals.push(Math.round(calcResult.points_base * 100));
+                  }
+                  if (colList.includes('cashier_id')) {
+                    bonusFields.push('cashier_id');
+                    bonusVals.push(created_by || null);
+                  }
+
+                  const bPlaceholders = bonusVals.map((_, i) => `$${i + 1}`).join(', ');
+                  // ON CONFLICT DO NOTHING guarantees idempotency under concurrency
+                  await client.query(
+                    `INSERT INTO points_ledger (${bonusFields.join(', ')}) VALUES (${bPlaceholders})
+                     ON CONFLICT DO NOTHING;`,
+                    bonusVals
+                  );
+                  bonusPointsTotal += camp.bonus_points;
+                  appliedCampaigns.push(camp);
+                }
+              }
+            }
+          }
+        } catch (campErr) {
+          console.error('[CampaignEngine] Error evaluating campaign for sale:', campErr.message);
+          // Hard Rule 2: NEVER fail or delay invoice on campaign error.
+        }
+
         // Update sale_transactions points_calculated flag
         await client.query(
           `UPDATE sale_transactions
@@ -226,17 +339,21 @@ class VehicleSalesPointsService {
 
         if (isOwnClient) await client.query('COMMIT');
 
-        // Non-blocking notification
+        // Non-blocking notification with combined total points
+        const totalCreditedPoints = finalPoints + bonusPointsTotal;
         NotificationService.queuePointsEarnedNotification({
           customer_id,
-          points: calcResult.points,
+          points: totalCreditedPoints,
           transaction_type: 'sale',
           tenant_id: tenantId,
         });
 
         return {
           status: 'credited',
-          points: calcResult.points,
+          points: finalPoints,
+          bonus_points: bonusPointsTotal,
+          total_points: totalCreditedPoints,
+          campaigns_applied: appliedCampaigns,
           reason_type: 'purchase',
           reason_text: calcResult.reason_text,
           ledger_entry: ledgerIns.rows[0],

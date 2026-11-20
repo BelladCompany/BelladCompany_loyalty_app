@@ -18,6 +18,7 @@ import CustomerPortalScreen from './pages/CustomerPortalScreen';
 import PublicOffersScreen from './pages/PublicOffersScreen';
 import PublicGiftClaimScreen from './screens/PublicGiftClaimScreen';
 import CustomerRedemptionsScreen from './screens/CustomerRedemptionsScreen';
+import CampaignScreen from './screens/CampaignScreen';
 import DirectorCommandCenter from './screens/DirectorCommandCenter';
 import UserManagementScreen from './screens/UserManagementScreen';
 import ApiService from './services/api';
@@ -83,6 +84,10 @@ export function App() {
   const [sessionSwitchedNotice, setSessionSwitchedNotice] = useState(false);
   const [appVersion, setAppVersionState] = useState(getAppVersion());
   const [activeTab, setActiveTab] = useState(() => {
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/campaigns')) {
+      return 'campaigns';
+    }
     const u = ApiService.getUser();
     if (
       u?.role === 'director' ||
@@ -407,6 +412,17 @@ export function App() {
               <h2 className="text-xl font-black text-slate-900">Restricted Admin Access</h2>
               <p className="text-sm text-slate-600">
                 The Customer Redemptions list is restricted to Administrator privileges only.
+              </p>
+            </div>
+          )
+        ) : activeTab === 'campaigns' ? (
+          isAdmin ? (
+            <CampaignScreen user={user} />
+          ) : (
+            <div className="p-8 bg-white rounded-3xl border border-rose-200 shadow-sm text-center max-w-lg mx-auto mt-12 space-y-4">
+              <h2 className="text-xl font-black text-slate-900">Restricted Director / Admin Access</h2>
+              <p className="text-sm text-slate-600">
+                The Campaign Add-on Engine requires Executive Director or Admin privileges.
               </p>
             </div>
           )

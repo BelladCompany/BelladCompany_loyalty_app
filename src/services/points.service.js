@@ -97,6 +97,8 @@ class PointsService {
     reference_id,
     receipt_no,
     account_ledger_no,
+    payment_mode,
+    utr_number,
     description,
     created_by,
     tenant_id,
@@ -262,6 +264,10 @@ class PointsService {
       let insertCols = ['customer_id', 'vehicle_id', 'branch_id', typeCol, 'points', refCol, actorCol, 'tenant_id'];
       let insertVals = [customer_id, vehicle_id || null, branch_id, ledgerType, earnedPoints, sourceRef, created_by || null, tenant_id];
 
+      if (cols.has('source_type')) {
+        insertCols.push('source_type');
+        insertVals.push('STANDARD');
+      }
       if (hasCategoryCol) {
         insertCols.push('transaction_category');
         insertVals.push(activeCategory);
@@ -290,6 +296,14 @@ class PointsService {
         insertCols.push('account_ledger_no');
         insertVals.push(account_ledger_no);
       }
+      if (cols.has('payment_mode') && payment_mode) {
+        insertCols.push('payment_mode');
+        insertVals.push(payment_mode);
+      }
+      if (cols.has('utr_number') && utr_number) {
+        insertCols.push('utr_number');
+        insertVals.push(utr_number);
+      }
 
       const placeholders = insertVals.map((_, i) => `$${i + 1}`).join(', ');
       const ledgerRes = await client.query(
@@ -298,6 +312,77 @@ class PointsService {
       );
 
       const ledgerEntry = ledgerRes.rows[0];
+      let bonusPointsTotal = 0;
+      const appliedCampaigns = [];
+
+      // CAMPAIGN ADD-ON ENGINE EVALUATION (Service/Accessories/Bodyshop)
+      try {
+        const CampaignEngineService = require('./campaignEngine.service');
+        if (CampaignEngineService.isEnabled()) {
+          const custTierRes = await client.query(
+            `SELECT current_tier FROM customer_tier_snapshot WHERE customer_id = $1 AND tenant_id = $2;`,
+            [customer_id, tenant_id]
+          );
+          const currentTier = custTierRes.rows[0]?.current_tier || 'silver';
+
+          const campaignEval = await CampaignEngineService.evaluateCampaigns({
+            standard_points: earnedPoints,
+            invoice: {
+              tenant_id,
+              spend_category: activeCategory,
+              category: activeCategory,
+              amount: amount,
+              net_ex_showroom_price: amount,
+              brand: brandName,
+              vehicle_type: vehicleType,
+              model: modelName,
+              branch_id: branch_id,
+              customer_tier: currentTier,
+              invoice_date: new Date(),
+            },
+            tenant_id,
+            client,
+          });
+
+          if (campaignEval && campaignEval.campaigns_applied && campaignEval.campaigns_applied.length > 0) {
+            for (const camp of campaignEval.campaigns_applied) {
+              if (camp.bonus_points > 0) {
+                const bonusRef = cleanRef || sourceRef;
+                let bCols = ['customer_id', 'vehicle_id', 'branch_id', typeCol, 'points', refCol, actorCol, 'tenant_id', 'source_type', 'campaign_id', 'parent_entry_id'];
+                let bVals = [customer_id, vehicle_id || null, branch_id, ledgerType, camp.bonus_points, bonusRef, created_by || null, tenant_id, 'CAMPAIGN', camp.campaign_id, ledgerEntry.entry_id];
+
+                if (hasCategoryCol) {
+                  bCols.push('transaction_category');
+                  bVals.push(activeCategory);
+                }
+                if (cols.has('reason_type')) {
+                  bCols.push('reason_type');
+                  bVals.push('campaign_bonus');
+                }
+                if (cols.has('reason_text')) {
+                  bCols.push('reason_text');
+                  bVals.push(`${camp.campaign_name} (+${camp.bonus_points} pts bonus)`);
+                }
+                if (cols.has('amount_paise')) {
+                  bCols.push('amount_paise');
+                  bVals.push(amount * 100);
+                }
+
+                const bPlaceholders = bVals.map((_, i) => `$${i + 1}`).join(', ');
+                await client.query(
+                  `INSERT INTO points_ledger (${bCols.join(', ')}) VALUES (${bPlaceholders})
+                   ON CONFLICT DO NOTHING;`,
+                  bVals
+                );
+                bonusPointsTotal += camp.bonus_points;
+                appliedCampaigns.push(camp);
+              }
+            }
+          }
+        }
+      } catch (campErr) {
+        console.error('[CampaignEngine] Error evaluating campaign for service/accessory earning:', campErr.message);
+      }
 
       // 5. Calculate lifetime points and current balance from ledger
       const aggRes = await client.query(
@@ -350,7 +435,7 @@ class PointsService {
       // 8. Queue non-blocking WhatsApp notification (does not block HTTP response)
       NotificationService.queuePointsEarnedNotification({
         customer_id,
-        points: earnedPoints,
+        points: earnedPoints + bonusPointsTotal,
         transaction_type: type,
         tenant_id,
       });
@@ -358,6 +443,10 @@ class PointsService {
       return {
         ledger_entry: ledgerEntry,
         tier_snapshot: tierSnapshot,
+        points: earnedPoints,
+        bonus_points: bonusPointsTotal,
+        total_points: earnedPoints + bonusPointsTotal,
+        campaigns_applied: appliedCampaigns,
       };
     } catch (error) {
       await client.query('ROLLBACK');
@@ -456,12 +545,19 @@ class PointsService {
               pl.source_ref,
               pl.receipt_no,
               pl.transaction_category,
+              pl.source_type,
+              pl.campaign_id,
+              c.code AS campaign_code,
+              c.name AS campaign_name,
+              c.type AS campaign_type,
+              c.value AS campaign_value,
               ${actorCol} AS created_by, u.username AS created_by_username,
               pl.calc_snapshot, pl.reason_text,
               pl.created_at
        FROM points_ledger pl
        LEFT JOIN branches b ON (pl.branch_id = b.branch_id OR pl.branch_id = b.id)
        LEFT JOIN users u ON ${actorCol} = COALESCE(u.user_id, u.id)
+       LEFT JOIN campaigns c ON pl.campaign_id = c.id
        WHERE pl.customer_id = $1 AND pl.tenant_id = $2
        ORDER BY pl.created_at DESC, COALESCE(pl.entry_id, pl.id) DESC
        LIMIT $3 OFFSET $4;`,

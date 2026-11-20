@@ -59,14 +59,14 @@ const createCustomerSchema = z.object({
   }).optional().nullable(),
   // Optional opening points (admin-only meaningful; cashier always gets 0 enforced server-side)
   opening_points: z.coerce.number().int().min(0, 'Opening points cannot be negative').default(0).optional(),
-  // Aadhaar (Mandatory 12 digits) & Optional GST Number
+  // Aadhaar (12 digits) OR GST Number (at least one must be provided)
   aadhaar_number: z
-    .string({ required_error: 'Aadhaar card number is mandatory (12 digits).' })
+    .string()
     .trim()
     .transform((val) => (val ? val.replace(/[\s-]/g, '') : ''))
-    .refine((val) => /^\d{12}$/.test(val), {
-      message: 'Aadhaar number is mandatory and must be exactly 12 numeric digits.',
-    }),
+    .optional()
+    .nullable()
+    .or(z.literal('')),
   gst_number: z
     .string()
     .trim()
@@ -95,7 +95,19 @@ const createCustomerSchema = z.object({
   pan_no: z.string().trim().optional().nullable(),
   service_tax_no: z.string().trim().optional().nullable(),
   ecc_no: z.string().trim().optional().nullable(),
-});
+}).refine(
+  (data) => {
+    const cleanAadhaar = data.aadhaar_number ? data.aadhaar_number.replace(/[\s-]/g, '') : '';
+    const cleanGst = data.gst_number ? data.gst_number.trim() : '';
+    const hasValidAadhaar = cleanAadhaar.length === 12 && /^\d{12}$/.test(cleanAadhaar);
+    const hasValidGst = cleanGst.length >= 8;
+    return hasValidAadhaar || hasValidGst;
+  },
+  {
+    message: 'Either Aadhaar Card No (12 numeric digits) or GST Number must be provided.',
+    path: ['aadhaar_number'],
+  }
+);
 
 const updateCustomerSchema = z.object({
   name: z.string().trim().min(1, 'Customer name cannot be empty').optional(),
@@ -190,6 +202,8 @@ const earnPointsSchema = z.object({
   reference_id: z.string().trim().optional().nullable(),
   receipt_no: z.string().trim().optional().nullable(),
   account_ledger_no: z.string().trim().optional().nullable(),
+  payment_mode: z.string().trim().optional().nullable(),
+  utr_number: z.string().trim().optional().nullable(),
   description: z.string().trim().optional().nullable(),
 });
 
@@ -238,6 +252,8 @@ const redeemPointsSchema = z.object({
   category: z.string().optional().default('service'),
   receipt_no: z.string().optional().nullable(),
   account_ledger_no: z.string().optional().nullable(),
+  payment_mode: z.string().optional().nullable(),
+  utr_number: z.string().optional().nullable(),
   branch_id: z.coerce.number().int().optional().nullable(),
   vehicle_id: z.coerce.number().int().optional().nullable(),
   referral_code: z.string().optional().nullable(),

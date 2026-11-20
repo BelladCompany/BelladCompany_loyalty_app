@@ -164,6 +164,13 @@ class CustomerService {
     try {
       await client.query('BEGIN');
 
+      // Check that at least one of Aadhaar or GST number is provided
+      const cleanAadhaarCheck = aadhaar_number && String(aadhaar_number).trim() ? String(aadhaar_number).trim() : null;
+      const cleanGstCheck = gst_number && String(gst_number).trim() ? String(gst_number).trim() : null;
+      if (!cleanAadhaarCheck && !cleanGstCheck) {
+        throw { statusCode: 400, message: 'Either Aadhaar Card No (12 digits) or GST Number must be provided.' };
+      }
+
       // Process optional Aadhaar number (HMAC-SHA256 hash & AES encrypted last-4)
       let aadhaarHash = null;
       let aadhaarLast4Enc = null;
@@ -738,6 +745,20 @@ class CustomerService {
     );
     const livePoints = Math.max(0, parseInt(pointsRes.rows[0]?.total_points || '0', 10));
 
+    // Check active campaign bonus info
+    const campInfoRes = await pool.query(
+      `SELECT c.name AS active_campaign_name, c.code AS active_campaign_code,
+              COALESCE(SUM(pl.points), 0) AS campaign_bonus_points
+       FROM points_ledger pl
+       JOIN campaigns c ON pl.campaign_id = c.id
+       WHERE pl.customer_id = $1 AND pl.tenant_id = $2 AND pl.source_type = 'CAMPAIGN'
+       GROUP BY c.name, c.code
+       ORDER BY MAX(pl.created_at) DESC
+       LIMIT 1;`,
+      [customerId, tenantId]
+    );
+    const campInfo = campInfoRes.rows[0] || {};
+
     // Fetch tier snapshot
     const TierService = require('./tier.service');
     const tierInfo = await TierService.getCustomerTier(customerId, tenantId);
@@ -747,6 +768,9 @@ class CustomerService {
       phones: phonesRes.rows,
       vehicles: finalVehicles,
       points_balance: livePoints,
+      active_campaign_name: campInfo.active_campaign_name || null,
+      active_campaign_code: campInfo.active_campaign_code || null,
+      campaign_bonus_points: Number(campInfo.campaign_bonus_points || 0),
       lifetime_points: tierInfo.lifetime_points,
       current_tier: tierInfo.current_tier,
       tier_name: tierInfo.current_tier,

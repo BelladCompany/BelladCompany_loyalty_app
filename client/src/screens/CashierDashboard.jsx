@@ -234,12 +234,29 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
     },
     {
       field: 'vehicles',
-      header: 'Vehicles',
-      render: (val) => (
-        <div className="text-xs font-semibold text-slate-700 whitespace-nowrap min-w-[130px]">
-          {(val || []).map((v) => v.registration_number || v.chassis_no || v.vin).join(', ') || 'None'}
-        </div>
-      ),
+      header: 'Vehicle / Model',
+      render: (val) => {
+        const list = Array.isArray(val) ? val : [];
+        const seen = new Set();
+        const unique = list.filter((v) => {
+          if (!v) return false;
+          const k = v.id || v.chassis_no || v.vin || v.registration_number || `${v.model}_${v.brand}`;
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+        return (
+          <div className="text-xs font-semibold text-slate-800 whitespace-nowrap min-w-[140px]">
+            {unique.map((v, i) => (
+              <div key={i} className="flex flex-col mb-1 last:mb-0">
+                <span className="font-bold text-slate-900">{v.model || 'Vehicle'} {v.brand ? `(${v.brand})` : ''}</span>
+                <span className="text-[10px] text-slate-500 font-mono">{v.registration_number || v.chassis_no || v.vin}</span>
+              </div>
+            ))}
+            {unique.length === 0 && <span className="text-slate-400">None</span>}
+          </div>
+        );
+      },
     },
     {
       field: 'action',

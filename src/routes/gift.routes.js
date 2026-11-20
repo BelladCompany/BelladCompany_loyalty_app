@@ -50,6 +50,9 @@ router.post('/create-from-razorpay', optionalAuthenticate, giftCardRateLimiter, 
 // 6. Confirm Razorpay payment signature
 router.post('/verify-razorpay-payment', optionalAuthenticate, GiftController.verifyRazorpayPayment);
 
+// 6b. Direct WhatsApp API Dispatch for Gift Card
+router.post('/send-whatsapp-api', optionalAuthenticate, GiftController.sendGiftWhatsAppApi);
+
 // 7. Get sender's history of sent gifts
 router.get('/my-sent-gifts', authenticateToken, GiftController.getMySentGifts);
 

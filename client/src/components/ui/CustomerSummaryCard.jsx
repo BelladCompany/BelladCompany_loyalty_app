@@ -228,6 +228,16 @@ export const CustomerSummaryCard = ({
             <div className="text-xs sm:text-sm font-bold text-emerald-600 font-mono">
               ≈ ₹{Number(rupeeValue).toLocaleString()} Redeemable Value
             </div>
+            {customer.active_campaign_name && (
+              <div className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-950 border border-amber-300 font-black text-[11px] shadow-2xs">
+                <span>🎁 Active Campaign: <strong>{customer.active_campaign_name}</strong></span>
+                {customer.campaign_bonus_points > 0 && (
+                  <span className="text-emerald-800 font-bold bg-white px-1.5 py-0.2 rounded border border-amber-200">
+                    (+{Number(customer.campaign_bonus_points).toLocaleString()} pts = ₹{Math.floor(customer.campaign_bonus_points / 4)} discount)
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">

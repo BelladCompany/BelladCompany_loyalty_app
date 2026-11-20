@@ -15,12 +15,14 @@ import Input from '../ui/Input';
 export const RaiseCorrectionModal = ({
   isOpen,
   initialReference = '',
+  initialWrongAmount = '',
   initialCustomerId = '',
+  ledgerData = [],
   onClose,
   onSuccess,
 }) => {
   const [reference, setReference] = useState(initialReference);
-  const [wrongAmount, setWrongAmount] = useState('');
+  const [wrongAmount, setWrongAmount] = useState(initialWrongAmount);
   const [correctAmount, setCorrectAmount] = useState('');
   const [explanation, setExplanation] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -29,17 +31,60 @@ export const RaiseCorrectionModal = ({
   const [error, setError] = useState('');
   const [successResult, setSuccessResult] = useState(null);
 
+  // Helper to extract bill amount from ledger row
+  const extractAmountFromRow = (row) => {
+    if (!row) return '';
+    if (row.amount_paise && Number(row.amount_paise) > 0) return String(Number(row.amount_paise) / 100);
+    if (row.calc_snapshot?.bill_amount) return String(row.calc_snapshot.bill_amount);
+    if (row.calc_snapshot?.net_ex_showroom) return String(row.calc_snapshot.net_ex_showroom);
+    if (row.calc_snapshot?.amount_paise) return String(Number(row.calc_snapshot.amount_paise) / 100);
+    const match = String(row.reference_id || row.source_ref || '').match(/(?:₹|Rs\.?)\s*([\d,]+(?:\.\d+)?)/i);
+    if (match) return match[1].replace(/,/g, '');
+    const numPts = Math.abs(Number(row.points || 0));
+    if (numPts > 0) {
+      const catStr = String(row.transaction_category || row.transaction_type || row.type || '').toLowerCase();
+      const rate = catStr.includes('access') ? 2 : catStr.includes('bodyshop') ? 3 : 4;
+      return String(Math.round((numPts / rate) * 100));
+    }
+    return '';
+  };
+
+  const findMatchingAmount = (refStr) => {
+    if (!refStr || !ledgerData || ledgerData.length === 0) return '';
+    const clean = String(refStr).trim().toLowerCase();
+    const matched = ledgerData.find((r) => {
+      const rec = String(r.receipt_no || '').trim().toLowerCase();
+      const ref = String(r.reference_id || '').trim().toLowerCase();
+      const src = String(r.source_ref || '').trim().toLowerCase();
+      const eid = String(r.entry_id || r.id || '').trim().toLowerCase();
+      return rec === clean || ref === clean || src.includes(clean) || eid === clean;
+    });
+    return matched ? extractAmountFromRow(matched) : '';
+  };
+
   useEffect(() => {
     if (isOpen) {
       setReference(initialReference || '');
-      setWrongAmount('');
+      let autoAmt = initialWrongAmount || '';
+      if (!autoAmt && initialReference) {
+        autoAmt = findMatchingAmount(initialReference);
+      }
+      setWrongAmount(autoAmt);
       setCorrectAmount('');
       setExplanation('');
       setSelectedFile(null);
       setError('');
       setSuccessResult(null);
     }
-  }, [isOpen, initialReference]);
+  }, [isOpen, initialReference, initialWrongAmount]);
+
+  const handleReferenceChange = (val) => {
+    setReference(val);
+    const autoAmt = findMatchingAmount(val);
+    if (autoAmt) {
+      setWrongAmount(autoAmt);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -172,30 +217,42 @@ export const RaiseCorrectionModal = ({
                   placeholder="e.g. KA 25 MP 2009, BAC-100008, or Receipt No"
                   icon={Receipt}
                   value={reference}
-                  onChange={(e) => setReference(e.target.value)}
+                  onChange={(e) => handleReferenceChange(e.target.value)}
                   required
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Wrong Bill Amount (₹)"
-                    type="number"
-                    placeholder="e.g. 2000"
-                    icon={CreditCard}
-                    value={wrongAmount}
-                    onChange={(e) => setWrongAmount(e.target.value)}
-                    required
-                  />
+                  <div>
+                    <Input
+                      label="Original Wrong Bill Amount (₹) — Auto-Fetched"
+                      type="number"
+                      placeholder="Auto-fetched from Receipt No"
+                      icon={CreditCard}
+                      value={wrongAmount}
+                      readOnly={true}
+                      disabled={true}
+                      required
+                      className="bg-slate-100 text-slate-700 cursor-not-allowed font-mono font-bold"
+                    />
+                    <p className="mt-1 text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+                      🔒 Auto-fetched from receipt. Locked against manual edits.
+                    </p>
+                  </div>
 
-                  <Input
-                    label="Correct Bill Amount (₹)"
-                    type="number"
-                    placeholder="e.g. 1200"
-                    icon={CreditCard}
-                    value={correctAmount}
-                    onChange={(e) => setCorrectAmount(e.target.value)}
-                    required
-                  />
+                  <div>
+                    <Input
+                      label="Correct Bill Amount (₹) *"
+                      type="number"
+                      placeholder="e.g. 1200"
+                      icon={CreditCard}
+                      value={correctAmount}
+                      onChange={(e) => setCorrectAmount(e.target.value)}
+                      required
+                    />
+                    <p className="mt-1 text-[11px] font-semibold text-indigo-600">
+                      ✏️ Enter verified accurate amount here.
+                    </p>
+                  </div>
                 </div>
               </div>
 

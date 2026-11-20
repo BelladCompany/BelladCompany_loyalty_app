@@ -42,12 +42,31 @@ export const Customer360View = ({
   const [addReceiptModalOpen, setAddReceiptModalOpen] = useState(false);
   const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
   const [selectedCorrectionRef, setSelectedCorrectionRef] = useState('');
+  const [selectedCorrectionAmount, setSelectedCorrectionAmount] = useState('');
   const [customerCorrections, setCustomerCorrections] = useState([]);
   const [viewCorrectionData, setViewCorrectionData] = useState(null);
   const [earnModalOpen, setEarnModalOpen] = useState(false);
   const [redeemModalOpen, setRedeemModalOpen] = useState(false);
   const [vehicleStatuses, setVehicleStatuses] = useState({});
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Helper to extract bill amount from ledger row
+  const getRowBillAmount = (row) => {
+    if (!row) return '';
+    if (row.amount_paise && Number(row.amount_paise) > 0) return String(Number(row.amount_paise) / 100);
+    if (row.calc_snapshot?.bill_amount) return String(row.calc_snapshot.bill_amount);
+    if (row.calc_snapshot?.net_ex_showroom) return String(row.calc_snapshot.net_ex_showroom);
+    if (row.calc_snapshot?.amount_paise) return String(Number(row.calc_snapshot.amount_paise) / 100);
+    const match = String(row.reference_id || row.source_ref || '').match(/(?:₹|Rs\.?)\s*([\d,]+(?:\.\d+)?)/i);
+    if (match) return match[1].replace(/,/g, '');
+    const numPts = Math.abs(Number(row.points || 0));
+    if (numPts > 0) {
+      const catStr = String(row.transaction_category || row.transaction_type || row.type || '').toLowerCase();
+      const rate = catStr.includes('access') ? 2 : catStr.includes('bodyshop') ? 3 : 4;
+      return String(Math.round((numPts / rate) * 100));
+    }
+    return '';
+  };
   const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
 
   // Central refresh logic for customer profile, ledger, and billing corrections
@@ -188,7 +207,10 @@ export const Customer360View = ({
         const cat = String(row?.transaction_category || '').toLowerCase();
         const tType = String(val || row?.type || '').toLowerCase();
 
-        if (refStr.includes('gift card') || reasonStr.includes('gift card') || row.reason_type === 'gift_card_claim') {
+        if (row.source_type === 'CAMPAIGN' || row.reason_type === 'campaign_bonus') {
+          label = '🎉 Campaign Add-on Bonus';
+          colorClass = 'bg-amber-100 text-amber-950 border-amber-300 font-extrabold';
+        } else if (refStr.includes('gift card') || reasonStr.includes('gift card') || row.reason_type === 'gift_card_claim') {
           label = '🎁 Gift Card Claim';
           colorClass = 'bg-purple-50 text-purple-900 border-purple-300 font-extrabold';
         } else if (refStr.includes('finance') || reasonStr.includes('finance')) {
@@ -264,24 +286,28 @@ export const Customer360View = ({
         });
 
         // Determine recorded bill amount from calc_snapshot, amount_paise, or source_ref
+        const isBonusRow = row?.source_type === 'CAMPAIGN' || row?.reason_type === 'campaign_bonus';
         let billAmount = null;
-        if (row.amount_paise && Number(row.amount_paise) > 0) {
-          billAmount = Number(row.amount_paise) / 100;
-        } else if (row.calc_snapshot?.bill_amount) {
-          billAmount = Number(row.calc_snapshot.bill_amount);
-        } else if (row.calc_snapshot?.net_ex_showroom) {
-          billAmount = Number(row.calc_snapshot.net_ex_showroom);
-        } else if (row.calc_snapshot?.amount_paise) {
-          billAmount = Number(row.calc_snapshot.amount_paise) / 100;
-        } else {
-          const match = String(row.reference_id || row.source_ref || '').match(/(?:₹|Rs\.?)\s*([\d,]+(?:\.\d+)?)/i);
-          if (match) {
-            billAmount = parseFloat(match[1].replace(/,/g, ''));
-          } else if (numPts > 0) {
-            // Precise fallback calculation based on category earning rate
-            const catStr = String(row?.transaction_category || row?.transaction_type || row?.type || '').toLowerCase();
-            const rate = catStr.includes('access') ? 2 : catStr.includes('bodyshop') ? 3 : 4;
-            billAmount = Math.round((numPts / rate) * 100);
+
+        if (!isBonusRow) {
+          if (row.amount_paise && Number(row.amount_paise) > 0) {
+            billAmount = Number(row.amount_paise) / 100;
+          } else if (row.calc_snapshot?.bill_amount) {
+            billAmount = Number(row.calc_snapshot.bill_amount);
+          } else if (row.calc_snapshot?.net_ex_showroom) {
+            billAmount = Number(row.calc_snapshot.net_ex_showroom);
+          } else if (row.calc_snapshot?.amount_paise) {
+            billAmount = Number(row.calc_snapshot.amount_paise) / 100;
+          } else {
+            const match = String(row.reference_id || row.source_ref || '').match(/(?:₹|Rs\.?)\s*([\d,]+(?:\.\d+)?)/i);
+            if (match) {
+              billAmount = parseFloat(match[1].replace(/,/g, ''));
+            } else if (numPts > 0) {
+              // Precise fallback calculation based on category earning rate
+              const catStr = String(row?.transaction_category || row?.transaction_type || row?.type || '').toLowerCase();
+              const rate = catStr.includes('access') ? 2 : catStr.includes('bodyshop') ? 3 : 4;
+              billAmount = Math.round((numPts / rate) * 100);
+            }
           }
         }
 
@@ -344,6 +370,40 @@ export const Customer360View = ({
           else if (rawLower.includes('sale')) typeBadge = 'Sale';
           else if (rawLower.includes('redemption')) typeBadge = 'Redemption';
           else typeBadge = 'Service';
+        }
+
+        const isBonus = row?.source_type === 'CAMPAIGN' || row?.reason_type === 'campaign_bonus';
+
+        if (isBonus) {
+          const campName = row.campaign_name || 'Campaign Bonus';
+          const bonusPts = Number(row.points || 0);
+          let pctText = row.campaign_value ? `${Number(row.campaign_value)}%` : '';
+          if (!pctText && row.reason_text) {
+            const m = row.reason_text.match(/(\d+(?:\.\d+)?%)/);
+            if (m) pctText = m[1];
+          }
+
+          return (
+            <div className="flex flex-col gap-1 items-start">
+              {receiptNo && (
+                <span className="font-mono text-xs font-bold text-slate-900 tracking-tight">{receiptNo}</span>
+              )}
+              <div
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-950 border border-amber-300 font-bold text-xs whitespace-nowrap shadow-2xs"
+                title={receiptNo ? `Ref Invoice: ${receiptNo}` : undefined}
+              >
+                <span>🎁 {campName}</span>
+                <span className="text-slate-400">•</span>
+                <span className="text-emerald-700 font-extrabold">+{bonusPts.toLocaleString('en-IN')} pts</span>
+                {pctText && (
+                  <>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-indigo-700 font-extrabold">({pctText})</span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
         }
 
         return (
@@ -466,6 +526,7 @@ export const Customer360View = ({
                   type="button"
                   onClick={() => {
                     setSelectedCorrectionRef(row.receipt_no || row.reference_id || String(row.id || row.entry_id || ''));
+                    setSelectedCorrectionAmount(getRowBillAmount(row));
                     setCorrectionModalOpen(true);
                   }}
                   className="px-2 py-0.5 text-[10px] font-bold text-white bg-rose-700 hover:bg-rose-800 rounded transition cursor-pointer shadow-xs"
@@ -483,6 +544,7 @@ export const Customer360View = ({
             type="button"
             onClick={() => {
               setSelectedCorrectionRef(row.receipt_no || row.reference_id || String(row.id || row.entry_id || ''));
+              setSelectedCorrectionAmount(getRowBillAmount(row));
               setCorrectionModalOpen(true);
             }}
             className="px-2.5 py-1 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-md border border-amber-300 shadow-xs cursor-pointer transition"
@@ -820,6 +882,7 @@ export const Customer360View = ({
                   type="button"
                   onClick={() => {
                     setSelectedCorrectionRef('');
+                    setSelectedCorrectionAmount('');
                     setCorrectionModalOpen(true);
                   }}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition shadow-xs cursor-pointer"
@@ -897,9 +960,17 @@ export const Customer360View = ({
         isOpen={correctionModalOpen}
         initialCustomerId={customer?.customer_id}
         initialReference={selectedCorrectionRef}
-        onClose={() => setCorrectionModalOpen(false)}
+        initialWrongAmount={selectedCorrectionAmount}
+        ledgerData={ledgerData}
+        onClose={() => {
+          setCorrectionModalOpen(false);
+          setSelectedCorrectionRef('');
+          setSelectedCorrectionAmount('');
+        }}
         onSuccess={() => {
           setCorrectionModalOpen(false);
+          setSelectedCorrectionRef('');
+          setSelectedCorrectionAmount('');
           handleRefreshProfile(false);
         }}
       />

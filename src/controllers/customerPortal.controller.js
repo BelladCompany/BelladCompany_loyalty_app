@@ -484,7 +484,7 @@ class CustomerPortalController {
       }
 
       let query = `
-        SELECT entry_id AS id, type, transaction_category, points, source_ref, reason_type, reason_text, calc_snapshot, created_at AS date
+        SELECT entry_id AS id, type, transaction_category, points, source_ref, reason_type, reason_text, calc_snapshot, source_type, campaign_id, parent_entry_id, created_at AS date
         FROM points_ledger
         WHERE customer_id = $1 AND tenant_id = $2
       `;
@@ -507,8 +507,11 @@ class CustomerPortalController {
         const rawType = (row.type || '').toLowerCase();
         const rawCat = (row.transaction_category || '').toLowerCase();
         const reasonText = (row.reason_text || row.source_ref || '').toLowerCase();
+        const isBonus = (row.source_type === 'CAMPAIGN' || Boolean(row.campaign_id) || row.reason_type === 'campaign_bonus');
 
-        if (rawType === 'redeem' || row.points < 0) {
+        if (isBonus) {
+          type = 'campaign_bonus';
+        } else if (rawType === 'redeem' || row.points < 0) {
           type = 'redeem';
         } else if (reasonText.includes('in-house') || rawCat.includes('inhouse')) {
           if (reasonText.includes('finance')) type = 'inhouse_finance';
@@ -537,7 +540,8 @@ class CustomerPortalController {
         }
 
         if (!text || !text.trim()) {
-          if (type === 'redeem') text = 'Redemption discount applied';
+          if (type === 'campaign_bonus') text = 'Campaign Promotional Bonus Points';
+          else if (type === 'redeem') text = 'Redemption discount applied';
           else if (type === 'inhouse_finance') text = 'In-house Finance Bonus Points';
           else if (type === 'inhouse_insurance') text = 'In-house Insurance Policy Bonus';
           else if (type === 'inhouse_exchange') text = 'In-house Vehicle Exchange Bonus';
@@ -569,6 +573,9 @@ class CustomerPortalController {
         return {
           id: parseInt(row.id, 10),
           type,
+          is_bonus: isBonus,
+          source_type: row.source_type || 'STANDARD',
+          campaign_id: row.campaign_id || null,
           text,
           date: dateFormatted,
           points: parseInt(row.points, 10),
@@ -715,6 +722,26 @@ class CustomerPortalController {
         referral_code: referral_code || null,
         tenant_id: tenantId,
       });
+
+      // Automated WhatsApp API Dispatch if requested or referee_phone is supplied
+      if (req.body.send_via_api && referee_phone) {
+        try {
+          const NotificationService = require('../services/notification.service');
+          const apiRes = await NotificationService.sendReferralInviteWhatsApp({
+            toPhone: referee_phone,
+            recipientName: referee_name || 'Friend',
+            senderName: req.user?.name || req.user?.customer_name || 'A Friend',
+            referralCode: result.referral_code,
+            claimUrl: result.claim_url,
+            tenant_id: tenantId,
+          });
+          result.whatsapp_api_result = apiRes;
+          result.whatsapp_sent = apiRes.success;
+        } catch (apiErr) {
+          console.warn('[Referral API Dispatch Warning]:', apiErr.message);
+          result.whatsapp_api_error = apiErr.message;
+        }
+      }
 
       res.status(200).json({
         status: 'success',

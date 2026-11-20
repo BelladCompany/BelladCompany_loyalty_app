@@ -88,13 +88,17 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
       errs.phone = 'Phone number must be exactly 10 numeric digits.';
     }
     const cleanAadhaar = aadhaar.replace(/[\s-]/g, '');
-    if (!cleanAadhaar) {
-      errs.aadhaar = 'Aadhaar Card No is mandatory (12 digits).';
-    } else if (!/^\d{12}$/.test(cleanAadhaar)) {
-      errs.aadhaar = 'Aadhaar number must be exactly 12 numeric digits.';
-    }
-    if (gstNumber.trim() && gstNumber.trim().length > 15) {
-      errs.gstNumber = 'GST Number must not exceed 15 characters.';
+    const cleanGst = gstNumber.trim();
+    if (!cleanAadhaar && !cleanGst) {
+      errs.aadhaar = 'Either Aadhaar Card (12 digits) or GST Number must be entered.';
+      errs.gstNumber = 'Either Aadhaar Card (12 digits) or GST Number must be entered.';
+    } else {
+      if (cleanAadhaar && !/^\d{12}$/.test(cleanAadhaar)) {
+        errs.aadhaar = 'Aadhaar number must be exactly 12 numeric digits.';
+      }
+      if (cleanGst && (cleanGst.length < 8 || cleanGst.length > 15)) {
+        errs.gstNumber = 'GST Number must be between 8 and 15 alphanumeric characters.';
+      }
     }
     if (age.trim() && (isNaN(Number(age)) || Number(age) <= 0 || Number(age) > 120)) {
       errs.age = 'Please enter a valid age between 1 and 120.';
@@ -166,7 +170,7 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
       const payload = {
         name: name.trim(),
         phone_numbers: [phone.trim().replace(/\D/g, '')],
-        aadhaar_number: aadhaar.replace(/[\s-]/g, '').trim(),
+        aadhaar_number: aadhaar.replace(/[\s-]/g, '').trim() || undefined,
         gst_number: gstNumber.trim() || undefined,
         visit_type: 'first_time',
         is_first_time_visitor: true,
@@ -402,14 +406,14 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
                     </div>
 
                     <div>
-                      <label htmlFor="add-cust-aadhaar" className="text-sm font-bold text-ink-primary block mb-1.5">
-                        Aadhaar Card No <span className="text-action-danger">*</span>
+                      <label htmlFor="add-cust-aadhaar" className="text-sm font-bold text-ink-primary block mb-1.5 flex items-center justify-between">
+                        <span>Aadhaar Card No (Individual)</span>
+                        <span className="text-[10px] text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">Aadhaar OR GST</span>
                       </label>
                       <input
                         id="add-cust-aadhaar"
                         type="text"
-                        required
-                        placeholder="e.g. 123456789012 (12 digits mandatory)"
+                        placeholder="e.g. 123456789012 (12 digits)"
                         value={aadhaar}
                         onChange={(e) => setAadhaar(e.target.value.replace(/\D/g, '').slice(0, 12))}
                         disabled={isLoading || isSendingOtp || !!success}
@@ -424,17 +428,19 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
                     <div className="md:col-span-1 space-y-1">
                       <label
                         htmlFor="add-cust-gst"
-                        className="text-sm font-bold text-ink-primary block mb-1.5"
+                        className="text-sm font-bold text-ink-primary block mb-1.5 flex items-center justify-between"
                       >
-                        GST Number / GSTIN <span className="text-xs text-slate-400 font-normal">(Optional)</span>
+                        <span>GST Number / GSTIN (Commercial)</span>
+                        <span className="text-[10px] text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">Aadhaar OR GST</span>
                       </label>
                       <input
                         type="text"
                         id="add-cust-gst"
                         placeholder="e.g. 29ABCDE1234F1Z5"
                         value={gstNumber}
-                        onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
+                        onChange={(e) => setGstNumber(e.target.value.toUpperCase().slice(0, 15))}
                         disabled={isLoading || isSendingOtp || !!success}
+                        maxLength={15}
                         className={`w-full h-11 px-4 border rounded text-base font-mono font-medium focus:outline-none focus:border-action-primary bg-white transition-colors ${
                           errors.gstNumber ? 'border-red-400 bg-red-50' : 'border-surface-border'
                         }`}

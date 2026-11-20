@@ -16,6 +16,8 @@ class PointsController {
         reference_id,
         receipt_no,
         account_ledger_no,
+        payment_mode,
+        utr_number,
         description,
       } = req.body;
       const tenantId = req.tenantId;
@@ -31,6 +33,8 @@ class PointsController {
         reference_id: reference_id || receipt_no,
         receipt_no: receipt_no ? receipt_no.trim() : null,
         account_ledger_no: account_ledger_no ? account_ledger_no.trim() : null,
+        payment_mode: payment_mode ? payment_mode.trim() : null,
+        utr_number: utr_number ? utr_number.trim() : null,
         description,
         created_by: createdBy,
         tenant_id: tenantId,

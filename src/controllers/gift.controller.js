@@ -93,6 +93,44 @@ class GiftController {
   }
 
   /**
+   * POST /api/gifts/send-whatsapp-api
+   * Sends gift card template directly via WhatsApp Provider to recipient
+   */
+  static async sendGiftWhatsAppApi(req, res, next) {
+    try {
+      const tenantId = req.tenantId || req.user?.tenant_id || env.defaultTenantId || 'bellad_and_company';
+      const {
+        recipient_phone,
+        recipient_name,
+        sender_name,
+        gift_code,
+        pin_code,
+        amount_inr,
+        claim_url,
+      } = req.body;
+
+      const NotificationService = require('../services/notification.service');
+      const result = await NotificationService.sendGiftCardWhatsApp({
+        toPhone: recipient_phone,
+        recipientName: recipient_name || 'Friend',
+        senderName: sender_name || req.user?.name || 'A Friend',
+        giftCode: gift_code,
+        pinCode: pin_code,
+        amountInr: amount_inr,
+        claimUrl: claim_url,
+        tenant_id: tenantId,
+      });
+
+      res.status(200).json({
+        status: result.success ? 'success' : 'fail',
+        ...result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * GET /api/gifts/claim/:token
    * Public lookup for claim screen
    */

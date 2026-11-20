@@ -77,6 +77,9 @@ export const AddReceiptModal = ({
   };
 
   const [category, setCategory] = useState('service');
+  const [wantRedemption, setWantRedemption] = useState(true);
+  const [paymentMode, setPaymentMode] = useState('UPI');
+  const [utrNumber, setUtrNumber] = useState('');
   const [billAmount, setBillAmount] = useState('');
   const [receiptNo, setReceiptNo] = useState('');
   const [branchId, setBranchId] = useState(() => resolveCashierBranch());
@@ -109,6 +112,9 @@ export const AddReceiptModal = ({
   useEffect(() => {
     if (isOpen) {
       setCategory('service');
+      setWantRedemption(true);
+      setPaymentMode('UPI');
+      setUtrNumber('');
       setBillAmount('');
       setReceiptNo('');
       setBranchId(resolveCashierBranch());
@@ -190,9 +196,11 @@ export const AddReceiptModal = ({
   const numAmount = parseFloat(billAmount || '0') || 0;
   const rateMultiplier = category === 'service' ? 4 : category === 'accessories' ? 2 : category === 'bodyshop' ? 3 : 1;
 
-  // Auto-calculated Points to Redeem (4 PTS = ₹1):
-  // Cannot exceed available points, and cannot exceed bill amount * 4
-  const activeRedeemPoints = isEligible && numAmount > 0 ? Math.min(currentPoints, Math.floor(numAmount * 4)) : 0;
+  // Points to Redeem (4 PTS = ₹1):
+  // Customer choice: only redeem if wantRedemption is true!
+  const activeRedeemPoints = isEligible && wantRedemption && numAmount > 0 
+    ? Math.min(currentPoints, Math.floor(numAmount * 4)) 
+    : 0;
   const discountAmount = Math.floor(activeRedeemPoints / 4);
   const netCashPaid = Math.max(0, numAmount - discountAmount);
   const earnedPoints = netCashPaid > 0 ? Math.floor((netCashPaid / 100) * rateMultiplier) : 0;
@@ -211,12 +219,16 @@ export const AddReceiptModal = ({
       setErrorMessage('Receipt / Invoice Number is strictly required.');
       return;
     }
+    if (!utrNumber.trim()) {
+      setErrorMessage('UTR / Transaction Reference Number is mandatory.');
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
-      if (isEligible && activeRedeemPoints > 0) {
-        // Auto-Redemption Flow (Instant discount + new points on cash paid, NO OTP)
+      if (isEligible && wantRedemption && activeRedeemPoints > 0) {
+        // Redemption Flow (Instant discount + new points on cash paid, NO OTP)
         const payload = {
           customer_id: customer.customer_id,
           phone: primaryPhone ? String(primaryPhone).replace(/[^\d+]/g, '') : undefined,
@@ -224,6 +236,8 @@ export const AddReceiptModal = ({
           points: activeRedeemPoints,
           category: category,
           receipt_no: receiptNo.trim(),
+          payment_mode: paymentMode,
+          utr_number: utrNumber.trim(),
           vehicle_id: selectedVehicleId ? parseInt(selectedVehicleId, 10) : undefined,
           branch_id: branchId ? parseInt(branchId, 10) : 1,
         };
@@ -242,6 +256,8 @@ export const AddReceiptModal = ({
           pointsEarned: ptsEarned,
           newBalance: updatedBalance,
           receiptNo: receiptNo.trim(),
+          paymentMode,
+          utrNumber: utrNumber.trim(),
           category,
           branchId: branchId ? parseInt(branchId, 10) : 1,
           jobCard: notes.trim(),
@@ -252,7 +268,7 @@ export const AddReceiptModal = ({
           branchName: selectedVeh?.branch_name || null,
         });
       } else {
-        // Standard Points Earning Flow (NO OTP)
+        // Standard Points Earning Flow (Customer chose to keep points, or not eligible)
         const payload = {
           customer_id: customer.customer_id,
           vehicle_id: selectedVehicleId ? parseInt(selectedVehicleId, 10) : null,
@@ -262,7 +278,9 @@ export const AddReceiptModal = ({
           category: category,
           reference_id: receiptNo.trim(),
           receipt_no: receiptNo.trim(),
-          description: `${receiptNo.trim()} | ${category.charAt(0).toUpperCase() + category.slice(1).toLowerCase()}${notes.trim() ? ` (${notes.trim()})` : ''}`,
+          payment_mode: paymentMode,
+          utr_number: utrNumber.trim(),
+          description: `${receiptNo.trim()} | ${category.charAt(0).toUpperCase() + category.slice(1).toLowerCase()} | Mode: ${paymentMode} | UTR: ${utrNumber.trim()}${notes.trim() ? ` (${notes.trim()})` : ''}`,
         };
 
         const res = await ApiService.earnPoints(payload);
@@ -279,6 +297,8 @@ export const AddReceiptModal = ({
           pointsEarned: pts,
           newBalance: updatedBalance,
           receiptNo: receiptNo.trim(),
+          paymentMode,
+          utrNumber: utrNumber.trim(),
           category,
           branchId: branchId ? parseInt(branchId, 10) : 1,
           jobCard: notes.trim(),
@@ -612,8 +632,8 @@ export const AddReceiptModal = ({
                 </div>
               )}
 
-              {/* 3. Lock Status Banner */}
-              {!isEligible && (
+              {/* 3. Lock Status Banner / Customer Choice */}
+              {!isEligible ? (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs">
                   <Lock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                   <div>
@@ -625,10 +645,101 @@ export const AddReceiptModal = ({
                     </p>
                   </div>
                 </div>
-              )}
+              ) : currentPoints > 0 ? (
+                <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      Customer Choice: Redeem Discount or Keep Points?
+                    </span>
+                    <span className="text-[10px] text-indigo-700 font-bold font-mono">
+                      Available: {currentPoints.toLocaleString()} PTS (₹{rupeeValue.toLocaleString()})
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setWantRedemption(true)}
+                      className={`p-2.5 rounded-xl border text-left transition flex flex-col gap-0.5 cursor-pointer ${
+                        wantRedemption
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-xs">Redeem Points</span>
+                        {wantRedemption && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      <span className={`text-[10px] ${wantRedemption ? 'text-emerald-100' : 'text-slate-500'}`}>
+                        Take full bill discount (-₹{Math.min(rupeeValue, Math.floor(numAmount || 0))})
+                      </span>
+                    </button>
 
-              {/* 4. Bill Amount & Invoice Details */}
+                    <button
+                      type="button"
+                      onClick={() => setWantRedemption(false)}
+                      className={`p-2.5 rounded-xl border text-left transition flex flex-col gap-0.5 cursor-pointer ${
+                        !wantRedemption
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                          : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-xs">Keep Points</span>
+                        {!wantRedemption && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      <span className={`text-[10px] ${!wantRedemption ? 'text-indigo-100' : 'text-slate-500'}`}>
+                        Do not redeem now, earn only on full bill
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* 4. Payment Mode, UTR & Bill Amount */}
               <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Payment Mode Dropdown */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Payment Mode *
+                    </label>
+                    <select
+                      value={paymentMode}
+                      onChange={(e) => {
+                        const m = e.target.value;
+                        setPaymentMode(m);
+                        if (m.toLowerCase() === 'cash' && !utrNumber) {
+                          setUtrNumber('CASH');
+                        } else if (utrNumber === 'CASH') {
+                          setUtrNumber('');
+                        }
+                      }}
+                      className="w-full h-10 sm:h-11 px-3 text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
+                      <option value="Card">Card (Debit / Credit)</option>
+                      <option value="NEFT">NEFT (Bank Transfer)</option>
+                      <option value="RTGS">RTGS (Bank Transfer)</option>
+                    </select>
+                  </div>
+
+                  {/* UTR Number Field (Mandatory) */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      UTR No / Txn Ref *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder={paymentMode.toLowerCase() === 'cash' ? 'Cash receipt ref or CASH' : 'e.g. 429182749281'}
+                      value={utrNumber}
+                      onChange={(e) => setUtrNumber(e.target.value)}
+                      className="w-full h-10 sm:h-11 px-3 text-xs font-bold font-mono text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Bill Amount (₹) *

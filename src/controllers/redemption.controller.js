@@ -65,6 +65,8 @@ class RedemptionController {
         category,
         receipt_no,
         account_ledger_no,
+        payment_mode,
+        utr_number,
         vehicle_id,
         referral_code,
       } = req.body;
@@ -83,6 +85,8 @@ class RedemptionController {
         category: category || 'service',
         receipt_no: receipt_no ? receipt_no.trim() : null,
         account_ledger_no: account_ledger_no ? account_ledger_no.trim() : null,
+        payment_mode: payment_mode ? payment_mode.trim() : null,
+        utr_number: utr_number ? utr_number.trim() : null,
         branch_id: branchId ? parseInt(branchId, 10) : null,
         vehicle_id: vehicle_id ? parseInt(vehicle_id, 10) : null,
         referral_code: referral_code ? referral_code.trim() : null,

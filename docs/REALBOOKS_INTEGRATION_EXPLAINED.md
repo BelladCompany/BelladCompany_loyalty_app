@@ -75,7 +75,7 @@ In RealBooks:
 
 ### Why do we need different `SEGID`s?
 Bellad & Company is not just one counter. You have:
-1. **Different Brands / Models**: Hero bikes, Hyundai cars, Swaraj tractors.
+1. **Different Brands / Models**: Hero bikes, Hyundai cars, Swaraj tractors, cnh.
 2. **Different Cities**: Hubli, Dharwad, Gadag, Haveri.
 3. **Different Departments**:
    - **Showroom (`SR`)**: Where new vehicles are sold.

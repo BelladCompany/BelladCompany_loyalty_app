@@ -26,7 +26,8 @@ import {
   Percent,
   Layers,
   Award,
-  Crown
+  Crown,
+  Zap
 } from 'lucide-react';
 
 /**
@@ -73,6 +74,7 @@ export const SidebarLayout = ({
   const logoUrl = publishedConfig?.theme_config?.logo_url || '/bellad-logo.png';
   const tagline = publishedConfig?.theme_config?.tagline || 'Loyalty Platform';
   const isCashier = user?.role === 'cashier';
+  const isHOD = user?.role === 'hod';
   const isManager = ['branch_manager', 'manager'].includes(user?.role);
   const isAccountsHead = ['accounts_head', 'account_head'].includes(user?.role);
   const isAdmin = ['admin', 'super_admin', 'regional_admin', 'director'].includes(user?.role) ||
@@ -85,7 +87,22 @@ export const SidebarLayout = ({
     activeTab === id || (id === 'dashboard' && activeTab === 'search');
 
   // Smart CRM Grouped Categories based on staff role
-  const navSections = isAccountsHead
+  const navSections = isHOD
+    ? [
+      {
+        group: 'Counter POS',
+        items: [
+          { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
+        ],
+      },
+      {
+        group: 'Analytics',
+        items: [
+          { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
+        ],
+      },
+    ]
+    : isAccountsHead
     ? [
       {
         group: 'Counter POS',
@@ -157,6 +174,7 @@ export const SidebarLayout = ({
           {
             group: 'Loyalty Rewards',
             items: [
+              { id: 'campaigns', label: 'Campaign Add-ons', icon: Zap },
               { id: 'customer_redemptions', label: 'Customer Redemptions', icon: Sparkles },
               { id: 'kyc_approvals', label: 'KYC Approvals', icon: ShieldCheck },
               { id: 'corrections_queue', label: 'Bill Correction Queue', icon: FileText },
@@ -405,8 +423,10 @@ export const SidebarLayout = ({
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 truncate tracking-tight">
               {activeTab === 'director_command_center'
                 ? 'Director Command Center'
-                : activeTab === 'reports'
-                  ? 'Reports & Analytics'
+                : activeTab === 'campaigns'
+                  ? 'Campaign Add-on Engine'
+                  : activeTab === 'reports'
+                    ? 'Reports & Analytics'
                   : activeTab === 'gift_cards'
                     ? 'Gift Card Rewards'
                     : activeTab === 'referrals'

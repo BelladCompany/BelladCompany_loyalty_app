@@ -119,6 +119,8 @@ class RedemptionService {
     category = 'service',
     receipt_no,
     account_ledger_no,
+    payment_mode,
+    utr_number,
     branch_id,
     vehicle_id,
     referral_code,
@@ -345,9 +347,9 @@ class RedemptionService {
       const redemptionInsert = await client.query(
         `INSERT INTO redemptions (
            redemption_code, tenant_id, customer_id, vehicle_id, points_redeemed,
-           discount_amount, branch_id, cashier_id, receipt_no, account_ledger_no
+           discount_amount, branch_id, cashier_id, receipt_no, account_ledger_no, payment_mode, utr_number
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING redemption_code AS id, redemption_code, customer_id, vehicle_id, branch_id, points_redeemed,
                    discount_amount, receipt_no, account_ledger_no, created_at;`,
         [
@@ -361,6 +363,8 @@ class RedemptionService {
           created_by || null,
           receipt_no || null,
           account_ledger_no || null,
+          payment_mode || null,
+          utr_number || null,
         ]
       );
       const redemption = redemptionInsert.rows[0];
@@ -368,22 +372,28 @@ class RedemptionService {
       // 6. Write 'redeem' points_ledger row (negative points_redeemed)
       let redeemLedgerEntry = null;
       if (points_redeemed > 0) {
+        const payMeta = [
+          payment_mode ? `Mode: ${payment_mode.toUpperCase()}` : '',
+          utr_number ? `UTR: ${utr_number}` : '',
+        ].filter(Boolean).join(' | ');
         const rRes = await client.query(
           `INSERT INTO points_ledger (
-             customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, cashier_id, tenant_id, receipt_no, account_ledger_no
+             customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, cashier_id, tenant_id, receipt_no, account_ledger_no, payment_mode, utr_number
            )
-           VALUES ($1, $2, $3, 'redeem', 'redemption', $4, $5, $6, $7, $8, $9)
+           VALUES ($1, $2, $3, 'redeem', 'redemption', $4, $5, $6, $7, $8, $9, $10, $11)
            RETURNING entry_id AS id, customer_id, vehicle_id, type AS transaction_type, transaction_category, points, source_ref AS reference_id, created_at;`,
           [
             customerId,
             vehicle_id || null,
             branch_id || null,
             -points_redeemed,
-            `Redemption discount of ₹${discount_applied} (Receipt: ${receipt_no || 'N/A'})`,
+            `Redemption discount of ₹${discount_applied} (Receipt: ${receipt_no || 'N/A'}${payMeta ? ` | ${payMeta}` : ''})`,
             created_by || null,
             tenant_id,
             receipt_no || null,
             account_ledger_no || null,
+            payment_mode || null,
+            utr_number || null,
           ]
         );
         redeemLedgerEntry = rRes.rows[0];
@@ -399,11 +409,15 @@ class RedemptionService {
 
       let earnLedgerEntry = null;
       if (new_points_earned > 0) {
+        const payMeta = [
+          payment_mode ? `Mode: ${payment_mode.toUpperCase()}` : '',
+          utr_number ? `UTR: ${utr_number}` : '',
+        ].filter(Boolean).join(' | ');
         const eRes = await client.query(
           `INSERT INTO points_ledger (
-             customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, cashier_id, tenant_id, receipt_no, account_ledger_no
+             customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, cashier_id, tenant_id, receipt_no, account_ledger_no, payment_mode, utr_number
            )
-           VALUES ($1, $2, $3, 'earn', $4, $5, $6, $7, $8, $9, $10)
+           VALUES ($1, $2, $3, 'earn', $4, $5, $6, $7, $8, $9, $10, $11, $12)
            RETURNING entry_id AS id, customer_id, vehicle_id, type AS transaction_type, transaction_category, points, source_ref AS reference_id, created_at;`,
           [
             customerId,
@@ -411,11 +425,13 @@ class RedemptionService {
             branch_id || null,
             normCategory,
             new_points_earned,
-            `Earned points on cash paid ₹${cash_paid} (Receipt: ${receipt_no || 'N/A'})`,
+            `Earned points on cash paid ₹${cash_paid} (Receipt: ${receipt_no || 'N/A'}${payMeta ? ` | ${payMeta}` : ''})`,
             created_by || null,
             tenant_id,
             receipt_no || null,
             account_ledger_no || null,
+            payment_mode || null,
+            utr_number || null,
           ]
         );
         earnLedgerEntry = eRes.rows[0];
