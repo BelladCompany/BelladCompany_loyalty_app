@@ -233,9 +233,13 @@ export const RedemptionModal = ({
   const isLocked = isVehicleUnder12Months && !isAccessories;
   const isEligible = !isExpired && (isAccessories || !isVehicleUnder12Months) && (currentBalance > 0);
 
+  // Dynamic Model Redemption % Cap
+  const modelCapPercent = vehicleStatus?.redemption_cap_percent != null ? Number(vehicleStatus.redemption_cap_percent) : 100;
+  const maxAllowedPointsByModel = Math.floor(currentBalance * (modelCapPercent / 100));
+
   // Live Arithmetic Preview Calculations
   const numBillAmount = parseFloat(billAmount || '0');
-  const redeemableRupees = currentBalance * POINTS_PER_RUPEE_REDEMPTION;
+  const redeemableRupees = maxAllowedPointsByModel * POINTS_PER_RUPEE_REDEMPTION;
   const previewDiscountApplied = numBillAmount > 0 ? Math.min(redeemableRupees, numBillAmount) : 0;
   const previewPointsRedeemed = numBillAmount > 0 ? Math.round(previewDiscountApplied / POINTS_PER_RUPEE_REDEMPTION) : 0;
   const previewCashPaid = numBillAmount > 0 ? Math.max(0, numBillAmount - previewDiscountApplied) : 0;

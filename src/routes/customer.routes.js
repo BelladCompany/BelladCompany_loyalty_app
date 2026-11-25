@@ -24,13 +24,13 @@ router.post('/request-creation-otp', requireRole(['cashier', 'admin']), otpReque
 router.post('/', requireRole(['cashier', 'admin']), otpVerifyRateLimiter, validate(createCustomerSchema), CustomerController.createCustomer);
 
 // List customers
-router.get('/', requireRole(['cashier', 'admin']), CustomerController.listCustomers);
+router.get('/', requireRole(['cashier', 'admin', 'advisor']), CustomerController.listCustomers);
 
 // Lookup referring customer profile by referral code (customer_id or phone)
-router.get('/by-referral-code/:code', requireRole(['cashier', 'admin']), CustomerController.getByReferralCode);
+router.get('/by-referral-code/:code', requireRole(['cashier', 'admin', 'advisor']), CustomerController.getByReferralCode);
 
 // Get customer by customer_id (e.g. BAC-100001)
-router.get('/:customerId', requireRole(['cashier', 'admin']), CustomerController.getCustomer);
+router.get('/:customerId', requireRole(['cashier', 'admin', 'advisor']), CustomerController.getCustomer);
 
 // Update customer details
 router.put('/:customerId', requireRole(['cashier', 'admin']), validate(updateCustomerSchema), CustomerController.updateCustomer);
@@ -45,7 +45,7 @@ router.delete('/:customerId/phones/:phoneId', requireRole(['admin']), CustomerCo
 // Customer full points ledger and current tier history
 router.get(
   '/:customerId/ledger',
-  requireRole(['cashier', 'admin']),
+  requireRole(['cashier', 'admin', 'advisor']),
   validate(ledgerQuerySchema, 'query'),
   PointsController.getCustomerLedger
 );

@@ -289,25 +289,32 @@ class RedemptionService {
       // ACCESSORIES EXEMPTION: Accessories can be redeemed anytime without the 12-month lock!
       // Other categories (service, sale, bodyshop, referral, etc.) strictly retain the 12-month lock.
       const isAccessories = ['accessories', 'accessory'].includes(normalizedCat);
+      let modelCapPercent = 100;
 
       if (vehicle_id) {
         const statusRes = await RedemptionEligibilityService.getVehicleRedemptionStatus(vehicle_id, tenant_id, category);
         if (statusRes.status === 'locked' && !isAccessories) {
           throw { statusCode: 400, message: statusRes.message || 'Points redemption is locked for vehicles purchased less than 12 months ago.' };
         }
+        if (statusRes.redemption_cap_percent != null) {
+          modelCapPercent = Number(statusRes.redemption_cap_percent);
+        }
       }
 
-      // 4. Calculate redemption & earning strictly using named constants
+      // 4. Calculate redemption & earning strictly using named constants and dynamic model percentage cap
       let discount_applied = 0;
       let points_redeemed = 0;
       let cash_paid = 0;
       let new_points_earned = 0;
       const billAmt = bill_amount ? parseFloat(bill_amount) : 0;
 
+      // Apply dynamic model percentage cap on points redemption (e.g. 50% for Tata/Hyundai, 100% for Hero)
+      const maxAllowedPointsByModel = Math.floor(currentPointBalance * (modelCapPercent / 100));
+
       if (billAmt > 0) {
-        const redeemable_rupees = currentPointBalance * POINTS_PER_RUPEE_REDEMPTION;
+        const redeemable_rupees = maxAllowedPointsByModel * POINTS_PER_RUPEE_REDEMPTION;
         discount_applied = Math.min(redeemable_rupees, billAmt);
-        points_redeemed = Math.min(currentPointBalance, Math.round(discount_applied / POINTS_PER_RUPEE_REDEMPTION));
+        points_redeemed = Math.min(maxAllowedPointsByModel, Math.round(discount_applied / POINTS_PER_RUPEE_REDEMPTION));
         cash_paid = billAmt - discount_applied;
 
         // Apply category specific points earning rate
@@ -324,8 +331,11 @@ class RedemptionService {
         new_points_earned = Math.floor((cash_paid / 100) * earnRate);
       } else if (points && parseInt(points, 10) > 0) {
         points_redeemed = parseInt(points, 10);
-        if (points_redeemed > currentPointBalance) {
-          throw { statusCode: 400, message: `Insufficient point balance. Current balance is ${currentPointBalance} pts.` };
+        if (points_redeemed > maxAllowedPointsByModel) {
+          throw {
+            statusCode: 400,
+            message: `Points redemption for this model is capped at ${modelCapPercent}%. Maximum allowed points to redeem is ${maxAllowedPointsByModel} pts (current balance: ${currentPointBalance} pts).`,
+          };
         }
         discount_applied = points_redeemed * POINTS_PER_RUPEE_REDEMPTION;
         cash_paid = 0;
@@ -504,6 +514,8 @@ class RedemptionService {
         updated_total_balance,
         remaining_balance: updated_total_balance,
         previous_balance: currentPointBalance,
+        model_cap_percent: modelCapPercent,
+        max_allowed_points: maxAllowedPointsByModel,
         redemption_code: redemptionCode,
         receipt_no,
         account_ledger_no,

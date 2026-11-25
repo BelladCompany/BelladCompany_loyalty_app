@@ -56,6 +56,7 @@ import {
 } from 'lucide-react';
 import ApiService from '../services/api';
 import CampaignScreen from './CampaignScreen';
+import ModelRedemptionCapStudio from '../components/studio/ModelRedemptionCapStudio';
 
 /**
  * Standard Dealerships / Tenants Catalog
@@ -146,6 +147,7 @@ const NAV_GROUPS = [
       { id: 'models_2w', label: '2-Wheeler (2W)', icon: Bike, badge: '2W', countKey: '2w' },
       { id: 'models_ev', label: 'Electric Vehicles (EV)', icon: Zap, badge: 'EV', countKey: 'ev' },
       { id: 'models_all', label: 'All Vehicle Models', icon: Layers, countKey: 'all_models' },
+      { id: 'model_redemption_caps', label: 'Model Redemption % Caps & Calculator', icon: SlidersHorizontal, badge: 'Dynamic Cap %', isSpecial: true },
     ],
   },
   {
@@ -170,6 +172,7 @@ const NAV_GROUPS = [
     title: 'Formulas & Governance',
     icon: Calculator,
     items: [
+      { id: 'model_redemption_caps', label: 'Model Redemption % Caps & Calculator', icon: SlidersHorizontal, badge: 'Active', isSpecial: true },
       { id: 'points_formulas', label: 'Points Gain Formula Studio', icon: Calculator },
       { id: 'director_audit', label: 'Approvals & Audit Register', icon: FileText, countKey: 'audit' },
       { id: 'simulator_test', label: 'Live Policy Simulator', icon: Play, isSpecial: true },
@@ -1564,6 +1567,11 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
             </div>
           )}
 
+          {/* ── VIEW: MODEL REDEMPTION % CAPS & DYNAMIC CALCULATOR ── */}
+          {activeCategory === 'model_redemption_caps' && (
+            <ModelRedemptionCapStudio tenantId={selectedTenant} user={user} />
+          )}
+
           {/* ── VIEW 3: POINTS GAIN FORMULA STUDIO (All 6 Core Channels) ── */}
           {activeCategory === 'points_formulas' && (
             <div className="space-y-5">
@@ -2334,6 +2342,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
           {activeCategory !== 'dealer_overview' &&
            activeCategory !== 'tier_slabs' &&
            activeCategory !== 'points_formulas' &&
+           activeCategory !== 'model_redemption_caps' &&
            activeCategory !== 'director_audit' &&
            activeCategory !== 'user_access_matrix' &&
            activeCategory !== 'simulator_test' &&

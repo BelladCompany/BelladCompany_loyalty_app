@@ -496,7 +496,7 @@ class CustomerService {
     const customerRes = await pool.query(
       `SELECT customer_id, customer_name AS name, age, address, firm_name, firm_name AS firm, email,
               branch_name, branch_name AS branch, branch_address, dms_invoice_number, dms_invoice_date,
-              sales_consultant, aadhaar_last4_enc, tenant_id, created_at, updated_at
+              sales_consultant, aadhaar_number, aadhaar_last4_enc, gst_number, tenant_id, created_at, updated_at
        FROM customers
        WHERE customer_id = $1 AND tenant_id = $2;`,
       [customerId, tenantId]
@@ -596,6 +596,8 @@ class CustomerService {
               name: row.name,
               customer_name: row.name,
               email: row.email,
+              gst_number: row.gst_number || null,
+              gstin: row.gst_number || null,
               tenant_id: row.tenant_id,
               created_at: row.created_at,
               updated_at: row.updated_at,
@@ -619,7 +621,7 @@ class CustomerService {
       const customerRes = await pool.query(
       `SELECT customer_id, customer_name AS name, age, aadhaar_number, address, firm_name, firm_name AS firm, email,
               branch_name, branch_name AS branch, branch_address, dms_invoice_number, dms_invoice_date,
-              sales_consultant, aadhaar_last4_enc, tenant_id, created_at, updated_at
+              sales_consultant, aadhaar_last4_enc, gst_number, tenant_id, created_at, updated_at
        FROM customers
        WHERE customer_id = $1 AND tenant_id = $2;`,
       [customerId, tenantId]
@@ -652,6 +654,8 @@ class CustomerService {
         ? `XXXX-XXXX-${aadhaarLast4}`
         : (row.aadhaar_number && row.aadhaar_number.length >= 4 ? `XXXX-XXXX-${row.aadhaar_number.slice(-4)}` : null),
       aadhaar_last4: aadhaarLast4,
+      gst_number: row.gst_number || null,
+      gstin: row.gst_number || null,
       address: row.address || null,
       firm: row.firm_name || row.firm || null,
       firm_name: row.firm_name || row.firm || null,
@@ -809,7 +813,7 @@ class CustomerService {
    * DB NOTE: email is no longer persisted (column removed); the value is accepted for API
    * compatibility but silently ignored.
    */
-  static async updateCustomer(customerId, { name, email, aadhaar_number }, tenantId) {
+  static async updateCustomer(customerId, { name, email, aadhaar_number, gst_number }, tenantId) {
     const fields = [];
     const values = [];
     let idx = 1;
@@ -836,6 +840,12 @@ class CustomerService {
         fields.push(`aadhaar_hash = NULL`);
         fields.push(`aadhaar_last4_enc = NULL`);
       }
+    }
+
+    if (gst_number !== undefined) {
+      const cleanGst = gst_number && String(gst_number).trim() ? String(gst_number).trim().toUpperCase() : null;
+      fields.push(`gst_number = $${idx++}`);
+      values.push(cleanGst);
     }
 
     if (fields.length === 0) {

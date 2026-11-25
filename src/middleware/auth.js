@@ -18,9 +18,9 @@ function invalidateSessionCache(userId) {
  */
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  // Strictly require Authorization: Bearer header. Only permit query parameter token for proof streaming routes (for <img> tags)
-  const isProofStream = req.path.includes('/proof');
-  const token = (authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null) || (isProofStream ? req.query.token : null);
+  // Strictly require Authorization: Bearer header. Permit query parameter token for streaming routes (images, proofs, invoice PDFs)
+  const isStreamingRoute = req.path.includes('/proof') || req.path.includes('/pdf') || req.path.includes('/advisor-queue');
+  const token = (authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null) || (isStreamingRoute ? req.query.token : null);
 
   if (!token) {
     return res.status(401).json({

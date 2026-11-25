@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const ModelRedemptionCapService = require('./modelRedemptionCap.service');
 
 /**
  * RedemptionEligibilityService
@@ -59,7 +60,7 @@ class RedemptionEligibilityService {
   static async getVehicleRedemptionStatus(vehicleId, tenantId, category = null) {
     // 1. Fetch vehicle record
     const vehicleRes = await pool.query(
-      `SELECT vehicle_id, customer_id, chassis_no AS registration_number,
+      `SELECT vehicle_id, customer_id, chassis_no AS registration_number, brand_name, model,
               purchase_date, dms_invoice_date, redemption_status, redemption_eligible_at, redemption_expires_at
        FROM vehicles
        WHERE vehicle_id = $1 AND tenant_id = $2;`,
@@ -129,25 +130,45 @@ class RedemptionEligibilityService {
       }
     }
 
+    // 4b. Resolve model-specific redemption percentage cap
+    const resolvedCap = await ModelRedemptionCapService.resolveCap({
+      tenant_id: tenantId,
+      brand_name: vehicle.brand_name,
+      model_name: vehicle.model,
+    });
+    const capPercent = resolvedCap.cap_percent != null ? Number(resolvedCap.cap_percent) : 100.0;
+    const maxRedeemablePoints = Math.floor(points_balance * (capPercent / 100));
+
     // 5. Build human-readable message
     let message;
     if (!vehicle.purchase_date && !vehicle.redemption_eligible_at) {
-      message = 'Active for point calculation and redemption.';
+      message = capPercent < 100
+        ? `Active for point calculation and redemption. (Capped up to ${capPercent}% for ${vehicle.model || vehicle.brand_name}: max ${maxRedeemablePoints.toLocaleString()} pts / ₹${(maxRedeemablePoints * 0.25).toFixed(0)} discount).`
+        : 'Active for point calculation and redemption.';
     } else if (isAccessories && baseStatus === 'locked') {
-      message = `Eligible to redeem anytime for Accessories! (${points_balance.toLocaleString()} pts available).`;
+      message = capPercent < 100
+        ? `Eligible to redeem anytime for Accessories! (Capped up to ${capPercent}% for ${vehicle.model || vehicle.brand_name}: max ${maxRedeemablePoints.toLocaleString()} pts / ₹${(maxRedeemablePoints * 0.25).toFixed(0)} discount).`
+        : `Eligible to redeem anytime for Accessories! (${points_balance.toLocaleString()} pts available).`;
     } else if (status === 'locked') {
       const eligibleStr = eligible_at
         ? eligible_at.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
         : '—';
       message = `Points are locked for Service / Sales until ${eligibleStr}. (Accessories redemption is unlocked anytime).`;
     } else {
-      message = `Eligible to redeem! (${points_balance.toLocaleString()} pts available - Points never expire).`;
+      message = capPercent < 100
+        ? `Eligible to redeem up to ${capPercent}%! (${maxRedeemablePoints.toLocaleString()} of ${points_balance.toLocaleString()} pts / ₹${(maxRedeemablePoints * 0.25).toFixed(0)} discount based on ${vehicle.model || vehicle.brand_name} policy).`
+        : `Eligible to redeem! (${points_balance.toLocaleString()} pts available - Points never expire).`;
     }
 
     return {
       vehicle_id: vehicle.vehicle_id,
       customer_id: vehicle.customer_id,
       registration_number: vehicle.registration_number,
+      brand_name: vehicle.brand_name,
+      model_name: vehicle.model,
+      redemption_cap_percent: capPercent,
+      max_redeemable_points: maxRedeemablePoints,
+      cap_rule_description: resolvedCap.description,
       purchase_date: vehicle.purchase_date,
       status,
       base_status: baseStatus,

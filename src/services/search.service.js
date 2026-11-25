@@ -22,6 +22,7 @@ class SearchService {
         c.age,
         c.aadhaar_number,
         c.aadhaar_last4_enc,
+        c.gst_number,
         c.address,
         c.firm_name,
         c.firm_name AS firm,
@@ -92,6 +93,7 @@ class SearchService {
           OR c.name ILIKE $2
           OR c.customer_id ILIKE $2
           OR c.aadhaar_number ILIKE $2
+          OR c.gst_number ILIKE $2
           OR c.firm_name ILIKE $2
           OR c.branch_name ILIKE $2
           OR c.dms_invoice_number ILIKE $2
@@ -142,6 +144,7 @@ class SearchService {
         c.age,
         c.aadhaar_number,
         c.aadhaar_last4_enc,
+        c.gst_number,
         c.address,
         c.firm_name,
         c.firm_name AS firm,
@@ -266,6 +269,8 @@ class SearchService {
         ? `XXXX-XXXX-${aadhaarLast4}`
         : (row.aadhaar_number && row.aadhaar_number.length >= 4 ? `XXXX-XXXX-${row.aadhaar_number.slice(-4)}` : null),
       aadhaar_last4: aadhaarLast4,
+      gst_number: row.gst_number || null,
+      gstin: row.gst_number || null,
       address: row.address || null,
       firm: row.firm_name || row.firm || null,
       firm_name: row.firm_name || row.firm || null,

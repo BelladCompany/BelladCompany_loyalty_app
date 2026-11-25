@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import RulesStudio from '../components/studio/RulesStudio';
 import StandaloneMasterEditorPortal from './StandaloneMasterEditorPortal';
-import { ArrowLeft, Sparkles, Sliders } from 'lucide-react';
+import ModelRedemptionCapStudio from '../components/studio/ModelRedemptionCapStudio';
+import { ArrowLeft, Sparkles, Sliders, Percent } from 'lucide-react';
 
 export default function MasterRuleEditorScreen({ user, onTabChange }) {
-  const [viewMode, setViewMode] = useState('studio'); // 'studio' | 'legacy'
+  const [viewMode, setViewMode] = useState('model_caps'); // 'model_caps' | 'studio' | 'legacy'
 
   return (
     <div className="relative min-h-screen bg-slate-950">
@@ -24,6 +25,17 @@ export default function MasterRuleEditorScreen({ user, onTabChange }) {
 
           <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700">
             <button
+              onClick={() => setViewMode('model_caps')}
+              className={`px-3 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                viewMode === 'model_caps'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Percent className="w-3 h-3" />
+              <span>Model % Caps &amp; Dynamic Calculator</span>
+            </button>
+            <button
               onClick={() => setViewMode('studio')}
               className={`px-3 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'studio'
@@ -32,7 +44,7 @@ export default function MasterRuleEditorScreen({ user, onTabChange }) {
               }`}
             >
               <Sparkles className="w-3 h-3" />
-              <span>Rules Studio V2 (Linear Grade)</span>
+              <span>Rules Studio V2</span>
             </button>
             <button
               onClick={() => setViewMode('legacy')}
@@ -53,7 +65,11 @@ export default function MasterRuleEditorScreen({ user, onTabChange }) {
         </span>
       </div>
 
-      {viewMode === 'studio' ? (
+      {viewMode === 'model_caps' ? (
+        <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+          <ModelRedemptionCapStudio tenantId={user?.tenant_id || 'bellad_and_company'} user={user} />
+        </div>
+      ) : viewMode === 'studio' ? (
         <RulesStudio user={user} tenantId={user?.tenant_id || 'bellad_and_company'} />
       ) : (
         <StandaloneMasterEditorPortal

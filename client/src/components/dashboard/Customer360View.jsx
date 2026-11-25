@@ -22,6 +22,9 @@ import {
   XCircle,
   Eye,
   RefreshCw,
+  Wrench,
+  Package,
+  UploadCloud,
 } from 'lucide-react';
 import EarnPointsModal from './EarnPointsModal';
 import RedemptionModal from './RedemptionModal';
@@ -50,6 +53,27 @@ export const Customer360View = ({
   const [vehicleStatuses, setVehicleStatuses] = useState({});
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // V2 Customer Spare Parts State
+  const [customerSpareParts, setCustomerSpareParts] = useState([]);
+  const [isLoadingSpareParts, setIsLoadingSpareParts] = useState(false);
+  const [sparePartsFilter, setSparePartsFilter] = useState('all');
+
+  useEffect(() => {
+    if (!customer?.customer_id) return;
+    setIsLoadingSpareParts(true);
+    ApiService.getCustomerSparePartsV2(customer.customer_id)
+      .then((res) => {
+        setCustomerSpareParts(res.data || []);
+      })
+      .catch((err) => {
+        console.warn('Failed to load customer spare parts:', err);
+        setCustomerSpareParts([]);
+      })
+      .finally(() => {
+        setIsLoadingSpareParts(false);
+      });
+  }, [customer?.customer_id, ledgerData]);
+
   // Helper to extract bill amount from ledger row
   const getRowBillAmount = (row) => {
     if (!row) return '';
@@ -68,6 +92,23 @@ export const Customer360View = ({
     return '';
   };
   const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
+  const isAdvisor = user?.role === 'advisor';
+  const [advisorViewOnlyNotice, setAdvisorViewOnlyNotice] = useState(false);
+
+  const handleOpenCorrection = (row) => {
+    if (isAdvisor) {
+      setAdvisorViewOnlyNotice(true);
+      return;
+    }
+    if (row) {
+      setSelectedCorrectionRef(row.receipt_no || row.reference_id || String(row.id || row.entry_id || ''));
+      setSelectedCorrectionAmount(getRowBillAmount(row));
+    } else {
+      setSelectedCorrectionRef('');
+      setSelectedCorrectionAmount('');
+    }
+    setCorrectionModalOpen(true);
+  };
 
   // Central refresh logic for customer profile, ledger, and billing corrections
   const handleRefreshProfile = async (silent = false) => {
@@ -184,6 +225,12 @@ export const Customer360View = ({
   const redemptionsList = ledgerData.filter(
     (item) => item.type === 'redemption' || item.transaction_type === 'redemption' || item.points < 0
   );
+
+  // Filtered customer spare parts
+  const filteredSpareParts = customerSpareParts.filter((item) => {
+    if (sparePartsFilter === 'all') return true;
+    return item.item_type === sparePartsFilter;
+  });
 
   // Columns for Points Ledger Table
   const ledgerColumns = [
@@ -524,11 +571,7 @@ export const Customer360View = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedCorrectionRef(row.receipt_no || row.reference_id || String(row.id || row.entry_id || ''));
-                    setSelectedCorrectionAmount(getRowBillAmount(row));
-                    setCorrectionModalOpen(true);
-                  }}
+                  onClick={() => handleOpenCorrection(row)}
                   className="px-2 py-0.5 text-[10px] font-bold text-white bg-rose-700 hover:bg-rose-800 rounded transition cursor-pointer shadow-xs"
                   title="Re-validate & re-submit correction"
                 >
@@ -539,14 +582,14 @@ export const Customer360View = ({
           );
         }
 
+        if (isAdvisor) {
+          return <span className="text-[11px] font-medium text-slate-400 italic">View Only</span>;
+        }
+
         return (
           <button
             type="button"
-            onClick={() => {
-              setSelectedCorrectionRef(row.receipt_no || row.reference_id || String(row.id || row.entry_id || ''));
-              setSelectedCorrectionAmount(getRowBillAmount(row));
-              setCorrectionModalOpen(true);
-            }}
+            onClick={() => handleOpenCorrection(row)}
             className="px-2.5 py-1 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-md border border-amber-300 shadow-xs cursor-pointer transition"
             title="Raise bill correction for this transaction"
           >
@@ -559,6 +602,26 @@ export const Customer360View = ({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
+      {/* Advisor View-Only Notice Banner */}
+      {isAdvisor && (
+        <div className="p-3 sm:p-3.5 bg-sky-50 border border-sky-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs text-sky-900 gap-2 font-medium shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-sky-600 text-white flex items-center justify-center font-black text-xs shrink-0">
+              ADV
+            </div>
+            <div>
+              <span className="font-bold text-sky-950 block">Advisor View-Only Mode</span>
+              <span className="text-[11px] text-sky-800">
+                You have view-only access to customer profiles and points balance. To upload single or bulk invoice PDFs, use the dedicated "Upload Invoices" tab in the left sidebar.
+              </span>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-white text-sky-800 px-2.5 py-1 rounded-full border border-sky-300 shrink-0">
+            View Only
+          </span>
+        </div>
+      )}
+
       {/* 1. Customer Summary Card Header */}
       <CustomerSummaryCard
         customer={{
@@ -566,7 +629,7 @@ export const Customer360View = ({
           points_balance: currentBalance,
           tier_name: tierName,
         }}
-        onAddReceipt={() => setAddReceiptModalOpen(true)}
+        onAddReceipt={isAdvisor ? null : () => setAddReceiptModalOpen(true)}
         onRefresh={() => handleRefreshProfile(false)}
         isRefreshing={isRefreshing}
         hasPendingCorrection={customerCorrections.some((c) => c.status === 'pending')}
@@ -631,13 +694,15 @@ export const Customer360View = ({
             </div>
 
             <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 min-w-0">
-              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Aadhaar Card No</span>
+              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">
+                {customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 ? 'Aadhaar Card No' : customer.gst_number || customer.gstin ? 'GSTIN (Commercial)' : 'Aadhaar / GSTIN'}
+              </span>
               <div className="flex items-center gap-1">
                 <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm mt-0.5 block break-words select-text">
-                  {customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 || 'N/A'}
+                  {customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 || customer.gst_number || customer.gstin || 'N/A'}
                 </span>
-                {(customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4) && (
-                  <CopyButton text={customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4} size="xs" title="Copy Aadhaar" />
+                {(customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 || customer.gst_number || customer.gstin) && (
+                  <CopyButton text={customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 || customer.gst_number || customer.gstin} size="xs" title="Copy Identity" />
                 )}
               </div>
             </div>
@@ -825,6 +890,7 @@ export const Customer360View = ({
           {[
             { id: 'ledger', label: 'Points Ledger', icon: History },
             { id: 'redemptions', label: 'Redemptions', icon: Coins },
+            { id: 'spare_parts', label: `Spare Parts & Invoices (${customerSpareParts.length})`, icon: Wrench },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeProfileTab === tab.id;
@@ -870,27 +936,27 @@ export const Customer360View = ({
                   <RefreshCw className={`w-3.5 h-3.5 text-indigo-600 ${isRefreshing ? 'animate-spin' : ''}`} />
                   <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setAddReceiptModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-xs cursor-pointer"
-                >
-                  <PlusCircle className="w-3.5 h-3.5 text-white" />
-                  Add Receipt
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCorrectionRef('');
-                    setSelectedCorrectionAmount('');
-                    setCorrectionModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition shadow-xs cursor-pointer"
-                  title="Raise bill correction if wrong bill or amount was entered by mistake"
-                >
-                  <FileText className="w-3.5 h-3.5 text-white" />
-                  Bill Correction
-                </button>
+                {!isAdvisor && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setAddReceiptModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-xs cursor-pointer"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5 text-white" />
+                      Add Receipt
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenCorrection(null)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition shadow-xs cursor-pointer"
+                      title="Raise bill correction if wrong bill or amount was entered by mistake"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-white" />
+                      Bill Correction
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -941,6 +1007,144 @@ export const Customer360View = ({
             )}
           </div>
         )}
+
+        {/* Tab 3: Spare Parts & Service Invoices Table */}
+        {activeProfileTab === 'spare_parts' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Spare Parts &amp; Service Invoices ({filteredSpareParts.length} line items)
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Itemized spare parts, HSN codes, unit prices, discounts, GST breakdown, and invoice links recorded for {customer.name || customer.customer_name}.
+                </p>
+              </div>
+
+              {/* Filter: All / Parts Only / Labour Only */}
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl self-start sm:self-auto text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setSparePartsFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg transition ${
+                    sparePartsFilter === 'all' ? 'bg-white text-indigo-700 shadow-2xs font-extrabold' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  All ({customerSpareParts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSparePartsFilter('part')}
+                  className={`px-3 py-1.5 rounded-lg transition ${
+                    sparePartsFilter === 'part' ? 'bg-white text-indigo-700 shadow-2xs font-extrabold' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Parts ({customerSpareParts.filter(i => i.item_type === 'part').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSparePartsFilter('labour')}
+                  className={`px-3 py-1.5 rounded-lg transition ${
+                    sparePartsFilter === 'labour' ? 'bg-white text-indigo-700 shadow-2xs font-extrabold' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Labour ({customerSpareParts.filter(i => i.item_type === 'labour').length})
+                </button>
+              </div>
+            </div>
+
+            {isLoadingSpareParts ? (
+              <div className="py-12 text-center text-slate-400 text-xs font-medium">
+                Loading spare parts history...
+              </div>
+            ) : filteredSpareParts.length === 0 ? (
+              <div className="p-8 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
+                <Package className="w-8 h-8 text-slate-400 mx-auto" />
+                <p className="text-xs font-bold text-slate-700">No spare parts recorded yet for this customer.</p>
+                <p className="text-[11px] text-slate-500">
+                  When service invoices are uploaded via "Add Receipt", parts &amp; prices are automatically cataloged here.
+                </p>
+              </div>
+            ) : (
+              <div className="border border-slate-200 rounded-xl overflow-x-auto shadow-2xs">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100/80 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-600">
+                      <th className="py-3 px-3">Type</th>
+                      <th className="py-3 px-3">Part / Op Code</th>
+                      <th className="py-3 px-4">Description</th>
+                      <th className="py-3 px-3 text-center">HSN/SAC</th>
+                      <th className="py-3 px-2 text-center">Qty</th>
+                      <th className="py-3 px-3 text-right">Unit Rate (₹)</th>
+                      <th className="py-3 px-3 text-right">Discount (₹)</th>
+                      <th className="py-3 px-3 text-right">Taxable (₹)</th>
+                      <th className="py-3 px-3 text-center">GST %</th>
+                      <th className="py-3 px-3 text-right font-black">Total (₹)</th>
+                      <th className="py-3 px-3">Invoice &amp; Vehicle</th>
+                      <th className="py-3 px-3">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {filteredSpareParts.map((item, idx) => {
+                      const totalGstPercent = (Number(item.cgst_rate_percent || 0) + Number(item.sgst_rate_percent || 0));
+                      const isPart = item.item_type === 'part';
+                      return (
+                        <tr key={item.id || idx} className="hover:bg-slate-50/80 transition">
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                              isPart ? 'bg-indigo-50 text-indigo-800 border border-indigo-200' : 'bg-amber-50 text-amber-800 border border-amber-200'
+                            }`}>
+                              {isPart ? 'Part' : 'Labour'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-900 whitespace-nowrap select-text">
+                            {item.item_code || '-'}
+                          </td>
+                          <td className="py-2.5 px-4 font-semibold text-slate-800 max-w-xs truncate" title={item.item_description}>
+                            {item.item_description}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500 text-center whitespace-nowrap">
+                            {item.hsn_sac_code || '-'}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-bold text-slate-700 whitespace-nowrap">
+                            {item.quantity} {item.uom ? <span className="text-[9px] text-slate-400">{item.uom}</span> : ''}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-medium text-slate-700 whitespace-nowrap">
+                            ₹{Number(item.unit_rate_rupees).toFixed(2)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-medium text-rose-600 whitespace-nowrap">
+                            {Number(item.discount_rupees) > 0 ? `-₹${Number(item.discount_rupees).toFixed(2)}` : '₹0.00'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-semibold text-slate-800 whitespace-nowrap">
+                            ₹{Number(item.taxable_value_rupees).toFixed(2)}
+                          </td>
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 bg-slate-100 rounded text-slate-700">
+                              {totalGstPercent > 0 ? `${totalGstPercent}%` : '0%'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-black text-slate-900 whitespace-nowrap text-xs">
+                            ₹{Number(item.total_amount_rupees).toFixed(2)}
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <div className="font-mono text-xs font-bold text-indigo-700 select-text">{item.invoice_number || 'N/A'}</div>
+                            <div className="text-[10px] text-slate-500 font-medium">
+                              {item.registration_number ? `${item.registration_number}` : ''}
+                              {item.vehicle_model ? ` (${item.vehicle_model})` : ''}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-500 text-[11px] whitespace-nowrap">
+                            {item.invoice_date ? new Date(item.invoice_date).toLocaleDateString('en-IN') : 'N/A'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Modal Dialogs */}
@@ -980,10 +1184,31 @@ export const Customer360View = ({
         correction={viewCorrectionData}
         onClose={() => setViewCorrectionData(null)}
         onRevalidate={(corr) => {
-          setSelectedCorrectionRef(corr.points_ledger_reference || '');
-          setCorrectionModalOpen(true);
+          handleOpenCorrection({ receipt_no: corr.points_ledger_reference || '' });
         }}
       />
+
+      {/* Advisor View-Only Notice Modal */}
+      {advisorViewOnlyNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4 text-center">
+            <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-black text-slate-900">Advisor View-Only Notice</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Service Advisors have view-only access to customer profiles and ledger. Bill corrections, point redemptions, and receipt transactions must be processed by Cashiers.
+            </p>
+            <button
+              type="button"
+              onClick={() => setAdvisorViewOnlyNotice(false)}
+              className="w-full py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl hover:bg-slate-800 transition cursor-pointer"
+            >
+              Understood
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

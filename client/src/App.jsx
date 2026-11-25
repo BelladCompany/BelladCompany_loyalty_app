@@ -21,6 +21,7 @@ import CustomerRedemptionsScreen from './screens/CustomerRedemptionsScreen';
 import CampaignScreen from './screens/CampaignScreen';
 import DirectorCommandCenter from './screens/DirectorCommandCenter';
 import UserManagementScreen from './screens/UserManagementScreen';
+import AdvisorInvoiceUploadScreen from './screens/AdvisorInvoiceUploadScreen';
 import ApiService from './services/api';
 import { isFeatureEnabled, getAppVersion, setAppVersion } from './config/versionConfig';
 
@@ -432,6 +433,8 @@ export function App() {
           <ReferralsScreen user={user} />
         ) : activeTab === 'master_editor' ? (
           <MasterRuleEditorScreen user={user} />
+        ) : activeTab === 'invoice_upload' ? (
+          <AdvisorInvoiceUploadScreen user={user} />
         ) : activeTab === 'reports' ? (
           <ReportsScreen user={user} />
         ) : activeTab === 'kyc_approvals' ? (

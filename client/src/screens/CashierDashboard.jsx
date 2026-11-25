@@ -33,6 +33,7 @@ import ApiService from '../services/api';
 
 export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
   const { showSuccess, showError, showInfo } = useToast();
+  const isAdvisor = user?.role === 'advisor';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -318,23 +319,27 @@ export const CashierDashboard = ({ user, activeTab, resetNonce }) => {
                 <span>{isSearching ? 'Searching...' : 'Search'}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setAddModalOpen(true)}
-                className="h-11 sm:h-14 px-4 sm:px-5 text-xs sm:text-sm font-bold whitespace-nowrap rounded-xl sm:rounded-2xl bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-1.5 transition-all shadow-sm"
-              >
-                <UserPlus className="w-4 h-4 text-amber-400" />
-                <span>+ Customer</span>
-              </button>
+              {!isAdvisor && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setAddModalOpen(true)}
+                    className="h-11 sm:h-14 px-4 sm:px-5 text-xs sm:text-sm font-bold whitespace-nowrap rounded-xl sm:rounded-2xl bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <UserPlus className="w-4 h-4 text-amber-400" />
+                    <span>+ Customer</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => setBulkModalOpen(true)}
-                className="h-11 sm:h-14 px-3.5 sm:px-4 text-xs font-bold whitespace-nowrap rounded-xl sm:rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center gap-1.5 transition-all"
-              >
-                <Upload className="w-3.5 h-3.5 text-slate-500" />
-                <span>Import CSV</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setBulkModalOpen(true)}
+                    className="h-11 sm:h-14 px-3.5 sm:px-4 text-xs font-bold whitespace-nowrap rounded-xl sm:rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center gap-1.5 transition-all"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Import CSV</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 

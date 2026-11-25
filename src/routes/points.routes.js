@@ -30,7 +30,7 @@ router.post(
 // Get customer full ledger history and current tier
 router.get(
   '/customers/:customerId/ledger',
-  requireRole(['cashier', 'admin']),
+  requireRole(['cashier', 'admin', 'advisor']),
   validate(ledgerQuerySchema, 'query'),
   PointsController.getCustomerLedger
 );

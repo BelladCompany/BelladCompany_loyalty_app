@@ -12,7 +12,7 @@ const { searchRateLimiter } = require('../middleware/rateLimiter');
 router.get(
   '/',
   authenticateToken,
-  requireRole(['cashier', 'admin', 'branch_manager', 'regional_admin', 'super_admin']),
+  requireRole(['cashier', 'admin', 'advisor', 'branch_manager', 'regional_admin', 'super_admin']),
   searchRateLimiter,
   validate(searchSchema, 'query'),
   SearchController.search

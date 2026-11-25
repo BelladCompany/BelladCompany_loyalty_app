@@ -27,7 +27,8 @@ import {
   Layers,
   Award,
   Crown,
-  Zap
+  Zap,
+  UploadCloud
 } from 'lucide-react';
 
 /**
@@ -73,6 +74,7 @@ export const SidebarLayout = ({
   const dealershipName = publishedConfig?.theme_config?.dealership_name || 'Bellad CRM';
   const logoUrl = publishedConfig?.theme_config?.logo_url || '/bellad-logo.png';
   const tagline = publishedConfig?.theme_config?.tagline || 'Loyalty Platform';
+  const isAdvisor = user?.role === 'advisor';
   const isCashier = user?.role === 'cashier';
   const isHOD = user?.role === 'hod';
   const isManager = ['branch_manager', 'manager'].includes(user?.role);
@@ -87,7 +89,17 @@ export const SidebarLayout = ({
     activeTab === id || (id === 'dashboard' && activeTab === 'search');
 
   // Smart CRM Grouped Categories based on staff role
-  const navSections = isHOD
+  const navSections = isAdvisor
+    ? [
+      {
+        group: 'Advisor Portal',
+        items: [
+          { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
+          { id: 'invoice_upload', label: 'Upload Invoices', icon: UploadCloud },
+        ],
+      },
+    ]
+    : isHOD
     ? [
       {
         group: 'Counter POS',
@@ -145,6 +157,7 @@ export const SidebarLayout = ({
             group: 'Counter POS',
             items: [
               { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
+              { id: 'invoice_upload', label: 'Advisor Invoices Queue', icon: UploadCloud },
             ],
           },
         ]
@@ -161,6 +174,7 @@ export const SidebarLayout = ({
             group: 'Counter POS',
             items: [
               { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
+              { id: 'invoice_upload', label: 'Advisor Invoices Queue', icon: UploadCloud },
             ],
           },
           {

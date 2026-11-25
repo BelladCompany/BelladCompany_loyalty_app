@@ -33,6 +33,7 @@ const campaignRoutes = require('./routes/campaign.routes');
 const directorRoutes = require('./routes/director.routes');
 const integrationRoutes = require('./routes/integration.routes');
 const importRoutes = require('./routes/import.routes');
+const invoiceV2Routes = require('./routes/invoiceV2.routes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -146,6 +147,7 @@ app.use('/api/integration', integrationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/appsheet', appsheetRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/v2/invoices', invoiceV2Routes);
 app.use('/api/public', publicBalanceRoutes);
 app.use('/api/public', publicReferralRoutes);
 app.use('/api', publicBalanceRoutes);

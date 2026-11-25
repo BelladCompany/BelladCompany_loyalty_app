@@ -273,6 +273,7 @@ export const UserManagementScreen = ({ user }) => {
       // Role filter
       if (roleFilter !== 'ALL') {
         if (roleFilter === 'cashier' && u.role !== 'cashier') return false;
+        if (roleFilter === 'advisor' && u.role !== 'advisor') return false;
         if (roleFilter === 'manager' && u.role !== 'manager' && u.role !== 'branch_manager') return false;
         if (roleFilter === 'admin' && u.role !== 'admin' && u.role !== 'super_admin' && u.role !== 'regional_admin') return false;
         if (roleFilter === 'director' && u.role !== 'director') return false;
@@ -294,9 +295,10 @@ export const UserManagementScreen = ({ user }) => {
   const stats = useMemo(() => {
     const total = users.length;
     const cashiers = users.filter((u) => u.role === 'cashier').length;
+    const advisors = users.filter((u) => u.role === 'advisor').length;
     const managers = users.filter((u) => u.role === 'manager' || u.role === 'branch_manager').length;
     const admins = users.filter((u) => u.role === 'admin' || u.role === 'super_admin' || u.role === 'director').length;
-    return { total, cashiers, managers, admins };
+    return { total, cashiers, advisors, managers, admins };
   }, [users]);
 
   const getRoleBadge = (role) => {
@@ -322,6 +324,13 @@ export const UserManagementScreen = ({ user }) => {
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase bg-indigo-50 text-indigo-800 border border-indigo-200">
             <ShieldCheck className="w-3 h-3 text-indigo-600" />
             Admin
+          </span>
+        );
+      case 'advisor':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase bg-sky-50 text-sky-800 border border-sky-200">
+            <UserCheck className="w-3 h-3 text-sky-600" />
+            Advisor (View-Only)
           </span>
         );
       case 'branch_manager':
@@ -514,6 +523,7 @@ export const UserManagementScreen = ({ user }) => {
                   className="w-full h-11 px-3.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 transition cursor-pointer"
                 >
                   <option value="cashier">CASHIER (Counter POS &amp; Redemptions)</option>
+                  <option value="advisor">SERVICE ADVISOR (View-Only &amp; Invoice PDF Queue)</option>
                   <option value="branch_manager">BRANCH MANAGER (Supervisor Approvals)</option>
                   <option value="hod">HOD (Customer Search &amp; All-Branch Reports)</option>
                   <option value="admin">ADMIN (Full System Administration)</option>
@@ -595,6 +605,7 @@ export const UserManagementScreen = ({ user }) => {
           {[
             { id: 'ALL', label: `All Staff (${users.length})` },
             { id: 'cashier', label: `Cashiers (${stats.cashiers})` },
+            { id: 'advisor', label: `Advisors (${stats.advisors})` },
             { id: 'manager', label: `Managers (${stats.managers})` },
             { id: 'admin', label: `Admins (${stats.admins})` },
           ].map((tab) => (
@@ -700,6 +711,7 @@ export const UserManagementScreen = ({ user }) => {
                         <div className="flex items-center gap-1.5">
                           {[
                             { role: 'cashier', label: 'Cashier' },
+                            { role: 'advisor', label: 'Advisor' },
                             { role: 'branch_manager', label: 'Manager' },
                             { role: 'hod', label: 'HOD' },
                             { role: 'admin', label: 'Admin' },

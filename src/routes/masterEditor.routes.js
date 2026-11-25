@@ -35,6 +35,13 @@ router.post('/dealerships/policy', requireRole(['admin', 'super_admin', 'regiona
 router.get('/points-formulas', requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager']), MasterEditorController.getPointsFormulas);
 router.post('/points-formulas', requireRole(['admin', 'super_admin', 'regional_admin']), MasterEditorController.savePointsFormula);
 
+// 3e. Dynamic Model Redemption Percentage Caps & Simulator
+router.get('/model-caps', requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager', 'director', 'cashier']), MasterEditorController.listModelCaps);
+router.post('/model-caps', requireRole(['admin', 'super_admin', 'regional_admin', 'director']), MasterEditorController.saveModelCap);
+router.delete('/model-caps/:id', requireRole(['admin', 'super_admin', 'regional_admin', 'director']), MasterEditorController.deleteModelCap);
+router.get('/model-caps/resolve', MasterEditorController.resolveModelCap);
+router.post('/model-caps/simulate', MasterEditorController.simulateModelCap);
+
 // 4. Rules listing & creation
 router.get('/', requireRole(['admin', 'super_admin', 'regional_admin', 'branch_manager']), MasterEditorController.listRules);
 router.post('/', requireRole(['admin', 'super_admin', 'regional_admin']), MasterEditorController.createRule);

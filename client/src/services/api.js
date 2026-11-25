@@ -1,4 +1,4 @@
-const rawApiBase = (import.meta.env.VITE_API_URL || '/api').trim();
+const rawApiBase = ((typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_URL) || '/api').trim();
 const cleanBase = rawApiBase.replace(/\/+$/, '');
 const API_BASE = cleanBase.startsWith('http') && !cleanBase.endsWith('/api')
   ? `${cleanBase}/api`
@@ -6,6 +6,18 @@ const API_BASE = cleanBase.startsWith('http') && !cleanBase.endsWith('/api')
 
 export class ApiService {
   static getApiBase() {
+    return API_BASE;
+  }
+
+  static getBaseUrl() {
+    return API_BASE;
+  }
+
+  getApiBase() {
+    return API_BASE;
+  }
+
+  getBaseUrl() {
     return API_BASE;
   }
 
@@ -43,7 +55,7 @@ export class ApiService {
     }
   }
   static getToken() {
-    return localStorage.getItem('bac_loyalty_token') || '';
+    return (typeof localStorage !== 'undefined' ? localStorage.getItem('bac_loyalty_token') : '') || '';
   }
 
   static setToken(token) {
@@ -910,6 +922,40 @@ export class ApiService {
     });
   }
 
+  // ─── Model Redemption Percentage Caps & Dynamic Calculator ────────────────────
+  static async getModelRedemptionCaps(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/master-rules/model-caps${qs ? `?${qs}` : ''}`);
+  }
+
+  static async saveModelRedemptionCap(payload) {
+    return this.request('/master-rules/model-caps', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
+  static async deleteModelRedemptionCap(id) {
+    return this.request(`/master-rules/model-caps/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  static async resolveModelRedemptionCap(brand_name, model_name, tenantId) {
+    const params = new URLSearchParams();
+    if (brand_name) params.append('brand_name', brand_name);
+    if (model_name) params.append('model_name', model_name);
+    if (tenantId) params.append('tenant_id', tenantId);
+    return this.request(`/master-rules/model-caps/resolve?${params.toString()}`);
+  }
+
+  static async simulateModelRedemptionCap(payload) {
+    return this.request('/master-rules/model-caps/simulate', {
+      method: 'POST',
+      body: payload,
+    });
+  }
+
   // ─── Live Policy Simulator (Testing dummy customer & all rules) ──────────────
   static async simulateMasterRule(payload) {
     return this.request('/master-rules/simulate', {
@@ -1174,7 +1220,117 @@ export class ApiService {
       method: 'POST',
     });
   }
+
+  // --- V2 Dealership Invoice OCR & Spare Parts Storage ---
+  static async parseInvoicePdf(file, options = {}) {
+    const formData = new FormData();
+    formData.append('invoice_pdf', file);
+    if (options.branchId) formData.append('branchId', options.branchId);
+    if (options.customerId) formData.append('customerId', options.customerId);
+    if (options.vehicleId) formData.append('vehicleId', options.vehicleId);
+    if (options.save) formData.append('save', 'true');
+
+    const qs = options.save ? '?save=true' : '';
+    return this.request(`/v2/invoices/parse${qs}`, {
+      method: 'POST',
+      body: formData,
+      timeoutMs: 30000,
+    });
+  }
+
+  static async saveInvoiceV2(data) {
+    return this.request('/v2/invoices/save', {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  static async searchSparePartsV2(query, brand = '') {
+    const qs = new URLSearchParams();
+    if (query) qs.append('q', query);
+    if (brand && brand !== 'All') qs.append('brand', brand);
+    return this.request(`/v2/invoices/spare-parts/search?${qs.toString()}`);
+  }
+
+  static async getInvoicesV2(params = {}) {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v) qs.append(k, v);
+    });
+    return this.request(`/v2/invoices?${qs.toString()}`);
+  }
+
+  static async getInvoiceDetailsV2(id) {
+    return this.request(`/v2/invoices/${id}`);
+  }
+
+  static async getCustomerSparePartsV2(customerId, params = {}) {
+    const qs = new URLSearchParams();
+    if (params.itemType) qs.append('itemType', params.itemType);
+    if (params.limit) qs.append('limit', params.limit);
+    if (params.offset) qs.append('offset', params.offset);
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return this.request(`/v2/invoices/customers/${customerId}/parts${query}`);
+  }
+
+  // --- Advisor Invoice PDF Queue Methods (Supports Single or Bulk PDFs) ---
+  static async uploadAdvisorInvoice(fileOrFiles, options = {}) {
+    const formData = new FormData();
+    if (Array.isArray(fileOrFiles) || (typeof FileList !== 'undefined' && fileOrFiles instanceof FileList)) {
+      Array.from(fileOrFiles).forEach((f) => {
+        formData.append('invoice_pdfs', f);
+      });
+    } else {
+      formData.append('invoice_pdf', fileOrFiles);
+    }
+    if (options.customerId) formData.append('customerId', options.customerId);
+    if (options.vehicleId) formData.append('vehicleId', options.vehicleId);
+    if (options.autoSave) formData.append('autoSave', 'true');
+
+    return this.request('/v2/invoices/advisor-upload', {
+      method: 'POST',
+      body: formData,
+      timeoutMs: 60000,
+    });
+  }
+
+  static async getAdvisorInvoiceQueue(params = {}) {
+    const qs = new URLSearchParams();
+    if (params.status && params.status !== 'all') qs.append('status', params.status);
+    if (params.date) qs.append('date', params.date);
+    if (params.search) qs.append('search', params.search);
+    if (params.customerId) qs.append('customerId', params.customerId);
+    if (params.limit) qs.append('limit', params.limit);
+    if (params.offset) qs.append('offset', params.offset);
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return this.request(`/v2/invoices/advisor-queue${query}`);
+  }
+
+  static async getAdvisorInvoiceQueueItem(id) {
+    return this.request(`/v2/invoices/advisor-queue/${id}`);
+  }
+
+  static async updateAdvisorInvoiceStatus(id, status) {
+    return this.request(`/v2/invoices/advisor-queue/${id}/status`, {
+      method: 'PATCH',
+      body: { status },
+    });
+  }
+
+  static getAdvisorInvoicePdfUrl(id) {
+    const base = typeof this?.getApiBase === 'function' ? this.getApiBase() : (typeof this?.getBaseUrl === 'function' ? this.getBaseUrl() : API_BASE);
+    const token = typeof this?.getToken === 'function' ? this.getToken() : '';
+    return `${base}/v2/invoices/advisor-queue/${id}/pdf?token=${encodeURIComponent(token || '')}`;
+  }
+
+  getAdvisorInvoicePdfUrl(id) {
+    return ApiService.getAdvisorInvoicePdfUrl(id);
+  }
 }
+
+ApiService.prototype.getBaseUrl = function () { return API_BASE; };
+ApiService.prototype.getApiBase = function () { return API_BASE; };
+ApiService.prototype.getAdvisorInvoicePdfUrl = function (id) { return ApiService.getAdvisorInvoicePdfUrl(id); };
 
 export default ApiService;
 

@@ -44,7 +44,7 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
   const [eccNo, setEccNo] = useState('');
   const [age, setAge] = useState('');
 
-  // Vehicle Details (Brand & Reg No are mandatory, Branch selectable without default)
+  // Vehicle Details (Brand, Model & Reg No are mandatory; Branch is optional)
   const [branchList, setBranchList] = useState(branches || []);
   const [brandName, setBrandName] = useState('');
   const [branchName, setBranchName] = useState('');
@@ -106,8 +106,8 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
     if (!brandName.trim()) {
       errs.brandName = 'Vehicle brand is required.';
     }
-    if (!branchName.trim()) {
-      errs.branchName = 'Please select a branch.';
+    if (!model.trim()) {
+      errs.model = 'Vehicle model is required.';
     }
     if (!regNo.trim()) {
       errs.regNo = 'Registration number is required.';
@@ -681,7 +681,7 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
 
                     <div>
                       <label className="text-sm font-bold text-ink-primary block mb-1.5">
-                        Branch <span className="text-rose-500">*</span>
+                        Branch
                       </label>
                       <select
                         id="add-cust-branch"
@@ -695,7 +695,7 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
                           errors.branchName ? 'border-rose-500 bg-rose-50/30' : 'border-surface-border'
                         }`}
                       >
-                        <option value="">Select Branch...</option>
+                        <option value="">Select Branch (Optional)...</option>
                         {branchList.map((b) => {
                           const bName = typeof b === 'string' ? b : (b.branch_name || b.name || b.branch_city || b.code || '');
                           const bKey = typeof b === 'object' ? (b.branch_id || b.id || bName) : b;
@@ -713,16 +713,63 @@ export const AddCustomerModal = ({ isOpen, onClose, onSuccess, user, branches = 
                     </div>
 
                     <div>
-                      <label className="text-sm font-bold text-ink-primary block mb-1.5">Model</label>
+                      <label className="text-sm font-bold text-ink-primary block mb-1.5">
+                        Model <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         id="add-cust-model"
                         type="text"
-                        placeholder="e.g. Swift, Creta"
+                        list="customer-model-options"
+                        placeholder="e.g. Swift, Creta, Punch, Splendor"
                         value={model}
-                        onChange={(e) => setModel(e.target.value)}
+                        onChange={(e) => {
+                          setModel(e.target.value);
+                          if (errors.model) setErrors((prev) => ({ ...prev, model: undefined }));
+                        }}
                         disabled={isLoading || isSendingOtp || !!success}
-                        className="w-full h-11 px-4 border border-surface-border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white"
+                        className={`w-full h-11 px-4 border rounded text-base font-medium focus:outline-none focus:border-action-primary bg-white ${
+                          errors.model ? 'border-rose-500 bg-rose-50/30' : 'border-surface-border'
+                        }`}
                       />
+                      <datalist id="customer-model-options">
+                        <option value="Punch" />
+                        <option value="Nexon" />
+                        <option value="Harrier" />
+                        <option value="Safari" />
+                        <option value="Tiago" />
+                        <option value="Altroz" />
+                        <option value="Curvv" />
+                        <option value="Tigor" />
+                        <option value="Creta" />
+                        <option value="Venue" />
+                        <option value="i20" />
+                        <option value="Verna" />
+                        <option value="Exter" />
+                        <option value="Alcazar" />
+                        <option value="Splendor" />
+                        <option value="HF Deluxe" />
+                        <option value="Glamour" />
+                        <option value="Passion" />
+                        <option value="Xpulse" />
+                        <option value="Pleasure" />
+                        <option value="Destini" />
+                        <option value="Xtreme" />
+                        <option value="Hector" />
+                        <option value="ZS EV" />
+                        <option value="Astor" />
+                        <option value="Comet EV" />
+                        <option value="Gloster" />
+                        <option value="450X" />
+                        <option value="450S" />
+                        <option value="450 Apex" />
+                        <option value="Rizta" />
+                        <option value="744 FE" />
+                        <option value="855 FE" />
+                        <option value="735 FE" />
+                      </datalist>
+                      {errors.model && (
+                        <p className="text-xs text-rose-500 font-semibold mt-1 animate-fadeIn">{errors.model}</p>
+                      )}
                     </div>
 
                     <div>

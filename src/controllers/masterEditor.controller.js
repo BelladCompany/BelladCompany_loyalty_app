@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const MasterRuleEngineService = require('../services/masterRuleEngine.service');
+const ModelRedemptionCapService = require('../services/modelRedemptionCap.service');
 
 class MasterEditorController {
   /**
@@ -786,7 +787,7 @@ class MasterEditorController {
     try {
       const { id } = req.params;
       const { role } = req.body;
-      const validRoles = ['cashier', 'branch_manager', 'manager', 'regional_admin', 'admin', 'super_admin', 'director', 'hod'];
+      const validRoles = ['cashier', 'advisor', 'branch_manager', 'manager', 'regional_admin', 'admin', 'super_admin', 'director', 'hod'];
       if (!validRoles.includes(role)) {
         return res.status(400).json({ success: false, error: `Invalid role. Allowed: ${validRoles.join(', ')}` });
       }
@@ -1481,6 +1482,128 @@ class MasterEditorController {
       });
     } catch (error) {
       console.error('Error saving points formula:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * 3e. Dynamic Model Redemption Percentage Caps & Calculator
+   */
+  static async listModelCaps(req, res) {
+    try {
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const { brand, search } = req.query;
+
+      const result = await ModelRedemptionCapService.listCaps({
+        tenant_id,
+        brand,
+        search,
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: result.caps,
+        stats: result.stats,
+      });
+    } catch (error) {
+      console.error('Error listing model redemption caps:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  static async saveModelCap(req, res) {
+    try {
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const { brand_name, model_name, redemption_cap_percent, description } = req.body;
+      const updated_by = req.user?.username || req.user?.role || 'Director';
+
+      const saved = await ModelRedemptionCapService.saveCap({
+        tenant_id,
+        brand_name,
+        model_name,
+        redemption_cap_percent,
+        description,
+        updated_by,
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: saved,
+        message: `Redemption cap for ${saved.brand_name} ${saved.model_name} updated to ${saved.redemption_cap_percent}%.`,
+      });
+    } catch (error) {
+      console.error('Error saving model redemption cap:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  static async deleteModelCap(req, res) {
+    try {
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const { id } = req.params;
+
+      const deleted = await ModelRedemptionCapService.deleteCap(id, tenant_id);
+
+      return res.status(200).json({
+        success: true,
+        data: deleted,
+        message: `Redemption cap for ${deleted.brand_name} ${deleted.model_name} removed.`,
+      });
+    } catch (error) {
+      console.error('Error deleting model redemption cap:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  static async resolveModelCap(req, res) {
+    try {
+      const tenant_id = req.tenantId || req.user?.tenant_id || 'bellad_and_company';
+      const { brand_name, model_name } = req.query;
+
+      const resolved = await ModelRedemptionCapService.resolveCap({
+        tenant_id,
+        brand_name,
+        model_name,
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: resolved,
+      });
+    } catch (error) {
+      console.error('Error resolving model redemption cap:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  static async simulateModelCap(req, res) {
+    try {
+      const {
+        point_balance = 0,
+        bill_amount = 0,
+        cap_percent = 100,
+        points_per_rupee = 0.25,
+        brand_name = 'ALL',
+        model_name = 'ALL',
+      } = req.body;
+
+      const simulation = ModelRedemptionCapService.calculateCappedRedemption({
+        point_balance,
+        bill_amount,
+        cap_percent,
+        points_per_rupee,
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          brand_name,
+          model_name,
+          ...simulation,
+        },
+      });
+    } catch (error) {
+      console.error('Error simulating model redemption cap:', error);
       return res.status(500).json({ success: false, error: error.message });
     }
   }

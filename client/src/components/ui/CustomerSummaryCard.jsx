@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Phone, Car, Award, ShieldCheck, CheckCircle2, PlusCircle, Lock, Sparkles, RefreshCw, AlertTriangle, X, ShieldAlert } from 'lucide-react';
+import { User, Phone, Car, Award, ShieldCheck, CheckCircle2, PlusCircle, Lock, Sparkles, RefreshCw, AlertTriangle, X, ShieldAlert, Building2, FileText } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import CopyButton from './CopyButton';
 import ApiService from '../../services/api';
@@ -26,12 +26,48 @@ export const CustomerSummaryCard = ({
   const phones = customer.phones || [];
   const vehicles = customer.vehicles || [];
   const aadhaarDisplay = customer.aadhaar_number || customer.aadhaar_no || customer.aadhaar_last4 || null;
+  const gstDisplay = customer.gst_number || customer.gstin || customer.gst_no || null;
+  const hasAadhaar = Boolean(aadhaarDisplay);
+  const hasGst = Boolean(gstDisplay);
+
+  const currentUser = ApiService.getUser();
+  const isAdvisor = currentUser?.role === 'advisor';
 
   // Add / Edit Aadhaar Modal State
   const [isAadhaarModalOpen, setIsAadhaarModalOpen] = useState(false);
   const [aadhaarInput, setAadhaarInput] = useState('');
   const [isSubmittingAadhaar, setIsSubmittingAadhaar] = useState(false);
   const [aadhaarError, setAadhaarError] = useState('');
+
+  // Add / Edit GST Modal State (for commercial customers without Aadhaar)
+  const [isGstModalOpen, setIsGstModalOpen] = useState(false);
+  const [gstInput, setGstInput] = useState('');
+  const [isSubmittingGst, setIsSubmittingGst] = useState(false);
+  const [gstError, setGstError] = useState('');
+
+  const handleSaveGst = async (e) => {
+    e.preventDefault();
+    const clean = gstInput.trim().toUpperCase();
+    if (clean.length < 8 || clean.length > 15) {
+      setGstError('GST number must be between 8 and 15 alphanumeric characters.');
+      return;
+    }
+    setIsSubmittingGst(true);
+    setGstError('');
+    try {
+      await ApiService.updateCustomer(customer.customer_id, {
+        gst_number: clean,
+      });
+      setIsGstModalOpen(false);
+      if (typeof onRefresh === 'function') {
+        await onRefresh();
+      }
+    } catch (err) {
+      setGstError(err.message || 'Failed to update GST number. Please try again.');
+    } finally {
+      setIsSubmittingGst(false);
+    }
+  };
 
   const handleSaveAadhaar = async (e) => {
     e.preventDefault();
@@ -157,43 +193,88 @@ export const CustomerSummaryCard = ({
               )}
             </div>
 
-            {/* Aadhaar Number Display */}
-            {aadhaarDisplay ? (
+            {/* Identity Display: Priority 1 = Aadhaar, Priority 2 = GSTIN for Commercial/Business, Fallback = Missing */}
+            {hasAadhaar ? (
               <div className="flex items-center gap-1.5 sm:gap-2 bg-amber-50 border border-amber-200 text-amber-900 px-3 py-0.5 sm:py-1 rounded-xl">
                 <ShieldCheck className="w-4 h-4 text-amber-600 flex-shrink-0" />
                 <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-700">Aadhaar:</span>
                 <span className="font-mono font-bold text-xs sm:text-sm text-slate-900 select-text">{aadhaarDisplay}</span>
                 <CopyButton text={aadhaarDisplay} size="xs" title="Copy Aadhaar" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAadhaarInput('');
-                    setAadhaarError('');
-                    setIsAadhaarModalOpen(true);
-                  }}
-                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold ml-1 underline cursor-pointer"
-                  title="Update Aadhaar number"
-                >
-                  Edit
-                </button>
+                {hasGst && (
+                  <span className="inline-flex items-center gap-1 ml-1.5 pl-1.5 border-l border-amber-300 text-[11px] font-bold text-amber-800">
+                    <Building2 className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="font-mono">{gstDisplay}</span>
+                  </span>
+                )}
+              </div>
+            ) : hasGst ? (
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-50 border border-emerald-300 text-emerald-950 px-3 py-0.5 sm:py-1 rounded-xl">
+                <Building2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-emerald-800">GSTIN:</span>
+                <span className="font-mono font-bold text-xs sm:text-sm text-slate-900 select-text">{gstDisplay}</span>
+                <CopyButton text={gstDisplay} size="xs" title="Copy GSTIN" />
+                {!isAdvisor && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGstInput(gstDisplay);
+                        setGstError('');
+                        setIsGstModalOpen(true);
+                      }}
+                      className="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold ml-1 underline cursor-pointer"
+                      title="Update GST number"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAadhaarInput('');
+                        setAadhaarError('');
+                        setIsAadhaarModalOpen(true);
+                      }}
+                      className="text-[10px] text-slate-500 hover:text-slate-800 font-bold ml-1.5 border-l border-emerald-300 pl-1.5 cursor-pointer"
+                      title="Optionally link Aadhaar if individual customer"
+                    >
+                      + Add Aadhaar
+                    </button>
+                  </>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-2 bg-rose-50 border border-rose-300 text-rose-900 px-3 py-1 rounded-xl">
                 <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-rose-800">Aadhaar:</span>
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-rose-800">Identity:</span>
                 <span className="text-xs font-black text-rose-700">Missing / Not Linked</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAadhaarInput('');
-                    setAadhaarError('');
-                    setIsAadhaarModalOpen(true);
-                  }}
-                  className="px-2.5 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold rounded-lg transition shadow-xs cursor-pointer ml-1"
-                  title="Mandatory: Click to add customer Aadhaar number"
-                >
-                  + Add Aadhaar
-                </button>
+                {!isAdvisor && (
+                  <div className="flex items-center gap-1 ml-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAadhaarInput('');
+                        setAadhaarError('');
+                        setIsAadhaarModalOpen(true);
+                      }}
+                      className="px-2.5 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold rounded-lg transition shadow-xs cursor-pointer"
+                      title="Click to add customer Aadhaar number"
+                    >
+                      + Add Aadhaar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGstInput('');
+                        setGstError('');
+                        setIsGstModalOpen(true);
+                      }}
+                      className="px-2.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition shadow-xs cursor-pointer"
+                      title="Click to add customer commercial GSTIN"
+                    >
+                      + Add GST
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -256,19 +337,21 @@ export const CustomerSummaryCard = ({
               </button>
             )}
 
-            {/* Combined Add Receipt Button */}
-            <button
-              type="button"
-              id="add-receipt-btn"
-              onClick={() => {
-                if (onAddReceipt) onAddReceipt(customer);
-                else if (onRecordEarning) onRecordEarning(customer);
-              }}
-              className="h-11 sm:h-12 px-5 sm:px-6 font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98] cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/25 w-full sm:w-auto"
-            >
-              <PlusCircle className="w-4 h-4 text-white" />
-              <span>Add Receipt</span>
-            </button>
+            {/* Combined Add Receipt Button (Only for Cashier/Admin) */}
+            {onAddReceipt && (
+              <button
+                type="button"
+                id="add-receipt-btn"
+                onClick={() => {
+                  if (onAddReceipt) onAddReceipt(customer);
+                  else if (onRecordEarning) onRecordEarning(customer);
+                }}
+                className="h-11 sm:h-12 px-5 sm:px-6 font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98] cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/25 w-full sm:w-auto"
+              >
+                <PlusCircle className="w-4 h-4 text-white" />
+                <span>Add Receipt</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -290,7 +373,7 @@ export const CustomerSummaryCard = ({
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-indigo-400" />
                 <h3 className="font-bold text-sm sm:text-base">
-                  {aadhaarDisplay ? 'Update Customer Aadhaar' : 'Link Customer Aadhaar Card'}
+                  Link Customer Aadhaar Card
                 </h3>
               </div>
               <button
@@ -358,6 +441,80 @@ export const CustomerSummaryCard = ({
                   className="px-5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
                 >
                   {isSubmittingAadhaar ? 'Saving...' : 'Save Aadhaar Number'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit GST Modal */}
+      {isGstModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <h3 className="text-base font-black text-slate-900">
+                  {gstDisplay ? 'Update Customer GSTIN' : 'Link Commercial GSTIN'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGstModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveGst} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                  GST Number (8 to 15 Alphanumeric) <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  maxLength={15}
+                  required
+                  placeholder="e.g. 29ABCDE1234F1Z5"
+                  value={gstInput}
+                  onChange={(e) => {
+                    setGstInput(e.target.value.toUpperCase().trim());
+                    setGstError('');
+                  }}
+                  className="w-full h-11 px-3 font-mono font-bold text-base text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-emerald-600 uppercase transition"
+                  autoFocus
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Enter customer's commercial firm GSTIN for business identity.
+                </p>
+              </div>
+
+              {gstError && (
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{gstError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsGstModalOpen(false)}
+                  disabled={isSubmittingGst}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingGst || gstInput.trim().length < 8}
+                  className="px-5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                >
+                  {isSubmittingGst ? 'Saving...' : 'Save GST Number'}
                 </button>
               </div>
             </form>

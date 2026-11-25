@@ -27,9 +27,8 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   username: z.string({ required_error: 'Username is required' }).min(3, 'Username must be at least 3 characters'),
   password: z.string({ required_error: 'Password is required' }).min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['cashier', 'admin'], {
+  role: z.enum(['cashier', 'admin', 'advisor', 'branch_manager', 'regional_admin', 'super_admin', 'director', 'manager', 'hod'], {
     required_error: 'Role is required',
-    invalid_type_error: "Role must be either 'cashier' or 'admin'",
   }),
   branch_id: z.number().int().positive().optional().nullable(),
 });
@@ -118,6 +117,14 @@ const updateCustomerSchema = z.object({
     .refine((val) => !val || val.replace(/\D/g, '').length === 12, 'Aadhaar number must contain exactly 12 digits')
     .optional()
     .nullable(),
+  gst_number: z
+    .string()
+    .trim()
+    .min(8, 'GST Number must be between 8 and 15 alphanumeric characters')
+    .max(15, 'GST Number must be between 8 and 15 alphanumeric characters')
+    .optional()
+    .nullable()
+    .or(z.literal('')),
 });
 
 const addPhoneSchema = z.object({
