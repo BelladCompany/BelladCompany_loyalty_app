@@ -1,17 +1,17 @@
 # Graph Report - final-loyaly-app-nov  (2026-11-25)
 
 ## Corpus Check
-- 396 files · ~339,593 words
+- 397 files · ~339,606 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: (none) 9, .example 2, .csv 2)
 
 ## Summary
-- 2315 nodes · 4526 edges · 136 communities (98 shown, 38 thin omitted)
+- 2315 nodes · 4525 edges · 136 communities (98 shown, 38 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 76 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `748a1b74`
+- Built from commit: `b0a81941`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -145,7 +145,7 @@
 - auth.controller.js
 
 ## God Nodes (most connected - your core abstractions)
-1. `ApiService` - 209 edges
+1. `ApiService` - 208 edges
 2. `{ Pool }` - 120 edges
 3. `react` - 57 edges
 4. `lucide-react` - 48 edges
@@ -582,16 +582,16 @@ Nodes (3): bcrypt, crypto, jwt
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Automobile Dealership Group Loyalty Program - Backend & POS Counter` connect `Automobile Dealership Loyalty Program — Design System` to `reltigrow.provider.js`?**
-  _High betweenness centrality (0.232) - this node is a cross-community bridge._
+- **Why does `Automobile Dealership Loyalty Program — Design System` connect `Automobile Dealership Loyalty Program — Design System` to `react`?**
+  _High betweenness centrality (0.267) - this node is a cross-community bridge._
 - **Should `ApiService` be split into smaller, more focused modules?**
   _Cohesion score 0.03265626753450791 - nodes in this community are weakly interconnected._
-- **Why does `🛠️ Tech Stack & Key Rules` connect `reltigrow.provider.js` to `Automobile Dealership Loyalty Program — Design System`?**
-  _High betweenness centrality (0.231) - this node is a cross-community bridge._
+- **Why does `Automobile Dealership Group Loyalty Program - Backend & POS Counter` connect `Automobile Dealership Loyalty Program — Design System` to `reltigrow.provider.js`?**
+  _High betweenness centrality (0.266) - this node is a cross-community bridge._
 - **Should `db.js` be split into smaller, more focused modules?**
   _Cohesion score 0.03870043000477783 - nodes in this community are weakly interconnected._
-- **Why does `Automobile Dealership Loyalty Program — Design System` connect `Automobile Dealership Loyalty Program — Design System` to `react`?**
-  _High betweenness centrality (0.220) - this node is a cross-community bridge._
+- **Why does `🛠️ Tech Stack & Key Rules` connect `reltigrow.provider.js` to `Automobile Dealership Loyalty Program — Design System`?**
+  _High betweenness centrality (0.264) - this node is a cross-community bridge._
 - **Should `react` be split into smaller, more focused modules?**
   _Cohesion score 0.07858807858807859 - nodes in this community are weakly interconnected._
 - **Should `customer.service.js` be split into smaller, more focused modules?**

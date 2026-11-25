@@ -196,14 +196,8 @@ export default function ModelRedemptionCapStudio({ tenantId = 'bellad_and_compan
       if (brandDefault) {
         setCapPercent(Number(brandDefault.redemption_cap_percent));
       } else {
-        // Fallbacks
-        if (selectedBrand === 'HERO MOTO CORP' || selectedBrand === 'ATHER ENERGY') {
-          setCapPercent(100);
-        } else if (selectedBrand === 'TATA MOTORS' || selectedBrand === 'HYUNDAI') {
-          setCapPercent(50);
-        } else {
-          setCapPercent(100);
-        }
+        // Fallbacks: Default to 100% full redemption across all brands
+        setCapPercent(100);
       }
     }
   }, [selectedBrand, selectedModel, isCustomMode, customModelInput, caps]);
@@ -523,9 +517,9 @@ export default function ModelRedemptionCapStudio({ tenantId = 'bellad_and_compan
             <div className="flex justify-between text-[11px] font-mono text-slate-400 font-bold px-1">
               <span>1% (Minimum)</span>
               <span className="text-indigo-300">25%</span>
-              <span className="text-amber-300 font-black">50% (Tata &amp; Hyundai)</span>
+              <span className="text-indigo-300">50%</span>
               <span className="text-indigo-300">75%</span>
-              <span className="text-emerald-400 font-black">100% (Hero Full)</span>
+              <span className="text-emerald-400 font-black">100% (Full Redemption)</span>
             </div>
           </div>
 
@@ -534,9 +528,9 @@ export default function ModelRedemptionCapStudio({ tenantId = 'bellad_and_compan
             {[
               { label: '10%', val: 10 },
               { label: '25%', val: 25 },
-              { label: '50% (Tata & Hyundai)', val: 50 },
+              { label: '50%', val: 50 },
               { label: '75%', val: 75 },
-              { label: '100% (Hero Full)', val: 100 },
+              { label: '100% (Full)', val: 100 },
             ].map((p) => (
               <button
                 key={p.val}
