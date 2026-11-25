@@ -92,6 +92,7 @@ class PointsService {
     vehicle_id,
     branch_id,
     amount,
+    taxable_amount,
     type,
     category,
     reference_id,
@@ -225,6 +226,14 @@ class PointsService {
         }
       }
 
+      // Determine spend amount for points calculation:
+      // - For sales: strictly keep 'amount' (Ex-Showroom price - do NOT touch sales as requested)
+      // - For service/accessories/bodyshop: if 'taxable_amount' (before-tax base) is provided, calculate points on pre-tax spend!
+      const parsedTaxable = (activeCategory !== 'sale' && taxable_amount != null && !isNaN(parseFloat(taxable_amount)) && parseFloat(taxable_amount) > 0)
+        ? parseFloat(taxable_amount)
+        : null;
+      const calcSpendAmount = parsedTaxable != null ? parsedTaxable : amount;
+
       // Check Master Policy Engine (AppSheet Brain) for dynamic Director rules
       const MasterRuleEngineService = require('./masterRuleEngine.service');
       const matchedMasterRule = await MasterRuleEngineService.resolveRule({
@@ -237,7 +246,7 @@ class PointsService {
         variant_name: variantName,
         branch_name: branchRes.rows[0]?.name || 'ALL',
         priority_tier: 'ALL',
-        spend_amount: amount,
+        spend_amount: calcSpendAmount,
         transaction_date: new Date(),
         client,
       });
@@ -247,19 +256,21 @@ class PointsService {
 
       if (matchedMasterRule) {
         const outcome = MasterRuleEngineService.calculateOutcome({
-          invoice_amount: amount,
+          invoice_amount: calcSpendAmount,
           rule: matchedMasterRule,
         });
         earnedPoints = outcome.total_points;
         appliedRuleNotice = `Master Rule: ${matchedMasterRule.rule_name} (${matchedMasterRule.rule_code})`;
       } else {
-        earnedPoints = await this.calculatePoints(activeCategory, amount, tenant_id, client);
+        earnedPoints = await this.calculatePoints(activeCategory, calcSpendAmount, tenant_id, client);
       }
 
       // 4. Insert immutable record into points_ledger (clean: Receipt No, Type and Bill Amount)
       const formattedCategory = (activeCategory || 'service').charAt(0).toUpperCase() + (activeCategory || 'service').slice(1).toLowerCase();
       const cleanRef = (receipt_no || reference_id || '').trim();
-      const sourceRef = cleanRef ? `${cleanRef} | ${formattedCategory} (Bill: ₹${amount})` : `${formattedCategory} transaction earning (Bill: ₹${amount})`;
+      const sourceRef = cleanRef
+        ? `${cleanRef} | ${formattedCategory} (Bill: ₹${amount}${parsedTaxable ? `, Before-Tax: ₹${parsedTaxable}` : ''})`
+        : `${formattedCategory} transaction earning (Bill: ₹${amount}${parsedTaxable ? `, Before-Tax: ₹${parsedTaxable}` : ''})`;
 
       let insertCols = ['customer_id', 'vehicle_id', 'branch_id', typeCol, 'points', refCol, actorCol, 'tenant_id'];
       let insertVals = [customer_id, vehicle_id || null, branch_id, ledgerType, earnedPoints, sourceRef, created_by || null, tenant_id];
@@ -282,7 +293,7 @@ class PointsService {
       }
       if (cols.has('calc_snapshot')) {
         insertCols.push('calc_snapshot');
-        insertVals.push(JSON.stringify({ bill_amount: amount }));
+        insertVals.push(JSON.stringify({ bill_amount: amount, taxable_amount: parsedTaxable, calc_spend: calcSpendAmount }));
       }
       if (cols.has('amount_paise')) {
         insertCols.push('amount_paise');

@@ -115,6 +115,7 @@ class RedemptionService {
     customer_id,
     otp,
     bill_amount,
+    taxable_amount,
     points,
     category = 'service',
     receipt_no,
@@ -307,9 +308,15 @@ class RedemptionService {
       let cash_paid = 0;
       let new_points_earned = 0;
       const billAmt = bill_amount ? parseFloat(bill_amount) : 0;
+      const parsedTaxable = (taxable_amount != null && !isNaN(parseFloat(taxable_amount)) && parseFloat(taxable_amount) > 0)
+        ? parseFloat(taxable_amount)
+        : null;
 
       // Apply dynamic model percentage cap on points redemption (e.g. 50% for Tata/Hyundai, 100% for Hero)
       const maxAllowedPointsByModel = Math.floor(currentPointBalance * (modelCapPercent / 100));
+
+      let taxableBase = parsedTaxable;
+      let netTaxablePaid = 0;
 
       if (billAmt > 0) {
         const redeemable_rupees = maxAllowedPointsByModel * POINTS_PER_RUPEE_REDEMPTION;
@@ -328,7 +335,16 @@ class RedemptionService {
           earnRate = 4; // 4%
         }
 
-        new_points_earned = Math.floor((cash_paid / 100) * earnRate);
+        // Before-Tax Points Calculation:
+        // Points are calculated on Taxable (Before-Tax) Base net of the discount redeemed.
+        // If taxable_amount is provided, net taxable = max(0, taxable_amount - discount_applied).
+        // If taxable_amount is not provided, fallback safely to cash_paid.
+        if (taxableBase != null && taxableBase > 0) {
+          netTaxablePaid = Math.max(0, taxableBase - discount_applied);
+          new_points_earned = Math.floor((netTaxablePaid / 100) * earnRate);
+        } else {
+          new_points_earned = Math.floor((cash_paid / 100) * earnRate);
+        }
       } else if (points && parseInt(points, 10) > 0) {
         points_redeemed = parseInt(points, 10);
         if (points_redeemed > maxAllowedPointsByModel) {
@@ -423,6 +439,10 @@ class RedemptionService {
           payment_mode ? `Mode: ${payment_mode.toUpperCase()}` : '',
           utr_number ? `UTR: ${utr_number}` : '',
         ].filter(Boolean).join(' | ');
+        const earnSourceText = (taxableBase != null && taxableBase > 0)
+          ? `Earned points on net before-tax ₹${netTaxablePaid} (Pre-Tax Base: ₹${taxableBase}, Bill: ₹${billAmt}, Paid: ₹${cash_paid}, Receipt: ${receipt_no || 'N/A'}${payMeta ? ` | ${payMeta}` : ''})`
+          : `Earned points on cash paid ₹${cash_paid} (Receipt: ${receipt_no || 'N/A'}${payMeta ? ` | ${payMeta}` : ''})`;
+
         const eRes = await client.query(
           `INSERT INTO points_ledger (
              customer_id, vehicle_id, branch_id, type, transaction_category, points, source_ref, cashier_id, tenant_id, receipt_no, account_ledger_no, payment_mode, utr_number
@@ -435,7 +455,7 @@ class RedemptionService {
             branch_id || null,
             normCategory,
             new_points_earned,
-            `Earned points on cash paid ₹${cash_paid} (Receipt: ${receipt_no || 'N/A'}${payMeta ? ` | ${payMeta}` : ''})`,
+            earnSourceText,
             created_by || null,
             tenant_id,
             receipt_no || null,
@@ -510,6 +530,9 @@ class RedemptionService {
         discount_applied,
         points_redeemed,
         cash_paid,
+        bill_amount: billAmt,
+        taxable_amount: taxableBase,
+        net_taxable_paid: (taxableBase != null && taxableBase > 0) ? netTaxablePaid : cash_paid,
         new_points_earned,
         updated_total_balance,
         remaining_balance: updated_total_balance,

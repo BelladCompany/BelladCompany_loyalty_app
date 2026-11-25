@@ -201,6 +201,7 @@ const earnPointsSchema = z.object({
   vehicle_id: z.number().int().positive().optional().nullable(),
   branch_id: z.number({ required_error: 'Branch ID is required' }).int().positive('Branch ID must be a positive integer'),
   amount: positiveInteger,
+  taxable_amount: z.coerce.number().min(0).optional().nullable(),
   type: z.enum(['sale', 'service'], {
     required_error: "Transaction type is required ('sale' or 'service')",
     invalid_type_error: "Type must be either 'sale' or 'service'",
@@ -255,6 +256,7 @@ const redeemPointsSchema = z.object({
   customer_id: z.string().trim().optional().nullable(),
   otp: z.string().trim().optional().nullable(),
   bill_amount: z.coerce.number().optional().nullable(),
+  taxable_amount: z.coerce.number().min(0).optional().nullable(),
   points: z.coerce.number().int().min(0).optional().nullable(),
   category: z.string().optional().default('service'),
   receipt_no: z.string().optional().nullable(),

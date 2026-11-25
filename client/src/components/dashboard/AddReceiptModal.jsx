@@ -499,7 +499,27 @@ export const AddReceiptModal = ({
     : 0;
   const discountAmount = Math.floor(activeRedeemPoints / 4);
   const netCashPaid = Math.max(0, numAmount - discountAmount);
-  const earnedPoints = netCashPaid > 0 ? Math.floor((netCashPaid / 100) * rateMultiplier) : 0;
+
+  // Before-Tax Spend Determination:
+  // 1. From GST Table (OCR / breakdown inputs) if available
+  const allSlabsTotals = calculateAllSlabsTotal();
+  const rawTaxableFromGst = allSlabsTotals?.grandTaxable || 0;
+
+  // 2. Fallback: if user manually enters billAmount without filling GST table, back-calculate using chosen GST slab
+  const defaultSlabRate = selectedGstRate === 'all' ? 18 : Number(selectedGstRate || 18);
+  const effectiveTaxableAmount = category === 'sale'
+    ? numAmount
+    : (rawTaxableFromGst > 0
+        ? rawTaxableFromGst
+        : (numAmount > 0 ? Number((numAmount / (1 + defaultSlabRate / 100)).toFixed(2)) : 0));
+
+  // 3. For sales: strictly keep Ex-Showroom amount (user requested "dont touch for sale this is for reedemption")
+  // For service/accessories/bodyshop: loyalty points are calculated on Before-Tax Taxable Base net of discount!
+  const netTaxableSpend = category === 'sale'
+    ? numAmount
+    : Math.max(0, effectiveTaxableAmount - discountAmount);
+
+  const earnedPoints = netTaxableSpend > 0 ? Math.floor((netTaxableSpend / 100) * rateMultiplier) : 0;
   const projectedBalance = Math.max(0, currentPoints - activeRedeemPoints) + earnedPoints;
 
   // Handle Form Submission
@@ -529,11 +549,12 @@ export const AddReceiptModal = ({
 
     try {
       if (isEligible && wantRedemption && activeRedeemPoints > 0) {
-        // Redemption Flow
+        // Redemption Flow (Before-Tax Loyalty Earning Net of Discount)
         const payload = {
           customer_id: customer.customer_id,
           phone: primaryPhone ? String(primaryPhone).replace(/[^\d+]/g, '') : undefined,
           bill_amount: numAmount,
+          taxable_amount: category === 'sale' ? numAmount : Number(effectiveTaxableAmount.toFixed(2)),
           points: activeRedeemPoints,
           category: category,
           receipt_no: receiptNo.trim(),
@@ -561,6 +582,8 @@ export const AddReceiptModal = ({
         setSuccessData({
           type: 'redemption',
           billAmount: numAmount,
+          taxableAmount: effectiveTaxableAmount,
+          netTaxableSpend: netTaxableSpend,
           discountAmount: resData.discount_applied ?? discountAmount,
           cashPaid: resData.cash_paid ?? netCashPaid,
           pointsRedeemed: resData.points_redeemed ?? activeRedeemPoints,
@@ -579,12 +602,13 @@ export const AddReceiptModal = ({
           branchName: selectedVeh?.branch_name || null,
         });
       } else {
-        // Standard Points Earning Flow
+        // Standard Points Earning Flow (Before-tax for service/parts/bodyshop; Ex-showroom for sales)
         const payload = {
           customer_id: customer.customer_id,
           vehicle_id: selectedVehicleId ? parseInt(selectedVehicleId, 10) : null,
           branch_id: branchId ? parseInt(branchId, 10) : 1,
           amount: Math.round(numAmount),
+          taxable_amount: category === 'sale' ? Math.round(numAmount) : Number(effectiveTaxableAmount.toFixed(2)),
           type: category === 'sale' ? 'sale' : 'service',
           category: category,
           reference_id: receiptNo.trim(),
@@ -612,6 +636,8 @@ export const AddReceiptModal = ({
         setSuccessData({
           type: 'earning',
           billAmount: numAmount,
+          taxableAmount: effectiveTaxableAmount,
+          netTaxableSpend: netTaxableSpend,
           discountAmount: 0,
           cashPaid: numAmount,
           pointsRedeemed: 0,
@@ -831,6 +857,15 @@ export const AddReceiptModal = ({
                     </span>
                   </div>
                 </>
+              )}
+              {successData.category !== 'sale' && successData.taxableAmount > 0 && (
+                <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200 text-slate-600">
+                  <span>Pre-Tax Base / Net Taxable</span>
+                  <span className="font-mono text-slate-800 font-semibold">
+                    ₹{Number(successData.taxableAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {successData.discountAmount > 0 ? ` (Net: ₹${Number(successData.netTaxableSpend || (successData.taxableAmount - successData.discountAmount)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` : ''}
+                  </span>
+                </div>
               )}
               <div className="flex justify-between items-center text-xs pt-1 text-slate-700">
                 <span className="font-bold flex items-center gap-1.5">
@@ -1929,12 +1964,25 @@ export const AddReceiptModal = ({
                           <span>Net Cash to Collect:</span>
                           <span className="font-mono text-sm text-indigo-700 font-bold">₹{netCashPaid.toLocaleString('en-IN')}</span>
                         </div>
+                        {category !== 'sale' && effectiveTaxableAmount > 0 && (
+                          <div className="flex justify-between items-center text-slate-500 text-[11px] bg-slate-50/80 p-2 rounded-lg border border-slate-100">
+                            <span>Pre-Tax Base / Net Taxable:</span>
+                            <span className="font-mono font-medium text-slate-700">
+                              ₹{formatInr(effectiveTaxableAmount)} {discountAmount > 0 ? `→ ₹${formatInr(netTaxableSpend)}` : ''}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-100">
                           <span className="flex items-center gap-1">
                             <Coins className="w-3.5 h-3.5 text-amber-500" /> New Points to Earn:
                           </span>
                           <span className="font-mono font-black text-amber-600">+{earnedPoints} PTS</span>
                         </div>
+                        {category !== 'sale' && netTaxableSpend > 0 && (
+                          <div className="text-[10px] text-slate-400 text-right -mt-1 font-medium">
+                            (Calculated on pre-tax net: ₹{formatInr(netTaxableSpend)} @ {rateMultiplier} PTS / ₹100)
+                          </div>
+                        )}
                         <div className="flex justify-between items-center text-slate-500 pt-1 text-[11px]">
                           <span>Projected New Balance:</span>
                           <span className="font-mono font-bold text-slate-800">

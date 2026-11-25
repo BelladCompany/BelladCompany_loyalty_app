@@ -320,6 +320,7 @@ export const RedemptionModal = ({
         customer_id: customer.customer_id,
         otp: otp.trim(),
         bill_amount: category === 'referral' ? undefined : numBillAmount,
+        taxable_amount: category === 'referral' ? undefined : numBillAmount,
         category,
         receipt_no: receiptNo.trim() || undefined,
         account_ledger_no: accountLedgerNo.trim() || undefined,

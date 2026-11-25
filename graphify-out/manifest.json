@@ -78,9 +78,9 @@
     "semantic_hash": ""
   },
   "client/src/components/dashboard/AddReceiptModal.jsx": {
-    "mtime": 1795521692.3115816,
-    "seen": 1795521736.5942476,
-    "ast_hash": "e8a0a7cc39a658b5db5aeaf4468dc14e",
+    "mtime": 1795587165.263454,
+    "seen": 1795587275.2327018,
+    "ast_hash": "c3f8fbca5dd94edf9c45f2a5f6d31b85",
     "semantic_hash": ""
   },
   "client/src/components/dashboard/BranchNetworkChart.jsx": {
@@ -132,9 +132,9 @@
     "semantic_hash": ""
   },
   "client/src/components/dashboard/RedemptionModal.jsx": {
-    "mtime": 1795416035.0728219,
-    "seen": 1795419439.7517612,
-    "ast_hash": "470a238026a7f11594a16e119ed00af7",
+    "mtime": 1795587176.0569227,
+    "seen": 1795587275.2346323,
+    "ast_hash": "3d3e4443150cec1024a54c703d258864",
     "semantic_hash": ""
   },
   "client/src/components/dashboard/RequestKycModal.jsx": {
@@ -396,9 +396,9 @@
     "semantic_hash": ""
   },
   "client/src/services/api.js": {
-    "mtime": 1795505039.2314079,
-    "seen": 1795505310.4796276,
-    "ast_hash": "e38aa9345bd36707c3513c8bb51bb9c9",
+    "mtime": 1795585458.2516599,
+    "seen": 1795587275.2443907,
+    "ast_hash": "37e1671d44916c3fdb1e0fe92bc9ee0e",
     "semantic_hash": ""
   },
   "client/tailwind.config.js": {
@@ -1218,9 +1218,9 @@
     "semantic_hash": ""
   },
   "src/controllers/points.controller.js": {
-    "mtime": 1795156014.869133,
-    "seen": 1795419439.7517612,
-    "ast_hash": "fb547e81c7e7154985b3015a918bb14e",
+    "mtime": 1795587021.0207229,
+    "seen": 1795587275.2749252,
+    "ast_hash": "cf59440bf9826096d6e562cd8a42cbc0",
     "semantic_hash": ""
   },
   "src/controllers/publicBalance.controller.js": {
@@ -1230,9 +1230,9 @@
     "semantic_hash": ""
   },
   "src/controllers/redemption.controller.js": {
-    "mtime": 1795156062.3930583,
-    "seen": 1795419439.7517612,
-    "ast_hash": "bb90e087ae0fd0a725d066eea75bb42a",
+    "mtime": 1795586945.0962577,
+    "seen": 1795587275.2751393,
+    "ast_hash": "a548e617d0a4f6d6b70acc71c29cb0b9",
     "semantic_hash": ""
   },
   "src/controllers/referral.controller.js": {
@@ -1656,9 +1656,9 @@
     "semantic_hash": ""
   },
   "src/services/points.service.js": {
-    "mtime": 1795156045.1039133,
-    "seen": 1795419439.7517612,
-    "ast_hash": "a38c21652f3b2a6421df127d2f73aa1d",
+    "mtime": 1795587047.6269948,
+    "seen": 1795587275.2913196,
+    "ast_hash": "551b56d0c60c9e431e9abf74b3bfcc5b",
     "semantic_hash": ""
   },
   "src/services/publicBalance.service.js": {
@@ -1686,9 +1686,9 @@
     "semantic_hash": ""
   },
   "src/services/redemption.service.js": {
-    "mtime": 1795415947.3801024,
-    "seen": 1795419439.7517612,
-    "ast_hash": "1428fe6a080ae34ad53b46722d756287",
+    "mtime": 1795587009.839911,
+    "seen": 1795587275.2921612,
+    "ast_hash": "c9cbc71a6fdef39855ecfb4cd98826a5",
     "semantic_hash": ""
   },
   "src/services/redemption_eligibility.service.js": {
@@ -1770,9 +1770,9 @@
     "semantic_hash": ""
   },
   "src/validators/schemas.js": {
-    "mtime": 1795503236.9793742,
-    "seen": 1795503742.1929855,
-    "ast_hash": "3c62a901de8e6d76b4f77831213fd727",
+    "mtime": 1795586932.255416,
+    "seen": 1795587275.2949195,
+    "ast_hash": "693a9a88acec69cdec8d046978748e02",
     "semantic_hash": ""
   },
   "sync-columns.js": {
@@ -1923,6 +1923,24 @@
     "mtime": 1795504649.625988,
     "seen": 1795505310.476044,
     "ast_hash": "1de02181acb34467ee3ca57687c1d48d",
+    "semantic_hash": ""
+  },
+  "scripts/create-full-db-backup.js": {
+    "mtime": 1795585007.8706632,
+    "seen": 1795587275.2561688,
+    "ast_hash": "e8f15bab01531ae3653967a384bac0ed",
+    "semantic_hash": ""
+  },
+  "scripts/fetch-sheet.js": {
+    "mtime": 1795585411.6415148,
+    "seen": 1795587275.2565942,
+    "ast_hash": "a84c22b4f546e14ceebbeffd87c2d26b",
+    "semantic_hash": ""
+  },
+  "scripts/sheet_preview.html": {
+    "mtime": 1795585416.361607,
+    "seen": 1795587275.29816,
+    "ast_hash": "35b3e8132d680c3810d6bc41ce35a09f",
     "semantic_hash": ""
   },
   "client/package-lock.json": {

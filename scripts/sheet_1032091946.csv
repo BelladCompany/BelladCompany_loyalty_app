@@ -1,0 +1,14 @@
+,,,,Invoice Amount,"11,172"
+,,,,Availabe Points,22
+,For IRN Invoice (B2B),,,For B2C,
+,Before Tax Calculation,,,After Tax Calculation,
+,Service bill,9468,,Service bill,"11,172"
+,Points redeemed,22,,Points redeemed,22
+,Net Payable,9446,,,
+,Tax,1700,,,
+,Customer pays,11146,,Customer pays,"11,150"
+,"Points gained, On Net Payable",94,,"Points gained, on Net Payable",94
+,"Commission to Loyalty, 0.01% + 18% tax on Net Payable",1.11,,"Commission to Loyalty, 0.01% + 18% tax on Net Payable",1.11
+,"Hyundai invoices Loyalty, ₹2,500 + 18% tax",26,,"Hyundai invoices Loyalty, ₹2,500 + 18% tax",25.96
+,"Loyalty invoices MG, ₹2,500 + 18% tax",26,,"Loyalty invoices MG, ₹2,500 + 18% tax",25.96
+,,,,Profit  C7 - F7,4

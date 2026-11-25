@@ -1,0 +1,52 @@
+Segment,Ex-Showroom,Divide By,Points Gain,Divide By,Amount,,,,,Segment,Ex-Showroom,Divide By,Points Gain,Divide By,Amount,,
+Sales,1000000,100,10000.00,4.00,2500.00,,,,,Sales,1000000,100,10000.00,4.00,2500.00,625,3125.00
+,Service/Spares/Accy,,,,,,,,,,,,,,,,
+Service,"9,446",25,377.84,4.00,94.46,,,,,,,,,,,,
+,Ex-Showroom,,,,,,,,,,,,,,,,
+Sales Referal 4W,5 - 10,,10000.00,4.00,2500.00,,,,,,,,,,,,
+,10 -15,,15000.00,4.00,3750.00,,,,,,,,,,,,
+,15 - 20,,20000.00,4.00,5000.00,,,,,,,,,,,,
+,20 - 25,,25000.00,4.00,6250.00,,Credit card,,,,,,,,,,
+,25 Above,,30000.00,4.00,7500.00,,Post booking no refferal,,,,,,,,,,
+,Ex-Showroom,,,,,,,,,,,,,,,,
+Sales Referal 2W,50k - 1,,2000.00,4.00,500.00,,,,,,,,,,,,
+,1 - 1.25,,3000.00,4.00,750.00,,,,,,,,,,,,
+,1.25 - 1.5,,4000.00,4.00,1000.00,,,,,,,,,,,,
+,1.5 - 1.75,,5000.00,4.00,1250.00,,,,,,,,,,,,
+,1.75 - 2,,6000.00,4.00,1500.00,,,,,,,,,,,,
+,2 Above,,7000.00,,#DIV/0!,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+"4 points = 1 rupee
+
+For sales
+Give 1 point for every Rs.100. Ex: if a car is worth 10L (ex-showroom) then the customer gets 10000 points. 
+Note: points should only be on ex-showroom price, not on on-road price. 
+
+For service:
+Give 4 points for every Rs.100. Ex: if service bill is Rs.10000, then give 400 points. 
+
+Referral: case by case - ask Umesh, Shrinivas, and Shivanand 
+
+Everytime a customer spends, they should automatically get a WhatsApp message with the new points earned and total points available. 
+
+Redeeming points:
+Customer should be able to redeem any time after 1 year (keep this timespan variable) of purchase. 
+While redeeming, they should get an OTP, and the same should be shared with the cashier. Cashier inputs the customer’s OTP and how many points to redeem. 
+
+Automatically discount should be applied and a unique code should be generated. That should be accounted in real-books. (This process can be automated)",,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+T& C ,,,,,,,,,,,,,,,,,
+1,Refferal should be only for immediate relative  ,,,,,,,,,,,,,,,,
+2,Redemation will be less tahn or equl to 50 % of bill amount another 50% customer has to pay . ,,,,,,,,,,,,,,,,
+3,,,,,,,,,,,,,,,,,
