@@ -1318,8 +1318,8 @@ export class ApiService {
   }
 
   static getAdvisorInvoicePdfUrl(id) {
-    const base = typeof this?.getApiBase === 'function' ? this.getApiBase() : (typeof this?.getBaseUrl === 'function' ? this.getBaseUrl() : API_BASE);
-    const token = typeof this?.getToken === 'function' ? this.getToken() : '';
+    const base = API_BASE;
+    const token = typeof ApiService.getToken === 'function' ? ApiService.getToken() : '';
     return `${base}/v2/invoices/advisor-queue/${id}/pdf?token=${encodeURIComponent(token || '')}`;
   }
 
@@ -1328,6 +1328,8 @@ export class ApiService {
   }
 }
 
+ApiService.getBaseUrl = function () { return API_BASE; };
+ApiService.getApiBase = function () { return API_BASE; };
 ApiService.prototype.getBaseUrl = function () { return API_BASE; };
 ApiService.prototype.getApiBase = function () { return API_BASE; };
 ApiService.prototype.getAdvisorInvoicePdfUrl = function (id) { return ApiService.getAdvisorInvoicePdfUrl(id); };
