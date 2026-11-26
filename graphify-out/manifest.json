@@ -1920,9 +1920,9 @@
     "semantic_hash": ""
   },
   "client/src/screens/AdvisorInvoiceUploadScreen.jsx": {
-    "mtime": 1795504649.625988,
-    "seen": 1795505310.476044,
-    "ast_hash": "1de02181acb34467ee3ca57687c1d48d",
+    "mtime": 1795685178.7000642,
+    "seen": 1795685207.8125587,
+    "ast_hash": "849a22a3172e6daa6e71537b56475cd4",
     "semantic_hash": ""
   },
   "scripts/create-full-db-backup.js": {
@@ -2004,9 +2004,9 @@
     "semantic_hash": ""
   },
   "scripts/check_triggers.js": {
-    "mtime": 1795679979.8062937,
-    "seen": 1795684733.9817214,
-    "ast_hash": "4f3f0c1cb96b0b02359e0eae3ceff926",
+    "mtime": 1795685037.8629882,
+    "seen": 1795685207.8281865,
+    "ast_hash": "5e7e2a7055fad59f6057fb16d6eafd4b",
     "semantic_hash": ""
   },
   "scripts/inspect_vandana.js": {
@@ -2016,9 +2016,9 @@
     "semantic_hash": ""
   },
   "scripts/restore_vandana.js": {
-    "mtime": 1795679939.533095,
-    "seen": 1795684733.9892466,
-    "ast_hash": "c8f6247e403eef5346aff23bc3c7d2c6",
+    "mtime": 1795685083.765982,
+    "seen": 1795685207.8357387,
+    "ast_hash": "e088db847148b8c6cc7099ccb9de3560",
     "semantic_hash": ""
   },
   "scripts/revert_test_redemption.js": {

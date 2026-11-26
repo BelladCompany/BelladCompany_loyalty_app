@@ -1,17 +1,17 @@
 # Graph Report - final-loyaly-app-nov  (2026-11-26)
 
 ## Corpus Check
-- 411 files · ~345,342 words
+- 411 files · ~345,532 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: (none) 9, .example 2, .csv 2)
 
 ## Summary
-- 2362 nodes · 4579 edges · 138 communities (100 shown, 38 thin omitted)
+- 2362 nodes · 4579 edges · 139 communities (101 shown, 38 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 80 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3c69fed1`
+- Built from commit: `539696c1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -144,9 +144,10 @@
 - run-migration-017.js
 - NotificationController
 - runTests
+- App
 
 ## God Nodes (most connected - your core abstractions)
-1. `ApiService` - 208 edges
+1. `ApiService` - 207 edges
 2. `{ Pool }` - 113 edges
 3. `react` - 57 edges
 4. `lucide-react` - 48 edges
@@ -158,10 +159,10 @@
 10. `ReferralService` - 27 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `5. Existing Data Reconciliation Audit (A3 Findings)` --references--> `VehicleSalesPointsService`  [INFERRED]
-  AUDIT.md → src/services/vehicleSalesPoints.service.js
 - `9.1 Customer Merge Mechanics (`merge.service.js:203`)` --references--> `MergeService`  [INFERRED]
   AUDIT.md → src/services/merge.service.js
+- `5. Existing Data Reconciliation Audit (A3 Findings)` --references--> `VehicleSalesPointsService`  [INFERRED]
+  AUDIT.md → src/services/vehicleSalesPoints.service.js
 - `7.2 `Button`` --references--> `Button()`  [INFERRED]
   DESIGN_SYSTEM.md → client/src/components/ui/Button.jsx
 - `7.7 `ConfirmationModal`` --references--> `ConfirmationModal()`  [INFERRED]
@@ -183,11 +184,11 @@
 - 5-file cycle: `src/services/appsheetPull.service.js -> src/services/transaction.service.js -> src/services/points.service.js -> src/services/notification.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
 - 5-file cycle: `src/services/appsheetPull.service.js -> src/services/transaction.service.js -> src/services/referral.service.js -> src/services/notification.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
 
-## Communities (138 total, 38 thin omitted)
+## Communities (139 total, 38 thin omitted)
 
 ### Community 0 - "ApiService"
 Cohesion: 0.03
-Nodes (9): EarnPointsModal(), PortalDashboardScreen(), SendGiftModal(), RulesStudio(), CampaignScreen(), PublicGiftClaimScreen(), PublicReferralLeadScreen(), ReferralsScreen() (+1 more)
+Nodes (8): EarnPointsModal(), PortalDashboardScreen(), SendGiftModal(), RulesStudio(), CampaignScreen(), PublicReferralLeadScreen(), ReferralsScreen(), ApiService
 
 ### Community 1 - "db.js"
 Cohesion: 0.04
@@ -350,16 +351,16 @@ Cohesion: 0.11
 Nodes (18): apiVersion, kind, app, app.kubernetes.io/component, app.kubernetes.io/name, metadata, labels, name (+10 more)
 
 ### Community 44 - "AddReceiptModal"
-Cohesion: 0.08
-Nodes (18): App(), CorrectionsQueue(), AddReceiptModal(), CATEGORIES, formatInr(), GST_SLABS, Customer360View(), EligibilityBanner() (+10 more)
+Cohesion: 0.13
+Nodes (11): CorrectionsQueue(), AddReceiptModal(), CATEGORIES, formatInr(), GST_SLABS, Customer360View(), EligibilityBanner(), RedemptionModal() (+3 more)
 
 ### Community 45 - "CorrectionService"
 Cohesion: 0.17
 Nodes (5): testCorrectionFlow(), CorrectionController, fs, path, CorrectionService
 
 ### Community 47 - "PortalDashboardScreen.jsx"
-Cohesion: 0.20
-Nodes (7): EnrollmentScreen(), INITIAL_MONTHLY_OFFERS, LedgerRow, PassSkeleton(), TIER_BENEFITS_DATA, CARD_THEMES, PRESET_AMOUNTS
+Cohesion: 0.25
+Nodes (6): INITIAL_MONTHLY_OFFERS, LedgerRow, PassSkeleton(), TIER_BENEFITS_DATA, CARD_THEMES, PRESET_AMOUNTS
 
 ### Community 49 - "pg"
 Cohesion: 0.10
@@ -550,7 +551,7 @@ Cohesion: 0.40
 Nodes (4): buildCommand, framework, outputDirectory, rewrites
 
 ### Community 106 - "CashierDashboard"
-Cohesion: 0.25
+Cohesion: 0.29
 Nodes (5): AddCustomerModal(), BulkImportModal(), LogBadge(), MessageLogModal(), CashierDashboard()
 
 ### Community 107 - "startupProbe"
@@ -585,6 +586,10 @@ Nodes (11): fetchUrl(), fs, https, run(), https, options, origin, req (+3 more)
 Cohesion: 0.29
 Nodes (5): fs, multer, path, storage, uploadDir
 
+### Community 138 - "App"
+Cohesion: 0.13
+Nodes (9): App(), EnrollmentScreen(), CustomerPortalScreen(), PublicOffersScreen(), GiftCardsScreen(), LoginScreen(), PublicBalancePassScreen(), PublicGiftClaimScreen() (+1 more)
+
 ## Knowledge Gaps
 - **38 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -592,15 +597,15 @@ Nodes (5): fs, multer, path, storage, uploadDir
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Automobile Dealership Group Loyalty Program - Backend & POS Counter` connect `Automobile Dealership Loyalty Program — Design System` to `reltigrow.provider.js`?**
-  _High betweenness centrality (0.224) - this node is a cross-community bridge._
+  _High betweenness centrality (0.235) - this node is a cross-community bridge._
 - **Should `ApiService` be split into smaller, more focused modules?**
-  _Cohesion score 0.03090172239108409 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.031630170316301706 - nodes in this community are weakly interconnected._
 - **Why does `🛠️ Tech Stack & Key Rules` connect `reltigrow.provider.js` to `Automobile Dealership Loyalty Program — Design System`?**
-  _High betweenness centrality (0.223) - this node is a cross-community bridge._
+  _High betweenness centrality (0.233) - this node is a cross-community bridge._
 - **Should `db.js` be split into smaller, more focused modules?**
   _Cohesion score 0.04065040650406504 - nodes in this community are weakly interconnected._
 - **Why does `Automobile Dealership Loyalty Program — Design System` connect `Automobile Dealership Loyalty Program — Design System` to `DirectorCommandCenter.jsx`?**
-  _High betweenness centrality (0.220) - this node is a cross-community bridge._
+  _High betweenness centrality (0.225) - this node is a cross-community bridge._
 - **Should `react` be split into smaller, more focused modules?**
   _Cohesion score 0.08117283950617284 - nodes in this community are weakly interconnected._
 - **Should `invoiceV2.controller.js` be split into smaller, more focused modules?**

@@ -15,6 +15,7 @@ import {
   Car,
   User,
   Hash,
+  Trash2,
 } from 'lucide-react';
 import ApiService from '../services/api';
 
@@ -39,6 +40,8 @@ export const AdvisorInvoiceUploadScreen = ({ user }) => {
   const [isLoadingQueue, setIsLoadingQueue] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'pending', 'completed'
   const [searchQuery, setSearchQuery] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
+  const [actionNotice, setActionNotice] = useState('');
 
   const fileInputRef = useRef(null);
 
@@ -61,6 +64,27 @@ export const AdvisorInvoiceUploadScreen = ({ user }) => {
   useEffect(() => {
     loadQueue();
   }, [statusFilter]);
+
+  // Delete invoice handler
+  const handleDeleteItem = async (item) => {
+    const invLabel = item.invoice_number ? `#${item.invoice_number}` : (item.original_filename || 'PDF invoice');
+    if (!window.confirm(`Are you sure you want to delete invoice ${invLabel} from the queue? This will remove the uploaded PDF.`)) {
+      return;
+    }
+    setDeletingId(item.id);
+    try {
+      await ApiService.deleteAdvisorInvoiceQueueItem(item.id);
+      setActionNotice(`Invoice ${invLabel} deleted successfully.`);
+      setTimeout(() => setActionNotice(''), 4000);
+      await loadQueue();
+    } catch (err) {
+      console.error('[AdvisorInvoiceUploadScreen] Delete error:', err);
+      setUploadError(err.message || 'Failed to delete invoice PDF.');
+      setTimeout(() => setUploadError(''), 4000);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Handle single or bulk file upload
   const handleFilesUpload = async (files) => {
@@ -249,6 +273,14 @@ export const AdvisorInvoiceUploadScreen = ({ user }) => {
             <span>{uploadError}</span>
           </div>
         )}
+
+        {/* Delete / Action Notice Alert */}
+        {actionNotice && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-xs text-amber-900 font-semibold animate-fadeIn">
+            <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0" />
+            <span>{actionNotice}</span>
+          </div>
+        )}
       </div>
 
       {/* Uploaded Invoices Queue Section */}
@@ -379,15 +411,30 @@ export const AdvisorInvoiceUploadScreen = ({ user }) => {
                             <span className="font-mono font-black text-xs text-slate-900 truncate">
                               {item.invoice_number ? `#${item.invoice_number}` : 'Invoice Stored'}
                             </span>
-                            <span
-                              className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border shrink-0 ${
-                                isPending
-                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                  : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              }`}
-                            >
-                              {item.status}
-                            </span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span
+                                className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                                  isPending
+                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                    : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                }`}
+                              >
+                                {item.status}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteItem(item)}
+                                disabled={deletingId === item.id}
+                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition border border-transparent hover:border-rose-200 cursor-pointer disabled:opacity-50"
+                                title="Delete invoice card"
+                              >
+                                {deletingId === item.id ? (
+                                  <RefreshCw className="w-3 h-3 animate-spin text-rose-600" />
+                                ) : (
+                                  <Trash2 className="w-3 h-3" />
+                                )}
+                              </button>
+                            </div>
                           </div>
 
                           <div>
@@ -413,17 +460,39 @@ export const AdvisorInvoiceUploadScreen = ({ user }) => {
                             </span>
                           </div>
 
-                          <a
-                            href={pdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition shadow-2xs"
-                            title="Open raw PDF invoice"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-slate-500" />
-                            <span>View PDF</span>
-                            <ExternalLink className="w-3 h-3 text-slate-400" />
-                          </a>
+                          <div className="flex items-center gap-1.5">
+                            <a
+                              href={pdfUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition shadow-2xs"
+                              title="Open raw PDF invoice"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-slate-500" />
+                              <span>View PDF</span>
+                              <ExternalLink className="w-3 h-3 text-slate-400" />
+                            </a>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteItem(item)}
+                              disabled={deletingId === item.id}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white text-xs font-bold rounded-xl border border-rose-200 hover:border-rose-600 transition shadow-2xs disabled:opacity-50 cursor-pointer"
+                              title="Delete uploaded invoice PDF"
+                            >
+                              {deletingId === item.id ? (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  <span>Deleting...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Delete</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
