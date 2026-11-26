@@ -95,9 +95,8 @@ export const EarnPointsModal = ({
   const netAmount = category === 'sale' ? Math.max(0, numAmount - numDiscount) : numAmount;
   const currentPoints = Math.max(0, customer?.total_points ?? customer?.points_balance ?? 0);
 
-  // Dynamic preview earning calculation based on category (Service 4%, Accessory 2%, Bodyshop 3%, Sale 1%)
-  const rateMultiplier =
-    category === 'service' ? 4 : category === 'accessories' ? 2 : category === 'bodyshop' ? 3 : 1;
+  // Dynamic preview earning calculation based on category (Service / Accessories / Bodyshop 4%, Sale 1%)
+  const rateMultiplier = category === 'sale' ? 1 : 4;
   const previewEarnedPoints = netAmount > 0 ? Math.floor((netAmount / 100) * rateMultiplier) : 0;
   const previewNewBalance = currentPoints + previewEarnedPoints;
 

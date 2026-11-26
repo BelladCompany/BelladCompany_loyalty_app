@@ -54,11 +54,14 @@ function detectBrandAndFormat(text) {
   if (lower.includes('heromotocorp') || lower.includes('hero motocorp') || lower.includes('hmcl') || lower.includes('joyride')) {
     return 'Hero MotoCorp';
   }
-  if (lower.includes('hyundai') || lower.includes('bellad hyundai') || lower.includes('my hyundai')) {
+  if (lower.includes('hyundai') || lower.includes('bellad hyundai') || lower.includes('my hyundai') || /\bB20\d{7,8}\b/.test(text)) {
     return 'Hyundai';
   }
-  if (lower.includes('tata motors') || lower.includes('tata passenger') || lower.includes('tata')) {
+  if (lower.includes('tata motors') || lower.includes('tata passenger') || lower.includes('tata') || lower.includes('bellad enterprises private limited-500b') || /\b[EI]BEL[A-Z0-9]{8,14}\b/i.test(text)) {
     return 'Tata Motors';
+  }
+  if (lower.includes('mg motor') || lower.includes('morris garages') || lower.includes('mghubli') || lower.includes('mg_') || lower.includes('zs ev') || lower.includes('hector') || lower.includes('comet') || lower.includes('windsor') || lower.includes('astor') || lower.includes('gloster') || /\bS311[A-Z0-9]{6,12}\b/i.test(text)) {
+    return 'MG Motors';
   }
   return 'Generic';
 }
@@ -257,9 +260,9 @@ function parseHeroInvoice(text) {
 }
 
 /**
- * Parser for Hyundai Dealership Invoices
+ * Parser for Hyundai Dealership Invoices (Supports both single-line & multi-line wrapped layouts)
  */
-function parseHyundaiInvoice(text) {
+function parseHyundaiInvoice(text, originalFilename = '') {
   const invoice = {
     brand_name: 'Hyundai',
     dealer_name: 'BELLAD HYUNDAI',
@@ -286,182 +289,660 @@ function parseHyundaiInvoice(text) {
     line_items: []
   };
 
-  // 1. Invoice Number & Customer Name
-  const invCustMatch = text.match(/([B|G]\d{9,10})\s+([A-Z\s]{3,40})/);
-  if (invCustMatch) {
-    invoice.invoice_number = invCustMatch[1].trim();
-    invoice.customer_name = invCustMatch[2].trim();
+  // 1. Invoice Number (Prioritize B-series over G-series)
+  const bMatch = text.match(/\b(B\d{9,10})\b/);
+  const fnMatch = String(originalFilename).match(/\b(B\d{9,10})\b/i);
+  if (bMatch) {
+    invoice.invoice_number = bMatch[1].trim();
+  } else if (fnMatch) {
+    invoice.invoice_number = fnMatch[1].trim().toUpperCase();
+  } else {
+    const invBlock = text.match(/Invoice\s*No[^\n]*\n(?:[^\n]*\n){0,3}\s*([A-Z0-9]+)/i);
+    if (invBlock && !invBlock[1].startsWith('G')) {
+      invoice.invoice_number = invBlock[1].trim();
+    } else {
+      const gMatch = text.match(/\b(G\d{9,10})\b/);
+      if (gMatch) invoice.invoice_number = gMatch[1].trim();
+    }
   }
 
-  // 2. RO Number
+  // 2. Customer Name
+  // A. Check Gate Pass: "Customer ARJUNASA MERWADE Reg. No"
+  const gatePassCust = text.match(/Customer\s+([A-Z\s]{3,40}?)\s+Reg\.?\s*No/i);
+  if (gatePassCust && !gatePassCust[1].includes('VIN')) {
+    invoice.customer_name = gatePassCust[1].trim();
+  }
+  // B. Check Header under GST No: "GST No:\nARJUNASA MERWADE\n"
+  if (!invoice.customer_name) {
+    const gstCust = text.match(/GST No:\s*\n\s*([A-Z\s]{3,40}?)\n\s*(?:[a-z0-9\/]|Reg)/i);
+    if (gstCust && !gstCust[1].includes('VIN')) {
+      invoice.customer_name = gstCust[1].trim();
+    }
+  }
+  // C. Check inline Invoice + Name: "B202613526\tSWAROOPCHAND MALU"
+  if (!invoice.customer_name) {
+    const invCust = text.match(/([B|G]\d{9,10})\s+([A-Z\s]{3,40})/);
+    if (invCust && !invCust[2].trim().startsWith('VIN')) {
+      invoice.customer_name = invCust[2].trim();
+    }
+  }
+  // D. Gate Pass bottom signature: "Customer Signature\nSWAROOPCHAND MALU\n"
+  if (!invoice.customer_name) {
+    const sigCust = text.match(/Customer Signature\s*\n\s*([A-Z\s]{3,40}?)\s*\n\s*\*{4}\d+/i);
+    if (sigCust && !sigCust[1].includes('VIN')) {
+      invoice.customer_name = sigCust[1].trim();
+    }
+  }
+
+  // 3. Reg No (Prioritize Indian registration format)
+  const regIndian = text.match(/\b([A-Z]{2}\s*\d{1,2}\s*[A-Z]{1,3}\s*\d{4})\b/);
+  if (regIndian) {
+    invoice.registration_number = normalizeRegNo(regIndian[1]);
+  } else {
+    const regFallback = text.match(/Reg\.?\s*No[\s:]*([A-Z0-9]+)/i);
+    if (regFallback && regFallback[1] !== 'VIN') {
+      invoice.registration_number = normalizeRegNo(regFallback[1]);
+    }
+  }
+
+  // 4. VIN / Chassis (17 alphanumeric)
+  const vinMatch = text.match(/\b([A-HJ-NPR-Z0-9]{17})\b/);
+  if (vinMatch) {
+    invoice.vin = vinMatch[1].trim();
+  }
+
+  // 5. Model
+  const modelGatePass = text.match(/Model\s+(?:GS\*\*B|IB\*\*C|AI3\*C|SU\*\*B|HC\*\*B)?\s*([A-Za-z0-9\.\s\+\(\)\-]+?)(?:\s+R\/O|\s+Payment|\n)/i);
+  if (modelGatePass) {
+    invoice.model = modelGatePass[1].replace(/^(?:GS\*\*B|IB\*\*C|AI3\*C|SU\*\*B|HC\*\*B)\s*/, '').trim();
+  } else {
+    const modelGeneral = text.match(/(?:Creta|i20|i10|Venue|Exter|Verna|Alcazar|Tucson|Santro|Aura)[A-Za-z0-9\.\s\+\(\)\-]*/i);
+    if (modelGeneral) {
+      invoice.model = modelGeneral[0].trim();
+    }
+  }
+
+  // 6. RO / Job Card
   const roMatch = text.match(/R\/O\s*(?:no|Number)[\s:]*(R\d{9,12})/i) || text.match(/Repair Order Number[\s\S]*?(R\d{9,12})/i);
   if (roMatch) {
     invoice.repair_order_number = roMatch[1].trim();
     invoice.job_card_number = invoice.repair_order_number;
   }
 
-  // 3. Reg No
-  const regMatch = text.match(/Reg No[\s:]*([A-Z0-9]+)/i) || text.match(/Registration No[\s\S]*?([A-Z]{2}\s*\d{1,2}\s*[A-Z]{1,3}\s*\d{3,4})/i);
-  if (regMatch) {
-    invoice.registration_number = normalizeRegNo(regMatch[1]);
-  }
-
-  // 4. VIN / Chassis
-  const vinMatch = text.match(/VIN[\s\S]*?([A-Z0-9]{17})/i) || text.match(/Chassis No[\s\S]*?([A-Z0-9]{17})/i);
-  if (vinMatch) {
-    invoice.vin = vinMatch[1].trim();
-  }
-
-  // 5. Model
-  const modelGatePassMatch = text.match(/Model\s*\n\s*R\/O Number[^\n]+\n\s*([^\n]+(?:\n\s*[^\n]+)?)/i);
-  if (modelGatePassMatch) {
-    invoice.model = modelGatePassMatch[1].replace(/HC\*\*B\s*/, '').replace(/\s+/g, ' ').trim();
-  } else {
-    const modelMatch = text.match(/(?:HC\*\*B\s+)?([A-Za-z0-9\.\s]+(?:VTVT|CRDI|SX|EX|Petrol|Diesel)[A-Za-z0-9\.\s\(\)]*)/i);
-    if (modelMatch) {
-      invoice.model = modelMatch[1].replace(/HC\*\*B\s*/, '').replace(/\s+/g, ' ').trim();
-    }
-  }
-
-  // 6. Kilometers
-  const kmsMatch = text.match(/Kilometers\s+([\d\.]+)/i);
+  // 7. Kilometers
+  const kmsMatch = text.match(/(?:Mileage|Kilometers)[\s:]*([\d\.]+)/i);
   if (kmsMatch) {
     invoice.odometer_kms = Math.round(parseFloat(kmsMatch[1]));
   }
 
-  // 7. Invoice Date
-  const dateMatch = text.match(/(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/);
-  if (dateMatch) {
-    invoice.invoice_date = dateMatch[1].replace(' ', 'T') + '+05:30';
+  // 8. Invoice Date (DD.MM.YYYY, DD-MM-YYYY, or YYYY-MM-DD)
+  const dateDotted = text.match(/(?:Date|Invoice Date)[\s:]*(\d{2})[\.\-](\d{2})[\.\-](\d{4})/i);
+  if (dateDotted) {
+    invoice.invoice_date = `${dateDotted[3]}-${dateDotted[2]}-${dateDotted[1]}T10:00:00+05:30`;
+  } else {
+    const dateDash = text.match(/(\d{4}-\d{2}-\d{2}(?:\s+\d{2}:\d{2}:\d{2})?)/);
+    if (dateDash) {
+      invoice.invoice_date = dateDash[1].replace(' ', 'T') + '+05:30';
+    }
   }
 
-  // 8. Phone from Gate Pass if present
+  // 9. Phone from Gate Pass if present
   const phoneMatch = text.match(/\*{4}(\d{6})/);
   if (phoneMatch) {
     invoice.customer_phone = phoneMatch[1];
   }
 
-  // 9. Grand Total: "Grand Total(Rs) (Rounded) 8968"
-  const grandMatch = text.match(/Grand Total\(Rs\)\s*\(Rounded\)\s*(\d+)/i);
+  // 10. Summary Block Extraction (Parts Sub Total, Labour Sub Total, Taxes, Grand Total)
+  const subTotalMatch = text.match(/Sub Total\s+([\d\.,]+)\s+([\d\.,]+)/i);
+  if (subTotalMatch) {
+    invoice.parts_taxable_paise = toPaise(subTotalMatch[1]);
+    invoice.labour_taxable_paise = toPaise(subTotalMatch[2]);
+  }
+
+  const totalMatch = text.match(/Total(?:\(Rs\))?\s+([\d\.,]+)\s+([\d\.,]+)/i);
+  if (totalMatch) {
+    invoice.parts_total_paise = toPaise(totalMatch[1]);
+    invoice.labour_total_paise = toPaise(totalMatch[2]);
+  }
+
+  const grandMatch = text.match(/Grand Total(?:\(Rs\))?\s*\(Rounded\)\s*([\d,]+)/i);
   if (grandMatch) {
     invoice.net_amount_paise = toPaise(grandMatch[1]);
+  } else if (invoice.parts_total_paise > 0 || invoice.labour_total_paise > 0) {
+    invoice.net_amount_paise = invoice.parts_total_paise + invoice.labour_total_paise;
   }
 
-  // Find table cut point after invoice number line
-  let tableText = text;
-  if (invoice.invoice_number) {
-    const splitIdx = text.indexOf(invoice.invoice_number);
-    if (splitIdx !== -1) {
-      tableText = text.substring(splitIdx);
+  // CGST / SGST breakdown
+  const cgstLabour = text.match(/CGST\s*@\s*9%\s*on\s*Labor\s*value\s*of\s*[\d\.,]+\s*[\d\.,]+\s*([\d\.,]+)/i);
+  const sgstLabour = text.match(/SGST\s*@\s*9%\s*on\s*Labor\s*value\s*of\s*[\d\.,]+\s*[\d\.,]+\s*([\d\.,]+)/i);
+  const cgstPart = text.match(/CGST@9%\s*ON\s*Part\s*Value\s*of\s*[\d\.,]+\s*([\d\.,]+)/i);
+  const sgstPart = text.match(/SGST@9%\s*ON\s*Part\s*Value\s*of\s*[\d\.,]+\s*([\d\.,]+)/i);
+
+  let totalCgst = 0;
+  let totalSgst = 0;
+  if (cgstLabour) totalCgst += toPaise(cgstLabour[1]);
+  if (cgstPart) totalCgst += toPaise(cgstPart[1]);
+  if (sgstLabour) totalSgst += toPaise(sgstLabour[1]);
+  if (sgstPart) totalSgst += toPaise(sgstPart[1]);
+  invoice.cgst_paise = totalCgst;
+  invoice.sgst_paise = totalSgst;
+
+  // 11. Extract Line Items (Both Single-Line & Multi-Line Layouts)
+  function fillItemNumbers(item, taxRateStr, qtyStr, rateStr, remainingStr) {
+    const taxRate = parseFloat(taxRateStr);
+    const qty = parseFloat(qtyStr.replace(/,/g, ''));
+    item.quantity = qty;
+    item.unit_rate_paise = toPaise(rateStr);
+    item.total_value_paise = Math.round(qty * toPaise(rateStr));
+    item.cgst_rate_percent = taxRate / 2;
+    item.sgst_rate_percent = taxRate / 2;
+
+    if (remainingStr) {
+      const tokens = remainingStr.trim().split(/\s+/);
+      const lastToken = tokens[tokens.length - 1];
+      item.taxable_value_paise = toPaise(lastToken);
+      const taxPaise = Math.round(item.taxable_value_paise * (taxRate / 100));
+      item.cgst_amount_paise = Math.round(taxPaise / 2);
+      item.sgst_amount_paise = Math.round(taxPaise / 2);
+      item.total_amount_paise = item.taxable_value_paise + taxPaise;
     }
   }
 
-  // Split into parts section and labour section
-  const labourIdx = tableText.search(/Labour and Services|Labour Invoice/i);
-  const partsText = labourIdx !== -1 ? tableText.substring(0, labourIdx) : tableText;
-  const labourText = labourIdx !== -1 ? tableText.substring(labourIdx) : '';
+  const partsIdx = text.search(/Part Invoice/i);
+  const labourIdx = text.search(/Labour and Services|Labour Invoice/i);
+  const summaryIdx = text.search(/Sub Total/i);
 
-  // Extract Parts
-  const partRowRegex = /(?:^|\n)\s*(\d{1,2})\s+([A-Z0-9]+)\s+([\s\S]+?)\s+(\d{4,8})\s+(\d+)%\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)/g;
-  let m;
-  while ((m = partRowRegex.exec(partsText)) !== null) {
-    const partCode = m[2].trim();
-    const partDesc = m[3].replace(/\s+/g, ' ').trim();
-    const hsn = m[4].trim();
-    const taxRate = parseFloat(m[5]);
-    const qty = parseFloat(m[6].replace(/,/g, ''));
-    const rate = m[7];
-    const disc = m[8];
-    const taxable = m[9];
-    
-    const taxablePaise = toPaise(taxable);
-    const taxPaise = Math.round(taxablePaise * (taxRate / 100));
-    const halfTax = Math.round(taxPaise / 2);
-    const totalAmountPaise = taxablePaise + taxPaise;
+  const partsText = partsIdx !== -1 && labourIdx !== -1 ? text.slice(partsIdx, labourIdx) : '';
+  const labourText = labourIdx !== -1 && summaryIdx !== -1 ? text.slice(labourIdx, summaryIdx) : '';
 
-    invoice.line_items.push({
-      item_type: 'part',
-      item_code: partCode,
-      item_description: partDesc,
-      hsn_sac_code: hsn,
-      billing_type: 'Paid',
-      quantity: qty,
-      uom: 'PC',
-      unit_rate_paise: toPaise(rate),
-      total_value_paise: Math.round(qty * toPaise(rate)),
-      discount_paise: toPaise(disc),
-      taxable_value_paise: taxablePaise,
-      cgst_rate_percent: taxRate / 2,
-      cgst_amount_paise: halfTax,
-      sgst_rate_percent: taxRate / 2,
-      sgst_amount_paise: halfTax,
-      total_amount_paise: totalAmountPaise
-    });
+  // 11a. Parts Parsing
+  if (partsText) {
+    const singleLinePartsRegex = /(?:^|\n)\s*(\d{1,2})\s+([A-Z0-9]{8,15})\s+([\s\S]+?)\s+(\d{6,8})\s+(\d+)%\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)/g;
+    let m;
+    const format1Parts = [];
+    while ((m = singleLinePartsRegex.exec(partsText)) !== null) {
+      const taxablePaise = toPaise(m[9]);
+      const taxRate = parseFloat(m[5]);
+      const taxPaise = Math.round(taxablePaise * (taxRate / 100));
+      format1Parts.push({
+        item_type: 'part',
+        item_code: m[2].trim(),
+        item_description: m[3].replace(/\s+/g, ' ').trim(),
+        hsn_sac_code: m[4].trim(),
+        billing_type: 'Paid',
+        quantity: parseFloat(m[6].replace(/,/g, '')),
+        uom: 'PC',
+        unit_rate_paise: toPaise(m[7]),
+        total_value_paise: Math.round(parseFloat(m[6].replace(/,/g, '')) * toPaise(m[7])),
+        discount_paise: toPaise(m[8]),
+        taxable_value_paise: taxablePaise,
+        cgst_rate_percent: taxRate / 2,
+        cgst_amount_paise: Math.round(taxPaise / 2),
+        sgst_rate_percent: taxRate / 2,
+        sgst_amount_paise: Math.round(taxPaise / 2),
+        total_amount_paise: taxablePaise + taxPaise,
+      });
+    }
+
+    if (format1Parts.length > 0) {
+      invoice.line_items.push(...format1Parts);
+    } else {
+      const partLines = partsText.split('\n');
+      let current = null;
+      for (const rawLine of partLines) {
+        const line = rawLine.trim();
+        const start = line.match(/^(\d{1,2})\s+([A-Z0-9]{8,15})(?:\s+(.*))?$/);
+        if (start) {
+          if (current && (current.unit_rate_paise > 0 || current.taxable_value_paise > 0)) {
+            invoice.line_items.push(current);
+          }
+          current = {
+            item_type: 'part',
+            item_code: start[2],
+            item_description: (start[3] || '').trim(),
+            hsn_sac_code: '',
+            billing_type: 'Paid',
+            quantity: 1,
+            uom: 'PC',
+            unit_rate_paise: 0,
+            total_value_paise: 0,
+            discount_paise: 0,
+            taxable_value_paise: 0,
+            cgst_rate_percent: 9,
+            cgst_amount_paise: 0,
+            sgst_rate_percent: 9,
+            sgst_amount_paise: 0,
+            total_amount_paise: 0,
+          };
+          if (start[3]) {
+            const inlineNum = start[3].match(/^(.*?)\s+(?:(\d{6,8})\s+)?(\d+)%\s+([\d\.]+)\s+([\d\.,]+)(?:\s+([\s\S]*))?$/);
+            if (inlineNum) {
+              current.item_description = inlineNum[1].trim();
+              if (inlineNum[2]) current.hsn_sac_code = inlineNum[2];
+              fillItemNumbers(current, inlineNum[3], inlineNum[4], inlineNum[5], inlineNum[6]);
+            }
+          }
+        } else if (current) {
+          if (line.match(/^\d{4,8}$/)) {
+            current.hsn_sac_code = (current.hsn_sac_code + line).slice(0, 8);
+          } else if (line.match(/^(\d+)%\s+([\d\.]+)/)) {
+            const numMatch = line.match(/^(\d+)%\s+([\d\.]+)(?:\s+([\d\.,]+))?(?:\s+([\s\S]*))?$/);
+            if (numMatch) {
+              fillItemNumbers(current, numMatch[1], numMatch[2], numMatch[3] || '0', numMatch[4]);
+            }
+          } else if (!current.unit_rate_paise && line.length > 1 && !line.match(/^[0-9\.\s]+$/) && !line.startsWith('Part Invoice')) {
+            current.item_description += ' ' + line;
+          }
+        }
+      }
+      if (current && (current.unit_rate_paise > 0 || current.taxable_value_paise > 0)) {
+        invoice.line_items.push(current);
+      }
+    }
   }
 
-  // Extract Labour
-  const labourRowRegex = /(?:^|\n)\s*(\d{1,2})\s+([A-Z0-9]+)\s+([\s\S]+?)\s+(\d{6})\s+(\d+)%\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)/g;
-  while ((m = labourRowRegex.exec(labourText)) !== null) {
-    const opCode = m[2].trim();
-    const desc = m[3].replace(/\s+/g, ' ').trim();
-    const sac = m[4].trim();
-    const taxRate = parseFloat(m[5]);
-    const qty = parseFloat(m[6].replace(/,/g, ''));
-    const rate = m[7];
-    const disc = m[8];
-    const taxable = m[9];
+  // 11b. Labour Parsing
+  if (labourText) {
+    const singleLineLabourRegex = /(?:^|\n)\s*(\d{1,2})\s+([A-Z0-9]{8,18})\s+([\s\S]+?)\s+(9987\d{2})\s+(\d+)%\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)\s+([\d\.,]+)/g;
+    let m;
+    const format1Labour = [];
+    while ((m = singleLineLabourRegex.exec(labourText)) !== null) {
+      const taxablePaise = toPaise(m[9]);
+      const taxRate = parseFloat(m[5]);
+      const taxPaise = Math.round(taxablePaise * (taxRate / 100));
+      format1Labour.push({
+        item_type: 'labour',
+        item_code: m[2].trim(),
+        item_description: m[3].replace(/\s+/g, ' ').trim(),
+        hsn_sac_code: m[4].trim(),
+        billing_type: 'Paid',
+        quantity: parseFloat(m[6].replace(/,/g, '')),
+        uom: 'HRS',
+        unit_rate_paise: toPaise(m[7]),
+        total_value_paise: Math.round(parseFloat(m[6].replace(/,/g, '')) * toPaise(m[7])),
+        discount_paise: toPaise(m[8]),
+        taxable_value_paise: taxablePaise,
+        cgst_rate_percent: taxRate / 2,
+        cgst_amount_paise: Math.round(taxPaise / 2),
+        sgst_rate_percent: taxRate / 2,
+        sgst_amount_paise: Math.round(taxPaise / 2),
+        total_amount_paise: taxablePaise + taxPaise,
+      });
+    }
 
-    const taxablePaise = toPaise(taxable);
-    const taxPaise = Math.round(taxablePaise * (taxRate / 100));
-    const halfTax = Math.round(taxPaise / 2);
-    const totalAmountPaise = taxablePaise + taxPaise;
-
-    invoice.line_items.push({
-      item_type: 'labour',
-      item_code: opCode,
-      item_description: desc,
-      hsn_sac_code: sac,
-      billing_type: 'Paid',
-      quantity: qty,
-      uom: 'HRS',
-      unit_rate_paise: toPaise(rate),
-      total_value_paise: Math.round(qty * toPaise(rate)),
-      discount_paise: toPaise(disc),
-      taxable_value_paise: taxablePaise,
-      cgst_rate_percent: taxRate / 2,
-      cgst_amount_paise: halfTax,
-      sgst_rate_percent: taxRate / 2,
-      sgst_amount_paise: halfTax,
-      total_amount_paise: totalAmountPaise
-    });
+    if (format1Labour.length > 0) {
+      invoice.line_items.push(...format1Labour);
+    } else {
+      const labourLines = labourText.split('\n');
+      let current = null;
+      for (const rawLine of labourLines) {
+        const line = rawLine.trim();
+        const start = line.match(/^(\d{1,2})\s+([A-Z0-9]{8,18})(?:\s+(.*))?$/);
+        if (start) {
+          if (current && (current.unit_rate_paise > 0 || current.taxable_value_paise > 0)) {
+            invoice.line_items.push(current);
+          }
+          current = {
+            item_type: 'labour',
+            item_code: start[2],
+            item_description: (start[3] || '').trim(),
+            hsn_sac_code: '998729',
+            billing_type: 'Paid',
+            quantity: 1,
+            uom: 'HRS',
+            unit_rate_paise: 0,
+            total_value_paise: 0,
+            discount_paise: 0,
+            taxable_value_paise: 0,
+            cgst_rate_percent: 9,
+            cgst_amount_paise: 0,
+            sgst_rate_percent: 9,
+            sgst_amount_paise: 0,
+            total_amount_paise: 0,
+          };
+          if (start[3]) {
+            const inlineNum = start[3].match(/^(.*?)\s+(?:(\d{6,8})\s+)?(\d+)%\s+([\d\.]+)\s+([\d\.,]+)(?:\s+([\s\S]*))?$/);
+            if (inlineNum) {
+              current.item_description = inlineNum[1].trim();
+              if (inlineNum[2]) current.hsn_sac_code = inlineNum[2];
+              fillItemNumbers(current, inlineNum[3], inlineNum[4], inlineNum[5], inlineNum[6]);
+            }
+          }
+        } else if (current) {
+          if (line.match(/(?:9987\d{2}\s+)?(\d+)%\s+([\d\.]+)/)) {
+            const numMatch = line.match(/(?:9987\d{2}\s+)?(\d+)%\s+([\d\.]+)\s+([\d\.,]+)(?:\s+([\s\S]*))?$/);
+            if (numMatch) {
+              fillItemNumbers(current, numMatch[1], numMatch[2], numMatch[3] || '0', numMatch[4]);
+            }
+          } else if (!current.unit_rate_paise && line.length > 1 && !line.match(/^[0-9\.\s]+$/) && !line.startsWith('Labour and')) {
+            current.item_description += ' ' + line;
+          }
+        }
+      }
+      if (current && (current.unit_rate_paise > 0 || current.taxable_value_paise > 0)) {
+        invoice.line_items.push(current);
+      }
+    }
   }
 
-  // Totals breakdown
-  let partsTaxable = 0, partsTotal = 0, labourTaxable = 0, labourTotal = 0, cgstTotal = 0, sgstTotal = 0, discTotal = 0;
+  // Calculate totals breakdown if not already filled from summary block
+  let sumPartsTaxable = 0, sumPartsTotal = 0, sumLabourTaxable = 0, sumLabourTotal = 0;
   for (const item of invoice.line_items) {
     if (item.item_type === 'part') {
-      partsTaxable += item.taxable_value_paise;
-      partsTotal += item.total_amount_paise;
+      sumPartsTaxable += item.taxable_value_paise;
+      sumPartsTotal += item.total_amount_paise;
     } else {
-      labourTaxable += item.taxable_value_paise;
-      labourTotal += item.total_amount_paise;
+      sumLabourTaxable += item.taxable_value_paise;
+      sumLabourTotal += item.total_amount_paise;
     }
-    cgstTotal += item.cgst_amount_paise;
-    sgstTotal += item.sgst_amount_paise;
-    discTotal += item.discount_paise;
   }
 
-  invoice.parts_taxable_paise = partsTaxable;
-  invoice.parts_total_paise = partsTotal;
-  invoice.labour_taxable_paise = labourTaxable;
-  invoice.labour_total_paise = labourTotal;
-  invoice.cgst_paise = cgstTotal;
-  invoice.sgst_paise = sgstTotal;
-  invoice.discount_paise = discTotal;
+  if (invoice.parts_taxable_paise === 0) invoice.parts_taxable_paise = sumPartsTaxable;
+  if (invoice.parts_total_paise === 0) invoice.parts_total_paise = sumPartsTotal;
+  if (invoice.labour_taxable_paise === 0) invoice.labour_taxable_paise = sumLabourTaxable;
+  if (invoice.labour_total_paise === 0) invoice.labour_total_paise = sumLabourTotal;
 
   if (invoice.net_amount_paise === 0) {
-    invoice.net_amount_paise = partsTotal + labourTotal;
+    invoice.net_amount_paise = invoice.parts_total_paise + invoice.labour_total_paise;
   }
+
+  return invoice;
+}
+
+/**
+ * Parser for Tata Motors Dealership Invoices
+ */
+function parseTataInvoice(text, filename = '') {
+  const invoice = {
+    brand_name: 'Tata Motors',
+    dealer_name: 'BELLAD ENTERPRISES PRIVATE LIMITED',
+    invoice_number: null,
+    invoice_date: null,
+    job_card_number: null,
+    repair_order_number: null,
+    customer_name: null,
+    customer_phone: null,
+    registration_number: null,
+    vin: null,
+    model: null,
+    odometer_kms: null,
+    billing_type: 'Paid',
+    parts_taxable_paise: 0,
+    parts_total_paise: 0,
+    labour_taxable_paise: 0,
+    labour_total_paise: 0,
+    cgst_paise: 0,
+    sgst_paise: 0,
+    discount_paise: 0,
+    round_off_paise: 0,
+    net_amount_paise: 0,
+    line_items: []
+  };
+
+  // 1. Invoice Number
+  const invMatch = text.match(/(?:Invoice\s*Ref\.?|Invoice\s*No\.?)\s*:\s*([A-Za-z0-9]+)/i);
+  if (invMatch && invMatch[1].length > 4 && !/^(date|amount|total|gstin|pan|cin)$/i.test(invMatch[1])) {
+    invoice.invoice_number = invMatch[1].trim();
+  } else {
+    const fnMatch = filename.match(/([A-Za-z]{5,8}\d{8,12})/i);
+    if (fnMatch) invoice.invoice_number = fnMatch[1].trim();
+  }
+
+  // 2. Invoice Date
+  const dateMatch = text.match(/Invoice\s*Date\s*:\s*([0-9/.-]+)/i);
+  if (dateMatch) invoice.invoice_date = dateMatch[1].trim();
+
+  // 3. Customer Name
+  // Priority A: Gate Pass "Customer Name : <Name>"
+  const gpCustMatch = text.match(/Customer\s*Name\s*:\s*([^\n\r]+?)(?:\s+Invoice Ref|\s+Account Name|\n|$)/i);
+  if (gpCustMatch && gpCustMatch[1].trim().length > 2) {
+    invoice.customer_name = gpCustMatch[1].trim().replace(/\s{2,}/g, ' ');
+  } else {
+    // Priority B: Header line after IRN Ack Date
+    const irnCustMatch = text.match(/IRN\s*Ack\s*Date\s*:\s*[0-9/.-]+\s*\n+\s*([A-Za-z\s.]+?)(?:\n|First Floor|Phone No|Customer GSTIN)/i);
+    if (irnCustMatch && irnCustMatch[1].trim().length > 2) {
+      invoice.customer_name = irnCustMatch[1].trim().replace(/\s{2,}/g, ' ');
+    } else {
+      // Priority C: Header line after Duplicate / Original
+      const headerMatch = text.match(/(?:Duplicate\s*:For\s*Supplier|Original\s*:For\s*Recipient)\s*\n+(?:Mr\.|Mrs\.|Ms\.)?\s*([A-Za-z\s.]+?)(?:\n|Customer GSTIN|A\/C Code)/i);
+      if (headerMatch && headerMatch[1].trim().length > 2) {
+        invoice.customer_name = headerMatch[1].trim().replace(/\s{2,}/g, ' ');
+      }
+    }
+  }
+
+  // 4. Customer Phone
+  const phoneMatch = text.match(/Phone\s*No(?:\s*\([^)]*\))?\s*:\s*[, ]*([6-9]\d{9})/i);
+  if (phoneMatch) invoice.customer_phone = phoneMatch[1].trim();
+
+  // 5. Vehicle Registration (Careful: avoid IRN hash)
+  const regMatch = text.match(/Vehicle\s*(?:Regn\.?\s*)?No\s*:\s*([A-Za-z]{2}\s*\d{1,2}\s*[A-Za-z]{1,3}\s*\d{3,4})/i);
+  if (regMatch) {
+    invoice.registration_number = normalizeRegNo(regMatch[1]);
+  }
+
+  // 6. VIN / Chassis No
+  const vinMatch = text.match(/Chassis\s*No\s*:\s*([A-Za-z0-9]{17})/i);
+  if (vinMatch) invoice.vin = vinMatch[1].trim();
+
+  // 7. Model
+  const modelMatch = text.match(/(?:Model\s*Name|Model)\s*:\s*([^\n\r_]+)/i);
+  if (modelMatch) invoice.model = modelMatch[1].trim();
+
+  // 8. Job Card No
+  const jcMatch = text.match(/Job\s*Card(?:\s*No\.?|\s*\/\s*Order\s*ref)?\s*:\s*([A-Za-z0-9-]+)/i);
+  if (jcMatch) {
+    invoice.job_card_number = jcMatch[1].trim();
+    invoice.repair_order_number = jcMatch[1].trim();
+  }
+
+  // 9. Odometer
+  const odoMatch = text.match(/Kms\.?\s*:\s*(\d+)/i);
+  if (odoMatch) invoice.odometer_kms = parseInt(odoMatch[1], 10);
+
+  // 10. Totals and GST Summary
+  const grandMatch = text.match(/(?:Grand\s*Total|Invoice\s*Amount\s*:\s*Rs\.)\s*:?\s*([\d,]+\.?\d*)/i);
+  if (grandMatch) invoice.net_amount_paise = toPaise(grandMatch[1]);
+
+  const partsTaxMatch = text.match(/Parts\s*Net\s*Taxable\s*Amount\s*:\s*([\d,]+\.?\d*)/i);
+  if (partsTaxMatch) invoice.parts_taxable_paise = toPaise(partsTaxMatch[1]);
+
+  const finalPartsMatch = text.match(/Final\s*Parts\s*Invoice\s*Amount\s*:\s*([\d,]+\.?\d*)/i);
+  if (finalPartsMatch) invoice.parts_total_paise = toPaise(finalPartsMatch[1]);
+
+  const finalLabourMatch = text.match(/Final\s*Labour\s*Invoice\s*Amount\s*:\s*([\d,]+\.?\d*)/i);
+  if (finalLabourMatch) {
+    invoice.labour_total_paise = toPaise(finalLabourMatch[1]);
+  }
+
+  // Taxes
+  const cgstLabMatch = text.match(/CGST\s*on\s*Labour\s*:\s*([\d,]+\.?\d*)/i);
+  const sgstLabMatch = text.match(/SGST\s*on\s*Labour\s*:\s*([\d,]+\.?\d*)/i);
+  const cgstPartsMatch = text.match(/CGST\s*on\s*Parts\s*:\s*([\d,]+\.?\d*)/i);
+  const sgstPartsMatch = text.match(/SGST\s*on\s*Parts\s*:\s*([\d,]+\.?\d*)/i);
+
+  const cgstPaise = (cgstLabMatch ? toPaise(cgstLabMatch[1]) : 0) + (cgstPartsMatch ? toPaise(cgstPartsMatch[1]) : 0);
+  const sgstPaise = (sgstLabMatch ? toPaise(sgstLabMatch[1]) : 0) + (sgstPartsMatch ? toPaise(sgstPartsMatch[1]) : 0);
+  invoice.cgst_paise = cgstPaise;
+  invoice.sgst_paise = sgstPaise;
+
+  if (invoice.labour_total_paise > 0) {
+    const labTaxPaise = (cgstLabMatch ? toPaise(cgstLabMatch[1]) : 0) + (sgstLabMatch ? toPaise(sgstLabMatch[1]) : 0);
+    invoice.labour_taxable_paise = Math.max(0, invoice.labour_total_paise - labTaxPaise);
+  }
+
+  // Build line items from parts and labour if summary exists
+  if (invoice.parts_taxable_paise > 0) {
+    invoice.line_items.push({
+      item_type: 'part',
+      description: 'Tata Genuine Spare Parts (Consolidated)',
+      taxable_value_paise: invoice.parts_taxable_paise,
+      cgst_rate_percent: 9,
+      sgst_rate_percent: 9,
+      cgst_amount_paise: cgstPartsMatch ? toPaise(cgstPartsMatch[1]) : Math.round(invoice.parts_taxable_paise * 0.09),
+      sgst_amount_paise: sgstPartsMatch ? toPaise(sgstPartsMatch[1]) : Math.round(invoice.parts_taxable_paise * 0.09),
+      total_amount_paise: invoice.parts_total_paise || Math.round(invoice.parts_taxable_paise * 1.18)
+    });
+  }
+
+  if (invoice.labour_taxable_paise > 0) {
+    invoice.line_items.push({
+      item_type: 'labour',
+      description: 'Tata Workshop Labour & Services (Consolidated)',
+      taxable_value_paise: invoice.labour_taxable_paise,
+      cgst_rate_percent: 9,
+      sgst_rate_percent: 9,
+      cgst_amount_paise: cgstLabMatch ? toPaise(cgstLabMatch[1]) : Math.round(invoice.labour_taxable_paise * 0.09),
+      sgst_amount_paise: sgstLabMatch ? toPaise(sgstLabMatch[1]) : Math.round(invoice.labour_taxable_paise * 0.09),
+      total_amount_paise: invoice.labour_total_paise || Math.round(invoice.labour_taxable_paise * 1.18)
+    });
+  }
+
+  invoice.summary = {
+    parts_count: invoice.parts_taxable_paise > 0 ? 1 : 0,
+    labour_count: invoice.labour_taxable_paise > 0 ? 1 : 0,
+    parts_total_rupees: invoice.parts_total_paise / 100,
+    labour_total_rupees: invoice.labour_total_paise / 100,
+    parts_taxable_rupees: invoice.parts_taxable_paise / 100,
+    labour_taxable_rupees: invoice.labour_taxable_paise / 100,
+    net_payable_rupees: invoice.net_amount_paise / 100
+  };
+
+  return invoice;
+}
+
+/**
+ * Parser for MG Motors Dealership Invoices
+ */
+function parseMgInvoice(text, filename = '') {
+  const invoice = {
+    brand_name: 'MG Motors',
+    dealer_name: 'BELLAD AND COMPANY PVT LTD (MG)',
+    invoice_number: null,
+    invoice_date: null,
+    job_card_number: null,
+    repair_order_number: null,
+    customer_name: null,
+    customer_phone: null,
+    registration_number: null,
+    vin: null,
+    model: null,
+    odometer_kms: null,
+    billing_type: 'Paid',
+    parts_taxable_paise: 0,
+    parts_total_paise: 0,
+    labour_taxable_paise: 0,
+    labour_total_paise: 0,
+    cgst_paise: 0,
+    sgst_paise: 0,
+    discount_paise: 0,
+    round_off_paise: 0,
+    net_amount_paise: 0,
+    line_items: []
+  };
+
+  // 1. Invoice Number (e.g. S311S26102517)
+  const invMatch = text.match(/Invoice\s*No\.?\s*:\s*([A-Za-z0-9]+)/i);
+  if (invMatch && !/^(date|amount|total|gstin|pan|cin)$/i.test(invMatch[1].trim())) {
+    invoice.invoice_number = invMatch[1].trim();
+  }
+
+  // 2. RO Number / Job Card (e.g. S311323589)
+  const roMatch = text.match(/RO\s*No\.?\s*:\s*([A-Za-z0-9]+)/i);
+  if (roMatch) {
+    invoice.job_card_number = roMatch[1].trim();
+    invoice.repair_order_number = roMatch[1].trim();
+    if (!invoice.invoice_number) {
+      invoice.invoice_number = roMatch[1].trim();
+    }
+  }
+
+  // 3. Invoice Date
+  const dateMatch = text.match(/Invoice\s*Date\s*:\s*([0-9.]+)/i);
+  if (dateMatch) invoice.invoice_date = dateMatch[1].trim();
+
+  // 4. Customer Name & Phone
+  const billMatch = text.match(/Bill\s*to\s*:\s*\n*(?:Cust\s*ID\s*:\s*\d+\s*\n*)?([A-Za-z. ]+?)(?:\s*\n|#|\d{2,}|Bellary|Hubli|Karnataka|Mobile)/i);
+  if (billMatch && billMatch[1].trim().length > 2) {
+    invoice.customer_name = billMatch[1].trim().replace(/\s*\.$/, '').replace(/\s{2,}/g, ' ');
+  }
+
+  const phoneMatch = text.match(/Mobile\s*:\s*([6-9]\d{9})/i);
+  if (phoneMatch) invoice.customer_phone = phoneMatch[1].trim();
+
+  // 5. Registration Number
+  const regMatch = text.match(/Reg\s*No\.?\s*:\s*([A-Za-z0-9]+)/i);
+  if (regMatch) invoice.registration_number = normalizeRegNo(regMatch[1]);
+
+  // 6. VIN (17 alphanumeric, excluding CIN which starts with U)
+  const vinMatch = text.match(/VIN\s*:\s*([A-HJ-NPR-Z0-9]{17})/i);
+  if (vinMatch) invoice.vin = vinMatch[1].trim();
+
+  // 7. Model
+  const modelMatch = text.match(/Model\s*:\s*([^\n\r]+)/i);
+  if (modelMatch) invoice.model = modelMatch[1].trim();
+
+  // 8. Odometer
+  const odoMatch = text.match(/Mileage\s*:\s*(\d+)/i);
+  if (odoMatch) invoice.odometer_kms = parseInt(odoMatch[1], 10);
+
+  // 9. Totals & GST Summary
+  const taxAmtMatch = text.match(/Taxable\s*amount\s*:\s*([\d,]+\.?\d*)\s+([\d,]+\.?\d*)/i);
+  if (taxAmtMatch) {
+    invoice.parts_taxable_paise = toPaise(taxAmtMatch[1]);
+    invoice.labour_taxable_paise = toPaise(taxAmtMatch[2]);
+  }
+
+  const cgstMatch = text.match(/CGST\s*amount\s*:\s*([\d,]+\.?\d*)\s+([\d,]+\.?\d*)/i);
+  const sgstMatch = text.match(/SGST\s*amount\s*:\s*([\d,]+\.?\d*)\s+([\d,]+\.?\d*)/i);
+  if (cgstMatch && sgstMatch) {
+    const cgstTotal = toPaise(cgstMatch[1]) + toPaise(cgstMatch[2]);
+    const sgstTotal = toPaise(sgstMatch[1]) + toPaise(sgstMatch[2]);
+    invoice.cgst_paise = cgstTotal;
+    invoice.sgst_paise = sgstTotal;
+  }
+
+  const grandMatch = text.match(/(?:Grand\s*Total|Net\s*Payable\s*Amount)\s*:\s*([\d,]+\.?\d*)/i);
+  if (grandMatch) invoice.net_amount_paise = toPaise(grandMatch[1]);
+
+  invoice.parts_total_paise = Math.round(invoice.parts_taxable_paise * 1.18);
+  invoice.labour_total_paise = Math.round(invoice.labour_taxable_paise * 1.18);
+
+  if (invoice.parts_taxable_paise > 0) {
+    invoice.line_items.push({
+      item_type: 'part',
+      description: 'MG Genuine Parts & Consumables',
+      taxable_value_paise: invoice.parts_taxable_paise,
+      cgst_rate_percent: 9,
+      sgst_rate_percent: 9,
+      cgst_amount_paise: Math.round(invoice.parts_taxable_paise * 0.09),
+      sgst_amount_paise: Math.round(invoice.parts_taxable_paise * 0.09),
+      total_amount_paise: invoice.parts_total_paise
+    });
+  }
+
+  if (invoice.labour_taxable_paise > 0) {
+    invoice.line_items.push({
+      item_type: 'labour',
+      description: 'MG Workshop Labour & Services',
+      taxable_value_paise: invoice.labour_taxable_paise,
+      cgst_rate_percent: 9,
+      sgst_rate_percent: 9,
+      cgst_amount_paise: Math.round(invoice.labour_taxable_paise * 0.09),
+      sgst_amount_paise: Math.round(invoice.labour_taxable_paise * 0.09),
+      total_amount_paise: invoice.labour_total_paise
+    });
+  }
+
+  invoice.summary = {
+    parts_count: invoice.parts_taxable_paise > 0 ? 1 : 0,
+    labour_count: invoice.labour_taxable_paise > 0 ? 1 : 0,
+    parts_total_rupees: invoice.parts_total_paise / 100,
+    labour_total_rupees: invoice.labour_total_paise / 100,
+    parts_taxable_rupees: invoice.parts_taxable_paise / 100,
+    labour_taxable_rupees: invoice.labour_taxable_paise / 100,
+    net_payable_rupees: invoice.net_amount_paise / 100
+  };
 
   return invoice;
 }
@@ -469,7 +950,7 @@ function parseHyundaiInvoice(text) {
 /**
  * Generic Fallback Parser for Dealership Invoices
  */
-function parseGenericInvoice(text) {
+function parseGenericInvoice(text, originalFilename = '') {
   const brand = detectBrandAndFormat(text);
   const invoice = {
     brand_name: brand,
@@ -497,19 +978,73 @@ function parseGenericInvoice(text) {
     line_items: []
   };
 
-  const invMatch = text.match(/(?:Invoice\s*No|Invoice\s*Number)[\s:]*([A-Z0-9]+)/i);
-  if (invMatch) invoice.invoice_number = invMatch[1].trim();
+  // 1. Customer Name
+  const custNameMatch = 
+    text.match(/Customer\s*Name\s*[:\-]?\s*([A-Za-z\s.]{3,50}?)(?:\s+Invoice Ref|\s+Account Name|\s+Cust ID|\n|$)/i) ||
+    text.match(/Bill\s*to\s*:\s*\n*(?:Cust\s*ID\s*:\s*\d+\s*\n*)?([A-Za-z. ]{3,50}?)(?:\s*\n|#|\d{2,}|Bellary|Hubli|Karnataka|Mobile)/i) ||
+    text.match(/(?:Client|Customer|Party)\s*Name\s*[:\-]?\s*([A-Za-z\s.]{3,50})/i) ||
+    text.match(/Name\s*[:\-]\s*([A-Za-z\s.]{3,40})/i);
 
-  const regMatch = text.match(/([A-Z]{2}\s*\d{1,2}\s*[A-Z]{1,3}\s*\d{3,4})/i);
-  if (regMatch) invoice.registration_number = normalizeRegNo(regMatch[1]);
+  if (custNameMatch) {
+    const candidate = custNameMatch[1].trim().replace(/\s{2,}/g, ' ');
+    if (candidate.length > 2 && !/^(VIN|INVOICE|ORIGINAL|DUPLICATE|TAX|TOTAL|DATE|BELLAD|DEALER)/i.test(candidate)) {
+      invoice.customer_name = candidate;
+    }
+  }
 
-  const vinMatch = text.match(/([A-HJ-NPR-Z0-9]{17})/);
-  if (vinMatch) invoice.vin = vinMatch[1].trim();
+  // 2. Customer Phone
+  const phoneMatch = text.match(/(?:Mobile|Phone|Mob|Ph|Contact)(?:\s*No)?(?:\s*\([^)]*\))?\s*[:\-]?\s*[, ]*([6-9]\d{9})/i);
+  if (phoneMatch) invoice.customer_phone = phoneMatch[1].trim();
 
-  const kmsMatch = text.match(/(?:Kms|Kilometers|Odometer)[\s:]*(\d+)/i);
+  // 3. Invoice Number
+  const invMatch = text.match(/(?:Invoice\s*No|Invoice\s*Number|Invoice\s*Ref\.?|Bill\s*No)[\s:\.]*([A-Za-z0-9\/-]+)/i);
+  if (invMatch && !/^(date|amount|total|no|gstin|pan|cin)$/i.test(invMatch[1].trim())) {
+    invoice.invoice_number = invMatch[1].trim();
+  } else {
+    const fnMatch = String(originalFilename).match(/\b([A-Za-z0-9_-]{6,25})\b/i);
+    if (fnMatch && !/^(invoice|bill|scan|pdf)/i.test(fnMatch[1])) {
+      invoice.invoice_number = fnMatch[1].trim();
+    }
+  }
+
+  // 4. Vehicle Registration
+  const regLabelMatch = text.match(/(?:Vehicle\s*No|Vehicle\s*Regn\.?\s*No|Registration\s*No|Reg\s*No\.?)\s*[:\-]?\s*([A-Za-z0-9 -]+)/i);
+  if (regLabelMatch) {
+    const norm = normalizeRegNo(regLabelMatch[1]);
+    if (norm) invoice.registration_number = norm;
+  }
+  if (!invoice.registration_number) {
+    const regMatch = text.match(/\b([A-Za-z]{2}\s*\d{1,2}\s*[A-Za-z]{1,3}\s*\d{3,4})\b/i);
+    if (regMatch) invoice.registration_number = normalizeRegNo(regMatch[1]);
+  }
+
+  // 5. VIN / Chassis
+  const vinLabelMatch = text.match(/(?:Chassis\s*No|VIN)\s*[:\-]?\s*([A-HJ-NPR-Z0-9]{17})/i);
+  if (vinLabelMatch) {
+    invoice.vin = vinLabelMatch[1].trim();
+  } else {
+    const all17 = text.match(/\b([A-HJ-NPR-Z0-9]{17})\b/g) || [];
+    const validVin = all17.find(c => !c.startsWith('U') && !c.startsWith('L') && /\d/.test(c) && /[A-Z]/.test(c));
+    if (validVin) invoice.vin = validVin;
+  }
+
+  // 6. Model
+  const modelMatch = text.match(/(?:Model\s*Name|Model)\s*[:\-]?\s*([^\n\r_]+)/i);
+  if (modelMatch) invoice.model = modelMatch[1].trim();
+
+  // 7. Odometer
+  const kmsMatch = text.match(/(?:Kms|Kilometers|Odometer|Mileage)[\s:\.]*(\d+)/i);
   if (kmsMatch) invoice.odometer_kms = parseInt(kmsMatch[1], 10);
 
-  const netMatch = text.match(/(?:Total\s*Amount|Net\s*Amount|Invoice\s*Amount|Grand\s*Total)[\s:]*([\d,]+\.?\d*)/i);
+  // 8. Job Card / RO
+  const jcMatch = text.match(/(?:Job\s*Card(?:\s*No\.?|\s*\/\s*Order\s*ref)?|RO\s*No\.?)\s*[:\-]?\s*([A-Za-z0-9-]+)/i);
+  if (jcMatch) {
+    invoice.job_card_number = jcMatch[1].trim();
+    invoice.repair_order_number = jcMatch[1].trim();
+  }
+
+  // 9. Totals
+  const netMatch = text.match(/(?:Grand\s*Total|Invoice\s*Amount\s*:\s*Rs\.|Total\s*Amount|Net\s*Amount|Net\s*Payable\s*Amount)[\s:\.]*(?:Rs\.?)?\s*([\d,]+\.?\d*)/i);
   if (netMatch) invoice.net_amount_paise = toPaise(netMatch[1]);
 
   return invoice;
@@ -528,9 +1063,13 @@ async function parseInvoicePdf(pdfBuffer, originalFilename = 'invoice.pdf') {
   if (brand === 'Hero MotoCorp') {
     parsedData = parseHeroInvoice(text);
   } else if (brand === 'Hyundai') {
-    parsedData = parseHyundaiInvoice(text);
+    parsedData = parseHyundaiInvoice(text, originalFilename);
+  } else if (brand === 'Tata Motors') {
+    parsedData = parseTataInvoice(text, originalFilename);
+  } else if (brand === 'MG Motors') {
+    parsedData = parseMgInvoice(text, originalFilename);
   } else {
-    parsedData = parseGenericInvoice(text);
+    parsedData = parseGenericInvoice(text, originalFilename);
   }
 
   parsedData.raw_pdf_name = originalFilename;
@@ -1195,6 +1734,8 @@ module.exports = {
   detectBrandAndFormat,
   parseHeroInvoice,
   parseHyundaiInvoice,
+  parseTataInvoice,
+  parseMgInvoice,
   parseGenericInvoice,
   parseInvoicePdf,
   saveInvoiceAndCatalog,

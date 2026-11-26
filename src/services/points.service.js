@@ -108,6 +108,18 @@ class PointsService {
     const activeCategory = (category || type || 'sale').toLowerCase();
     const activeType = type || (activeCategory === 'sale' ? 'sale' : 'service');
 
+    // Security Wall: Numerical Bounds & Input Sanitization
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0 || !Number.isFinite(numAmount) || numAmount > 50000000) {
+      throw { statusCode: 400, message: 'Invalid transaction amount: Amount must be greater than zero and up to ₹50,000,000.' };
+    }
+    if (taxable_amount != null) {
+      const numTax = Number(taxable_amount);
+      if (isNaN(numTax) || numTax < 0 || !Number.isFinite(numTax) || numTax > 50000000) {
+        throw { statusCode: 400, message: 'Invalid taxable amount: Taxable amount cannot be negative.' };
+      }
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -132,8 +144,8 @@ class PointsService {
       const hasIdempotencyCol = cols.has('idempotency_key');
       const hasRateSnapshotCol = cols.has('redemption_rate_snapshot');
 
-      // 0. Idempotency & Deduplication Check (LOOP-09 Fix)
-      if (idempotency_key || reference_id) {
+      // 0. Idempotency & Deduplication Check (LOOP-09 Fix & Anti-Replay Defense Wall)
+      if (idempotency_key || reference_id || receipt_no) {
         let dedupClauses = [];
         let dedupParams = [tenant_id];
 
@@ -147,6 +159,12 @@ class PointsService {
           dedupParams.push(`%${reference_id}%`);
           dedupParams.push(ledgerType);
           dedupClauses.push(`(${refCol} IS NOT NULL AND (${refCol} = $${dedupParams.length - 2} OR ${refCol} LIKE $${dedupParams.length - 1}) AND ${typeCol} = $${dedupParams.length})`);
+        }
+
+        if (receipt_no && cols.has('receipt_no')) {
+          dedupParams.push(receipt_no.trim());
+          dedupParams.push(ledgerType);
+          dedupClauses.push(`(receipt_no IS NOT NULL AND UPPER(receipt_no) = UPPER($${dedupParams.length - 1}) AND ${typeCol} = $${dedupParams.length})`);
         }
 
         if (dedupClauses.length > 0) {

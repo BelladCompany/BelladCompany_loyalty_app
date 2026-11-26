@@ -1,17 +1,17 @@
-# Graph Report - final-loyaly-app-nov  (2026-11-25)
+# Graph Report - final-loyaly-app-nov  (2026-11-26)
 
 ## Corpus Check
-- 397 files · ~339,606 words
+- 406 files · ~343,889 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: (none) 9, .example 2, .csv 2)
 
 ## Summary
-- 2315 nodes · 4525 edges · 136 communities (98 shown, 38 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 76 edges (avg confidence: 0.88)
+- 2349 nodes · 4545 edges · 142 communities (103 shown, 39 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 78 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b0a81941`
+- Built from commit: `320fa42a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -20,7 +20,7 @@
 - db.js
 - react
 - invoiceV2.controller.js
-- customer.service.js
+- d_kavya_k_bellad_p_devops_apps_loyalty_loyalty_backup_src_final_loyaly_app_nov_src_config_db_pool
 - IntegrationController
 - environment
 - rules.controller.js
@@ -33,36 +33,36 @@
 - Automobile Dealership Loyalty Program — Design System
 - rateLimiter.js
 - App
-- ReferralService
+- .getCustomerById
 - package.json
 - kyc.routes.js
-- integration.service.js
+- VehiclePointsEngine
 - containers
 - annotations
 - scopeBranchAccess
 - app.js
 - CampaignEngineService
-- brand.routes.js
-- hashIdentifier
+- copy-data.js
+- customer.service.js
 - SYSTEM AUDIT & ARCHITECTURE SPECIFICATION (PHASE 0 - REVISED & EXPANDED)
 - data
-- RealBooksService
+- ref_path
 - NetworkPolicy database-isolation-policy
 - MULTI-TENANT SAAS ARCHITECTURE & IMPLEMENTATION SPECIFICATION (PHASE 1 - REVISED)
 - GiftEngineService
-- AdminController
+- hashIdentifier
 - MasterEditorController
 - redemption.service.js
 - Bellad & Co. Dealership Loyalty & Rewards Platform
 - services
 - StandaloneMasterEditorPortal
-- env.js
+- RealBooksService
 - KycController
 - ports
 - ports
 - AddReceiptModal
 - CorrectionService
-- copy-data.js
+- AdminController
 - PortalDashboardScreen.jsx
 - NotificationService
 - pg
@@ -73,7 +73,7 @@
 - auth.js
 - reltigrow.provider.js
 - containers
-- VehiclePointsEngine
+- ReferralService
 - labels
 - SearchService
 - AppSheetSyncEngine
@@ -82,9 +82,9 @@
 - initContainers
 - scripts
 - create-before-gst-backup.js
-- ref_fs
+- export_all_tables_json.js
 - RedemptionEligibilityService
-- import.routes.js
+- invoiceV2.routes.js
 - run-migration-012.js
 - labels
 - PersistentVolumeClaim postgres-pvc
@@ -95,7 +95,7 @@
 - TenantController
 - PersistentVolumeClaim postgres-pvc
 - Skeleton.jsx
-- run-migration-019.js
+- GiftCardService
 - OfferService
 - ErrorBoundary
 - Project Context: Multi-Tenant Loyalty App Builder Platform (SaaS)
@@ -103,21 +103,21 @@
 - labels
 - RealBooksClient
 - VehicleController
-- engines
-- ref_path
+- package.json
+- run-migration-016.js
 - template
 - livenessProbe
 - readinessProbe
 - PlatformLedgerService
 - app.js
 - Loyalty App — Audit Brief for Claude Code
-- BranchController
-- run_migration_074.js
-- RedemptionController
+- branch.routes.js
+- director.routes.js
+- firewall.js
 - BuilderErrorBoundary
 - fix-login.js
 - strategy
-- run-migration-016.js
+- BrandController
 - apply-bellad-branches.js
 - run-migrations-010-011.js
 - reset-render.js
@@ -125,36 +125,42 @@
 - CashierDashboard
 - startupProbe
 - appsheet.js
-- correction.routes.js
-- NotificationController
-- OPERATIONS RUNBOOK: WHITE-LABEL LOYALTY PLATFORM & STUDIO
+- run-migration-018.js
+- ref_fs
+- customerPortal.controller.js
 - baseline-migrations.js
+- OPERATIONS RUNBOOK: WHITE-LABEL LOYALTY PLATFORM & STUDIO
 - src/index.js
-- CustomerController
 - sync-columns.js
 - fetch-sheet.js
 - client/vercel.json
 - compare-counts.js
 - SaaS Loyalty App Builder: Implementation Progress
-- director.routes.js
-- googleSheets.service.js
-- api.test.js
+- AppSheetPullService
+- uploadCorrectionProof.js
+- RealBooksSegmentResolver
 - _tmp_schema.js
 - deploy.sh script
-- CashierInviteService
-- auth.controller.js
+- cashierInvite.service.js
+- RedemptionController
+- 8.1 Queue Implementation Analysis
+- run-migration-017.js
+- db-backup.js
+- run-migration-019.js
+- NotificationController
+- api.test.js
 
 ## God Nodes (most connected - your core abstractions)
-1. `ApiService` - 208 edges
-2. `{ Pool }` - 120 edges
+1. `ApiService` - 206 edges
+2. `{ Pool }` - 113 edges
 3. `react` - 57 edges
 4. `lucide-react` - 48 edges
 5. `App()` - 34 edges
 6. `express` - 33 edges
 7. `MasterEditorController` - 30 edges
-8. `NotificationService` - 29 edges
-9. `authenticateToken()` - 29 edges
-10. `ReferralService` - 28 edges
+8. `authenticateToken()` - 30 edges
+9. `NotificationService` - 28 edges
+10. `ReferralService` - 27 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `9.1 Customer Merge Mechanics (`merge.service.js:203`)` --references--> `MergeService`  [INFERRED]
@@ -175,14 +181,14 @@
 - 3-file cycle: `src/services/customer.service.js -> src/services/transaction.service.js -> src/services/referral.service.js -> src/services/customer.service.js`
 - 4-file cycle: `src/services/customer.service.js -> src/services/transaction.service.js -> src/services/vehicleSalesPoints.service.js -> src/services/notification.service.js -> src/services/customer.service.js`
 - 4-file cycle: `src/services/appsheetPull.service.js -> src/services/points.service.js -> src/services/notification.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
-- 4-file cycle: `src/services/customer.service.js -> src/services/transaction.service.js -> src/services/points.service.js -> src/services/notification.service.js -> src/services/customer.service.js`
 - 4-file cycle: `src/services/customer.service.js -> src/services/transaction.service.js -> src/services/referral.service.js -> src/services/notification.service.js -> src/services/customer.service.js`
+- 4-file cycle: `src/services/customer.service.js -> src/services/transaction.service.js -> src/services/points.service.js -> src/services/notification.service.js -> src/services/customer.service.js`
 - 4-file cycle: `src/services/appsheetPull.service.js -> src/services/transaction.service.js -> src/services/referral.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
 - 5-file cycle: `src/services/appsheetPull.service.js -> src/services/transaction.service.js -> src/services/vehicleSalesPoints.service.js -> src/services/notification.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
-- 5-file cycle: `src/services/appsheetPull.service.js -> src/services/transaction.service.js -> src/services/points.service.js -> src/services/notification.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
 - 5-file cycle: `src/services/appsheetPull.service.js -> src/services/transaction.service.js -> src/services/referral.service.js -> src/services/notification.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
+- 5-file cycle: `src/services/appsheetPull.service.js -> src/services/transaction.service.js -> src/services/points.service.js -> src/services/notification.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
 
-## Communities (136 total, 38 thin omitted)
+## Communities (142 total, 39 thin omitted)
 
 ### Community 0 - "ApiService"
 Cohesion: 0.03
@@ -190,23 +196,19 @@ Nodes (9): EarnPointsModal(), PortalDashboardScreen(), SendGiftModal(), RulesStu
 
 ### Community 1 - "db.js"
 Cohesion: 0.04
-Nodes (16): assert, parseDateRobust(), runRepair(), DUMMY_MODELS, runTests(), assert, parseDmsDate(), updatePurchaseDates() (+8 more)
+Nodes (14): bcrypt, parseDateRobust(), runRepair(), DUMMY_MODELS, runTests(), parseDmsDate(), updatePurchaseDates(), bcrypt (+6 more)
 
 ### Community 2 - "react"
 Cohesion: 0.08
 Nodes (31): RaiseCorrectionModal(), RequestKycModal(), DICTIONARY, Button(), ConfirmationModal(), CopyButton(), CustomerSummaryCard(), DataTable() (+23 more)
 
 ### Community 3 - "invoiceV2.controller.js"
-Cohesion: 0.17
-Nodes (13): addToAdvisorQueue(), detectBrandAndFormat(), extractTextFromPdf(), fs, normalizeRegNo(), parseGenericInvoice(), parseHeroInvoice(), parseHyundaiInvoice() (+5 more)
+Cohesion: 0.16
+Nodes (16): addToAdvisorQueue(), detectBrandAndFormat(), extractTextFromPdf(), fs, normalizeRegNo(), parseGenericInvoice(), parseHeroInvoice(), parseHyundaiInvoice() (+8 more)
 
-### Community 4 - "customer.service.js"
-Cohesion: 0.10
-Nodes (15): bcrypt, bcryptjs, bcrypt, testReferralFlow(), bcrypt, bcrypt, jwt, express (+7 more)
-
-### Community 5 - "IntegrationController"
-Cohesion: 0.08
-Nodes (6): IntegrationController, authenticateApiKey(), requireScope(), express, router, IntegrationService
+### Community 4 - "d_kavya_k_bellad_p_devops_apps_loyalty_loyalty_backup_src_final_loyaly_app_nov_src_config_db_pool"
+Cohesion: 0.09
+Nodes (8): bcrypt, crypto, jwt, crypto, authenticateApiKey(), requireScope(), express, router
 
 ### Community 6 - "environment"
 Cohesion: 0.04
@@ -230,7 +232,7 @@ Nodes (39): scaleDown, scaleUp, HorizontalPodAutoscaler backend-hpa, HorizontalP
 
 ### Community 11 - "schemas.js"
 Cohesion: 0.07
-Nodes (36): validate(), { ZodError }, express, router, express, router, express, router (+28 more)
+Nodes (37): loginRateLimiter(), validate(), { ZodError }, express, router, express, router, express (+29 more)
 
 ### Community 12 - "client/package.json"
 Cohesion: 0.07
@@ -245,28 +247,28 @@ Cohesion: 0.05
 Nodes (35): 1.1 Action Colors, 1.2 Surface Colors, 1.3 Text (Ink) Colors, 1.4 Sidebar Colors, 1. Color Palette — Light Theme Only, 2.1 Scale, 2. Typography, 3. Spacing Scale (+27 more)
 
 ### Community 15 - "rateLimiter.js"
-Cohesion: 0.09
-Nodes (23): appsheetIpRequestCounts, giftCardRateLimiter(), giftCardRequestCounts, globalApiRateLimiter(), globalApiRequestCounts, ipRequestCounts, loginIpRequestCounts, otpRequestCounts (+15 more)
+Cohesion: 0.07
+Nodes (31): appsheetIpRequestCounts, giftCardRateLimiter(), giftCardRequestCounts, globalApiRateLimiter(), globalApiRequestCounts, ipRequestCounts, kycRateLimiter(), loginIpRequestCounts (+23 more)
 
 ### Community 16 - "App"
 Cohesion: 0.13
 Nodes (10): App(), CustomerPortalScreen(), ALL_DEALERSHIP_BRANCHES, ALL_DEALERSHIP_BRANDS, BRAND_ICONS, PublicOffersScreen(), GiftCardsScreen(), LoginScreen() (+2 more)
 
-### Community 17 - "ReferralService"
-Cohesion: 0.05
-Nodes (7): runTest(), testReferralWhatsAppFlow(), CustomerPortalController, GiftCardController, ReferralController, GiftCardService, ReferralService
+### Community 17 - ".getCustomerById"
+Cohesion: 0.18
+Nodes (4): testGetCustomer(), AppSheetSearchService, MergeService, TierService
 
 ### Community 18 - "package.json"
-Cohesion: 0.09
-Nodes (28): author, dependencies, bcryptjs@^2.4.3, cors@^2.8.5, dotenv@^16.4.5, express@^4.19.2, helmet@^7.1.0, jsonwebtoken@^9.0.2 (+20 more)
+Cohesion: 0.11
+Nodes (18): dependencies, bcryptjs@^2.4.3, cors@^2.8.5, express@^4.19.2, helmet@^7.1.0, jsonwebtoken@^9.0.2, multer@^2.3.0, pdf-parse@^2.4.5 (+10 more)
 
 ### Community 19 - "kyc.routes.js"
-Cohesion: 0.18
-Nodes (9): kycRateLimiter(), fs, multer, path, storage, uploadDir, uploadKycProof, express (+1 more)
+Cohesion: 0.29
+Nodes (5): fs, multer, path, storage, uploadDir
 
-### Community 20 - "integration.service.js"
-Cohesion: 0.06
-Nodes (13): 3. Exhaustive Loophole & Security Vulnerability Audit (LOOP-01 to LOOP-25), main(), testGetCustomer(), testPhase2(), testPhase4ReferralSlabs(), runVerification(), PointsController, TransactionController (+5 more)
+### Community 20 - "VehiclePointsEngine"
+Cohesion: 0.10
+Nodes (11): assert, fixAndVerify(), recalculateAllVehicleSales(), assert, assert, assert, runRegressionSuite(), runVerification() (+3 more)
 
 ### Community 21 - "containers"
 Cohesion: 0.07
@@ -277,36 +279,32 @@ Cohesion: 0.07
 Nodes (27): cert-manager.io/cluster-issuer, kubernetes.io/ingress.class, nginx.ingress.kubernetes.io/proxy-body-size, nginx.ingress.kubernetes.io/proxy-read-timeout, nginx.ingress.kubernetes.io/proxy-send-timeout, nginx.ingress.kubernetes.io/ssl-redirect, nginx.ingress.kubernetes.io/websocket-services, apiVersion (+19 more)
 
 ### Community 23 - "scopeBranchAccess"
-Cohesion: 0.21
-Nodes (6): testPhase6Reports(), ReportController, isAdminOrDirector(), scopeBranchAccess(), express, ReportService
+Cohesion: 0.19
+Nodes (7): testPhase6Reports(), ReportController, isAdminOrDirector(), scopeBranchAccess(), express, router, ReportService
 
 ### Community 24 - "app.js"
-Cohesion: 0.13
-Nodes (17): express, authenticateToken(), publicBalanceRateLimiter(), requireRole(), uploadCorrectionProof, express, router, express (+9 more)
+Cohesion: 0.08
+Nodes (26): express, authenticateToken(), publicBalanceRateLimiter(), requireRole(), uploadCorrectionProof, express, router, express (+18 more)
 
 ### Community 25 - "CampaignEngineService"
 Cohesion: 0.19
 Nodes (4): seed(), runCampaignSuite(), CampaignController, CampaignEngineService
 
-### Community 26 - "brand.routes.js"
-Cohesion: 0.18
-Nodes (5): BrandController, express, router, createBrandSchema, updateBrandSchema
-
-### Community 27 - "hashIdentifier"
-Cohesion: 0.12
-Nodes (19): fetchAppSheetPRDoneRows(), parseDmsDate(), wipeAndSync(), bcrypt, testPhase3Kyc(), seedRahulSharma(), bcrypt, seed() (+11 more)
+### Community 27 - "customer.service.js"
+Cohesion: 0.06
+Nodes (11): 3. Exhaustive Loophole & Security Vulnerability Audit (LOOP-01 to LOOP-25), testPhase2(), runTest(), CustomerController, PointsController, TransactionController, bcrypt, CustomerService (+3 more)
 
 ### Community 28 - "SYSTEM AUDIT & ARCHITECTURE SPECIFICATION (PHASE 0 - REVISED & EXPANDED)"
-Cohesion: 0.07
-Nodes (26): 10.1 Frontend Screens (18 Screens), 10.2 Backend API Routes (21 Route Modules), 10. Existing Features Inventory (18 Screens & 21 API Route Modules), 11.1 How Vehicle Redemption Expiry Works Today (`redemption_eligibility.service.js:201`), 11.2 Step-by-Step Timeline Example, 11. Redemption Expiry Reset Mechanics & Step-by-Step Business Verification Example, 1. System Overview & Technology Stack, 2. Exhaustive Hardcoded Business Values & Config Mapping (+18 more)
+Cohesion: 0.08
+Nodes (23): 10.1 Frontend Screens (18 Screens), 10.2 Backend API Routes (21 Route Modules), 10. Existing Features Inventory (18 Screens & 21 API Route Modules), 11.1 How Vehicle Redemption Expiry Works Today (`redemption_eligibility.service.js:201`), 11.2 Step-by-Step Timeline Example, 11. Redemption Expiry Reset Mechanics & Step-by-Step Business Verification Example, 1. System Overview & Technology Stack, 2. Exhaustive Hardcoded Business Values & Config Mapping (+15 more)
 
 ### Community 29 - "data"
 Cohesion: 0.08
 Nodes (23): apiVersion, data, DB_SSL, DEFAULT_TENANT_ID, ENABLE_DEBUG_OTP, FRONTEND_URL, LOG_LEVEL, NODE_ENV (+15 more)
 
-### Community 30 - "RealBooksService"
-Cohesion: 0.13
-Nodes (6): assert, runTests(), runTests(), verifyAll(), RealBooksSegmentResolver, RealBooksService
+### Community 30 - "ref_path"
+Cohesion: 0.29
+Nodes (3): fs, path, path
 
 ### Community 31 - "NetworkPolicy database-isolation-policy"
 Cohesion: 0.11
@@ -317,12 +315,20 @@ Cohesion: 0.09
 Nodes (22): 10. Provisioning, Privacy & Aadhaar Compliance (Fixing B14, B15, LOOP-25), 11.1 Golden Test Suite & Baseline Capture (B17), 11.2 Phased Rollout Schedule (B16), 11. Testing, Rollout & Phased Timeline (Fixing B16, B17), 12. Business Decisions Summary Table (Section C), 1.1 Complete Rule Categories & Constant Mapping Table (Fixing B1), 1.2 Comprehensive Schema SQL Definition (Fixing B2, B3, B4, B7, B8), 1. Complete Schema Changes & Migration Strategy (Fixing B1, B2, B3, B4, B7, B8) (+14 more)
 
 ### Community 33 - "GiftEngineService"
-Cohesion: 0.16
+Cohesion: 0.17
 Nodes (3): runTests(), GiftController, GiftEngineService
 
+### Community 34 - "hashIdentifier"
+Cohesion: 0.17
+Nodes (12): fetchAppSheetPRDoneRows(), parseDmsDate(), wipeAndSync(), seedRahulSharma(), bcrypt, seed(), xlsx, crypto (+4 more)
+
+### Community 35 - "MasterEditorController"
+Cohesion: 0.06
+Nodes (3): MasterEditorController, MasterRuleEngineService, ModelRedemptionCapService
+
 ### Community 36 - "redemption.service.js"
-Cohesion: 0.11
-Nodes (9): bcrypt, fs, path, testDatabaseTransaction(), path, ModelRedemptionCapService, bcrypt, crypto (+1 more)
+Cohesion: 0.09
+Nodes (18): bcryptjs, bcrypt, fs, path, bcrypt, testPhase3Kyc(), testDatabaseTransaction(), bcrypt (+10 more)
 
 ### Community 37 - "Bellad & Co. Dealership Loyalty & Rewards Platform"
 Cohesion: 0.09
@@ -336,9 +342,9 @@ Nodes (21): databases, databaseName, name, plan, postgresMajorVersion, user, fro
 Cohesion: 0.09
 Nodes (14): BRAND_MODELS_MAP, ModelRedemptionCapStudio(), STATUS_BADGES, DEALERSHIPS, LoyaltyAppBuilder(), TEST_CUSTOMERS, MasterRuleEditorScreen(), DEALERSHIPS (+6 more)
 
-### Community 40 - "env.js"
-Cohesion: 0.23
-Nodes (5): assert, jwt, crypto, env, crypto
+### Community 40 - "RealBooksService"
+Cohesion: 0.18
+Nodes (3): runTests(), runTests(), RealBooksService
 
 ### Community 42 - "ports"
 Cohesion: 0.11
@@ -381,20 +387,20 @@ Cohesion: 0.25
 Nodes (4): testPhase5PublicBalance(), PublicBalanceController, crypto, PublicBalanceService
 
 ### Community 54 - "auth.js"
-Cohesion: 0.17
-Nodes (9): AuthController, invalidateSessionCache(), jwt, sessionCache, loginRateLimiter(), express, router, loginSchema (+1 more)
+Cohesion: 0.18
+Nodes (8): AuthController, invalidateSessionCache(), jwt, sessionCache, searchRateLimiter(), express, router, searchSchema
 
 ### Community 55 - "reltigrow.provider.js"
-Cohesion: 0.15
+Cohesion: 0.16
 Nodes (7): 🛠️ Tech Stack & Key Rules, http, https, normalizeToE164India(), ReltigrowWhatsAppProvider, BaseWhatsAppProvider, MockWhatsAppProvider
 
 ### Community 56 - "containers"
 Cohesion: 0.15
 Nodes (13): command, envFrom, image, imagePullPolicy, lifecycle, name, ports, resources (+5 more)
 
-### Community 57 - "VehiclePointsEngine"
-Cohesion: 0.12
-Nodes (8): assert, fixAndVerify(), recalculateAllVehicleSales(), assert, runRegressionSuite(), RuleEngineService, VehiclePointsEngine, VehicleSalesPointsService
+### Community 57 - "ReferralService"
+Cohesion: 0.09
+Nodes (7): testPhase4ReferralSlabs(), testReferralWhatsAppFlow(), ReferralController, express, ipRateLimitStore, router, ReferralService
 
 ### Community 58 - "labels"
 Cohesion: 0.23
@@ -428,17 +434,13 @@ Nodes (10): scripts, build, db:backup, dev, migrate, migrate:dry-run, seed, star
 Cohesion: 0.20
 Nodes (6): path, { spawnSync }, testSuites, { execSync }, fs, path
 
-### Community 66 - "ref_fs"
-Cohesion: 0.17
-Nodes (5): fs, path, fs, path, fs
-
 ### Community 67 - "RedemptionEligibilityService"
-Cohesion: 0.25
+Cohesion: 0.23
 Nodes (3): verify(), runRedemptionStatusCron(), RedemptionEligibilityService
 
-### Community 68 - "import.routes.js"
-Cohesion: 0.11
-Nodes (14): multer@^2.3.0, multer, express, fs, multer, path, router, storage (+6 more)
+### Community 68 - "invoiceV2.routes.js"
+Cohesion: 0.33
+Nodes (4): express, multer, router, upload
 
 ### Community 70 - "labels"
 Cohesion: 0.22
@@ -468,9 +470,9 @@ Nodes (6): PersistentVolumeClaim postgres-pvc, Service postgres-service, apiVers
 Cohesion: 0.54
 Nodes (7): ShimmerBar(), SkeletonCard(), SkeletonCustomerProfile(), SkeletonKycQueue(), SkeletonLine(), SkeletonStatCard(), SkeletonTable()
 
-### Community 80 - "OfferService"
-Cohesion: 0.18
-Nodes (4): express, router, STAFF_ROLES, OfferService
+### Community 79 - "GiftCardService"
+Cohesion: 0.10
+Nodes (3): CustomerPortalController, GiftCardController, GiftCardService
 
 ### Community 82 - "Project Context: Multi-Tenant Loyalty App Builder Platform (SaaS)"
 Cohesion: 0.29
@@ -484,13 +486,13 @@ Nodes (7): app, app, matchLabels, replicas, selector, serviceName, spec
 Cohesion: 0.29
 Nodes (7): app, app.kubernetes.io/component, app.kubernetes.io/name, metadata, labels, name, namespace
 
-### Community 87 - "engines"
-Cohesion: 0.27
-Nodes (6): devDependencies, nodemon@^3.1.4, engines, node, npm, nodemon
+### Community 86 - "VehicleController"
+Cohesion: 0.19
+Nodes (6): resolveChassisNo(), VehicleController, express, router, createVehicleSchema, updateVehicleSchema
 
-### Community 88 - "ref_path"
-Cohesion: 0.13
-Nodes (7): fs, path, fs, path, fs, path, path
+### Community 87 - "package.json"
+Cohesion: 0.12
+Nodes (17): author, dotenv@^16.4.5, morgan@^1.10.0, description, devDependencies, nodemon@^3.1.4, engines, node (+9 more)
 
 ### Community 89 - "template"
 Cohesion: 0.33
@@ -504,13 +506,29 @@ Nodes (6): livenessProbe, failureThreshold, httpGet, initialDelaySeconds, period
 Cohesion: 0.33
 Nodes (6): readinessProbe, failureThreshold, httpGet, initialDelaySeconds, periodSeconds, timeoutSeconds
 
+### Community 92 - "PlatformLedgerService"
+Cohesion: 0.36
+Nodes (3): PlatformLedgerService, assert, runLedgerTests()
+
 ### Community 93 - "app.js"
-Cohesion: 0.10
-Nodes (18): allowedOrigins, clientDistPath, cors, corsOptions, defaultOrigins, envCorsOrigins, envFrontendUrl, express (+10 more)
+Cohesion: 0.12
+Nodes (15): allowedOrigins, clientDistPath, cors, corsOptions, defaultOrigins, envCorsOrigins, envFrontendUrl, express (+7 more)
 
 ### Community 94 - "Loyalty App — Audit Brief for Claude Code"
 Cohesion: 0.33
 Nodes (5): Known confirmed bug (reproduce first), Loyalty App — Audit Brief for Claude Code, Output format, Requirements checklist to verify, Your task
+
+### Community 95 - "branch.routes.js"
+Cohesion: 0.18
+Nodes (5): BranchController, express, router, createBranchSchema, updateBranchSchema
+
+### Community 96 - "director.routes.js"
+Cohesion: 0.25
+Nodes (4): DirectorController, express, router, DirectorService
+
+### Community 97 - "firewall.js"
+Cohesion: 0.25
+Nodes (8): COMMAND_INJECTION_PATTERNS, crypto, firewallMiddleware(), FORBIDDEN_KEYS, inspectValue(), PATH_TRAVERSAL_PATTERNS, SQLI_PATTERNS, XSS_PATTERNS
 
 ### Community 99 - "fix-login.js"
 Cohesion: 0.40
@@ -544,55 +562,63 @@ Nodes (4): startupProbe, failureThreshold, httpGet, periodSeconds
 Cohesion: 0.83
 Nodes (3): extractCustomerPrDetails(), fetchAppSheetPRDoneRows(), main()
 
-### Community 109 - "correction.routes.js"
-Cohesion: 0.29
-Nodes (5): fs, multer, path, storage, uploadDir
+### Community 110 - "ref_fs"
+Cohesion: 0.20
+Nodes (5): fs, path, fs, fs, path
 
-### Community 111 - "OPERATIONS RUNBOOK: WHITE-LABEL LOYALTY PLATFORM & STUDIO"
-Cohesion: 0.11
-Nodes (18): 1. Production Architecture Overview, 2.1 Pre-Flight Verification, 2.2 Applying Database Migrations, 2.3 Starting Services, 2. Zero-Downtime Deployment Procedure, 3.1 Publishing Rules Live (< 1 Second), 3.2 One-Click Rollback Flow, 3. Real-Time Publish & Instant Rollback Runbook (+10 more)
+### Community 111 - "customerPortal.controller.js"
+Cohesion: 0.16
+Nodes (8): assert, jwt, jsonwebtoken, crypto, env, bcrypt, jwt, crypto
 
 ### Community 112 - "baseline-migrations.js"
 Cohesion: 0.40
 Nodes (4): baselineMigrations(), fs, path, { Pool }
 
-### Community 113 - "src/index.js"
-Cohesion: 0.27
-Nodes (8): startAppSheetPullCron(), runGiftExpiryWorker(), startGiftExpiryCron(), startRedemptionStatusCron(), fs, path, runMigrations(), server
+### Community 113 - "OPERATIONS RUNBOOK: WHITE-LABEL LOYALTY PLATFORM & STUDIO"
+Cohesion: 0.11
+Nodes (18): 1. Production Architecture Overview, 2.1 Pre-Flight Verification, 2.2 Applying Database Migrations, 2.3 Starting Services, 2. Zero-Downtime Deployment Procedure, 3.1 Publishing Rules Live (< 1 Second), 3.2 One-Click Rollback Flow, 3. Real-Time Publish & Instant Rollback Runbook (+10 more)
+
+### Community 114 - "src/index.js"
+Cohesion: 0.36
+Nodes (6): startAppSheetPullCron(), runGiftExpiryWorker(), startGiftExpiryCron(), startRedemptionStatusCron(), runMigrations(), server
 
 ### Community 116 - "fetch-sheet.js"
-Cohesion: 0.20
-Nodes (8): fetchUrl(), fs, https, run(), https, options, origin, req
+Cohesion: 0.15
+Nodes (11): fetchUrl(), fs, https, run(), https, options, origin, req (+3 more)
 
-### Community 120 - "director.routes.js"
-Cohesion: 0.25
-Nodes (4): DirectorController, express, router, DirectorService
+### Community 121 - "uploadCorrectionProof.js"
+Cohesion: 0.29
+Nodes (5): fs, multer, path, storage, uploadDir
 
-### Community 122 - "api.test.js"
+### Community 134 - "cashierInvite.service.js"
+Cohesion: 0.32
+Nodes (3): bcrypt, CashierInviteService, crypto
+
+### Community 136 - "8.1 Queue Implementation Analysis"
+Cohesion: 0.33
+Nodes (3): 8.1 Queue Implementation Analysis, 8.2 Failure & Server Restart Impact, 8. Background Processing & Queue Evaluation (LOOP-22 Evidence)
+
+### Community 143 - "api.test.js"
 Cohesion: 0.18
 Nodes (11): http, makeRequest(), http, run(), startServer(), stopServer(), testEndpoint(), http (+3 more)
 
-### Community 135 - "auth.controller.js"
-Cohesion: 0.50
-Nodes (3): bcrypt, crypto, jwt
-
 ## Knowledge Gaps
-- **38 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **39 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Automobile Dealership Loyalty Program — Design System` connect `Automobile Dealership Loyalty Program — Design System` to `react`?**
-  _High betweenness centrality (0.267) - this node is a cross-community bridge._
+- **Why does `Automobile Dealership Group Loyalty Program - Backend & POS Counter` connect `Automobile Dealership Loyalty Program — Design System` to `reltigrow.provider.js`?**
+  _High betweenness centrality (0.244) - this node is a cross-community bridge._
 - **Should `ApiService` be split into smaller, more focused modules?**
   _Cohesion score 0.03265626753450791 - nodes in this community are weakly interconnected._
-- **Why does `Automobile Dealership Group Loyalty Program - Backend & POS Counter` connect `Automobile Dealership Loyalty Program — Design System` to `reltigrow.provider.js`?**
-  _High betweenness centrality (0.266) - this node is a cross-community bridge._
-- **Should `db.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.03870043000477783 - nodes in this community are weakly interconnected._
 - **Why does `🛠️ Tech Stack & Key Rules` connect `reltigrow.provider.js` to `Automobile Dealership Loyalty Program — Design System`?**
-  _High betweenness centrality (0.264) - this node is a cross-community bridge._
+  _High betweenness centrality (0.243) - this node is a cross-community bridge._
+- **Should `db.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.03779366700715015 - nodes in this community are weakly interconnected._
+- **Why does `Automobile Dealership Loyalty Program — Design System` connect `Automobile Dealership Loyalty Program — Design System` to `react`?**
+  _High betweenness centrality (0.234) - this node is a cross-community bridge._
 - **Should `react` be split into smaller, more focused modules?**
   _Cohesion score 0.07858807858807859 - nodes in this community are weakly interconnected._
-- **Should `customer.service.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.09659090909090909 - nodes in this community are weakly interconnected._
+- **Should `d_kavya_k_bellad_p_devops_apps_loyalty_loyalty_backup_src_final_loyaly_app_nov_src_config_db_pool` be split into smaller, more focused modules?**
+  _Cohesion score 0.08923076923076922 - nodes in this community are weakly interconnected._

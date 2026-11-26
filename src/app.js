@@ -78,14 +78,24 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// Import security rate limiter
+// Import security rate limiter, sanitization, and firewall middleware
 const { globalApiRateLimiter } = require('./middleware/rateLimiter');
+const sanitizeMiddleware = require('./middleware/sanitize');
+const firewallMiddleware = require('./middleware/firewall');
 
 // Security and utility middleware
 app.disable('x-powered-by');
-app.use(helmet({ crossOriginResourcePolicy: false, contentSecurityPolicy: false }));
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: false,
+  frameguard: { action: 'sameorigin' },
+  noSniff: true,
+  xssFilter: true,
+}));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use(firewallMiddleware);
+app.use(sanitizeMiddleware);
 
 // Global rate limiting across all API endpoints (protects against high-concurrency DDoS / brute-force)
 app.use('/api', globalApiRateLimiter);
@@ -153,18 +163,28 @@ app.use('/api/public', publicReferralRoutes);
 app.use('/api', publicBalanceRoutes);
 app.use('/api', kycRoutes);
 
-// Serve static uploads (proofs, attachments)
+// Authentication middleware for protected static resources
+const authenticateToken = require('./middleware/auth');
+const requireRole = require('./middleware/roles');
+
+// Serve static uploads with authentication wall on sensitive KYC identity proofs
+app.use('/uploads/kyc_proofs', authenticateToken, express.static(path.join(__dirname, '../uploads/kyc_proofs')));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Download full backup archive endpoint
-app.get(['/download-backup', '/api/download-backup'], (req, res) => {
-  const fs = require('fs');
-  const backupZip = path.join(__dirname, '../Bellad_Loyalty_Rewards_Full_Backup_16-11-2026.zip');
-  if (fs.existsSync(backupZip)) {
-    return res.download(backupZip, 'Bellad_Loyalty_Rewards_Full_Backup_16-11-2026.zip');
+// Download full backup archive endpoint (Strictly protected: admin / director role only)
+app.get(
+  ['/download-backup', '/api/download-backup', '/api/admin/download-backup'],
+  authenticateToken,
+  requireRole(['admin', 'director', 'super_admin']),
+  (req, res) => {
+    const fs = require('fs');
+    const backupZip = path.join(__dirname, '../Bellad_Loyalty_Rewards_Full_Backup_16-11-2026.zip');
+    if (fs.existsSync(backupZip)) {
+      return res.download(backupZip, 'Bellad_Loyalty_Rewards_Full_Backup_16-11-2026.zip');
+    }
+    return res.status(404).json({ error: 'Backup archive not found' });
   }
-  return res.status(404).json({ error: 'Backup archive not found' });
-});
+);
 
 // Serve static client assets if client/dist exists (production fullstack deploy) with high-speed immutable browser cache
 const fs = require('fs');

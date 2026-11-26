@@ -265,8 +265,11 @@ class RealBooksService {
    */
   static async queueRedemptionSync({ redemption, tenant_id, simulate_fail = false }) {
     const payload = {
-      receipt_no: redemption.redemption_code,
+      receipt_no: redemption.receipt_no || redemption.redemption_code,
       customer_id: redemption.customer_id,
+      vehicle_id: redemption.vehicle_id || null,
+      model: redemption.model || null,
+      brand_name: redemption.brand_name || null,
       bill_amount: redemption.discount_amount_rupees || redemption.discount_amount,
       discount_amount: redemption.discount_amount_rupees || redemption.discount_amount,
       points_redeemed: redemption.points_redeemed,

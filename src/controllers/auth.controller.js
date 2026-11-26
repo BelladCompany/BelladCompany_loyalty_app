@@ -58,8 +58,8 @@ class AuthController {
       if (user.password_hash && (user.password_hash.startsWith('$2a$') || user.password_hash.startsWith('$2b$'))) {
         isMatch = await bcrypt.compare(cleanPassword, user.password_hash);
         
-        // Flexible fallback for demo credentials across environments (Render and Local)
-        if (!isMatch) {
+        // Flexible fallback for demo credentials strictly in non-production development and automated test environments
+        if (!isMatch && env.nodeEnv !== 'production') {
           const lowerUser = (user.username || '').toLowerCase();
           const lowerPass = cleanPassword.toLowerCase();
           if (lowerUser === 'admin' && (lowerPass === 'admin@123')) {

@@ -78,9 +78,9 @@
     "semantic_hash": ""
   },
   "client/src/components/dashboard/AddReceiptModal.jsx": {
-    "mtime": 1795587165.263454,
-    "seen": 1795587275.2327018,
-    "ast_hash": "c3f8fbca5dd94edf9c45f2a5f6d31b85",
+    "mtime": 1795607983.8000603,
+    "seen": 1795608013.220951,
+    "ast_hash": "dee93dfa5c1cd624f55827a858ef1883",
     "semantic_hash": ""
   },
   "client/src/components/dashboard/BranchNetworkChart.jsx": {
@@ -114,9 +114,9 @@
     "semantic_hash": ""
   },
   "client/src/components/dashboard/EarnPointsModal.jsx": {
-    "mtime": 1795070865.416567,
-    "seen": 1795419439.7517612,
-    "ast_hash": "1e616d186f19223561a0f6b8b005aee7",
+    "mtime": 1795600899.9169776,
+    "seen": 1795601561.1934276,
+    "ast_hash": "0d0420ea950da2642356d3703358012f",
     "semantic_hash": ""
   },
   "client/src/components/dashboard/MessageLogModal.jsx": {
@@ -1092,9 +1092,9 @@
     "semantic_hash": ""
   },
   "src/app.js": {
-    "mtime": 1795426689.0488236,
-    "seen": 1795426750.3879447,
-    "ast_hash": "2d21c1d0cc46872022cd18ea10bb412e",
+    "mtime": 1795608520.518913,
+    "seen": 1795608584.5957806,
+    "ast_hash": "f200330823e1648386346525a4192c5e",
     "semantic_hash": ""
   },
   "src/config/db.js": {
@@ -1128,9 +1128,9 @@
     "semantic_hash": ""
   },
   "src/controllers/auth.controller.js": {
-    "mtime": 1795004820.5690172,
-    "seen": 1795419439.7517612,
-    "ast_hash": "69634474d11faad0b959407602f63c76",
+    "mtime": 1795608413.7640564,
+    "seen": 1795608584.5967946,
+    "ast_hash": "8a5047a4c4b092bfa260fecd512a4453",
     "semantic_hash": ""
   },
   "src/controllers/branch.controller.js": {
@@ -1176,9 +1176,9 @@
     "semantic_hash": ""
   },
   "src/controllers/gift.controller.js": {
-    "mtime": 1795156371.2045324,
-    "seen": 1795419439.7517612,
-    "ast_hash": "1802485379233de12948ac0d429f0cd8",
+    "mtime": 1795608365.0207705,
+    "seen": 1795608584.5982494,
+    "ast_hash": "30e56f1893da78d11839a00a5e7ec860",
     "semantic_hash": ""
   },
   "src/controllers/giftCard.controller.js": {
@@ -1230,9 +1230,9 @@
     "semantic_hash": ""
   },
   "src/controllers/redemption.controller.js": {
-    "mtime": 1795586945.0962577,
-    "seen": 1795587275.2751393,
-    "ast_hash": "a548e617d0a4f6d6b70acc71c29cb0b9",
+    "mtime": 1795607403.3528168,
+    "seen": 1795608013.2636766,
+    "ast_hash": "887ae84a7cfde1b741dd6a05990c2dea",
     "semantic_hash": ""
   },
   "src/controllers/referral.controller.js": {
@@ -1308,21 +1308,21 @@
     "semantic_hash": ""
   },
   "src/middleware/apiKeyAuth.js": {
-    "mtime": 1793601443.7506707,
-    "seen": 1795419439.7517612,
-    "ast_hash": "3899a6e1f3503f473a497549db8a22db",
+    "mtime": 1795608395.414551,
+    "seen": 1795608584.6030886,
+    "ast_hash": "94a091f3e9fc6ca92ddce3821ac219dc",
     "semantic_hash": ""
   },
   "src/middleware/appsheetAuth.js": {
-    "mtime": 1793871760.4073067,
-    "seen": 1795419439.7517612,
-    "ast_hash": "fcc1178f6d8302d37a3e9938a86efef9",
+    "mtime": 1795608466.855628,
+    "seen": 1795608584.6030917,
+    "ast_hash": "50d5e9aa3c13403be6c509dd3b81e86c",
     "semantic_hash": ""
   },
   "src/middleware/auth.js": {
-    "mtime": 1795503448.5111992,
-    "seen": 1795503742.1771736,
-    "ast_hash": "39d254afa0eb0128a9b5c1e76c809bc9",
+    "mtime": 1795608339.8662255,
+    "seen": 1795608584.6030939,
+    "ast_hash": "5fd6f3c711d09d081170ed462f61b13d",
     "semantic_hash": ""
   },
   "src/middleware/errorHandler.js": {
@@ -1338,9 +1338,9 @@
     "semantic_hash": ""
   },
   "src/middleware/rateLimiter.js": {
-    "mtime": 1793873565.7027204,
-    "seen": 1795419439.7517612,
-    "ast_hash": "f352a702f4d3303fb0e3cd5487cfd4c1",
+    "mtime": 1795607263.6010013,
+    "seen": 1795608013.2674258,
+    "ast_hash": "1665582ea31f1a6cf55e2c4ca93c2a48",
     "semantic_hash": ""
   },
   "src/middleware/roles.js": {
@@ -1428,9 +1428,9 @@
     "semantic_hash": ""
   },
   "src/routes/gift.routes.js": {
-    "mtime": 1795156333.759709,
-    "seen": 1795419439.7517612,
-    "ast_hash": "9212812fe5de5ed06bc6724110378c65",
+    "mtime": 1795608351.5413752,
+    "seen": 1795608584.6068974,
+    "ast_hash": "e426dcd69088aaebcd792199d3aaf72f",
     "semantic_hash": ""
   },
   "src/routes/giftCard.routes.js": {
@@ -1476,9 +1476,9 @@
     "semantic_hash": ""
   },
   "src/routes/points.routes.js": {
-    "mtime": 1795503237.400604,
-    "seen": 1795503742.1823337,
-    "ast_hash": "edc3ea93a25c00e4622a7514c802e1ba",
+    "mtime": 1795607473.3501773,
+    "seen": 1795608013.2727163,
+    "ast_hash": "62ee8fa7b59c4b0cfb1a05afdefff652",
     "semantic_hash": ""
   },
   "src/routes/publicBalance.routes.js": {
@@ -1494,9 +1494,9 @@
     "semantic_hash": ""
   },
   "src/routes/redemption.routes.js": {
-    "mtime": 1795503237.507314,
-    "seen": 1795503742.182959,
-    "ast_hash": "be333ea93ff6ddcf4b825562a3cafdca",
+    "mtime": 1795607346.7735047,
+    "seen": 1795608013.2731495,
+    "ast_hash": "86a69899285af42b25b996104138bc03",
     "semantic_hash": ""
   },
   "src/routes/referral.routes.js": {
@@ -1524,9 +1524,9 @@
     "semantic_hash": ""
   },
   "src/routes/transaction.routes.js": {
-    "mtime": 1789026678.0,
-    "seen": 1795419439.7517612,
-    "ast_hash": "5c5f60838f50c77ff17bcc6bd0d5f7a9",
+    "mtime": 1795607458.5165787,
+    "seen": 1795608013.273964,
+    "ast_hash": "505a2590957bf8c19a6f907e3f163637",
     "semantic_hash": ""
   },
   "src/routes/vehicle.routes.js": {
@@ -1656,9 +1656,9 @@
     "semantic_hash": ""
   },
   "src/services/points.service.js": {
-    "mtime": 1795587047.6269948,
-    "seen": 1795587275.2913196,
-    "ast_hash": "551b56d0c60c9e431e9abf74b3bfcc5b",
+    "mtime": 1795607427.7667065,
+    "seen": 1795608013.2789145,
+    "ast_hash": "aba4902289d0ebdcf4d57d47f4d4b307",
     "semantic_hash": ""
   },
   "src/services/publicBalance.service.js": {
@@ -1680,15 +1680,15 @@
     "semantic_hash": ""
   },
   "src/services/realbooks/realbooks.service.js": {
-    "mtime": 1795004821.8691013,
-    "seen": 1795419439.7517612,
-    "ast_hash": "8415395427692a547413335e19dcf853",
+    "mtime": 1795678838.594322,
+    "seen": 1795679001.4609275,
+    "ast_hash": "8ef3229c3ddfbcc1ca4acc6d8875b10b",
     "semantic_hash": ""
   },
   "src/services/redemption.service.js": {
-    "mtime": 1795587009.839911,
-    "seen": 1795587275.2921612,
-    "ast_hash": "c9cbc71a6fdef39855ecfb4cd98826a5",
+    "mtime": 1795607388.9900286,
+    "seen": 1795608013.2800503,
+    "ast_hash": "f9de2a561a45b8181e3fc4106d91b58d",
     "semantic_hash": ""
   },
   "src/services/redemption_eligibility.service.js": {
@@ -1734,9 +1734,9 @@
     "semantic_hash": ""
   },
   "src/services/transaction.service.js": {
-    "mtime": 1790668814.0,
-    "seen": 1795419439.7517612,
-    "ast_hash": "1292ae692e881edb41799f8e0e052eaa",
+    "mtime": 1795607515.0714335,
+    "seen": 1795608013.281541,
+    "ast_hash": "1166fdec76074d1dc6e769f2136d445d",
     "semantic_hash": ""
   },
   "src/services/vehiclePointsEngine.service.js": {
@@ -1770,9 +1770,9 @@
     "semantic_hash": ""
   },
   "src/validators/schemas.js": {
-    "mtime": 1795586932.255416,
-    "seen": 1795587275.2949195,
-    "ast_hash": "693a9a88acec69cdec8d046978748e02",
+    "mtime": 1795607332.1217244,
+    "seen": 1795608013.2825692,
+    "ast_hash": "84499dcddad91c39dd0c20d56547c4a3",
     "semantic_hash": ""
   },
   "sync-columns.js": {
@@ -1914,9 +1914,9 @@
     "semantic_hash": ""
   },
   "src/services/invoiceParserV2.service.js": {
-    "mtime": 1795503712.5751357,
-    "seen": 1795503742.1876705,
-    "ast_hash": "9d918961e134e2daf4a981fc58f027b6",
+    "mtime": 1795604434.181658,
+    "seen": 1795604532.1148808,
+    "ast_hash": "1b46312d32357067d6d56ca0312cedc7",
     "semantic_hash": ""
   },
   "client/src/screens/AdvisorInvoiceUploadScreen.jsx": {
@@ -1941,6 +1941,60 @@
     "mtime": 1795585416.361607,
     "seen": 1795587275.29816,
     "ast_hash": "35b3e8132d680c3810d6bc41ce35a09f",
+    "semantic_hash": ""
+  },
+  "src/middleware/sanitize.js": {
+    "mtime": 1795607243.156468,
+    "seen": 1795608013.2676766,
+    "ast_hash": "2cf61498952703eccc012f2025ebd93e",
+    "semantic_hash": ""
+  },
+  "src/middleware/firewall.js": {
+    "mtime": 1795608476.5062156,
+    "seen": 1795608584.6033583,
+    "ast_hash": "9fdc2127b92bf1fa588fc86b751735e5",
+    "semantic_hash": ""
+  },
+  "scripts/inspect_branches.js": {
+    "mtime": 1795610018.0779428,
+    "seen": 1795679001.421345,
+    "ast_hash": "a979b9b008c277d91081f14b11a6fce1",
+    "semantic_hash": ""
+  },
+  "scripts/inspect_brand_segments.js": {
+    "mtime": 1795609631.911455,
+    "seen": 1795679001.421351,
+    "ast_hash": "ee5215795f6fd8fc788b19db92efbb7e",
+    "semantic_hash": ""
+  },
+  "scripts/inspect_invoice.js": {
+    "mtime": 1795610330.901095,
+    "seen": 1795679001.4213548,
+    "ast_hash": "f62ca7342ee99178f4ae5fa8edcd511d",
+    "semantic_hash": ""
+  },
+  "scripts/inspect_realbooks_segments.js": {
+    "mtime": 1795609548.4106445,
+    "seen": 1795679001.4213579,
+    "ast_hash": "424454a6a04695b954b10de65d033e4b",
+    "semantic_hash": ""
+  },
+  "scripts/inspect_sync_logs.js": {
+    "mtime": 1795609718.6413836,
+    "seen": 1795679001.421361,
+    "ast_hash": "191746cdd067406f701675f9aa9ef4ef",
+    "semantic_hash": ""
+  },
+  "scripts/inspect_vehicles_brand.js": {
+    "mtime": 1795609618.165196,
+    "seen": 1795679001.4213634,
+    "ast_hash": "759068c3f1beced71a64693ca4b91899",
+    "semantic_hash": ""
+  },
+  "scripts/probe_realbooks_api.js": {
+    "mtime": 1795609988.915775,
+    "seen": 1795679001.4221964,
+    "ast_hash": "77a55c422cd5abc203b8a62de5a673f2",
     "semantic_hash": ""
   },
   "client/package-lock.json": {

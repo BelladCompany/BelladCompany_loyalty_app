@@ -29,7 +29,7 @@ const authenticateToken = (req, res, next) => {
     });
   }
 
-  jwt.verify(token, env.jwtSecret, async (err, decodedUser) => {
+  jwt.verify(token, env.jwtSecret, { algorithms: ['HS256'] }, async (err, decodedUser) => {
     if (err) {
       return res.status(403).json({
         status: 'fail',
@@ -78,11 +78,13 @@ const authenticateToken = (req, res, next) => {
     }
 
     req.user = decodedUser;
-    // LOOP-06 & LOOP-20 Fix: Allow X-Tenant-ID header override ONLY for admin/super_admin/director/management roles.
+    // Security Wall: Strict Multi-Tenant Isolation
+    // Allow X-Tenant-ID header override ONLY for admin/super_admin/director/management roles.
+    // Non-admin operational roles (cashier, advisor, customer) are strictly locked to their assigned tenant.
     const isAdmin = ['admin', 'super_admin', 'regional_admin', 'director', 'management'].includes(decodedUser.role);
-    const tenantId = (isAdmin && req.headers['x-tenant-id']) 
-      ? req.headers['x-tenant-id'] 
-      : (decodedUser.tenant_id || req.headers['x-tenant-id'] || 'bellad_and_company');
+    const tenantId = isAdmin
+      ? (req.headers['x-tenant-id'] || decodedUser.tenant_id || 'bellad_and_company')
+      : (decodedUser.tenant_id || 'bellad_and_company');
 
     req.tenantId = tenantId;
     next();

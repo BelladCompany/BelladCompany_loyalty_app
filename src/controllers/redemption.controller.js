@@ -94,6 +94,7 @@ class RedemptionController {
         referral_code: referral_code ? referral_code.trim() : null,
         created_by: createdBy,
         tenant_id: tenantId,
+        idempotency_key: req.idempotencyKey || req.headers['idempotency-key'] || req.headers['x-idempotency-key'] || null,
       });
 
       const message = result.message || `Redemption processed successfully. Discount of ₹${result.discount_applied} applied.`;

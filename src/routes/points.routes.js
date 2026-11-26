@@ -5,6 +5,7 @@ const authenticateToken = require('../middleware/auth');
 const requireRole = require('../middleware/roles');
 const validate = require('../middleware/validate');
 const { earnPointsSchema, inhouseBonusSchema, ledgerQuerySchema } = require('../validators/schemas');
+const { redemptionRateLimiter } = require('../middleware/rateLimiter');
 
 const checkIdempotency = require('../middleware/idempotency');
 
@@ -14,6 +15,7 @@ router.use(authenticateToken);
 router.post(
   '/earn',
   requireRole(['cashier', 'admin']),
+  redemptionRateLimiter,
   checkIdempotency,
   validate(earnPointsSchema),
   PointsController.earnPoints
@@ -23,6 +25,7 @@ router.post(
 router.post(
   '/inhouse-bonus',
   requireRole(['cashier', 'admin']),
+  redemptionRateLimiter,
   validate(inhouseBonusSchema),
   PointsController.grantInhouseBonus
 );

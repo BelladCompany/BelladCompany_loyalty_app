@@ -45,30 +45,42 @@ async function authenticateApiKey(req, res, next) {
       // Async update last_used_at without awaiting
       pool.query(`UPDATE integration_api_keys SET last_used_at = NOW() WHERE key_id = $1`, [clientInfo.key_id]).catch(() => { });
     } else {
-      // 2. Check environment fallback keys (for backward compatibility & zero-config local testing)
-      const masterKey = process.env.BELLAD_API_KEY || 'bac_live_master_bellad_loyalty_2026';
-      const appsheetKey = process.env.APPSHEET_WEBHOOK_KEY || 'appsheet_secret_key_default_2026';
+      // 2. Check environment fallback keys (restricted in production)
+      const crypto = require('crypto');
+      const isProduction = process.env.NODE_ENV === 'production';
+      const masterKey = process.env.BELLAD_API_KEY || (isProduction ? null : 'bac_live_master_bellad_loyalty_2026');
+      const appsheetKey = process.env.APPSHEET_WEBHOOK_KEY || (isProduction ? null : 'appsheet_secret_key_default_2026');
 
-      if (apiKey === masterKey) {
-        clientInfo = {
-          key_id: 0,
-          tenant_id: 'bellad_and_company',
-          name: 'Master Fallback Integration Key',
-          client_type: 'custom',
-          api_key_prefix: 'bac_live_master',
-          scopes: ['read', 'write', 'sync', 'redeem', 'admin'],
-          is_active: true,
-        };
-      } else if (apiKey === appsheetKey) {
-        clientInfo = {
-          key_id: 0,
-          tenant_id: 'bellad_and_company',
-          name: 'AppSheet Webhook Key',
-          client_type: 'appsheet',
-          api_key_prefix: 'bac_live_appsheet',
-          scopes: ['read', 'write', 'sync'],
-          is_active: true,
-        };
+      const apiKeyHash = crypto.createHash('sha256').update(String(apiKey).trim()).digest();
+
+      if (masterKey) {
+        const masterHash = crypto.createHash('sha256').update(masterKey).digest();
+        if (crypto.timingSafeEqual(apiKeyHash, masterHash)) {
+          clientInfo = {
+            key_id: 0,
+            tenant_id: 'bellad_and_company',
+            name: 'Master Fallback Integration Key',
+            client_type: 'custom',
+            api_key_prefix: 'bac_live_master',
+            scopes: ['read', 'write', 'sync', 'redeem', 'admin'],
+            is_active: true,
+          };
+        }
+      }
+
+      if (!clientInfo && appsheetKey) {
+        const appsheetHash = crypto.createHash('sha256').update(appsheetKey).digest();
+        if (crypto.timingSafeEqual(apiKeyHash, appsheetHash)) {
+          clientInfo = {
+            key_id: 0,
+            tenant_id: 'bellad_and_company',
+            name: 'AppSheet Webhook Key',
+            client_type: 'appsheet',
+            api_key_prefix: 'bac_live_appsheet',
+            scopes: ['read', 'write', 'sync'],
+            is_active: true,
+          };
+        }
       }
     }
 

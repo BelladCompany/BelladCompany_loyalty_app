@@ -28,7 +28,7 @@ const optionalAuthenticate = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    jwt.verify(token, env.jwtSecret, (err, user) => {
+    jwt.verify(token, env.jwtSecret, { algorithms: ['HS256'] }, (err, user) => {
       if (!err && user) {
         req.user = user;
         const isAdmin = ['admin', 'super_admin', 'regional_admin'].includes(user.role);

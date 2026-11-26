@@ -127,10 +127,52 @@ class RedemptionService {
     referral_code,
     created_by,
     tenant_id,
+    idempotency_key,
   }) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+
+      // 0. Boundary & Math Sanity Check (Security Wall Against Negative Amounts & Overflow)
+      if (bill_amount != null) {
+        const b = parseFloat(bill_amount);
+        if (isNaN(b) || b < 0 || !Number.isFinite(b) || b > 50000000) {
+          throw { statusCode: 400, message: 'Invalid bill amount: Must be a non-negative number up to ₹50,000,000.' };
+        }
+      }
+      if (taxable_amount != null) {
+        const t = parseFloat(taxable_amount);
+        if (isNaN(t) || t < 0 || !Number.isFinite(t) || t > 50000000) {
+          throw { statusCode: 400, message: 'Invalid taxable amount: Must be a non-negative number.' };
+        }
+      }
+      if (points != null) {
+        const p = Number(points);
+        if (isNaN(p) || p < 0 || !Number.isInteger(p) || p > 10000000) {
+          throw { statusCode: 400, message: 'Invalid points: Points must be a non-negative whole number up to 10,000,000.' };
+        }
+      }
+
+      // 0b. Anti-Replay Defense Wall: Check if receipt_no was already redeemed
+      const cleanReceiptNo = receipt_no ? String(receipt_no).trim() : null;
+      if (cleanReceiptNo) {
+        const existingReceipt = await client.query(
+          `SELECT redemption_code, receipt_no, discount_amount, points_redeemed, created_at
+           FROM redemptions
+           WHERE tenant_id = $1 AND UPPER(receipt_no) = UPPER($2)
+           LIMIT 1;`,
+          [tenant_id, cleanReceiptNo]
+        );
+        if (existingReceipt.rows.length > 0) {
+          const rec = existingReceipt.rows[0];
+          const recDate = new Date(rec.created_at).toLocaleDateString('en-IN');
+          throw {
+            statusCode: 409,
+            code: 'RECEIPT_ALREADY_REDEEMED',
+            message: `Receipt #${cleanReceiptNo} has already been processed and redeemed (Discount: ₹${rec.discount_amount}, Points: ${rec.points_redeemed} PTS on ${recDate}). Duplicate redemption blocked to prevent double-spending.`,
+          };
+        }
+      }
 
       // 1. Resolve customer_id
       let customerId = customer_id ? String(customer_id).trim() : null;
@@ -319,20 +361,18 @@ class RedemptionService {
       let netTaxablePaid = 0;
 
       if (billAmt > 0) {
-        const redeemable_rupees = maxAllowedPointsByModel * POINTS_PER_RUPEE_REDEMPTION;
-        discount_applied = Math.min(redeemable_rupees, billAmt);
+        const redeemable_rupees = Math.round(maxAllowedPointsByModel * POINTS_PER_RUPEE_REDEMPTION);
+        discount_applied = Math.round(Math.min(redeemable_rupees, billAmt));
         points_redeemed = Math.min(maxAllowedPointsByModel, Math.round(discount_applied / POINTS_PER_RUPEE_REDEMPTION));
         cash_paid = billAmt - discount_applied;
 
-        // Apply category specific points earning rate
+        // Apply category specific points earning rate (4 pts / ₹100 for service/accessories/bodyshop, 1 pt for sales)
         const normCategory = (category || 'service').toLowerCase();
         let earnRate = POINTS_PER_100_RUPEES_EARNED; // 4% default
-        if (normCategory === 'accessories' || normCategory === 'accessory') {
-          earnRate = 2; // 2%
-        } else if (normCategory === 'bodyshop') {
-          earnRate = 3; // 3%
-        } else if (normCategory === 'service') {
-          earnRate = 4; // 4%
+        if (normCategory === 'sale' || normCategory === 'sales') {
+          earnRate = 1; // 1%
+        } else {
+          earnRate = 4; // 4% for service, accessories, bodyshop
         }
 
         // Before-Tax Points Calculation:
@@ -341,9 +381,9 @@ class RedemptionService {
         // If taxable_amount is not provided, fallback safely to cash_paid.
         if (taxableBase != null && taxableBase > 0) {
           netTaxablePaid = Math.max(0, taxableBase - discount_applied);
-          new_points_earned = Math.floor((netTaxablePaid / 100) * earnRate);
+          new_points_earned = Math.round((netTaxablePaid / 100) * earnRate);
         } else {
-          new_points_earned = Math.floor((cash_paid / 100) * earnRate);
+          new_points_earned = Math.round((cash_paid / 100) * earnRate);
         }
       } else if (points && parseInt(points, 10) > 0) {
         points_redeemed = parseInt(points, 10);
@@ -353,7 +393,7 @@ class RedemptionService {
             message: `Points redemption for this model is capped at ${modelCapPercent}%. Maximum allowed points to redeem is ${maxAllowedPointsByModel} pts (current balance: ${currentPointBalance} pts).`,
           };
         }
-        discount_applied = points_redeemed * POINTS_PER_RUPEE_REDEMPTION;
+        discount_applied = Math.round(points_redeemed * POINTS_PER_RUPEE_REDEMPTION);
         cash_paid = 0;
         new_points_earned = 0;
       }

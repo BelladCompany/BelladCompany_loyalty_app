@@ -342,6 +342,44 @@ const globalApiRateLimiter = (req, res, next) => {
   next();
 };
 
+/**
+ * Rate limiter for redemptions and points operations to prevent automated rapid-fire double-spending
+ * Max 60 redemptions per 1 minute per IP in production; 1000 in dev/test
+ */
+const redemptionRequestCounts = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of redemptionRequestCounts.entries()) {
+    if (now > data.resetTime) {
+      redemptionRequestCounts.delete(ip);
+    }
+  }
+}, 60 * 1000);
+
+const redemptionRateLimiter = (req, res, next) => {
+  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  const isDev = process.env.NODE_ENV !== 'production';
+  const maxRequests = isDev ? 1000 : 60;
+
+  const current = redemptionRequestCounts.get(clientIp);
+  if (!current || now > current.resetTime) {
+    redemptionRequestCounts.set(clientIp, { count: 1, resetTime: now + windowMs });
+    return next();
+  }
+
+  if (current.count >= maxRequests) {
+    return res.status(429).json({
+      status: 'fail',
+      error: 'Transaction rate limit exceeded: Too many redemption operations from this network. Please wait a moment.',
+    });
+  }
+
+  current.count += 1;
+  next();
+};
+
 // Dual export support for backward compatibility with default import and named imports
 loginRateLimiter.loginRateLimiter = loginRateLimiter;
 loginRateLimiter.kycRateLimiter = kycRateLimiter;
@@ -352,5 +390,6 @@ loginRateLimiter.otpVerifyRateLimiter = otpVerifyRateLimiter;
 loginRateLimiter.searchRateLimiter = searchRateLimiter;
 loginRateLimiter.giftCardRateLimiter = giftCardRateLimiter;
 loginRateLimiter.globalApiRateLimiter = globalApiRateLimiter;
+loginRateLimiter.redemptionRateLimiter = redemptionRateLimiter;
 
 module.exports = loginRateLimiter;

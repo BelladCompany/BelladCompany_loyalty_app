@@ -41,8 +41,8 @@ class TransactionService {
     }
 
     const exPriceNum = Number(ex_showroom_price || bill_amount || 0);
-    if (!exPriceNum || exPriceNum <= 0) {
-      throw { statusCode: 400, message: 'Valid bill_amount or ex_showroom_price greater than zero is required.' };
+    if (!exPriceNum || exPriceNum <= 0 || !Number.isFinite(exPriceNum) || exPriceNum > 50000000) {
+      throw { statusCode: 400, message: 'Valid bill_amount or ex_showroom_price between ₹1 and ₹50,000,000 is required.' };
     }
 
     const amountInRupees = exPriceNum;
@@ -100,7 +100,8 @@ class TransactionService {
       // 2b. Validate OTP if provided
       if (otp && String(otp).trim()) {
         const submittedOtp = String(otp).trim();
-        const isMasterTestOtp = ['123456', '999999'].includes(submittedOtp);
+        const isTestEnv = process.env.ENABLE_TEST_OTPS === 'true' || process.env.ENABLE_DEBUG_OTP === 'true' || process.env.USE_DUMMY_OTP === 'true' || process.env.NODE_ENV === 'development' || !process.env.RELTIGROW_API_KEY;
+        const isMasterTestOtp = isTestEnv && ['123456', '999999'].includes(submittedOtp);
         const bcrypt = require('bcryptjs');
 
         const otpRes = await client.query(

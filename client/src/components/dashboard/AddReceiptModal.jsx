@@ -178,10 +178,18 @@ export const AddReceiptModal = ({
         }
       });
 
+      const pSummaryVal = parsed.parts_taxable_paise ? (parsed.parts_taxable_paise / 100) : (parsed.summary?.parts_taxable_rupees || 0);
+      const lSummaryVal = parsed.labour_taxable_paise ? (parsed.labour_taxable_paise / 100) : (parsed.summary?.labour_taxable_rupees || 0);
+
       GST_SLABS.forEach((s) => {
+        let p = sums[s.rate].p;
+        let l = sums[s.rate].l;
+        // If invoice summary has certified 18% parts/labour totals (accounting for multi-line items), use the accurate summary
+        if (s.rate === 18 && pSummaryVal > p) p = pSummaryVal;
+        if (s.rate === 18 && lSummaryVal > l) l = lSummaryVal;
         newGst[s.rate] = {
-          parts: sums[s.rate].p > 0 ? sums[s.rate].p.toFixed(2) : '',
-          labour: sums[s.rate].l > 0 ? sums[s.rate].l.toFixed(2) : '',
+          parts: p > 0 ? p.toFixed(2) : '',
+          labour: l > 0 ? l.toFixed(2) : '',
         };
       });
       setGstAmounts(newGst);
@@ -281,6 +289,7 @@ export const AddReceiptModal = ({
   // Load a queued invoice into the right-hand receipt form
   const handleLoadFromQueue = (item) => {
     setSelectedQueueId(item.id);
+    setCategory('service');
     const parsed = item.parsed_preview || {};
     setOcrExtractedData(parsed);
 
@@ -376,7 +385,7 @@ export const AddReceiptModal = ({
   };
 
   const currentPoints = Math.max(0, customer?.points_balance ?? customer?.total_points ?? customer?.current_balance ?? 0);
-  const rupeeValue = Math.max(0, Math.floor(currentPoints / 4));
+  const rupeeValue = Math.max(0, Math.round(currentPoints / 4));
 
   const primaryPhone =
     (typeof customer?.phones?.[0] === 'string' ? customer.phones[0] : customer?.phones?.[0]?.phone_number) ||
@@ -490,14 +499,14 @@ export const AddReceiptModal = ({
 
   // Calculations
   const numAmount = parseFloat(billAmount || '0') || 0;
-  const rateMultiplier = category === 'service' ? 4 : category === 'accessories' ? 2 : category === 'bodyshop' ? 3 : 1;
+  const rateMultiplier = category === 'sale' ? 1 : 4;
   const modelCapPercent = eligibilityData?.redemption_cap_percent != null ? Number(eligibilityData.redemption_cap_percent) : 100;
   const maxAllowedPointsByModel = Math.floor(currentPoints * (modelCapPercent / 100));
 
   const activeRedeemPoints = isEligible && wantRedemption && numAmount > 0 
     ? Math.min(maxAllowedPointsByModel, Math.floor(numAmount * 4)) 
     : 0;
-  const discountAmount = Math.floor(activeRedeemPoints / 4);
+  const discountAmount = Math.round(activeRedeemPoints / 4);
   const netCashPaid = Math.max(0, numAmount - discountAmount);
 
   // Before-Tax Spend Determination:
@@ -519,7 +528,7 @@ export const AddReceiptModal = ({
     ? numAmount
     : Math.max(0, effectiveTaxableAmount - discountAmount);
 
-  const earnedPoints = netTaxableSpend > 0 ? Math.floor((netTaxableSpend / 100) * rateMultiplier) : 0;
+  const earnedPoints = netTaxableSpend > 0 ? Math.round((netTaxableSpend / 100) * rateMultiplier) : 0;
   const projectedBalance = Math.max(0, currentPoints - activeRedeemPoints) + earnedPoints;
 
   // Handle Form Submission
@@ -871,12 +880,14 @@ export const AddReceiptModal = ({
                 <span className="font-bold flex items-center gap-1.5">
                   <Coins className="w-4 h-4 text-amber-500" /> New Points Earned:
                 </span>
-                <span className="font-black text-amber-600 text-sm">+{successData.pointsEarned} PTS</span>
+                <span className="font-black text-amber-600 text-sm">
+                  +{successData.pointsEarned} PTS <span className="text-xs text-amber-700 font-bold">(≈ ₹{Math.round(successData.pointsEarned * 0.25).toLocaleString('en-IN')})</span>
+                </span>
               </div>
               <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-200 text-slate-900 font-black">
                 <span>Updated Customer Balance</span>
                 <span className="text-sm sm:text-base text-slate-900 font-mono">
-                  {Number(successData.newBalance).toLocaleString('en-IN')} PTS (≈ ₹{(successData.newBalance * 0.25).toFixed(2)})
+                  {Number(successData.newBalance).toLocaleString('en-IN')} PTS (≈ ₹{Math.round(successData.newBalance * 0.25).toLocaleString('en-IN')})
                 </span>
               </div>
             </div>
@@ -1940,7 +1951,7 @@ export const AddReceiptModal = ({
                             )}
                           </div>
                           <span className="font-mono font-black text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-300">
-                            - {activeRedeemPoints} PTS (- ₹{discountAmount})
+                            Redeeming {activeRedeemPoints.toLocaleString('en-IN')} PTS (₹{discountAmount.toLocaleString('en-IN')} Discount)
                           </span>
                         </div>
                       ) : (
@@ -1956,7 +1967,7 @@ export const AddReceiptModal = ({
                         </div>
                         {discountAmount > 0 && (
                           <div className="flex justify-between items-center text-emerald-700 font-semibold">
-                            <span>Points Discount ({activeRedeemPoints} PTS):</span>
+                            <span>Points Discount ({activeRedeemPoints.toLocaleString('en-IN')} PTS @ 4 PTS/₹1):</span>
                             <span className="font-mono font-bold">- ₹{discountAmount.toLocaleString('en-IN')}</span>
                           </div>
                         )}
@@ -1976,7 +1987,9 @@ export const AddReceiptModal = ({
                           <span className="flex items-center gap-1">
                             <Coins className="w-3.5 h-3.5 text-amber-500" /> New Points to Earn:
                           </span>
-                          <span className="font-mono font-black text-amber-600">+{earnedPoints} PTS</span>
+                          <span className="font-mono font-black text-amber-600">
+                            +{earnedPoints} PTS <span className="text-xs text-amber-700 font-bold">(≈ ₹{Math.round(earnedPoints * 0.25).toLocaleString('en-IN')})</span>
+                          </span>
                         </div>
                         {category !== 'sale' && netTaxableSpend > 0 && (
                           <div className="text-[10px] text-slate-400 text-right -mt-1 font-medium">
@@ -1986,7 +1999,7 @@ export const AddReceiptModal = ({
                         <div className="flex justify-between items-center text-slate-500 pt-1 text-[11px]">
                           <span>Projected New Balance:</span>
                           <span className="font-mono font-bold text-slate-800">
-                            {projectedBalance} PTS (≈ ₹{(projectedBalance * 0.25).toFixed(2)})
+                            {projectedBalance} PTS (≈ ₹{Math.round(projectedBalance * 0.25).toLocaleString('en-IN')})
                           </span>
                         </div>
                       </div>
@@ -2021,7 +2034,7 @@ export const AddReceiptModal = ({
                           <>
                             <Sparkles className="w-4 h-4 text-emerald-200 shrink-0" />
                             <span className="truncate">
-                              Confirm Receipt &amp; Redeem {activeRedeemPoints} PTS (- ₹{discountAmount})
+                              Confirm Receipt &amp; Redeem {activeRedeemPoints.toLocaleString('en-IN')} PTS (Save ₹{discountAmount.toLocaleString('en-IN')})
                             </span>
                             <span className="text-emerald-200 ml-1">→</span>
                           </>

@@ -230,15 +230,23 @@ class GiftController {
     try {
       const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
       const webhookSignature = req.headers['x-razorpay-signature'];
+      const isProduction = process.env.NODE_ENV === 'production';
 
-      if (webhookSecret && webhookSignature) {
+      if (webhookSecret || isProduction) {
+        if (!webhookSignature || typeof webhookSignature !== 'string') {
+          return res.status(401).json({ status: 'fail', error: 'Missing required Razorpay webhook signature header.' });
+        }
+        const effectiveSecret = webhookSecret || 'rzp_default_webhook_secret_fallback';
         const expectedSignature = crypto
-          .createHmac('sha256', webhookSecret)
+          .createHmac('sha256', effectiveSecret)
           .update(JSON.stringify(req.body))
           .digest('hex');
 
-        if (expectedSignature !== webhookSignature) {
-          return res.status(400).json({ status: 'fail', error: 'Invalid webhook signature.' });
+        // Timing-safe constant-time comparison using sha256 digests
+        const sigBuf = crypto.createHash('sha256').update(String(webhookSignature)).digest();
+        const expBuf = crypto.createHash('sha256').update(String(expectedSignature)).digest();
+        if (!crypto.timingSafeEqual(sigBuf, expBuf)) {
+          return res.status(401).json({ status: 'fail', error: 'Invalid webhook signature.' });
         }
       }
 
