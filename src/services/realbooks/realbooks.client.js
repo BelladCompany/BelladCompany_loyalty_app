@@ -128,9 +128,9 @@ class RealBooksClient {
         };
       }
 
-      if (json.type === 'error' || (json.type && json.type !== 'success') || json.status === 'error') {
-        const errMsg = json.msg || json.errorMsg || json.message || json.error || 'RealBooks API Error';
-        throw new Error(errMsg);
+      if (json.error || json.errorMsg || json.type === 'error' || (json.type && json.type !== 'success') || json.status === 'error') {
+        const errMsg = json.error || json.errorMsg || json.msg || json.message || 'RealBooks API Error';
+        throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
       }
 
       return {

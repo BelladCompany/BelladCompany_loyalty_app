@@ -349,7 +349,7 @@ class RedemptionService {
       let points_redeemed = 0;
       let cash_paid = 0;
       let new_points_earned = 0;
-      const billAmt = bill_amount ? parseFloat(bill_amount) : 0;
+      const billAmt = bill_amount ? Math.round(parseFloat(bill_amount)) : 0;
       const parsedTaxable = (taxable_amount != null && !isNaN(parseFloat(taxable_amount)) && parseFloat(taxable_amount) > 0)
         ? parseFloat(taxable_amount)
         : null;
@@ -362,9 +362,9 @@ class RedemptionService {
 
       if (billAmt > 0) {
         const redeemable_rupees = Math.round(maxAllowedPointsByModel * POINTS_PER_RUPEE_REDEMPTION);
-        discount_applied = Math.round(Math.min(redeemable_rupees, billAmt));
+        discount_applied = Math.min(billAmt, Math.round(Math.min(redeemable_rupees, billAmt)));
         points_redeemed = Math.min(maxAllowedPointsByModel, Math.round(discount_applied / POINTS_PER_RUPEE_REDEMPTION));
-        cash_paid = billAmt - discount_applied;
+        cash_paid = Math.max(0, billAmt - discount_applied);
 
         // Apply category specific points earning rate (4 pts / ₹100 for service/accessories/bodyshop, 1 pt for sales)
         const normCategory = (category || 'service').toLowerCase();

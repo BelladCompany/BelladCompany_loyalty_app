@@ -78,9 +78,9 @@
     "semantic_hash": ""
   },
   "client/src/components/dashboard/AddReceiptModal.jsx": {
-    "mtime": 1795607983.8000603,
-    "seen": 1795608013.220951,
-    "ast_hash": "dee93dfa5c1cd624f55827a858ef1883",
+    "mtime": 1795684663.0400324,
+    "seen": 1795684733.9573927,
+    "ast_hash": "0d71ff211451fe09a47e33941cc458d1",
     "semantic_hash": ""
   },
   "client/src/components/dashboard/BranchNetworkChart.jsx": {
@@ -396,9 +396,9 @@
     "semantic_hash": ""
   },
   "client/src/services/api.js": {
-    "mtime": 1795585458.2516599,
-    "seen": 1795587275.2443907,
-    "ast_hash": "37e1671d44916c3fdb1e0fe92bc9ee0e",
+    "mtime": 1795683617.681106,
+    "seen": 1795684733.9698315,
+    "ast_hash": "30e2f8a9a7c32571ba4f95aaf244ad15",
     "semantic_hash": ""
   },
   "client/tailwind.config.js": {
@@ -1668,9 +1668,9 @@
     "semantic_hash": ""
   },
   "src/services/realbooks/realbooks.client.js": {
-    "mtime": 1795679484.9945598,
-    "seen": 1795679576.821782,
-    "ast_hash": "e2771337658fccd83abf3b9494a2ce06",
+    "mtime": 1795684335.997387,
+    "seen": 1795684734.0190322,
+    "ast_hash": "be4cbf8d74b40e00a207831ff7031b8c",
     "semantic_hash": ""
   },
   "src/services/realbooks/realbooks.segment_resolver.js": {
@@ -1686,9 +1686,9 @@
     "semantic_hash": ""
   },
   "src/services/redemption.service.js": {
-    "mtime": 1795607388.9900286,
-    "seen": 1795608013.2800503,
-    "ast_hash": "f9de2a561a45b8181e3fc4106d91b58d",
+    "mtime": 1795684355.260379,
+    "seen": 1795684734.0194654,
+    "ast_hash": "ba72b926943d4251c27830c8fe9b0082",
     "semantic_hash": ""
   },
   "src/services/redemption_eligibility.service.js": {
@@ -1902,21 +1902,21 @@
     "semantic_hash": ""
   },
   "src/controllers/invoiceV2.controller.js": {
-    "mtime": 1795504588.3506815,
-    "seen": 1795505310.508082,
-    "ast_hash": "fe5c501dd362e2d9150de54e5025cf06",
+    "mtime": 1795683583.9028742,
+    "seen": 1795684734.0020022,
+    "ast_hash": "83fb44b6f1b359cbbef4df5945a7a510",
     "semantic_hash": ""
   },
   "src/routes/invoiceV2.routes.js": {
-    "mtime": 1795504575.579548,
-    "seen": 1795505310.5165496,
-    "ast_hash": "507b9e3ca0aed4d3c7f2522fa0dc72b9",
+    "mtime": 1795683603.280215,
+    "seen": 1795684734.0113065,
+    "ast_hash": "f34caa7e310dbd79b4f474ab4f4c29d5",
     "semantic_hash": ""
   },
   "src/services/invoiceParserV2.service.js": {
-    "mtime": 1795604434.181658,
-    "seen": 1795604532.1148808,
-    "ast_hash": "1b46312d32357067d6d56ca0312cedc7",
+    "mtime": 1795680132.3421035,
+    "seen": 1795684734.0173101,
+    "ast_hash": "06a868a65d71a0cd5550c982609c9a2a",
     "semantic_hash": ""
   },
   "client/src/screens/AdvisorInvoiceUploadScreen.jsx": {
@@ -1968,9 +1968,9 @@
     "semantic_hash": ""
   },
   "scripts/inspect_invoice.js": {
-    "mtime": 1795610330.901095,
-    "seen": 1795679001.4213548,
-    "ast_hash": "f62ca7342ee99178f4ae5fa8edcd511d",
+    "mtime": 1795684094.6998453,
+    "seen": 1795684733.987309,
+    "ast_hash": "7569fdc01043444bb12ccec3a80daf5e",
     "semantic_hash": ""
   },
   "scripts/inspect_realbooks_segments.js": {
@@ -1998,9 +1998,33 @@
     "semantic_hash": ""
   },
   "scripts/inspect_sync_error.js": {
-    "mtime": 1795679541.9107757,
-    "seen": 1795679576.7870448,
-    "ast_hash": "aac44cd2d69d90771d97431ea90f0117",
+    "mtime": 1795683971.9537883,
+    "seen": 1795684733.9875293,
+    "ast_hash": "9dc728e575c445fd63ba4b06cf8a8a12",
+    "semantic_hash": ""
+  },
+  "scripts/check_triggers.js": {
+    "mtime": 1795679979.8062937,
+    "seen": 1795684733.9817214,
+    "ast_hash": "4f3f0c1cb96b0b02359e0eae3ceff926",
+    "semantic_hash": ""
+  },
+  "scripts/inspect_vandana.js": {
+    "mtime": 1795679919.3485649,
+    "seen": 1795684733.987747,
+    "ast_hash": "71fe9c3b62a50047aee8a76d2c816cac",
+    "semantic_hash": ""
+  },
+  "scripts/restore_vandana.js": {
+    "mtime": 1795679939.533095,
+    "seen": 1795684733.9892466,
+    "ast_hash": "c8f6247e403eef5346aff23bc3c7d2c6",
+    "semantic_hash": ""
+  },
+  "scripts/revert_test_redemption.js": {
+    "mtime": 1795680001.9573257,
+    "seen": 1795684733.9892495,
+    "ast_hash": "e9386336afc5181ef4511d766fa0e3d5",
     "semantic_hash": ""
   },
   "client/package-lock.json": {

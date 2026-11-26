@@ -444,6 +444,37 @@ async function updateAdvisorQueueStatus(req, res, next) {
   }
 }
 
+/**
+ * DELETE /api/v2/invoices/advisor-queue/:id
+ * Allows advisors, cashiers, or admins to delete an uploaded invoice PDF from the queue.
+ */
+async function deleteAdvisorQueueItem(req, res, next) {
+  try {
+    const tenantId = req.headers['x-tenant-id'] || req.user?.tenant_id || 'bellad_and_company';
+    const queueId = req.params.id;
+
+    const deleted = await invoiceParserService.deleteAdvisorQueueItem(queueId, tenantId);
+    if (!deleted) {
+      return res.status(404).json({
+        status: 'fail',
+        error: 'Invoice queue item not found or already deleted.',
+      });
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Invoice #${deleted.invoice_number || deleted.original_filename || 'PDF'} successfully deleted from queue.`,
+      data: deleted,
+    });
+  } catch (err) {
+    console.error('[InvoiceV2Controller] deleteAdvisorQueueItem error:', err);
+    return res.status(500).json({
+      status: 'error',
+      error: err.message || 'Failed to delete invoice from queue.',
+    });
+  }
+}
+
 module.exports = {
   parseInvoice,
   saveInvoice,
@@ -456,4 +487,5 @@ module.exports = {
   getAdvisorQueueItem,
   getAdvisorQueuePdf,
   updateAdvisorQueueStatus,
+  deleteAdvisorQueueItem,
 };

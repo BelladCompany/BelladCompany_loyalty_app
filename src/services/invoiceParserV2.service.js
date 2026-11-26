@@ -1729,6 +1729,32 @@ async function updateAdvisorQueueStatus(id, tenantId, status, userId = null) {
   return res.rows[0] || null;
 }
 
+/**
+ * Deletes an advisor invoice queue item and deletes its PDF file from disk.
+ */
+async function deleteAdvisorQueueItem(id, tenantId = 'bellad_and_company') {
+  // 1. Fetch item to get file path
+  const item = await getAdvisorQueueItem(id, tenantId);
+  if (!item) return null;
+
+  // 2. Remove physical PDF file if it exists
+  if (item.file_path) {
+    try {
+      const fullPath = path.resolve(__dirname, '../../', item.file_path);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    } catch (fileErr) {
+      console.warn(`[InvoiceV2Service] Failed to unlink file ${item.file_path}:`, fileErr.message);
+    }
+  }
+
+  // 3. Delete DB record
+  const sql = `DELETE FROM advisor_invoice_queue WHERE id = $1 AND tenant_id = $2 RETURNING *;`;
+  const res = await pool.query(sql, [id, tenantId]);
+  return res.rows[0] || null;
+}
+
 module.exports = {
   extractTextFromPdf,
   detectBrandAndFormat,
@@ -1746,5 +1772,6 @@ module.exports = {
   addToAdvisorQueue,
   getAdvisorQueue,
   getAdvisorQueueItem,
-  updateAdvisorQueueStatus
+  updateAdvisorQueueStatus,
+  deleteAdvisorQueueItem
 };

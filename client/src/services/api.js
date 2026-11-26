@@ -1317,6 +1317,12 @@ export class ApiService {
     });
   }
 
+  static async deleteAdvisorInvoiceQueueItem(id) {
+    return this.request(`/v2/invoices/advisor-queue/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   static getAdvisorInvoicePdfUrl(id) {
     const base = API_BASE;
     const token = typeof ApiService.getToken === 'function' ? ApiService.getToken() : '';

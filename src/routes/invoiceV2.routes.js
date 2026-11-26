@@ -79,12 +79,13 @@ router.get('/', invoiceController.listInvoices);
 // 5. Get all spare parts and prices recorded for a specific customer
 router.get('/customers/:customerId/parts', invoiceController.getCustomerSpareParts);
 
-// 6. Advisor Invoice PDF Queue (Upload, Stream PDF, Day-Wise List, Status Update)
+// 6. Advisor Invoice PDF Queue (Upload, Stream PDF, Day-Wise List, Status Update, Delete)
 router.post('/advisor-upload', uploadInvoiceMiddleware, invoiceController.advisorUpload);
 router.get('/advisor-queue', invoiceController.getAdvisorQueue);
 router.get('/advisor-queue/:id', invoiceController.getAdvisorQueueItem);
 router.get('/advisor-queue/:id/pdf', invoiceController.getAdvisorQueuePdf);
 router.patch('/advisor-queue/:id/status', invoiceController.updateAdvisorQueueStatus);
+router.delete('/advisor-queue/:id', invoiceController.deleteAdvisorQueueItem);
 
 // 7. Get invoice details and line items by ID
 router.get('/:id', invoiceController.getInvoiceDetails);
