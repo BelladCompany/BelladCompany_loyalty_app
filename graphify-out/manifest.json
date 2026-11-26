@@ -1668,9 +1668,9 @@
     "semantic_hash": ""
   },
   "src/services/realbooks/realbooks.client.js": {
-    "mtime": 1795004821.557681,
-    "seen": 1795419439.7517612,
-    "ast_hash": "799f4bfb0ea455f01785680e6e745904",
+    "mtime": 1795679484.9945598,
+    "seen": 1795679576.821782,
+    "ast_hash": "e2771337658fccd83abf3b9494a2ce06",
     "semantic_hash": ""
   },
   "src/services/realbooks/realbooks.segment_resolver.js": {
@@ -1680,9 +1680,9 @@
     "semantic_hash": ""
   },
   "src/services/realbooks/realbooks.service.js": {
-    "mtime": 1795678838.594322,
-    "seen": 1795679001.4609275,
-    "ast_hash": "8ef3229c3ddfbcc1ca4acc6d8875b10b",
+    "mtime": 1795679500.33848,
+    "seen": 1795679576.8220866,
+    "ast_hash": "166dc5456d39de2beae34c19f17d4b2f",
     "semantic_hash": ""
   },
   "src/services/redemption.service.js": {
@@ -1995,6 +1995,12 @@
     "mtime": 1795609988.915775,
     "seen": 1795679001.4221964,
     "ast_hash": "77a55c422cd5abc203b8a62de5a673f2",
+    "semantic_hash": ""
+  },
+  "scripts/inspect_sync_error.js": {
+    "mtime": 1795679541.9107757,
+    "seen": 1795679576.7870448,
+    "ast_hash": "aac44cd2d69d90771d97431ea90f0117",
     "semantic_hash": ""
   },
   "client/package-lock.json": {

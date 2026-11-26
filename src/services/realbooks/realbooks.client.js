@@ -103,17 +103,21 @@ class RealBooksClient {
       }
 
       // If creating/syncing a customer ledger and RealBooks reports it already exists, treat as existing synced ledger
-      if (
-        actionName.toLowerCase().includes('ledger') &&
-        (json.msg?.toLowerCase().includes('already exist') || json.errorMsg?.toLowerCase().includes('already exist'))
-      ) {
+      const isAlreadyExist =
+        (json.msg && typeof json.msg === 'string' && json.msg.toLowerCase().includes('already exist')) ||
+        (json.errorMsg && typeof json.errorMsg === 'string' && json.errorMsg.toLowerCase().includes('already exist')) ||
+        (json.error && typeof json.error === 'string' && json.error.toLowerCase().includes('already exist')) ||
+        (json.message && typeof json.message === 'string' && json.message.toLowerCase().includes('already exist'));
+
+      if (actionName.toLowerCase().includes('ledger') && isAlreadyExist) {
+        const resolvedLid = json.id || json.data?.id || json.lid || json.ledgerId || null;
         return {
           success: true,
           mode: 'live',
           simulated: false,
-          message: `Customer ledger verified in RealBooks (${json.msg || json.errorMsg}).`,
+          message: `Customer ledger verified in RealBooks (${json.msg || json.errorMsg || json.error || json.message}).`,
           realbooks_voucher_id: `RB-EXISTING-${Date.now()}`,
-          realbooks_ledger_id: json.data?.id || json.lid || json.ledgerId,
+          realbooks_ledger_id: resolvedLid,
           cid: targetCid,
           segid: targetSegid,
           segment_name: meta.segment_name,
@@ -231,6 +235,7 @@ class RealBooksClient {
     receiptNo,
     customerName,
     customerId,
+    customerLid = null,
     billAmount,
     discountAmount = 0,
     cashPaid,
@@ -287,13 +292,19 @@ class RealBooksClient {
     }
 
     // Credit: Customer Party Ledger for Total Bill Amount
+    // Note: Do not pass ledgerCode here to prevent RealBooks from trying to auto-create a duplicate ledger
+    const customerLedgerObj = {
+      ledgerName: `${customerName || 'Customer'} (${customerId})`,
+      ledgerGroupName: 'Sundry Debtors',
+    };
+    if (customerLid && Number(customerLid) > 0) {
+      customerLedgerObj.id = Number(customerLid);
+    } else {
+      customerLedgerObj.id = 0;
+    }
+
     ledgerDetails.push({
-      ledger: {
-        id: 0,
-        ledgerName: `${customerName || 'Customer'} (${customerId})`,
-        ledgerGroupName: 'Sundry Debtors',
-        ledgerCode: customerId,
-      },
+      ledger: customerLedgerObj,
       amountType: 'cr',
       amount: numBill,
       ledgerType: 'party',

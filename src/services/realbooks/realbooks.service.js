@@ -193,6 +193,7 @@ class RealBooksService {
       receiptNo: code,
       customerName: customer.name,
       customerId: customer_id,
+      customerLid: ledgerSync.realbooks_ledger_id || customer.realbooks_lid || null,
       billAmount: bill_amount,
       discountAmount: discount_amount,
       cashPaid: Math.max(0, bill_amount - discount_amount),
