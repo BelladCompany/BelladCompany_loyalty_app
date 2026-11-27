@@ -130,13 +130,13 @@ class RedemptionEligibilityService {
       }
     }
 
-    // 4b. Resolve model-specific redemption percentage cap
+    // 4b. Resolve model-specific redemption percentage cap (Max 50% cap enforced)
     const resolvedCap = await ModelRedemptionCapService.resolveCap({
       tenant_id: tenantId,
       brand_name: vehicle.brand_name,
       model_name: vehicle.model,
     });
-    const capPercent = resolvedCap.cap_percent != null ? Number(resolvedCap.cap_percent) : 100.0;
+    const capPercent = resolvedCap.cap_percent != null ? Math.min(50.0, Number(resolvedCap.cap_percent)) : 50.0;
     const maxRedeemablePoints = Math.floor(points_balance * (capPercent / 100));
 
     // 5. Build human-readable message

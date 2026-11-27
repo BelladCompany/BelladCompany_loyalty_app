@@ -49,8 +49,8 @@ class ModelRedemptionCapService {
     const statsQuery = `
       SELECT 
         COUNT(*)::int AS total_caps,
-        COUNT(CASE WHEN redemption_cap_percent < 100 AND is_active = true THEN 1 END)::int AS capped_models_count,
-        COUNT(CASE WHEN redemption_cap_percent >= 100 AND is_active = true THEN 1 END)::int AS full_redemption_models_count,
+        COUNT(CASE WHEN redemption_cap_percent < 50 AND is_active = true THEN 1 END)::int AS capped_models_count,
+        COUNT(CASE WHEN redemption_cap_percent >= 50 AND is_active = true THEN 1 END)::int AS full_redemption_models_count,
         COUNT(DISTINCT brand_name)::int AS total_brands_count
       FROM model_redemption_caps
       WHERE tenant_id = $1;
@@ -61,8 +61,8 @@ class ModelRedemptionCapService {
       caps: rows,
       stats: statsRes.rows[0] || {
         total_caps: rows.length,
-        capped_models_count: rows.filter((r) => Number(r.redemption_cap_percent) < 100).length,
-        full_redemption_models_count: rows.filter((r) => Number(r.redemption_cap_percent) >= 100).length,
+        capped_models_count: rows.filter((r) => Number(r.redemption_cap_percent) < 50).length,
+        full_redemption_models_count: rows.filter((r) => Number(r.redemption_cap_percent) >= 50).length,
         total_brands_count: new Set(rows.map((r) => r.brand_name)).size,
       },
     };
@@ -136,11 +136,11 @@ class ModelRedemptionCapService {
       matchedRule = allRules.find((r) => r.brand_name === 'ALL' && r.model_name === 'ALL');
     }
 
-    const capPercent = matchedRule ? Number(matchedRule.redemption_cap_percent) : 100.0;
+    const capPercent = matchedRule ? Math.min(50.0, Number(matchedRule.redemption_cap_percent)) : 50.0;
 
     return {
       cap_percent: capPercent,
-      is_capped: capPercent < 100,
+      is_capped: capPercent < 50,
       rule_id: matchedRule?.id || null,
       brand_name: matchedRule?.brand_name || cleanBrand,
       model_name: matchedRule?.model_name || cleanModel,
@@ -164,7 +164,7 @@ class ModelRedemptionCapService {
       throw new Error('Both brand_name and model_name are required.');
     }
 
-    const capPercent = Math.max(0, Math.min(100, parseFloat(redemption_cap_percent) || 0));
+    const capPercent = Math.max(0, Math.min(50, parseFloat(redemption_cap_percent) || 0));
     const cleanBrand = String(brand_name).trim();
     const cleanModel = String(model_name).trim();
 

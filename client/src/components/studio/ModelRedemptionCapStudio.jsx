@@ -196,8 +196,8 @@ export default function ModelRedemptionCapStudio({ tenantId = 'bellad_and_compan
       if (brandDefault) {
         setCapPercent(Number(brandDefault.redemption_cap_percent));
       } else {
-        // Fallbacks: Default to 100% full redemption across all brands
-        setCapPercent(100);
+        // Fallbacks: Default to 50% redemption across all brands
+        setCapPercent(50);
       }
     }
   }, [selectedBrand, selectedModel, isCustomMode, customModelInput, caps]);
@@ -464,13 +464,13 @@ export default function ModelRedemptionCapStudio({ tenantId = 'bellad_and_compan
           )}
         </div>
 
-        {/* ── STEP 3: PERCENTAGE SCROLL BAR (1% TO 100%) ── */}
+        {/* ── STEP 3: PERCENTAGE SCROLL BAR (1% TO 50% MAX CAP) ── */}
         <div className="p-5 rounded-2xl bg-slate-900 text-white space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <span className="text-[10px] font-black uppercase text-indigo-300 tracking-wider flex items-center gap-1.5">
                 <span className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 text-[10px] font-black flex items-center justify-center">3</span>
-                Redemption Percentage Scroll Bar (1% – 100%)
+                Redemption Percentage Scroll Bar (1% – 50% Max Cap)
               </span>
               <h3 className="text-base font-black text-white mt-0.5">
                 Cap for: <span className="text-amber-300">{selectedBrand}</span> • <span className="text-emerald-300">{effectiveTargetName}</span>
@@ -482,9 +482,9 @@ export default function ModelRedemptionCapStudio({ tenantId = 'bellad_and_compan
                 <input
                   type="number"
                   min="1"
-                  max="100"
+                  max="50"
                   value={capPercent}
-                  onChange={(e) => setCapPercent(Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1)))}
+                  onChange={(e) => setCapPercent(Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))}
                   className="w-14 bg-transparent text-xl font-black text-white text-center focus:outline-none font-mono"
                 />
                 <span className="text-lg font-black text-emerald-400">%</span>
@@ -507,19 +507,20 @@ export default function ModelRedemptionCapStudio({ tenantId = 'bellad_and_compan
             <input
               type="range"
               min="1"
-              max="100"
+              max="50"
               step="1"
               value={capPercent}
-              onChange={(e) => setCapPercent(parseInt(e.target.value, 10))}
+              onChange={(e) => setCapPercent(Math.min(50, parseInt(e.target.value, 10)))}
               className="w-full h-3.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-emerald-400"
             />
 
             <div className="flex justify-between text-[11px] font-mono text-slate-400 font-bold px-1">
               <span>1% (Minimum)</span>
-              <span className="text-indigo-300">25%</span>
-              <span className="text-indigo-300">50%</span>
-              <span className="text-indigo-300">75%</span>
-              <span className="text-emerald-400 font-black">100% (Full Redemption)</span>
+              <span className="text-indigo-300">10%</span>
+              <span className="text-indigo-300">20%</span>
+              <span className="text-indigo-300">30%</span>
+              <span className="text-indigo-300">40%</span>
+              <span className="text-emerald-400 font-black">50% (Max Cap)</span>
             </div>
           </div>
 
@@ -527,10 +528,10 @@ export default function ModelRedemptionCapStudio({ tenantId = 'bellad_and_compan
           <div className="flex items-center gap-2 pt-1 flex-wrap">
             {[
               { label: '10%', val: 10 },
-              { label: '25%', val: 25 },
-              { label: '50%', val: 50 },
-              { label: '75%', val: 75 },
-              { label: '100% (Full)', val: 100 },
+              { label: '20%', val: 20 },
+              { label: '30%', val: 30 },
+              { label: '40%', val: 40 },
+              { label: '50% (Max Cap)', val: 50 },
             ].map((p) => (
               <button
                 key={p.val}

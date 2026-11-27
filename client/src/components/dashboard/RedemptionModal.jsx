@@ -127,6 +127,8 @@ export const RedemptionModal = ({
   const [category, setCategory] = useState('service'); // service | accessories | bodyshop | referral
   const [receiptNo, setReceiptNo] = useState('');
   const [accountLedgerNo, setAccountLedgerNo] = useState('');
+  const [customRedeemPercent, setCustomRedeemPercent] = useState(50); // Default 50% max cap
+  const [customRedeemPoints, setCustomRedeemPoints] = useState(''); // Custom points entered by cashier
 
   // Referral Tab Specific State
   const [referralCode, setReferralCode] = useState('');
@@ -201,6 +203,8 @@ export const RedemptionModal = ({
       setCategory('service');
       setReceiptNo('');
       setAccountLedgerNo('');
+      setCustomRedeemPercent(50);
+      setCustomRedeemPoints('');
       setReferralCode('');
       setReferrerDetails(null);
       setReferrerError('');
@@ -233,15 +237,29 @@ export const RedemptionModal = ({
   const isLocked = isVehicleUnder12Months && !isAccessories;
   const isEligible = !isExpired && (isAccessories || !isVehicleUnder12Months) && (currentBalance > 0);
 
-  // Dynamic Model Redemption % Cap
-  const modelCapPercent = vehicleStatus?.redemption_cap_percent != null ? Number(vehicleStatus.redemption_cap_percent) : 100;
+  // Dynamic Model Redemption % Cap (Max 50% cap strictly enforced across system)
+  const modelCapPercent = Math.min(50, vehicleStatus?.redemption_cap_percent != null ? Number(vehicleStatus.redemption_cap_percent) : 50);
   const maxAllowedPointsByModel = Math.floor(currentBalance * (modelCapPercent / 100));
 
   // Live Arithmetic Preview Calculations
   const numBillAmount = parseFloat(billAmount || '0');
-  const redeemableRupees = maxAllowedPointsByModel * POINTS_PER_RUPEE_REDEMPTION;
-  const previewDiscountApplied = numBillAmount > 0 ? Math.min(redeemableRupees, numBillAmount) : 0;
-  const previewPointsRedeemed = numBillAmount > 0 ? Math.round(previewDiscountApplied / POINTS_PER_RUPEE_REDEMPTION) : 0;
+  const maxPointsNeededForBill = numBillAmount > 0 ? Math.floor(numBillAmount * 4) : maxAllowedPointsByModel;
+  const absoluteMaxRedeemable = Math.min(maxAllowedPointsByModel, maxPointsNeededForBill);
+
+  let activeRedeemPoints = 0;
+  if (currentBalance > 0) {
+    if (customRedeemPoints !== '' && !isNaN(parseInt(customRedeemPoints, 10))) {
+      const parsedCustom = parseInt(customRedeemPoints, 10);
+      activeRedeemPoints = Math.min(absoluteMaxRedeemable, Math.max(0, parsedCustom));
+    } else {
+      const pct = Math.min(modelCapPercent, Math.max(0, Number(customRedeemPercent) || 50));
+      const calculatedPts = Math.floor(currentBalance * (pct / 100));
+      activeRedeemPoints = Math.min(absoluteMaxRedeemable, calculatedPts);
+    }
+  }
+
+  const previewDiscountApplied = numBillAmount > 0 ? Math.min(numBillAmount, Math.round(activeRedeemPoints * POINTS_PER_RUPEE_REDEMPTION)) : 0;
+  const previewPointsRedeemed = activeRedeemPoints;
   const previewCashPaid = numBillAmount > 0 ? Math.max(0, numBillAmount - previewDiscountApplied) : 0;
   const previewNewPointsEarned = numBillAmount > 0 ? Math.floor((previewCashPaid / 100) * POINTS_PER_100_RUPEES_EARNED) : 0;
   const previewUpdatedBalance = (currentBalance - previewPointsRedeemed) + previewNewPointsEarned;
@@ -321,6 +339,7 @@ export const RedemptionModal = ({
         otp: otp.trim(),
         bill_amount: category === 'referral' ? undefined : numBillAmount,
         taxable_amount: category === 'referral' ? undefined : numBillAmount,
+        points: activeRedeemPoints,
         category,
         receipt_no: receiptNo.trim() || undefined,
         account_ledger_no: accountLedgerNo.trim() || undefined,
@@ -811,6 +830,110 @@ export const RedemptionModal = ({
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Partial Redemption Controls (50% Cap, Presets & Custom Input) */}
+              {category !== 'referral' && currentBalance > 0 && (
+                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-300 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black uppercase text-emerald-950 tracking-wider">
+                        Redemption Selection
+                      </span>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 border border-emerald-300">
+                        Max 50% Cap
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-emerald-800">
+                      Max Allowed: <strong>{maxAllowedPointsByModel.toLocaleString()} PTS</strong> (₹{(maxAllowedPointsByModel * 0.25).toLocaleString('en-IN')})
+                    </span>
+                  </div>
+
+                  {/* Preset Buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[10, 20, 30, 40, 50].map((pct) => {
+                      const isSelected = (customRedeemPoints === '' || customRedeemPoints === null) && customRedeemPercent === pct;
+                      return (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => {
+                            setCustomRedeemPercent(pct);
+                            setCustomRedeemPoints('');
+                          }}
+                          className={`px-3 py-1.5 text-xs font-black rounded-lg border transition cursor-pointer ${
+                            isSelected
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                              : 'bg-white hover:bg-emerald-100/70 text-emerald-950 border-emerald-300'
+                          }`}
+                        >
+                          {pct}% {pct === 50 ? '(Max Cap)' : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Inputs */}
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                        Custom % (1% - 50%)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={customRedeemPoints !== '' ? Math.round((activeRedeemPoints / Math.max(1, currentBalance)) * 100) : customRedeemPercent}
+                          onChange={(e) => {
+                            const val = Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 0));
+                            setCustomRedeemPercent(val);
+                            setCustomRedeemPoints('');
+                          }}
+                          className="w-full h-9 px-3 pr-7 bg-white text-xs font-mono font-bold text-slate-900 rounded-lg border border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          placeholder="e.g. 30"
+                        />
+                        <span className="absolute right-3 top-2 text-xs font-bold text-slate-400 font-mono">%</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                        Exact Points (PTS)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          max={maxAllowedPointsByModel}
+                          value={customRedeemPoints !== '' ? customRedeemPoints : activeRedeemPoints || ''}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            if (raw === '') {
+                              setCustomRedeemPoints('');
+                            } else {
+                              const val = Math.max(0, Math.min(maxAllowedPointsByModel, parseInt(raw, 10) || 0));
+                              setCustomRedeemPoints(String(val));
+                            }
+                          }}
+                          className="w-full h-9 px-3 pr-9 bg-white text-xs font-mono font-bold text-slate-900 rounded-lg border border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          placeholder={`Max ${maxAllowedPointsByModel}`}
+                        />
+                        <span className="absolute right-2.5 top-2 text-[10px] font-bold text-slate-400 font-mono">PTS</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-semibold text-emerald-950 pt-2 border-t border-emerald-200">
+                    <span>
+                      Redeeming: <strong className="font-mono text-emerald-800 font-black">{activeRedeemPoints.toLocaleString()} PTS</strong>
+                      {currentBalance > 0 && ` (${Math.round((activeRedeemPoints / currentBalance) * 100)}% of balance)`}
+                    </span>
+                    <span>
+                      Discount: <strong className="font-mono text-emerald-800 font-black">-₹{previewDiscountApplied.toLocaleString('en-IN')}</strong>
+                    </span>
+                  </div>
                 </div>
               )}
 

@@ -135,6 +135,8 @@ export const AddReceiptModal = ({
 
   const [category, setCategory] = useState('service');
   const [wantRedemption, setWantRedemption] = useState(true);
+  const [customRedeemPercent, setCustomRedeemPercent] = useState(50); // Default 50% max cap
+  const [customRedeemPoints, setCustomRedeemPoints] = useState(''); // Custom points entered by cashier
   const [paymentMode, setPaymentMode] = useState('UPI');
   const [utrNumber, setUtrNumber] = useState('');
   const [billAmount, setBillAmount] = useState('');
@@ -463,6 +465,8 @@ export const AddReceiptModal = ({
     if (isOpen) {
       setCategory('service');
       setWantRedemption(true);
+      setCustomRedeemPercent(50);
+      setCustomRedeemPoints('');
       setPaymentMode('UPI');
       setUtrNumber('');
       setBillAmount('');
@@ -576,12 +580,24 @@ export const AddReceiptModal = ({
   // Calculations
   const numAmount = Math.round(parseFloat(billAmount || '0') || 0);
   const rateMultiplier = category === 'sale' ? 1 : 4;
-  const modelCapPercent = eligibilityData?.redemption_cap_percent != null ? Number(eligibilityData.redemption_cap_percent) : 100;
+  // 50% max cap strictly enforced across the system
+  const modelCapPercent = Math.min(50, eligibilityData?.redemption_cap_percent != null ? Number(eligibilityData.redemption_cap_percent) : 50);
   const maxAllowedPointsByModel = Math.floor(currentPoints * (modelCapPercent / 100));
+  const maxPointsNeededForBill = Math.floor(numAmount * 4);
+  const absoluteMaxRedeemable = Math.min(maxAllowedPointsByModel, maxPointsNeededForBill);
 
-  const activeRedeemPoints = isEligible && wantRedemption && numAmount > 0 
-    ? Math.min(maxAllowedPointsByModel, Math.floor(numAmount * 4)) 
-    : 0;
+  // Partial redemption: honors user percentage or custom exact points up to 50% cap
+  let activeRedeemPoints = 0;
+  if (isEligible && wantRedemption && numAmount > 0 && currentPoints > 0) {
+    if (customRedeemPoints !== '' && !isNaN(parseInt(customRedeemPoints, 10))) {
+      const parsedCustom = parseInt(customRedeemPoints, 10);
+      activeRedeemPoints = Math.min(absoluteMaxRedeemable, Math.max(0, parsedCustom));
+    } else {
+      const pct = Math.min(modelCapPercent, Math.max(0, Number(customRedeemPercent) || 50));
+      const calculatedPts = Math.floor(currentPoints * (pct / 100));
+      activeRedeemPoints = Math.min(absoluteMaxRedeemable, calculatedPts);
+    }
+  }
   const discountAmount = Math.min(numAmount, Math.round(activeRedeemPoints / 4));
   const netCashPaid = Math.max(0, numAmount - discountAmount);
 
@@ -1563,9 +1579,7 @@ export const AddReceiptModal = ({
                             {wantRedemption && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                           </div>
                           <span className={`text-[10px] ${wantRedemption ? 'text-emerald-100' : 'text-slate-500'}`}>
-                            {modelCapPercent < 100
-                              ? `Take up to ${modelCapPercent}% model cap discount (-₹${Math.min(Math.floor(maxAllowedPointsByModel / 4), Math.floor(numAmount || 0))})`
-                              : `Take full bill discount (-₹${Math.min(rupeeValue, Math.floor(numAmount || 0))})`}
+                            Up to 50% max cap discount (-₹{Math.min(Math.floor(maxAllowedPointsByModel / 4), Math.floor(numAmount || 0))})
                           </span>
                         </button>
 
@@ -1587,6 +1601,111 @@ export const AddReceiptModal = ({
                           </span>
                         </button>
                       </div>
+
+                      {/* Partial Redemption Controls (50% Cap, Presets & Custom Input) */}
+                      {wantRedemption && (
+                        <div className="mt-2.5 p-3 bg-emerald-50/90 rounded-xl border border-emerald-200 space-y-2.5">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[11px] font-black uppercase text-emerald-950 tracking-wider">
+                                Redemption Selection
+                              </span>
+                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-200 text-emerald-800 border border-emerald-300">
+                                Max 50% Cap
+                              </span>
+                            </div>
+                            <span className="text-[11px] font-semibold text-emerald-800">
+                              Max redeemable: <strong>{maxAllowedPointsByModel.toLocaleString()} PTS</strong> (₹{(maxAllowedPointsByModel * 0.25).toLocaleString('en-IN')})
+                            </span>
+                          </div>
+
+                          {/* Quick Percentage Presets */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {[10, 20, 30, 40, 50].map((pct) => {
+                              const isSelected = (customRedeemPoints === '' || customRedeemPoints === null) && customRedeemPercent === pct;
+                              return (
+                                <button
+                                  key={pct}
+                                  type="button"
+                                  onClick={() => {
+                                    setCustomRedeemPercent(pct);
+                                    setCustomRedeemPoints('');
+                                  }}
+                                  className={`px-2.5 py-1 text-xs font-black rounded-lg border transition cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                      : 'bg-white hover:bg-emerald-100/70 text-emerald-900 border-emerald-300'
+                                  }`}
+                                >
+                                  {pct}% {pct === 50 ? '(Max)' : ''}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Custom Percentage and Custom Points Fields */}
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">
+                                Custom % (1% - 50%)
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="50"
+                                  value={customRedeemPoints !== '' ? Math.round((activeRedeemPoints / Math.max(1, currentPoints)) * 100) : customRedeemPercent}
+                                  onChange={(e) => {
+                                    const val = Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 0));
+                                    setCustomRedeemPercent(val);
+                                    setCustomRedeemPoints('');
+                                  }}
+                                  className="w-full h-8 px-2.5 pr-7 bg-white text-xs font-mono font-bold text-slate-900 rounded-lg border border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                  placeholder="e.g. 30"
+                                />
+                                <span className="absolute right-2.5 top-1.5 text-xs font-bold text-slate-400 font-mono">%</span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">
+                                Exact Points (PTS)
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={maxAllowedPointsByModel}
+                                  value={customRedeemPoints !== '' ? customRedeemPoints : activeRedeemPoints || ''}
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    if (raw === '') {
+                                      setCustomRedeemPoints('');
+                                    } else {
+                                      const val = Math.max(0, Math.min(maxAllowedPointsByModel, parseInt(raw, 10) || 0));
+                                      setCustomRedeemPoints(String(val));
+                                    }
+                                  }}
+                                  className="w-full h-8 px-2.5 pr-9 bg-white text-xs font-mono font-bold text-slate-900 rounded-lg border border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                  placeholder={`Max ${maxAllowedPointsByModel}`}
+                                />
+                                <span className="absolute right-2 top-1.5 text-[10px] font-bold text-slate-400 font-mono">PTS</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Live calculated feedback */}
+                          <div className="flex items-center justify-between text-[11px] font-semibold text-emerald-950 pt-1.5 border-t border-emerald-200">
+                            <span>
+                              Redeeming: <strong className="font-mono text-emerald-800 font-black">{activeRedeemPoints.toLocaleString()} PTS</strong>
+                              {currentPoints > 0 && ` (${Math.round((activeRedeemPoints / currentPoints) * 100)}% of balance)`}
+                            </span>
+                            <span>
+                              Discount: <strong className="font-mono text-emerald-800 font-black">-₹{discountAmount.toLocaleString('en-IN')}</strong>
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : null}
 

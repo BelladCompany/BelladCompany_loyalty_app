@@ -78,9 +78,9 @@
     "semantic_hash": ""
   },
   "client/src/components/dashboard/AddReceiptModal.jsx": {
-    "mtime": 1795684663.0400324,
-    "seen": 1795684733.9573927,
-    "ast_hash": "0d71ff211451fe09a47e33941cc458d1",
+    "mtime": 1795775645.4638968,
+    "seen": 1795775868.8219202,
+    "ast_hash": "efcbd386cb1fe85b6ccfd1de563751cb",
     "semantic_hash": ""
   },
   "client/src/components/dashboard/BranchNetworkChart.jsx": {
@@ -132,9 +132,9 @@
     "semantic_hash": ""
   },
   "client/src/components/dashboard/RedemptionModal.jsx": {
-    "mtime": 1795587176.0569227,
-    "seen": 1795587275.2346323,
-    "ast_hash": "3d3e4443150cec1024a54c703d258864",
+    "mtime": 1795775719.1629703,
+    "seen": 1795775868.8247564,
+    "ast_hash": "4cbe2efd12edf738863a459d510f12ba",
     "semantic_hash": ""
   },
   "client/src/components/dashboard/RequestKycModal.jsx": {
@@ -174,9 +174,9 @@
     "semantic_hash": ""
   },
   "client/src/components/studio/ModelRedemptionCapStudio.jsx": {
-    "mtime": 1795592071.6817098,
-    "seen": 1795592125.6057398,
-    "ast_hash": "2ff8b00fbd56c47c872da5eb9b98b227",
+    "mtime": 1795775568.8799207,
+    "seen": 1795775868.8269172,
+    "ast_hash": "31e2895ba90e5003e5990169f7096d0b",
     "semantic_hash": ""
   },
   "client/src/components/studio/RulesStudio.jsx": {
@@ -1638,9 +1638,9 @@
     "semantic_hash": ""
   },
   "src/services/modelRedemptionCap.service.js": {
-    "mtime": 1795415801.9199805,
-    "seen": 1795419439.7517612,
-    "ast_hash": "26b538148002194a1dd8037d5eb7a4c9",
+    "mtime": 1795775524.0842779,
+    "seen": 1795775868.9055374,
+    "ast_hash": "53d630bc253743892e9a0d2c816028b2",
     "semantic_hash": ""
   },
   "src/services/notification.service.js": {
@@ -1686,15 +1686,15 @@
     "semantic_hash": ""
   },
   "src/services/redemption.service.js": {
-    "mtime": 1795684355.260379,
-    "seen": 1795684734.0194654,
-    "ast_hash": "ba72b926943d4251c27830c8fe9b0082",
+    "mtime": 1795775538.8795738,
+    "seen": 1795775868.9073834,
+    "ast_hash": "9475d2c25ce2e75a7d15d1d65d425725",
     "semantic_hash": ""
   },
   "src/services/redemption_eligibility.service.js": {
-    "mtime": 1795415909.0818808,
-    "seen": 1795419439.7517612,
-    "ast_hash": "ae3e35e0283eee79a27429a54301346b",
+    "mtime": 1795775538.635923,
+    "seen": 1795775868.907391,
+    "ast_hash": "a23e60edcaf2f0f4505542a5dfd81a44",
     "semantic_hash": ""
   },
   "src/services/referral.service.js": {
@@ -1968,9 +1968,9 @@
     "semantic_hash": ""
   },
   "scripts/inspect_invoice.js": {
-    "mtime": 1795684094.6998453,
-    "seen": 1795684733.987309,
-    "ast_hash": "7569fdc01043444bb12ccec3a80daf5e",
+    "mtime": 1795775846.0569143,
+    "seen": 1795775868.8632488,
+    "ast_hash": "f458ce800abca3f2405c971a0ed171af",
     "semantic_hash": ""
   },
   "scripts/inspect_realbooks_segments.js": {
@@ -1995,36 +1995,6 @@
     "mtime": 1795609988.915775,
     "seen": 1795679001.4221964,
     "ast_hash": "77a55c422cd5abc203b8a62de5a673f2",
-    "semantic_hash": ""
-  },
-  "scripts/inspect_sync_error.js": {
-    "mtime": 1795683971.9537883,
-    "seen": 1795684733.9875293,
-    "ast_hash": "9dc728e575c445fd63ba4b06cf8a8a12",
-    "semantic_hash": ""
-  },
-  "scripts/check_triggers.js": {
-    "mtime": 1795685037.8629882,
-    "seen": 1795685207.8281865,
-    "ast_hash": "5e7e2a7055fad59f6057fb16d6eafd4b",
-    "semantic_hash": ""
-  },
-  "scripts/inspect_vandana.js": {
-    "mtime": 1795679919.3485649,
-    "seen": 1795684733.987747,
-    "ast_hash": "71fe9c3b62a50047aee8a76d2c816cac",
-    "semantic_hash": ""
-  },
-  "scripts/restore_vandana.js": {
-    "mtime": 1795685083.765982,
-    "seen": 1795685207.8357387,
-    "ast_hash": "e088db847148b8c6cc7099ccb9de3560",
-    "semantic_hash": ""
-  },
-  "scripts/revert_test_redemption.js": {
-    "mtime": 1795680001.9573257,
-    "seen": 1795684733.9892495,
-    "ast_hash": "e9386336afc5181ef4511d766fa0e3d5",
     "semantic_hash": ""
   },
   "client/package-lock.json": {

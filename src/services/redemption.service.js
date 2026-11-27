@@ -332,7 +332,7 @@ class RedemptionService {
       // ACCESSORIES EXEMPTION: Accessories can be redeemed anytime without the 12-month lock!
       // Other categories (service, sale, bodyshop, referral, etc.) strictly retain the 12-month lock.
       const isAccessories = ['accessories', 'accessory'].includes(normalizedCat);
-      let modelCapPercent = 100;
+      let modelCapPercent = 50;
 
       if (vehicle_id) {
         const statusRes = await RedemptionEligibilityService.getVehicleRedemptionStatus(vehicle_id, tenant_id, category);
@@ -340,11 +340,11 @@ class RedemptionService {
           throw { statusCode: 400, message: statusRes.message || 'Points redemption is locked for vehicles purchased less than 12 months ago.' };
         }
         if (statusRes.redemption_cap_percent != null) {
-          modelCapPercent = Number(statusRes.redemption_cap_percent);
+          modelCapPercent = Math.min(50, Number(statusRes.redemption_cap_percent));
         }
       }
 
-      // 4. Calculate redemption & earning strictly using named constants and dynamic model percentage cap
+      // 4. Calculate redemption & earning strictly using named constants and dynamic model percentage cap (max 50%)
       let discount_applied = 0;
       let points_redeemed = 0;
       let cash_paid = 0;
@@ -354,16 +354,29 @@ class RedemptionService {
         ? parseFloat(taxable_amount)
         : null;
 
-      // Apply dynamic model percentage cap on points redemption (e.g. 50% for Tata/Hyundai, 100% for Hero)
+      // Apply dynamic model percentage cap on points redemption (up to 50% max allowed points)
       const maxAllowedPointsByModel = Math.floor(currentPointBalance * (modelCapPercent / 100));
 
       let taxableBase = parsedTaxable;
       let netTaxablePaid = 0;
 
       if (billAmt > 0) {
-        const redeemable_rupees = Math.round(maxAllowedPointsByModel * POINTS_PER_RUPEE_REDEMPTION);
+        // If cashier specified requested points, respect it up to maxAllowedPointsByModel; otherwise default to max cap
+        let targetPoints = maxAllowedPointsByModel;
+        if (points != null && parseInt(points, 10) > 0) {
+          const reqPoints = parseInt(points, 10);
+          if (reqPoints > maxAllowedPointsByModel) {
+            throw {
+              statusCode: 400,
+              message: `Points redemption cannot exceed the ${modelCapPercent}% cap. Maximum allowed is ${maxAllowedPointsByModel} pts (requested: ${reqPoints} pts).`,
+            };
+          }
+          targetPoints = reqPoints;
+        }
+
+        const redeemable_rupees = Math.round(targetPoints * POINTS_PER_RUPEE_REDEMPTION);
         discount_applied = Math.min(billAmt, Math.round(Math.min(redeemable_rupees, billAmt)));
-        points_redeemed = Math.min(maxAllowedPointsByModel, Math.round(discount_applied / POINTS_PER_RUPEE_REDEMPTION));
+        points_redeemed = Math.min(targetPoints, Math.round(discount_applied / POINTS_PER_RUPEE_REDEMPTION));
         cash_paid = Math.max(0, billAmt - discount_applied);
 
         // Apply category specific points earning rate (4 pts / ₹100 for service/accessories/bodyshop, 1 pt for sales)
