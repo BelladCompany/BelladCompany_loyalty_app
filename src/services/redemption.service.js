@@ -200,9 +200,13 @@ class RedemptionService {
         throw { statusCode: 400, message: 'Customer ID or valid Phone number is required for redemption.' };
       }
 
-      // 2. Validate active OTP for customer (optional - cashier counter receipt flow does not require OTP)
+      // 2. Validate active OTP for customer
       const submittedOtp = String(otp || '').trim();
       let matchedOtpId = null;
+
+      if (points > 0 && !submittedOtp) {
+        throw { statusCode: 400, message: 'Customer OTP verification code is required to redeem points.' };
+      }
 
       if (submittedOtp) {
         const isTestEnv = process.env.ENABLE_TEST_OTPS === 'true' || process.env.ENABLE_DEBUG_OTP === 'true' || process.env.USE_DUMMY_OTP === 'true' || process.env.NODE_ENV === 'development' || !process.env.RELTIGROW_API_KEY;

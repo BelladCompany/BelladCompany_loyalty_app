@@ -147,5 +147,7 @@
   "145": "run_migration_074.js",
   "146": "cleanObject",
   "147": ".listModelCaps",
-  "148": ".saveModelCap"
+  "148": ".saveModelCap",
+  "149": "EarnPointsModal",
+  "150": "PublicReferralLeadScreen"
 }

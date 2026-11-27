@@ -1,17 +1,17 @@
 # Graph Report - final-loyaly-app-nov  (2026-11-27)
 
 ## Corpus Check
-- 410 files · ~349,003 words
+- 410 files · ~349,617 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: (none) 9, .example 2, .csv 2)
 
 ## Summary
-- 2362 nodes · 4582 edges · 149 communities (104 shown, 45 thin omitted)
+- 2362 nodes · 4582 edges · 151 communities (104 shown, 47 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 80 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `2f9e3c60`
+- Built from commit: `23fb0553`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -154,6 +154,8 @@
 - TenantManagementScreen
 - run_migration_074.js
 - cleanObject
+- EarnPointsModal
+- PublicReferralLeadScreen
 
 ## God Nodes (most connected - your core abstractions)
 1. `ApiService` - 204 edges
@@ -172,10 +174,10 @@
   AUDIT.md → src/services/merge.service.js
 - `5. Existing Data Reconciliation Audit (A3 Findings)` --references--> `VehicleSalesPointsService`  [INFERRED]
   AUDIT.md → src/services/vehicleSalesPoints.service.js
-- `7.3 `Input`` --references--> `Input()`  [INFERRED]
-  DESIGN_SYSTEM.md → client/src/components/ui/Input.jsx
 - `Business Rules & Flow` --references--> `startGiftExpiryCron()`  [INFERRED]
   RUNBOOK.md → src/cron/gift_expiry_cron.js
+- `7.3 `Input`` --references--> `Input()`  [INFERRED]
+  DESIGN_SYSTEM.md → client/src/components/ui/Input.jsx
 - `7.1 `SidebarLayout`` --references--> `SidebarLayout()`  [INFERRED]
   DESIGN_SYSTEM.md → client/src/components/layout/SidebarLayout.jsx
 
@@ -193,11 +195,11 @@
 - 5-file cycle: `src/services/appsheetPull.service.js -> src/services/transaction.service.js -> src/services/points.service.js -> src/services/notification.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
 - 5-file cycle: `src/services/appsheetPull.service.js -> src/services/transaction.service.js -> src/services/referral.service.js -> src/services/notification.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
 
-## Communities (149 total, 45 thin omitted)
+## Communities (151 total, 47 thin omitted)
 
 ### Community 0 - "ApiService"
 Cohesion: 0.05
-Nodes (5): EarnPointsModal(), PortalDashboardScreen(), SendGiftModal(), PublicReferralLeadScreen(), ApiService
+Nodes (3): PortalDashboardScreen(), SendGiftModal(), ApiService
 
 ### Community 1 - "db.js"
 Cohesion: 0.04
@@ -612,21 +614,21 @@ Cohesion: 0.83
 Nodes (3): cleanObject(), isDangerousKey(), sanitizeMiddleware()
 
 ## Knowledge Gaps
-- **45 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **47 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Automobile Dealership Group Loyalty Program - Backend & POS Counter` connect `Automobile Dealership Loyalty Program — Design System` to `reltigrow.provider.js`?**
-  _High betweenness centrality (0.242) - this node is a cross-community bridge._
+  _High betweenness centrality (0.240) - this node is a cross-community bridge._
 - **Should `ApiService` be split into smaller, more focused modules?**
-  _Cohesion score 0.046886446886446886 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05185185185185185 - nodes in this community are weakly interconnected._
 - **Why does `🛠️ Tech Stack & Key Rules` connect `reltigrow.provider.js` to `Automobile Dealership Loyalty Program — Design System`?**
-  _High betweenness centrality (0.241) - this node is a cross-community bridge._
+  _High betweenness centrality (0.240) - this node is a cross-community bridge._
 - **Should `db.js` be split into smaller, more focused modules?**
   _Cohesion score 0.03735632183908046 - nodes in this community are weakly interconnected._
 - **Why does `Automobile Dealership Loyalty Program — Design System` connect `Automobile Dealership Loyalty Program — Design System` to `ui/index.js`?**
-  _High betweenness centrality (0.240) - this node is a cross-community bridge._
+  _High betweenness centrality (0.233) - this node is a cross-community bridge._
 - **Should `react` be split into smaller, more focused modules?**
   _Cohesion score 0.12311265969802555 - nodes in this community are weakly interconnected._
 - **Should `invoiceV2.controller.js` be split into smaller, more focused modules?**
