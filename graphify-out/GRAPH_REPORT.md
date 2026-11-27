@@ -1,7 +1,7 @@
 # Graph Report - final-loyaly-app-nov  (2026-11-27)
 
 ## Corpus Check
-- 410 files · ~349,617 words
+- 410 files · ~350,157 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: (none) 9, .example 2, .csv 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `23fb0553`
+- Built from commit: `8ffc0c26`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -620,15 +620,15 @@ Nodes (3): cleanObject(), isDangerousKey(), sanitizeMiddleware()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Automobile Dealership Group Loyalty Program - Backend & POS Counter` connect `Automobile Dealership Loyalty Program — Design System` to `reltigrow.provider.js`?**
-  _High betweenness centrality (0.240) - this node is a cross-community bridge._
+  _High betweenness centrality (0.251) - this node is a cross-community bridge._
 - **Should `ApiService` be split into smaller, more focused modules?**
   _Cohesion score 0.05185185185185185 - nodes in this community are weakly interconnected._
 - **Why does `🛠️ Tech Stack & Key Rules` connect `reltigrow.provider.js` to `Automobile Dealership Loyalty Program — Design System`?**
-  _High betweenness centrality (0.240) - this node is a cross-community bridge._
+  _High betweenness centrality (0.250) - this node is a cross-community bridge._
 - **Should `db.js` be split into smaller, more focused modules?**
   _Cohesion score 0.03735632183908046 - nodes in this community are weakly interconnected._
 - **Why does `Automobile Dealership Loyalty Program — Design System` connect `Automobile Dealership Loyalty Program — Design System` to `ui/index.js`?**
-  _High betweenness centrality (0.233) - this node is a cross-community bridge._
+  _High betweenness centrality (0.244) - this node is a cross-community bridge._
 - **Should `react` be split into smaller, more focused modules?**
   _Cohesion score 0.12311265969802555 - nodes in this community are weakly interconnected._
 - **Should `invoiceV2.controller.js` be split into smaller, more focused modules?**

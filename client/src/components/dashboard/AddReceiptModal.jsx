@@ -152,6 +152,8 @@ export const AddReceiptModal = ({
   const [debugOtpCode, setDebugOtpCode] = useState('');
   const [otpNotice, setOtpNotice] = useState('');
   const [selectedOtpPhone, setSelectedOtpPhone] = useState('');
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpModalError, setOtpModalError] = useState('');
 
   const vehicles = customer?.vehicles || [];
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
@@ -510,22 +512,26 @@ export const AddReceiptModal = ({
       setOtpSentPhone('');
       setDebugOtpCode('');
       setOtpNotice('');
+      setShowOtpModal(false);
+      setOtpModalError('');
       const pPhone = (typeof customer?.phones?.[0] === 'string' ? customer.phones[0] : customer?.phones?.[0]?.phone_number) || customer?.phone || '';
       setSelectedOtpPhone(pPhone);
     }
   }, [isOpen]);
 
-  // Request OTP for customer redemption
+  // Request OTP for customer redemption (used for resend and auto-send)
   const handleSendRedemptionOtp = async () => {
     const phoneToSend = selectedOtpPhone || primaryPhone;
     if (!phoneToSend) {
       setErrorMessage('No valid registered phone found for this customer to send OTP.');
-      return;
+      setOtpModalError('No valid registered phone found for this customer to send OTP.');
+      return false;
     }
 
     setIsSendingOtp(true);
     setErrorMessage('');
     setOtpNotice('');
+    setOtpModalError('');
     try {
       const res = await ApiService.requestOtp({
         phone: phoneToSend,
@@ -538,9 +544,13 @@ export const AddReceiptModal = ({
         setDebugOtpCode(code);
       }
       setOtpNotice(`OTP sent successfully to ${phoneToSend} via WhatsApp. Valid for 5 minutes.`);
+      return true;
     } catch (err) {
       console.error('[AddReceiptModal] Error sending redemption OTP:', err);
-      setErrorMessage(err.message || 'Failed to send OTP to customer.');
+      const msg = err.message || 'Failed to send OTP to customer.';
+      setErrorMessage(msg);
+      setOtpModalError(msg);
+      return false;
     } finally {
       setIsSendingOtp(false);
     }
@@ -717,15 +727,16 @@ export const AddReceiptModal = ({
   const earnedPoints = netTaxableSpend > 0 ? Math.round((netTaxableSpend / 100) * rateMultiplier) : 0;
   const projectedBalance = Math.max(0, currentPoints - activeRedeemPoints) + earnedPoints;
 
-  // Handle Form Submission
+  // Handle Form Submission: auto-triggers WhatsApp OTP if customer is redeeming points, otherwise submits directly
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (isAdvisor) {
       setErrorMessage('Advisor role is view-only. Receipts must be finalized and submitted by Cashier.');
       return;
     }
 
     setErrorMessage('');
+    setOtpModalError('');
 
     if (numAmount <= 0) {
       setErrorMessage('Please enter a valid bill amount greater than ₹0.');
@@ -740,12 +751,52 @@ export const AddReceiptModal = ({
       return;
     }
 
+    // Auto-send WhatsApp OTP to customer and open OTP modal if redeeming
+    if (isEligible && wantRedemption && activeRedeemPoints > 0) {
+      const phoneToSend = selectedOtpPhone || primaryPhone;
+      if (!phoneToSend) {
+        setErrorMessage('No valid registered phone found for this customer to send OTP.');
+        return;
+      }
+
+      setIsSendingOtp(true);
+      try {
+        const res = await ApiService.requestOtp({
+          phone: phoneToSend,
+          customer_id: customer?.customer_id,
+        });
+        const data = res.data || res;
+        setOtpSentPhone(phoneToSend);
+        const code = data.debug_otp || data.dummy_otp || data.otp || '';
+        if (code) {
+          setDebugOtpCode(code);
+        }
+        setRedemptionOtp('');
+        setShowOtpModal(true);
+      } catch (err) {
+        console.error('[AddReceiptModal] Error auto-sending redemption OTP:', err);
+        setErrorMessage(err.message || 'Failed to send WhatsApp verification OTP to customer.');
+      } finally {
+        setIsSendingOtp(false);
+      }
+      return;
+    }
+
+    // Direct submission if no points are redeemed (points earning flow only)
+    await executeFinalSubmission(null);
+  };
+
+  const executeFinalSubmission = async (submittedOtpCode = null) => {
     setIsSubmitting(true);
+    setOtpModalError('');
+    setErrorMessage('');
 
     try {
       if (isEligible && wantRedemption && activeRedeemPoints > 0) {
-        if (!redemptionOtp || redemptionOtp.trim().length !== 6) {
-          setErrorMessage('Customer OTP verification is required to redeem points. Please send OTP to customer WhatsApp and enter the 6-digit code.');
+        const cleanOtp = submittedOtpCode ? String(submittedOtpCode).trim() : '';
+        if (!cleanOtp || cleanOtp.length !== 6) {
+          setOtpModalError('Please enter a valid 6-digit OTP code received by the customer.');
+          setIsSubmitting(false);
           return;
         }
 
@@ -753,7 +804,7 @@ export const AddReceiptModal = ({
         const payload = {
           customer_id: customer.customer_id,
           phone: (selectedOtpPhone || primaryPhone) ? String(selectedOtpPhone || primaryPhone).replace(/[^\d+]/g, '') : undefined,
-          otp: redemptionOtp.trim(),
+          otp: cleanOtp,
           bill_amount: numAmount,
           taxable_amount: category === 'sale' ? numAmount : Number(effectiveTaxableAmount.toFixed(2)),
           points: activeRedeemPoints,
@@ -780,6 +831,7 @@ export const AddReceiptModal = ({
           }
         }
 
+        setShowOtpModal(false);
         setSuccessData({
           type: 'redemption',
           billAmount: numAmount,
@@ -858,7 +910,13 @@ export const AddReceiptModal = ({
         });
       }
     } catch (err) {
-      setErrorMessage(err.message || 'Failed to process receipt transaction. Please check details and try again.');
+      console.error('[AddReceiptModal] Submit error:', err);
+      const errMsg = err.message || (isEligible && activeRedeemPoints > 0 ? 'Failed to process redemption.' : 'Failed to record receipt.');
+      if (showOtpModal) {
+        setOtpModalError(errMsg);
+      } else {
+        setErrorMessage(errMsg);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -1813,118 +1871,38 @@ export const AddReceiptModal = ({
                             </span>
                           </div>
 
-                          {/* ─── Customer WhatsApp OTP Verification Section ─── */}
-                          <div className="mt-3 p-3.5 bg-white rounded-xl border-2 border-emerald-300 space-y-3 shadow-2xs">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
-                                  <KeyRound className="w-4 h-4 text-emerald-700" />
-                                </div>
-                                <div>
-                                  <span className="text-xs font-black uppercase text-slate-900 tracking-wider block">
-                                    Customer OTP Verification *
-                                  </span>
-                                  <span className="text-[10px] text-slate-500 font-medium">
-                                    Required to confirm redemption discount of -₹{discountAmount.toLocaleString('en-IN')}
-                                  </span>
-                                </div>
-                              </div>
-                              {otpSentPhone && (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                  OTP Sent
-                                </span>
-                              )}
+                          {/* ─── Automated Customer WhatsApp OTP Notice ─── */}
+                          <div className="mt-3 p-3 bg-emerald-50/90 rounded-xl border border-emerald-200/90 flex items-start gap-2.5">
+                            <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                              <Lock className="w-3.5 h-3.5" />
                             </div>
-
-                            {/* Phone Selector & Send OTP Button */}
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                              <div className="flex-1">
-                                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
-                                  Customer WhatsApp Phone
-                                </label>
-                                <select
-                                  value={selectedOtpPhone || primaryPhone}
-                                  onChange={(e) => setSelectedOtpPhone(e.target.value)}
-                                  className="w-full h-9 px-2.5 text-xs font-mono font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:border-emerald-600 cursor-pointer"
-                                >
-                                  {(customer?.phones && customer.phones.length > 0) ? (
-                                    customer.phones.map((p, idx) => {
+                            <div className="text-xs text-emerald-950 flex-1">
+                              <div className="font-bold flex items-center gap-2">
+                                <span>Automated WhatsApp OTP Verification</span>
+                                <span className="text-[10px] bg-emerald-200/90 text-emerald-800 font-extrabold px-1.5 py-0.2 rounded">SECURE</span>
+                              </div>
+                              <p className="text-[11px] text-emerald-800/90 font-medium mt-0.5 leading-relaxed">
+                                A 6-digit WhatsApp verification OTP will be <strong>automatically sent to customer ({selectedOtpPhone || primaryPhone})</strong> once you click <strong>Confirm Receipt &amp; Redeem</strong> below.
+                              </p>
+                              {(customer?.phones && customer.phones.length > 1) && (
+                                <div className="mt-2 flex items-center gap-2 text-[11px]">
+                                  <span className="font-bold text-emerald-900">Send OTP to:</span>
+                                  <select
+                                    value={selectedOtpPhone || primaryPhone}
+                                    onChange={(e) => setSelectedOtpPhone(e.target.value)}
+                                    className="h-7 px-2 text-[11px] font-mono font-bold text-slate-800 bg-white border border-emerald-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                                  >
+                                    {customer.phones.map((p, idx) => {
                                       const num = typeof p === 'string' ? p : p.phone_number;
                                       return (
                                         <option key={idx} value={num}>
                                           {num} {p?.is_primary ? '(Main)' : ''}
                                         </option>
                                       );
-                                    })
-                                  ) : (
-                                    <option value={primaryPhone}>{primaryPhone || 'No registered phone'}</option>
-                                  )}
-                                </select>
-                              </div>
-
-                              <div className="sm:self-end">
-                                <button
-                                  type="button"
-                                  onClick={handleSendRedemptionOtp}
-                                  disabled={isSendingOtp || !primaryPhone}
-                                  className="w-full sm:w-auto h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
-                                >
-                                  {isSendingOtp ? (
-                                    <>
-                                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                      <span>Sending OTP...</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <MessageSquare className="w-3.5 h-3.5" />
-                                      <span>{otpSentPhone ? 'Resend OTP' : 'Send OTP to Customer'}</span>
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Notice message */}
-                            {otpNotice && (
-                              <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] font-semibold flex items-center justify-between">
-                                <div className="flex items-center gap-1.5">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                  <span>{otpNotice}</span>
+                                    })}
+                                  </select>
                                 </div>
-                              </div>
-                            )}
-
-                            {/* Test OTP code helper for development / instant test convenience */}
-                            {debugOtpCode && (
-                              <div className="p-2 bg-amber-50 border border-amber-300 rounded-lg text-amber-950 text-xs font-mono flex items-center justify-between">
-                                <span>💡 Test Code: <strong>{debugOtpCode}</strong></span>
-                                <button
-                                  type="button"
-                                  onClick={() => setRedemptionOtp(debugOtpCode)}
-                                  className="px-2 py-0.5 bg-amber-200 hover:bg-amber-300 font-bold rounded text-[11px] text-amber-950 transition cursor-pointer"
-                                >
-                                  Use Code
-                                </button>
-                              </div>
-                            )}
-
-                            {/* OTP Code Input */}
-                            <div>
-                              <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1 flex items-center justify-between">
-                                <span>Enter 6-Digit OTP *</span>
-                                <span className="text-[10px] text-slate-400 font-normal">Provided by customer via WhatsApp</span>
-                              </label>
-                              <div className="relative">
-                                <input
-                                  type="text"
-                                  maxLength={6}
-                                  placeholder="e.g. 100782"
-                                  value={redemptionOtp}
-                                  onChange={(e) => setRedemptionOtp(e.target.value.replace(/\D/g, ''))}
-                                  className="w-full h-10 px-3 pr-10 text-sm font-mono font-black tracking-widest text-slate-900 bg-slate-50 border border-emerald-400 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                                />
-                                <KeyRound className="w-4 h-4 text-emerald-600 absolute right-3 top-3 pointer-events-none" />
-                              </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -2462,16 +2440,22 @@ export const AddReceiptModal = ({
                     <>
                       <button
                         type="submit"
-                        disabled={isSubmitting || numAmount <= 0}
+                        disabled={isSubmitting || isSendingOtp || numAmount <= 0}
                         className={`w-full min-h-[46px] py-2.5 px-4 rounded-xl font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer ${
                           isEligible && activeRedeemPoints > 0
                             ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/25'
                             : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/25'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
-                        {isSubmitting ? (
+                        {isSendingOtp ? (
                           <>
-                            <RefreshCw className="w-4 h-4 animate-spin" /> Processing Receipt &amp; Updating Ledger...
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span>Sending WhatsApp OTP to Customer...</span>
+                          </>
+                        ) : isSubmitting ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span>Processing Receipt &amp; Updating Ledger...</span>
                           </>
                         ) : isEligible && activeRedeemPoints > 0 ? (
                           <>
@@ -2504,6 +2488,180 @@ export const AddReceiptModal = ({
           </div>
         )}
       </div>
+
+      {/* ─── Customer WhatsApp OTP Verification Modal Overlay ─── */}
+      {showOtpModal && (
+        <div className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-emerald-600 px-5 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">Verify Customer OTP</h3>
+                  <p className="text-emerald-100 text-xs">Confirm Points Redemption</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOtpModal(false);
+                  setOtpModalError('');
+                }}
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              {/* Discount & Points Summary */}
+              <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-200 flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-slate-500 font-medium block">Redeeming Points</span>
+                  <span className="font-mono font-black text-emerald-800 text-sm">{activeRedeemPoints.toLocaleString('en-IN')} PTS</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-500 font-medium block">Discount Value</span>
+                  <span className="font-mono font-black text-emerald-700 text-sm">₹{discountAmount.toLocaleString('en-IN')} OFF</span>
+                </div>
+              </div>
+
+              {/* Notice on OTP Sent */}
+              <div className="text-xs text-slate-600">
+                A 6-digit verification code has been sent via <strong>WhatsApp</strong> to:
+                <div className="font-mono font-bold text-slate-900 mt-1 flex items-center gap-1.5 bg-slate-100 p-2 rounded-lg">
+                  <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{otpSentPhone || selectedOtpPhone || primaryPhone}</span>
+                </div>
+              </div>
+
+              {/* Error message inside modal */}
+              {otpModalError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{otpModalError}</span>
+                </div>
+              )}
+
+              {/* Test Code Convenience helper if in test/dev */}
+              {debugOtpCode && (
+                <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-950 text-xs font-mono flex items-center justify-between">
+                  <span>💡 Test OTP: <strong>{debugOtpCode}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => setRedemptionOtp(debugOtpCode)}
+                    className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 font-bold rounded-lg text-xs text-amber-950 transition cursor-pointer"
+                  >
+                    Fill Code
+                  </button>
+                </div>
+              )}
+
+              {/* OTP Input */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Enter 6-Digit Verification Code *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    autoFocus
+                    maxLength={6}
+                    placeholder="• • • • • •"
+                    value={redemptionOtp}
+                    onChange={(e) => setRedemptionOtp(e.target.value.replace(/\D/g, ''))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && redemptionOtp.length === 6 && !isSubmitting) {
+                        e.preventDefault();
+                        executeFinalSubmission(redemptionOtp);
+                      }
+                    }}
+                    className="w-full h-12 text-center text-2xl font-mono font-black tracking-widest text-slate-900 bg-slate-50 border-2 border-emerald-400 rounded-xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/20"
+                  />
+                </div>
+              </div>
+
+              {/* Resend Link */}
+              <div className="flex items-center justify-between text-xs pt-1">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const phoneToSend = selectedOtpPhone || primaryPhone;
+                    setIsSendingOtp(true);
+                    setOtpModalError('');
+                    try {
+                      const res = await ApiService.requestOtp({
+                        phone: phoneToSend,
+                        customer_id: customer?.customer_id,
+                      });
+                      const data = res.data || res;
+                      const code = data.debug_otp || data.dummy_otp || data.otp || '';
+                      if (code) setDebugOtpCode(code);
+                    } catch (err) {
+                      setOtpModalError(err.message || 'Failed to resend OTP.');
+                    } finally {
+                      setIsSendingOtp(false);
+                    }
+                  }}
+                  disabled={isSendingOtp}
+                  className="text-emerald-700 hover:text-emerald-800 font-bold inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSendingOtp ? 'animate-spin' : ''}`} />
+                  <span>{isSendingOtp ? 'Sending...' : 'Resend OTP via WhatsApp'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtpModal(false);
+                    setOtpModalError('');
+                  }}
+                  className="text-slate-400 hover:text-slate-600 font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOtpModal(false);
+                  setOtpModalError('');
+                }}
+                disabled={isSubmitting}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-200 transition cursor-pointer"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => executeFinalSubmission(redemptionOtp)}
+                disabled={isSubmitting || redemptionOtp.length !== 6}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Verifying &amp; Recording...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Verify &amp; Generate Receipt</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

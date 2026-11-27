@@ -78,9 +78,9 @@
     "semantic_hash": ""
   },
   "client/src/components/dashboard/AddReceiptModal.jsx": {
-    "mtime": 1795783345.120263,
-    "seen": 1795783397.7941644,
-    "ast_hash": "8d4bafda56dedde856e2dd9d0a287a4b",
+    "mtime": 1795784010.2370677,
+    "seen": 1795784050.203583,
+    "ast_hash": "9db6dc1bf419ca51fc1566dec1a90c3d",
     "semantic_hash": ""
   },
   "client/src/components/dashboard/BranchNetworkChart.jsx": {
