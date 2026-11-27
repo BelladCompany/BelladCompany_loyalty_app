@@ -31,8 +31,18 @@ import {
   Wrench,
   Bike,
   Flame,
+  Navigation,
+  Compass,
 } from 'lucide-react';
 import ApiService from '../services/api';
+import {
+  BELLAD_CITY_HUBS,
+  resolveNearestBelladHub,
+  getCachedUserCity,
+  setCachedUserCity,
+  isLocationPromptDismissed,
+  setLocationPromptDismissed,
+} from '../utils/geoUtils';
 
 const ALL_DEALERSHIP_BRANDS = [
   'All',
@@ -98,6 +108,16 @@ export default function PublicOffersScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Location / GPS states
+  const [selectedCity, setSelectedCity] = useState(() => {
+    const cached = getCachedUserCity();
+    return cached?.name || 'All';
+  });
+  const [detectedCityObj, setDetectedCityObj] = useState(() => getCachedUserCity());
+  const [isLocating, setIsLocating] = useState(false);
+  const [isLocationDismissed, setIsLocationDismissed] = useState(() => isLocationPromptDismissed());
+  const [locationToast, setLocationToast] = useState('');
+
   // Filtering states
   const [selectedBrand, setSelectedBrand] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -119,7 +139,6 @@ export default function PublicOffersScreen() {
   const [showManageModal, setShowManageModal] = useState(false);
   const [editingOffer, setEditingOffer] = useState(null);
   const [savingOffer, setSavingOffer] = useState(false);
-  const [includeInactive, setIncludeInactive] = useState(true);
 
   // Form State for creating/editing offers
   const [formData, setFormData] = useState({
@@ -128,6 +147,9 @@ export default function PublicOffersScreen() {
     category: 'new_vehicle',
     branch_name: 'All Branches',
     city: 'Hubli, Dharwad, Belgaum',
+    target_cities: ['All Cities'],
+    discount_percent: '',
+    is_statewide: true,
     title: '',
     benefit: '',
     description: '',
@@ -136,7 +158,7 @@ export default function PublicOffersScreen() {
     valid_till: 'Valid till 30 Nov 2026',
     badge: 'MONTHLY SPECIAL',
     badge_color: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
-    image_url: '',
+    image_url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
     whatsapp_number: '919035354159',
     is_active: true,
     priority: 5,
@@ -164,6 +186,73 @@ export default function PublicOffersScreen() {
   useEffect(() => {
     fetchOffers();
   }, [fetchOffers]);
+
+  // Geolocation trigger function using Haversine calculation
+  const handleTriggerGps = useCallback((isManual = false) => {
+    if (!navigator.geolocation) {
+      if (isManual) {
+        alert('Geolocation is not supported by your browser. Please select your city tab manually.');
+      }
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const res = resolveNearestBelladHub(latitude, longitude);
+        if (res && res.hub) {
+          const hubData = {
+            id: res.hub.id,
+            name: res.hub.name,
+            displayName: res.hub.displayName,
+            lat: latitude,
+            lng: longitude,
+            distanceKm: res.distanceKm,
+            isDirectMatch: res.isDirectMatch,
+          };
+          setCachedUserCity(hubData);
+          setDetectedCityObj(hubData);
+          setSelectedCity(res.hub.name);
+          setLocationToast(`📍 Nearest Bellad Hub detected: ${res.hub.displayName} (~${res.distanceKm} km away)`);
+        } else {
+          setLocationToast('📍 Outside dealership territory. Showing All Karnataka offers.');
+        }
+        setIsLocating(false);
+        setIsLocationDismissed(true);
+        setLocationPromptDismissed();
+      },
+      (err) => {
+        console.warn('Geolocation access denied or timed out:', err.message);
+        setIsLocating(false);
+        if (isManual) {
+          alert('GPS location permission was denied or timed out. Please choose your city from the tabs below.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }, []);
+
+  // Graceful auto-prompt on mount if not cached and not dismissed
+  useEffect(() => {
+    const cached = getCachedUserCity();
+    const dismissed = isLocationPromptDismissed();
+    if (!cached && !dismissed) {
+      handleTriggerGps(false);
+    }
+  }, [handleTriggerGps]);
+
+  const handleSelectCity = (cityName) => {
+    setSelectedCity(cityName);
+    if (cityName !== 'All') {
+      const hub = BELLAD_CITY_HUBS.find((h) => h.name.toLowerCase() === cityName.toLowerCase());
+      if (hub) {
+        const hubData = { id: hub.id, name: hub.name, displayName: hub.displayName, distanceKm: 0 };
+        setCachedUserCity(hubData);
+        setDetectedCityObj(hubData);
+      }
+    }
+  };
 
   // Handle staff unlock for Editor Mode
   const handleUnlockEditor = async (e) => {
@@ -199,11 +288,27 @@ export default function PublicOffersScreen() {
     }
   };
 
-  // Filtered offers list
+  // Filtered & Ranked offers list
   const filteredOffers = useMemo(() => {
-    return offers.filter((offer) => {
+    const list = offers.filter((offer) => {
       // If not in editor mode and offer is inactive, hide it
       if (!isEditorMode && !offer.is_active) return false;
+
+      // City / Location filter
+      if (selectedCity !== 'All') {
+        const c = selectedCity.toLowerCase();
+        const targetCities = Array.isArray(offer.target_cities) ? offer.target_cities : [];
+        const isTargeted = targetCities.some(
+          (tc) => tc.toLowerCase() === c || tc.toLowerCase().includes(c) || c.includes(tc.toLowerCase())
+        );
+        const isStatewide = offer.is_statewide || targetCities.includes('All Cities') || offer.city === 'All Cities';
+        const cityMatch = (offer.city || '').toLowerCase().includes(c);
+        const branchMatch = (offer.branch_name || '').toLowerCase().includes(c);
+
+        if (!isTargeted && !isStatewide && !cityMatch && !branchMatch) {
+          return false;
+        }
+      }
 
       // Brand filter
       if (selectedBrand !== 'All') {
@@ -245,7 +350,21 @@ export default function PublicOffersScreen() {
       }
       return true;
     });
-  }, [offers, selectedBrand, selectedCategory, selectedBranch, selectedMonth, searchQuery, isEditorMode]);
+
+    // If a specific city is selected, prioritize city-exclusive offers at top!
+    if (selectedCity !== 'All') {
+      const c = selectedCity.toLowerCase();
+      list.sort((a, b) => {
+        const aTarget = Array.isArray(a.target_cities) && a.target_cities.some((tc) => tc.toLowerCase().includes(c));
+        const bTarget = Array.isArray(b.target_cities) && b.target_cities.some((tc) => tc.toLowerCase().includes(c));
+        if (aTarget && !bTarget) return -1;
+        if (!aTarget && bTarget) return 1;
+        return (b.priority || 0) - (a.priority || 0);
+      });
+    }
+
+    return list;
+  }, [offers, selectedCity, selectedBrand, selectedCategory, selectedBranch, selectedMonth, searchQuery, isEditorMode]);
 
   // Open modal for new offer
   const handleOpenCreateModal = () => {
@@ -255,14 +374,17 @@ export default function PublicOffersScreen() {
       model_name: '',
       category: 'new_vehicle',
       branch_name: 'All Branches',
-      city: 'Hubli, Dharwad, Belgaum',
+      city: selectedCity !== 'All' ? selectedCity : 'Hubli, Dharwad, Belgaum',
+      target_cities: selectedCity !== 'All' ? [selectedCity] : ['All Cities'],
+      discount_percent: '',
+      is_statewide: selectedCity === 'All',
       title: '',
       benefit: '',
       description: '',
       highlights: '',
       valid_month: 'November 2026',
       valid_till: 'Valid till 30 Nov 2026',
-      badge: 'MONTHLY SPECIAL',
+      badge: selectedCity !== 'All' ? `${selectedCity.toUpperCase()} EXCLUSIVE` : 'MONTHLY SPECIAL',
       badge_color: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
       image_url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
       whatsapp_number: '919035354159',
@@ -281,12 +403,23 @@ export default function PublicOffersScreen() {
         ? offer.highlights
         : '';
 
+    let citiesArr = ['All Cities'];
+    if (Array.isArray(offer.target_cities) && offer.target_cities.length > 0) {
+      citiesArr = offer.target_cities;
+    } else if (offer.city) {
+      citiesArr = offer.city.split(',').map((c) => c.trim()).filter(Boolean);
+      if (citiesArr.length === 0) citiesArr = ['All Cities'];
+    }
+
     setFormData({
       brand_name: offer.brand_name || 'Tata Motors',
       model_name: offer.model_name || '',
       category: offer.category || 'new_vehicle',
       branch_name: offer.branch_name || 'All Branches',
       city: offer.city || '',
+      target_cities: citiesArr,
+      discount_percent: offer.discount_percent != null ? offer.discount_percent : '',
+      is_statewide: offer.is_statewide ?? citiesArr.includes('All Cities'),
       title: offer.title || '',
       benefit: offer.benefit || '',
       description: offer.description || '',
@@ -313,28 +446,34 @@ export default function PublicOffersScreen() {
         .map((s) => s.trim())
         .filter(Boolean);
 
+      const targetCities = formData.target_cities && formData.target_cities.length > 0
+        ? formData.target_cities
+        : ['All Cities'];
+
       const payload = {
         ...formData,
         highlights: hlArray,
+        target_cities: targetCities,
+        discount_percent: formData.discount_percent !== '' && formData.discount_percent !== null
+          ? parseFloat(formData.discount_percent)
+          : null,
+        is_statewide: targetCities.includes('All Cities') || formData.is_statewide,
       };
 
       if (editingOffer) {
         const res = await ApiService.updateOffer(editingOffer.offer_id, payload);
         if (res.status === 'success' && res.data) {
-          // Instant state update without waiting
           setOffers((prev) => prev.map((o) => (o.offer_id === editingOffer.offer_id ? res.data : o)));
         }
       } else {
         const res = await ApiService.createOffer(payload);
         if (res.status === 'success' && res.data) {
-          // Instant state insertion
           setOffers((prev) => [res.data, ...prev]);
         }
       }
 
       setShowManageModal(false);
       setEditingOffer(null);
-      // Background re-fetch to sync metadata
       fetchOffers();
     } catch (err) {
       alert(`Error saving offer: ${err.message}`);
@@ -346,7 +485,6 @@ export default function PublicOffersScreen() {
   // Toggle active status instantly
   const handleToggleActive = async (offerId) => {
     try {
-      // Optimistic local state update
       setOffers((prev) =>
         prev.map((o) => (o.offer_id === offerId ? { ...o, is_active: !o.is_active } : o))
       );
@@ -363,7 +501,6 @@ export default function PublicOffersScreen() {
       return;
     }
     try {
-      // Optimistic local state update
       setOffers((prev) => prev.filter((o) => o.offer_id !== offerId));
       await ApiService.deleteOffer(offerId);
     } catch (err) {
@@ -395,7 +532,7 @@ export default function PublicOffersScreen() {
             <div className="h-5 w-px bg-slate-200 hidden md:block" />
 
             <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-              <div className="">
+              <div>
                 <img
                   src="/bellad-logo.png"
                   alt="Bellad Logo"
@@ -404,7 +541,6 @@ export default function PublicOffersScreen() {
                     e.target.style.display = 'none';
                   }}
                 />
-
               </div>
               <div className="min-w-0">
                 <h1 className="text-xs sm:text-base font-black text-slate-900 tracking-tight flex items-center gap-1.5 truncate">
@@ -413,7 +549,6 @@ export default function PublicOffersScreen() {
                     Offers
                   </span>
                 </h1>
-
               </div>
             </div>
           </div>
@@ -453,6 +588,41 @@ export default function PublicOffersScreen() {
         </div>
       </header>
 
+      {/* ─── Location Detection Permission Banner (Prompt if not detected yet) ─── */}
+      {!detectedCityObj && !isLocationDismissed && (
+        <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white px-4 py-2.5 shadow-md">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded-full bg-amber-400 text-slate-900 font-bold">
+                <Navigation className="w-3.5 h-3.5 animate-pulse" />
+              </span>
+              <span className="font-semibold">
+                Looking for exclusive local schemes? Enable GPS location to see city-specific offers for Hubli, Bangalore, Belgaum &amp; more.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => handleTriggerGps(true)}
+                disabled={isLocating}
+                className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black rounded-lg transition flex items-center gap-1 shadow-xs cursor-pointer"
+              >
+                {isLocating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
+                <span>{isLocating ? 'Detecting...' : 'Enable Location'}</span>
+              </button>
+              <button
+                onClick={() => {
+                  setIsLocationDismissed(true);
+                  setLocationPromptDismissed();
+                }}
+                className="px-2 py-1 text-slate-300 hover:text-white transition cursor-pointer"
+              >
+                Not Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── Editor Mode Notification Banner (When active) ───────────────────── */}
       {isEditorMode && (
         <div className="bg-amber-400 text-slate-950 px-3.5 sm:px-4 py-2 text-xs font-bold shadow-xs border-b border-amber-500">
@@ -461,19 +631,19 @@ export default function PublicOffersScreen() {
               <span className="px-2 py-0.5 rounded-md bg-slate-950 text-white text-[10px] font-mono uppercase shrink-0">
                 Staff Editor Mode
               </span>
-              <span className="text-[11px] sm:text-xs">Live edit enabled. Changes update immediately!</span>
+              <span className="text-[11px] sm:text-xs">Live edit enabled. Target specific cities (e.g. Bangalore 80% vs Hubli 50%).</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={handleOpenCreateModal}
-                className="px-2.5 sm:px-3 py-1 bg-slate-950 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition flex items-center gap-1"
+                className="px-2.5 sm:px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" />
                 <span>Create Offer</span>
               </button>
               <button
                 onClick={() => setIsEditorMode(false)}
-                className="text-slate-800 hover:text-black underline text-xs"
+                className="text-slate-800 hover:text-black underline text-xs cursor-pointer"
               >
                 Exit
               </button>
@@ -482,8 +652,8 @@ export default function PublicOffersScreen() {
         </div>
       )}
 
-      {/* ─── Hero Headline & Dealership Overview (Modern Light Mode) ─────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-indigo-50/20 to-[#F8FAFC] py-10 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
+      {/* ─── Hero Headline & Dealership Overview ─────────────────────────────── */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-indigo-50/20 to-[#F8FAFC] py-8 sm:py-10 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold shadow-2xs">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -491,14 +661,14 @@ export default function PublicOffersScreen() {
           </div>
 
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 max-w-4xl mx-auto leading-tight">
-            Monthly Offers Across All Brands <br className="hidden sm:inline" />
+            Location-Based Offers Across All Brands <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-rose-600 bg-clip-text text-transparent">
               Tata • MG • Hero • Vida • Ather • Hyundai • Maruti • Swaraj
             </span>
           </h2>
 
           <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto font-medium">
-            Explore exclusive manufacturer exchange bonuses, EV subsidies, and finance schemes across all Bellad &amp; Co branches in Hubli, Belgaum, Dharwad, Hospet, Bangalore, and Bellary.
+            Explore exclusive regional schemes, manufacturer exchange bonuses, and EV subsidies customized for your city showroom.
           </p>
 
           {/* Quick Stats Highlights */}
@@ -523,9 +693,79 @@ export default function PublicOffersScreen() {
         </div>
       </section>
 
+      {/* ─── Location & City Selector Ribbon ─────────────────────────────────── */}
+      <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 -mt-5 relative z-30">
+        <div className="bg-white p-2 rounded-2xl border border-slate-200/90 shadow-md flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1.5 shrink-0 pl-1 text-xs font-bold text-slate-700">
+            <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
+            <span className="hidden sm:inline">Dealership Region:</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none flex-1">
+            <button
+              onClick={() => handleSelectCity('All')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                selectedCity === 'All'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <span>🌟 All Karnataka Deals</span>
+            </button>
+
+            {BELLAD_CITY_HUBS.map((hub) => {
+              const isSelected = selectedCity.toLowerCase() === hub.name.toLowerCase();
+              const isDetected = detectedCityObj && detectedCityObj.name.toLowerCase() === hub.name.toLowerCase();
+              return (
+                <button
+                  key={hub.id}
+                  onClick={() => handleSelectCity(hub.name)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                    isSelected
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-50 border border-slate-200/80 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <MapPin className={`w-3.5 h-3.5 ${isSelected ? 'text-amber-400' : 'text-slate-400'}`} />
+                  <span>{hub.displayName || hub.name}</span>
+                  {isDetected && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-emerald-100 text-emerald-800 font-bold">
+                      GPS
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* GPS Auto-detect Trigger Button */}
+          <button
+            onClick={() => handleTriggerGps(true)}
+            disabled={isLocating}
+            title="Auto-detect nearest showroom using device GPS"
+            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 font-bold text-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer border border-slate-200"
+          >
+            <Navigation className={`w-3.5 h-3.5 text-indigo-600 ${isLocating ? 'animate-spin' : ''}`} />
+            <span className="hidden md:inline">{isLocating ? 'Detecting...' : 'Auto GPS'}</span>
+          </button>
+        </div>
+
+        {/* Location Toast indicator if detected */}
+        {locationToast && (
+          <div className="mt-2 text-xs font-semibold text-indigo-700 bg-indigo-50/90 border border-indigo-200/70 rounded-xl px-3 py-1.5 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span>{locationToast}</span>
+            </div>
+            <button onClick={() => setLocationToast('')} className="text-slate-400 hover:text-slate-600">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </section>
+
       {/* ─── All Brand Selector Tabs ─────────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 -mt-5 relative z-20">
-        <div className="bg-white p-2 rounded-2xl border border-slate-200/90 shadow-lg shadow-slate-200/50 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+      <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-4 relative z-20">
+        <div className="bg-white p-2 rounded-2xl border border-slate-200/90 shadow-md flex items-center gap-1.5 overflow-x-auto scrollbar-none">
           {ALL_DEALERSHIP_BRANDS.map((brand) => {
             const isSelected = selectedBrand.toLowerCase() === brand.toLowerCase();
             return (
@@ -546,7 +786,7 @@ export default function PublicOffersScreen() {
       </section>
 
       {/* ─── Dynamic Filter Bar: Search, Category, Branch, Month ─────────────── */}
-      <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-6">
+      <section className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-5">
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 
           {/* Keyword Search */}
@@ -620,7 +860,10 @@ export default function PublicOffersScreen() {
 
         {/* Dynamic Count Indicator */}
         <div className="flex items-center justify-between mt-3 px-1 text-xs text-slate-500 font-medium">
-          <span>Showing {filteredOffers.length} offers for {selectedBrand === 'All' ? 'All Brands' : selectedBrand}</span>
+          <span>
+            Showing {filteredOffers.length} offers for {selectedBrand === 'All' ? 'All Brands' : selectedBrand}{' '}
+            {selectedCity !== 'All' ? `in ${selectedCity}` : 'Across Karnataka'}
+          </span>
           {isEditorMode && (
             <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
               ⚡ Instant Editor Mode Enabled
@@ -653,11 +896,12 @@ export default function PublicOffersScreen() {
             </div>
             <h3 className="text-base font-black text-slate-900">No Offers Found</h3>
             <p className="text-xs text-slate-500 font-medium">
-              No offers match your selected brand, branch, or search criteria.
+              No offers match your selected region ({selectedCity}), brand, or filters.
             </p>
             <div className="pt-2 flex items-center justify-center gap-2">
               <button
                 onClick={() => {
+                  setSelectedCity('All');
                   setSelectedBrand('All');
                   setSelectedCategory('all');
                   setSelectedBranch('All Branches');
@@ -674,7 +918,7 @@ export default function PublicOffersScreen() {
                   className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-xs flex items-center gap-1.5"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Create Offer for {selectedBrand}</span>
+                  <span>Create Offer for {selectedCity !== 'All' ? selectedCity : selectedBrand}</span>
                 </button>
               )}
             </div>
@@ -687,6 +931,10 @@ export default function PublicOffersScreen() {
                 : typeof offer.highlights === 'string'
                   ? JSON.parse(offer.highlights || '[]')
                   : [];
+
+              const hasCityExclusive = Array.isArray(offer.target_cities) &&
+                offer.target_cities.length > 0 &&
+                !offer.target_cities.includes('All Cities');
 
               return (
                 <div
@@ -708,8 +956,8 @@ export default function PublicOffersScreen() {
                     {/* Gradient shade over image bottom for badge contrast */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none" />
 
-                    {/* Badge */}
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                    {/* Badges on Top Left */}
+                    <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] tracking-wider uppercase font-mono font-bold bg-amber-400 text-slate-950 shadow-sm">
                         {offer.badge || 'MONTHLY OFFER'}
                       </span>
@@ -719,6 +967,18 @@ export default function PublicOffersScreen() {
                         </span>
                       )}
                     </div>
+
+                    {/* City Location Badge on Top Right */}
+                    {hasCityExclusive ? (
+                      <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-600 text-white shadow-md flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-amber-300" />
+                        <span>{offer.target_cities.join(', ')} Only</span>
+                      </div>
+                    ) : (
+                      <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-900/80 backdrop-blur-xs text-slate-200 shadow-sm">
+                        All Karnataka
+                      </div>
+                    )}
 
                     {/* Brand Tag */}
                     <div className="absolute bottom-3 left-3 px-2.5 py-1 rounded-xl bg-white/90 backdrop-blur-md border border-slate-200 text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-xs">
@@ -740,8 +1000,14 @@ export default function PublicOffersScreen() {
                         {offer.title}
                       </h3>
 
-                      <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-black">
-                        {offer.benefit}
+                      {/* Benefit and Location Discount Callout */}
+                      <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-black flex items-center justify-between">
+                        <span>{offer.benefit}</span>
+                        {offer.discount_percent > 0 && (
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-mono text-[10px] uppercase font-bold shrink-0 ml-1">
+                            {offer.discount_percent}% OFF
+                          </span>
+                        )}
                       </div>
 
                       <p className="text-xs text-slate-600 leading-relaxed font-medium line-clamp-3">
@@ -766,7 +1032,11 @@ export default function PublicOffersScreen() {
                       <div className="flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
                         <span className="line-clamp-1">
-                          {offer.branch_name === 'All Branches' ? `All Branches (${offer.city || 'Karnataka'})` : `${offer.branch_name} • ${offer.city || ''}`}
+                          {hasCityExclusive
+                            ? `Exclusive: ${offer.target_cities.join(', ')} branches`
+                            : offer.branch_name === 'All Branches'
+                              ? `All Branches (${offer.city || 'Karnataka'})`
+                              : `${offer.branch_name} • ${offer.city || ''}`}
                         </span>
                       </div>
                       {offer.valid_till && (
@@ -792,7 +1062,7 @@ export default function PublicOffersScreen() {
                         <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100">
                           <button
                             onClick={() => handleOpenEditModal(offer)}
-                            className="flex-1 py-1.5 px-2 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] transition flex items-center justify-center gap-1"
+                            className="flex-1 py-1.5 px-2 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] transition flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <Edit className="w-3 h-3" />
                             <span>Edit</span>
@@ -800,7 +1070,7 @@ export default function PublicOffersScreen() {
 
                           <button
                             onClick={() => handleToggleActive(offer.offer_id)}
-                            className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold transition flex items-center gap-1 border ${offer.is_active
+                            className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold transition flex items-center gap-1 border cursor-pointer ${offer.is_active
                               ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
                               : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
                               }`}
@@ -812,7 +1082,7 @@ export default function PublicOffersScreen() {
 
                           <button
                             onClick={() => handleDeleteOffer(offer.offer_id, offer.title)}
-                            className="py-1.5 px-2.5 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 font-bold text-[11px] transition flex items-center gap-1"
+                            className="py-1.5 px-2.5 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
                             title="Delete Offer"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -849,7 +1119,7 @@ export default function PublicOffersScreen() {
           <div className="bg-white border border-slate-200 rounded-3xl max-w-sm w-full p-6 text-slate-800 shadow-2xl relative">
             <button
               onClick={() => setShowUnlockModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800"
+              className="absolute top-4 right-4 p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -897,7 +1167,7 @@ export default function PublicOffersScreen() {
                 <button
                   type="submit"
                   disabled={unlocking}
-                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
                 >
                   {unlocking ? (
                     <>
@@ -917,18 +1187,18 @@ export default function PublicOffersScreen() {
         </div>
       )}
 
-      {/* ─── Staff Create / Edit Modal (100% Fully Visible - Pinned Header & Footer with Scrollable Body) ─── */}
+      {/* ─── Staff Create / Edit Modal (With Location Targeting & Discount %) ─── */}
       {showManageModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-hidden">
           <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-2xl w-full max-h-[92dvh] sm:max-h-[88vh] flex flex-col text-slate-800 shadow-2xl overflow-hidden relative animate-fadeIn">
-            {/* Pinned Modal Header (Always 100% visible, never scrolled off) */}
+            {/* Pinned Modal Header */}
             <div className="flex items-start justify-between p-3.5 sm:p-5 border-b border-slate-100 flex-shrink-0 bg-white select-none">
               <div className="pr-2 min-w-0">
                 <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
-                  {editingOffer ? 'Edit Monthly Offer' : 'Create New Monthly Offer'}
+                  {editingOffer ? 'Edit Dealership Offer' : 'Create New Dealership Offer'}
                 </h3>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-snug mt-0.5">
-                  Update model discounts, exchange benefits &amp; branch coverage. Updates take effect immediately.
+                  Set location exclusivity (e.g. Hubli 50%, Bangalore 80%), benefits &amp; details.
                 </p>
               </div>
               <button
@@ -943,8 +1213,80 @@ export default function PublicOffersScreen() {
             {/* Scrollable Form Body */}
             <form id="manageOfferForm" onSubmit={handleSaveOffer} className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-6 space-y-3 sm:space-y-4 text-xs font-medium">
 
+              {/* ─── Location & City Targeting Multi-Selector ─── */}
+              <div className="bg-indigo-50/50 p-3.5 rounded-2xl border border-indigo-100 space-y-2">
+                <label className="font-bold text-slate-800 block flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Target Cities / Territory Exclusivity *</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-normal">
+                    {formData.target_cities.includes('All Cities')
+                      ? 'Shows across all Karnataka'
+                      : `Exclusive to ${formData.target_cities.join(', ')}`}
+                  </span>
+                </label>
+
+                <div className="flex flex-wrap gap-2">
+                  <label className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center gap-1.5 ${
+                    formData.target_cities.includes('All Cities')
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={formData.target_cities.includes('All Cities')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData({ ...formData, target_cities: ['All Cities'], is_statewide: true });
+                        } else {
+                          setFormData({ ...formData, target_cities: ['Hubli'], is_statewide: false });
+                        }
+                      }}
+                    />
+                    <span>🌟 All Cities (Statewide)</span>
+                  </label>
+
+                  {BELLAD_CITY_HUBS.map((hub) => {
+                    const isChecked = formData.target_cities.includes(hub.name);
+                    return (
+                      <label
+                        key={hub.id}
+                        className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center gap-1.5 ${
+                          isChecked
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            let updated = formData.target_cities.filter((c) => c !== 'All Cities');
+                            if (e.target.checked) {
+                              updated.push(hub.name);
+                            } else {
+                              updated = updated.filter((c) => c !== hub.name);
+                            }
+                            if (updated.length === 0) updated = ['All Cities'];
+                            setFormData({
+                              ...formData,
+                              target_cities: updated,
+                              is_statewide: updated.includes('All Cities'),
+                            });
+                          }}
+                        />
+                        <span>📍 {hub.displayName || hub.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Brand & Model */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                {/* Brand */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Brand Name *</label>
                   <select
@@ -961,7 +1303,6 @@ export default function PublicOffersScreen() {
                   </select>
                 </div>
 
-                {/* Model */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Model Name *</label>
                   <input
@@ -975,8 +1316,8 @@ export default function PublicOffersScreen() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
-                {/* Category */}
+              {/* Category & Branch */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Category</label>
                   <select
@@ -992,7 +1333,6 @@ export default function PublicOffersScreen() {
                   </select>
                 </div>
 
-                {/* Branch */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Applicable Branch</label>
                   <select
@@ -1007,18 +1347,6 @@ export default function PublicOffersScreen() {
                     ))}
                   </select>
                 </div>
-
-                {/* City */}
-                <div className="sm:col-span-2 md:col-span-1">
-                  <label className="font-bold text-slate-700 block mb-1">Cities / Coverage</label>
-                  <input
-                    type="text"
-                    placeholder="Hubli, Belgaum, Dharwad"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
-                  />
-                </div>
               </div>
 
               {/* Title & Benefit */}
@@ -1028,7 +1356,7 @@ export default function PublicOffersScreen() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Tata Safari Dark Edition November Offer"
+                    placeholder="e.g. Tata Safari Dark Edition Special"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
@@ -1048,12 +1376,45 @@ export default function PublicOffersScreen() {
                 </div>
               </div>
 
+              {/* Location Discount % and Badge Text */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Location Discount % (e.g. 50 or 80)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      placeholder="e.g. 50% for Hubli, 80% for Bangalore"
+                      value={formData.discount_percent}
+                      onChange={(e) => setFormData({ ...formData, discount_percent: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">%</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Badge Text</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. HUBLI EXCLUSIVE, BANGALORE SPECIAL"
+                    value={formData.badge}
+                    onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+              </div>
+
               {/* Description */}
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Offer Description</label>
                 <textarea
                   rows={2}
-                  placeholder="Terms, package details, exchange bonuses..."
+                  placeholder="Terms, package details, exchange bonuses, city applicability..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
@@ -1065,7 +1426,7 @@ export default function PublicOffersScreen() {
                 <label className="font-bold text-slate-700 block mb-1">Key Features / Highlights (One per line)</label>
                 <textarea
                   rows={3}
-                  placeholder="ADAS Level 2 Features&#10;Panoramic Sunroof&#10;10,000 Loyalty Bonus Points"
+                  placeholder="City-exclusive manufacturer bonus&#10;Zero down-payment option&#10;10,000 Loyalty Bonus Points"
                   value={formData.highlights}
                   onChange={(e) => setFormData({ ...formData, highlights: e.target.value })}
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
@@ -1098,8 +1459,8 @@ export default function PublicOffersScreen() {
                 </div>
               </div>
 
-              {/* Image URL, Phone & Badge */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
+              {/* Image URL & Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Banner Image URL</label>
                   <input
@@ -1118,17 +1479,6 @@ export default function PublicOffersScreen() {
                     placeholder="919035354159"
                     value={formData.whatsapp_number}
                     onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
-                  />
-                </div>
-
-                <div className="sm:col-span-2 md:col-span-1">
-                  <label className="font-bold text-slate-700 block mb-1">Badge Text</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. FESTIVE SUV SPECIAL"
-                    value={formData.badge}
-                    onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
@@ -1158,12 +1508,12 @@ export default function PublicOffersScreen() {
               </div>
             </form>
 
-            {/* Pinned Modal Footer (Always 100% visible) */}
+            {/* Pinned Modal Footer */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 p-3 sm:p-4 border-t border-slate-100 flex-shrink-0 bg-slate-50">
               <button
                 type="button"
                 onClick={() => setShowManageModal(false)}
-                className="w-full sm:w-auto px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition text-center text-xs"
+                className="w-full sm:w-auto px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-bold transition text-center text-xs cursor-pointer"
               >
                 Cancel
               </button>

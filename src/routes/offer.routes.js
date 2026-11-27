@@ -13,7 +13,7 @@ const requireRole = require('../middleware/roles');
 router.get('/', async (req, res, next) => {
   try {
     const tenantId = req.headers['x-tenant-id'] || 'bellad_and_company';
-    const { brand, model, category, branch, month, search, includeInactive } = req.query;
+    const { brand, model, category, branch, month, search, city, includeInactive } = req.query;
 
     const data = await OfferService.getOffers({
       tenantId,
@@ -23,6 +23,7 @@ router.get('/', async (req, res, next) => {
       branch,
       month,
       search,
+      city,
       includeInactive: includeInactive === 'true',
     });
 

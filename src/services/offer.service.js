@@ -30,6 +30,21 @@ class OfferService {
       valIndex++;
     }
 
+    // Location / City targeted filtering
+    let cityParamIndex = null;
+    if (filters.city && filters.city !== 'all' && filters.city !== 'All Cities') {
+      cityParamIndex = valIndex;
+      conditions.push(`(
+        $${valIndex} = ANY(target_cities)
+        OR 'All Cities' = ANY(target_cities)
+        OR is_statewide = true
+        OR city ILIKE '%' || $${valIndex} || '%'
+        OR branch_name ILIKE '%' || $${valIndex} || '%'
+      )`);
+      values.push(filters.city);
+      valIndex++;
+    }
+
     if (filters.month && filters.month !== 'all' && filters.month !== 'All Months') {
       conditions.push(`valid_month ILIKE $${valIndex++}`);
       values.push(`%${filters.month}%`);
@@ -42,16 +57,28 @@ class OfferService {
     }
 
     const whereClause = conditions.join(' AND ');
+    const orderClause = cityParamIndex
+      ? `ORDER BY 
+          CASE 
+            WHEN $${cityParamIndex} = ANY(target_cities) OR city ILIKE '%' || $${cityParamIndex} || '%' THEN 1
+            WHEN is_statewide = true OR 'All Cities' = ANY(target_cities) THEN 2
+            ELSE 3
+          END ASC, 
+          priority DESC, created_at DESC`
+      : 'ORDER BY priority DESC, created_at DESC';
+
     const query = `
       SELECT 
         offer_id, tenant_id, brand_name, model_name, category,
-        branch_name, city, title, benefit, description, highlights,
+        branch_name, city, target_cities, discount_percent, is_statewide,
+        geofence_lat, geofence_lng, radius_km,
+        title, benefit, description, highlights,
         code, valid_month, valid_till, badge, badge_color, image_url,
         whatsapp_number, whatsapp_msg, is_active, priority,
         created_at, updated_at
       FROM dealership_offers
       WHERE ${whereClause}
-      ORDER BY priority DESC, created_at DESC;
+      ${orderClause};
     `;
 
     const { rows: offers } = await pool.query(query, values);
@@ -98,6 +125,12 @@ class OfferService {
       category = 'new_vehicle',
       branch_name = 'All Branches',
       city = 'All Cities',
+      target_cities,
+      discount_percent = null,
+      is_statewide = false,
+      geofence_lat = null,
+      geofence_lng = null,
+      radius_km = 50.0,
       title,
       benefit,
       description = '',
@@ -115,14 +148,18 @@ class OfferService {
     } = offerData;
 
     const highlightsJson = Array.isArray(highlights) ? JSON.stringify(highlights) : JSON.stringify([]);
+    const normalizedCities = Array.isArray(target_cities) && target_cities.length > 0
+      ? target_cities
+      : (city && city !== 'All Cities' ? city.split(',').map((c) => c.trim()).filter(Boolean) : ['All Cities']);
 
     const query = `
       INSERT INTO dealership_offers (
         tenant_id, brand_name, model_name, category, branch_name, city,
+        target_cities, discount_percent, is_statewide, geofence_lat, geofence_lng, radius_km,
         title, benefit, description, highlights, code, valid_month, valid_till,
         badge, badge_color, image_url, whatsapp_number, whatsapp_msg, is_active, priority
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::jsonb, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
       RETURNING *;
     `;
 
@@ -133,6 +170,12 @@ class OfferService {
       category,
       branch_name,
       city,
+      normalizedCities,
+      discount_percent ? parseFloat(discount_percent) : null,
+      Boolean(is_statewide || normalizedCities.includes('All Cities')),
+      geofence_lat ? parseFloat(geofence_lat) : null,
+      geofence_lng ? parseFloat(geofence_lng) : null,
+      radius_km ? parseFloat(radius_km) : 50.0,
       title,
       benefit,
       description,
@@ -165,6 +208,12 @@ class OfferService {
       category = existing.category,
       branch_name = existing.branch_name,
       city = existing.city,
+      target_cities = existing.target_cities,
+      discount_percent = existing.discount_percent,
+      is_statewide = existing.is_statewide,
+      geofence_lat = existing.geofence_lat,
+      geofence_lng = existing.geofence_lng,
+      radius_km = existing.radius_km,
       title = existing.title,
       benefit = existing.benefit,
       description = existing.description,
@@ -182,6 +231,9 @@ class OfferService {
     } = offerData;
 
     const highlightsJson = Array.isArray(highlights) ? JSON.stringify(highlights) : JSON.stringify(existing.highlights || []);
+    const normalizedCities = Array.isArray(target_cities) && target_cities.length > 0
+      ? target_cities
+      : (city && city !== 'All Cities' ? city.split(',').map((c) => c.trim()).filter(Boolean) : existing.target_cities || ['All Cities']);
 
     const query = `
       UPDATE dealership_offers
@@ -191,22 +243,28 @@ class OfferService {
         category = $3,
         branch_name = $4,
         city = $5,
-        title = $6,
-        benefit = $7,
-        description = $8,
-        highlights = $9::jsonb,
-        code = $10,
-        valid_month = $11,
-        valid_till = $12,
-        badge = $13,
-        badge_color = $14,
-        image_url = $15,
-        whatsapp_number = $16,
-        whatsapp_msg = $17,
-        is_active = $18,
-        priority = $19,
+        target_cities = $6,
+        discount_percent = $7,
+        is_statewide = $8,
+        geofence_lat = $9,
+        geofence_lng = $10,
+        radius_km = $11,
+        title = $12,
+        benefit = $13,
+        description = $14,
+        highlights = $15::jsonb,
+        code = $16,
+        valid_month = $17,
+        valid_till = $18,
+        badge = $19,
+        badge_color = $20,
+        image_url = $21,
+        whatsapp_number = $22,
+        whatsapp_msg = $23,
+        is_active = $24,
+        priority = $25,
         updated_at = NOW()
-      WHERE offer_id = $20 AND tenant_id = $21
+      WHERE offer_id = $26 AND tenant_id = $27
       RETURNING *;
     `;
 
@@ -216,6 +274,12 @@ class OfferService {
       category,
       branch_name,
       city,
+      normalizedCities,
+      discount_percent != null && discount_percent !== '' ? parseFloat(discount_percent) : null,
+      Boolean(is_statewide || normalizedCities.includes('All Cities')),
+      geofence_lat ? parseFloat(geofence_lat) : null,
+      geofence_lng ? parseFloat(geofence_lng) : null,
+      radius_km ? parseFloat(radius_km) : 50.0,
       title,
       benefit,
       description,
