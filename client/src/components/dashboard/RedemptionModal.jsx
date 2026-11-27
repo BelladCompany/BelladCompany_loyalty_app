@@ -127,7 +127,7 @@ export const RedemptionModal = ({
   const [category, setCategory] = useState('service'); // service | accessories | bodyshop | referral
   const [receiptNo, setReceiptNo] = useState('');
   const [accountLedgerNo, setAccountLedgerNo] = useState('');
-  const [customRedeemPercent, setCustomRedeemPercent] = useState(50); // Default 50% max cap
+  const [customRedeemPercent, setCustomRedeemPercent] = useState('50'); // Default 50% max cap
   const [customRedeemPoints, setCustomRedeemPoints] = useState(''); // Custom points entered by cashier
 
   // Referral Tab Specific State
@@ -203,7 +203,7 @@ export const RedemptionModal = ({
       setCategory('service');
       setReceiptNo('');
       setAccountLedgerNo('');
-      setCustomRedeemPercent(50);
+      setCustomRedeemPercent('50');
       setCustomRedeemPoints('');
       setReferralCode('');
       setReferrerDetails(null);
@@ -263,6 +263,53 @@ export const RedemptionModal = ({
   const previewCashPaid = numBillAmount > 0 ? Math.max(0, numBillAmount - previewDiscountApplied) : 0;
   const previewNewPointsEarned = numBillAmount > 0 ? Math.floor((previewCashPaid / 100) * POINTS_PER_100_RUPEES_EARNED) : 0;
   const previewUpdatedBalance = (currentBalance - previewPointsRedeemed) + previewNewPointsEarned;
+
+  // Computed display percentage for slider and inputs (e.g. 22%, 46%)
+  const displayPercent = customRedeemPercent !== '' && !isNaN(parseInt(customRedeemPercent, 10))
+    ? Math.max(0, Math.min(modelCapPercent, parseInt(customRedeemPercent, 10)))
+    : (customRedeemPoints !== '' && !isNaN(parseInt(customRedeemPoints, 10)) && currentBalance > 0
+        ? Math.min(modelCapPercent, Math.round((parseInt(customRedeemPoints, 10) / currentBalance) * 100))
+        : 50);
+
+  // Helper handlers for 2-way sync between Scroll Bar, % input, and PTS input
+  const handleSliderChange = (newPct) => {
+    const clamped = Math.max(0, Math.min(modelCapPercent, newPct));
+    setCustomRedeemPercent(String(clamped));
+    const calculatedPts = Math.min(absoluteMaxRedeemable, Math.floor(currentBalance * (clamped / 100)));
+    setCustomRedeemPoints(calculatedPts > 0 ? String(calculatedPts) : '0');
+  };
+
+  const handlePercentInputChange = (rawVal) => {
+    setCustomRedeemPercent(rawVal);
+    if (rawVal === '') {
+      setCustomRedeemPoints('');
+      return;
+    }
+    const parsed = parseInt(rawVal, 10);
+    if (isNaN(parsed)) {
+      setCustomRedeemPoints('');
+      return;
+    }
+    const clamped = Math.max(0, Math.min(modelCapPercent, parsed));
+    const calculatedPts = Math.min(absoluteMaxRedeemable, Math.floor(currentBalance * (clamped / 100)));
+    setCustomRedeemPoints(calculatedPts > 0 ? String(calculatedPts) : '0');
+  };
+
+  const handlePointsInputChange = (rawVal) => {
+    setCustomRedeemPoints(rawVal);
+    if (rawVal === '') {
+      setCustomRedeemPercent('');
+      return;
+    }
+    const parsed = parseInt(rawVal, 10);
+    if (isNaN(parsed)) {
+      setCustomRedeemPercent('');
+      return;
+    }
+    const clamped = Math.max(0, Math.min(absoluteMaxRedeemable, parsed));
+    const calculatedPct = currentBalance > 0 ? Math.min(modelCapPercent, Math.round((clamped / currentBalance) * 100)) : 0;
+    setCustomRedeemPercent(String(calculatedPct));
+  };
 
   // ── Step Handlers ──────────────────────────────────────────────────────────
 
@@ -833,9 +880,9 @@ export const RedemptionModal = ({
                 </div>
               )}
 
-              {/* Partial Redemption Controls (50% Cap, Presets & Custom Input) */}
+              {/* Partial Redemption Controls (50% Cap, Scroll Bar & Direct Number Inputs) */}
               {category !== 'referral' && currentBalance > 0 && (
-                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-300 space-y-3">
+                <div className="p-4 bg-emerald-50/90 rounded-2xl border border-emerald-300 space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-black uppercase text-emerald-950 tracking-wider">
@@ -850,51 +897,67 @@ export const RedemptionModal = ({
                     </span>
                   </div>
 
-                  {/* Preset Buttons */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {[10, 20, 30, 40, 50].map((pct) => {
-                      const isSelected = (customRedeemPoints === '' || customRedeemPoints === null) && customRedeemPercent === pct;
-                      return (
+                  {/* Percentage Scroll Bar / Slider (0% to 50%) */}
+                  <div className="p-3 bg-white/80 rounded-xl border border-emerald-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-1.5">
+                        <span>Percentage Scroll Bar</span>
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-mono text-xs font-black shadow-2xs">
+                          {displayPercent}%
+                        </span>
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        Drag for odd/even % (e.g. 22%, 46%)
+                      </span>
+                    </div>
+
+                    {/* Range Slider Track */}
+                    <div className="py-1">
+                      <input
+                        type="range"
+                        min="0"
+                        max={modelCapPercent}
+                        step="1"
+                        value={displayPercent}
+                        onChange={(e) => handleSliderChange(parseInt(e.target.value, 10))}
+                        className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Clickable Quick Snap Markers along the Slider */}
+                    <div className="flex justify-between text-[10px] font-mono font-bold text-slate-400 px-0.5">
+                      {[0, 10, 20, 25, 30, 40, 50].map((tick) => (
                         <button
-                          key={pct}
+                          key={tick}
                           type="button"
-                          onClick={() => {
-                            setCustomRedeemPercent(pct);
-                            setCustomRedeemPoints('');
-                          }}
-                          className={`px-3 py-1.5 text-xs font-black rounded-lg border transition cursor-pointer ${
-                            isSelected
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                              : 'bg-white hover:bg-emerald-100/70 text-emerald-950 border-emerald-300'
+                          onClick={() => handleSliderChange(tick)}
+                          className={`hover:text-emerald-700 transition cursor-pointer ${
+                            displayPercent === tick ? 'text-emerald-700 font-black underline' : ''
                           }`}
                         >
-                          {pct}% {pct === 50 ? '(Max Cap)' : ''}
+                          {tick}%{tick === 50 ? ' (Max)' : ''}
                         </button>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Custom Inputs */}
-                  <div className="grid grid-cols-2 gap-3 pt-1">
+                  {/* Direct Editable Fields: Percentage & Exact Points */}
+                  <div className="grid grid-cols-2 gap-3 pt-0.5">
                     <div>
                       <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
-                        Custom % (1% - 50%)
+                        Enter % (0% – 50%)
                       </label>
                       <div className="relative">
                         <input
                           type="number"
-                          min="1"
-                          max="50"
-                          value={customRedeemPoints !== '' ? Math.round((activeRedeemPoints / Math.max(1, currentBalance)) * 100) : customRedeemPercent}
-                          onChange={(e) => {
-                            const val = Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 0));
-                            setCustomRedeemPercent(val);
-                            setCustomRedeemPoints('');
-                          }}
-                          className="w-full h-9 px-3 pr-7 bg-white text-xs font-mono font-bold text-slate-900 rounded-lg border border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          placeholder="e.g. 30"
+                          min="0"
+                          max={modelCapPercent}
+                          value={customRedeemPercent}
+                          onChange={(e) => handlePercentInputChange(e.target.value)}
+                          className="w-full h-9 px-3 pr-8 bg-white text-xs font-mono font-bold text-slate-900 rounded-lg border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                          placeholder="e.g. 22 or 46"
                         />
-                        <span className="absolute right-3 top-2 text-xs font-bold text-slate-400 font-mono">%</span>
+                        <span className="absolute right-3 top-2 text-xs font-black text-slate-400 font-mono">%</span>
                       </div>
                     </div>
 
@@ -905,22 +968,14 @@ export const RedemptionModal = ({
                       <div className="relative">
                         <input
                           type="number"
-                          min="1"
+                          min="0"
                           max={maxAllowedPointsByModel}
-                          value={customRedeemPoints !== '' ? customRedeemPoints : activeRedeemPoints || ''}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            if (raw === '') {
-                              setCustomRedeemPoints('');
-                            } else {
-                              const val = Math.max(0, Math.min(maxAllowedPointsByModel, parseInt(raw, 10) || 0));
-                              setCustomRedeemPoints(String(val));
-                            }
-                          }}
-                          className="w-full h-9 px-3 pr-9 bg-white text-xs font-mono font-bold text-slate-900 rounded-lg border border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          value={customRedeemPoints !== '' ? customRedeemPoints : (activeRedeemPoints || '')}
+                          onChange={(e) => handlePointsInputChange(e.target.value)}
+                          className="w-full h-9 px-3 pr-10 bg-white text-xs font-mono font-bold text-slate-900 rounded-lg border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                           placeholder={`Max ${maxAllowedPointsByModel}`}
                         />
-                        <span className="absolute right-2.5 top-2 text-[10px] font-bold text-slate-400 font-mono">PTS</span>
+                        <span className="absolute right-2.5 top-2 text-[10px] font-black text-slate-400 font-mono">PTS</span>
                       </div>
                     </div>
                   </div>

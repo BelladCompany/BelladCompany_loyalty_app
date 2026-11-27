@@ -1,7 +1,7 @@
 # Graph Report - final-loyaly-app-nov  (2026-11-27)
 
 ## Corpus Check
-- 407 files · ~345,938 words
+- 407 files · ~346,370 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: (none) 9, .example 2, .csv 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `07db47e3`
+- Built from commit: `e1e5318e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
