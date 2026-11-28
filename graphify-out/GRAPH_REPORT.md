@@ -1,17 +1,17 @@
-# Graph Report - final-loyaly-app-nov  (2026-11-27)
+# Graph Report - final-loyaly-app-nov  (2026-11-28)
 
 ## Corpus Check
-- 410 files · ~350,157 words
+- 411 files · ~350,507 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: (none) 9, .example 2, .csv 2)
 
 ## Summary
-- 2362 nodes · 4582 edges · 151 communities (104 shown, 47 thin omitted)
+- 2362 nodes · 4583 edges · 150 communities (103 shown, 47 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 80 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8ffc0c26`
+- Built from commit: `abc92ba1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -128,7 +128,6 @@
 - ref_path
 - RealtimeRulePubSub
 - api.test.js
-- search.routes.js
 - PublicOffersScreen.jsx
 - RedemptionController
 - sync-columns.js
@@ -159,7 +158,7 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `ApiService` - 204 edges
-2. `{ Pool }` - 110 edges
+2. `{ Pool }` - 109 edges
 3. `react` - 57 edges
 4. `lucide-react` - 48 edges
 5. `App()` - 34 edges
@@ -195,7 +194,7 @@
 - 5-file cycle: `src/services/appsheetPull.service.js -> src/services/transaction.service.js -> src/services/points.service.js -> src/services/notification.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
 - 5-file cycle: `src/services/appsheetPull.service.js -> src/services/transaction.service.js -> src/services/referral.service.js -> src/services/notification.service.js -> src/services/customer.service.js -> src/services/appsheetPull.service.js`
 
-## Communities (151 total, 47 thin omitted)
+## Communities (150 total, 47 thin omitted)
 
 ### Community 0 - "ApiService"
 Cohesion: 0.05
@@ -254,8 +253,8 @@ Cohesion: 0.05
 Nodes (35): 1.1 Action Colors, 1.2 Surface Colors, 1.3 Text (Ink) Colors, 1.4 Sidebar Colors, 1. Color Palette — Light Theme Only, 2.1 Scale, 2. Typography, 3. Spacing Scale (+27 more)
 
 ### Community 15 - "rateLimiter.js"
-Cohesion: 0.08
-Nodes (27): appsheetIpRequestCounts, giftCardRateLimiter(), giftCardRequestCounts, globalApiRateLimiter(), globalApiRequestCounts, ipRequestCounts, loginIpRequestCounts, otpRequestCounts (+19 more)
+Cohesion: 0.07
+Nodes (31): appsheetIpRequestCounts, giftCardRateLimiter(), giftCardRequestCounts, globalApiRateLimiter(), globalApiRequestCounts, ipRequestCounts, loginIpRequestCounts, otpRequestCounts (+23 more)
 
 ### Community 17 - ".getCustomerById"
 Cohesion: 0.15
@@ -282,7 +281,7 @@ Cohesion: 0.07
 Nodes (27): cert-manager.io/cluster-issuer, kubernetes.io/ingress.class, nginx.ingress.kubernetes.io/proxy-body-size, nginx.ingress.kubernetes.io/proxy-read-timeout, nginx.ingress.kubernetes.io/proxy-send-timeout, nginx.ingress.kubernetes.io/ssl-redirect, nginx.ingress.kubernetes.io/websocket-services, apiVersion (+19 more)
 
 ### Community 23 - "scopeBranchAccess"
-Cohesion: 0.19
+Cohesion: 0.20
 Nodes (7): testPhase6Reports(), ReportController, isAdminOrDirector(), scopeBranchAccess(), express, router, ReportService
 
 ### Community 24 - "app.js"
@@ -577,10 +576,6 @@ Nodes (7): fs, path, fs, path, fs, path, path
 Cohesion: 0.24
 Nodes (8): assert, jwt, http, run(), startServer(), stopServer(), testEndpoint(), app
 
-### Community 112 - "search.routes.js"
-Cohesion: 0.40
-Nodes (4): searchRateLimiter(), express, router, searchSchema
-
 ### Community 113 - "PublicOffersScreen.jsx"
 Cohesion: 0.19
 Nodes (11): ALL_DEALERSHIP_BRANCHES, ALL_DEALERSHIP_BRANDS, BRAND_ICONS, PublicOffersScreen(), BELLAD_CITY_HUBS, calculateHaversineDistanceKm(), getCachedUserCity(), isLocationPromptDismissed() (+3 more)
@@ -620,15 +615,15 @@ Nodes (3): cleanObject(), isDangerousKey(), sanitizeMiddleware()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Automobile Dealership Group Loyalty Program - Backend & POS Counter` connect `Automobile Dealership Loyalty Program — Design System` to `reltigrow.provider.js`?**
-  _High betweenness centrality (0.251) - this node is a cross-community bridge._
+  _High betweenness centrality (0.253) - this node is a cross-community bridge._
 - **Should `ApiService` be split into smaller, more focused modules?**
   _Cohesion score 0.05185185185185185 - nodes in this community are weakly interconnected._
 - **Why does `🛠️ Tech Stack & Key Rules` connect `reltigrow.provider.js` to `Automobile Dealership Loyalty Program — Design System`?**
-  _High betweenness centrality (0.250) - this node is a cross-community bridge._
+  _High betweenness centrality (0.252) - this node is a cross-community bridge._
 - **Should `db.js` be split into smaller, more focused modules?**
   _Cohesion score 0.03735632183908046 - nodes in this community are weakly interconnected._
 - **Why does `Automobile Dealership Loyalty Program — Design System` connect `Automobile Dealership Loyalty Program — Design System` to `ui/index.js`?**
-  _High betweenness centrality (0.244) - this node is a cross-community bridge._
+  _High betweenness centrality (0.246) - this node is a cross-community bridge._
 - **Should `react` be split into smaller, more focused modules?**
   _Cohesion score 0.12311265969802555 - nodes in this community are weakly interconnected._
 - **Should `invoiceV2.controller.js` be split into smaller, more focused modules?**

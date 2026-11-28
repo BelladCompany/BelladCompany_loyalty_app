@@ -1128,9 +1128,9 @@
     "semantic_hash": ""
   },
   "src/controllers/auth.controller.js": {
-    "mtime": 1795608413.7640564,
-    "seen": 1795608584.5967946,
-    "ast_hash": "8a5047a4c4b092bfa260fecd512a4453",
+    "mtime": 1795845391.2410052,
+    "seen": 1795845491.0500147,
+    "ast_hash": "27768c7eb56fb83259401f725fb71def",
     "semantic_hash": ""
   },
   "src/controllers/branch.controller.js": {
@@ -1242,9 +1242,9 @@
     "semantic_hash": ""
   },
   "src/controllers/report.controller.js": {
-    "mtime": 1795004820.7567286,
-    "seen": 1795419439.7517612,
-    "ast_hash": "f8e0c4d28104f15caabd2b9b43718a35",
+    "mtime": 1795845369.6025155,
+    "seen": 1795845491.0543773,
+    "ast_hash": "0f06ee1c7415abd81a69b68c99f3d1d2",
     "semantic_hash": ""
   },
   "src/controllers/search.controller.js": {
@@ -1344,9 +1344,9 @@
     "semantic_hash": ""
   },
   "src/middleware/roles.js": {
-    "mtime": 1795156188.4056098,
-    "seen": 1795419439.7517612,
-    "ast_hash": "b358b0ea9b565e8acfe441f684f24aef",
+    "mtime": 1795845355.576691,
+    "seen": 1795845491.058535,
+    "ast_hash": "c378e3d69c27154b8159a8cae74198d2",
     "semantic_hash": ""
   },
   "src/middleware/upload.js": {
@@ -1704,9 +1704,9 @@
     "semantic_hash": ""
   },
   "src/services/report.service.js": {
-    "mtime": 1792833454.9093266,
-    "seen": 1795419439.7517612,
-    "ast_hash": "35166fb04d4e8575db252ca4f530df53",
+    "mtime": 1795845379.455951,
+    "seen": 1795845491.0724835,
+    "ast_hash": "26f264618e30c4578b383fafb2c6d6c9",
     "semantic_hash": ""
   },
   "src/services/ruleEngine.service.js": {

@@ -148,10 +148,12 @@ class ReportController {
   static async getReferrals(req, res, next) {
     try {
       const tenantId = req.tenantId || 'bellad_and_company';
+      const { branchId } = scopeBranchAccess(req);
       const { start_date, end_date } = req.query;
 
       const data = await ReportService.getReferralConversionReport({
         tenantId,
+        branchId,
         startDate: start_date,
         endDate: end_date,
       });

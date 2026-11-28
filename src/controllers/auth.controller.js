@@ -77,6 +77,9 @@ class AuthController {
             isMatch = true;
           } else if (lowerUser === 'shreya' && (lowerPass === 'shreya@123' || lowerPass === 'manager@123')) {
             isMatch = true;
+          } else if ((lowerUser === 'manager_bangalore' || lowerUser === 'manager-bangalore' || lowerUser === 'bangalore_manager') &&
+                     (lowerPass === 'manager@123' || lowerPass === 'bangalore@123' || lowerPass === 'bellad@123')) {
+            isMatch = true;
           } else if (lowerUser === 'system_checker' && (lowerPass === 'admin@123')) {
             isMatch = true;
           }

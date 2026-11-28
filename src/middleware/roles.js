@@ -70,7 +70,8 @@ const scopeBranchAccess = (req) => {
   const isElevated = isAdminOrDirector(user);
 
   if (!isElevated) {
-    const userBranchId = user && user.branch_id ? parseInt(user.branch_id, 10) : null;
+    // If a non-elevated user (manager/cashier) has no branch_id, lock to -1 to prevent leaking network-wide records
+    const userBranchId = user && user.branch_id ? parseInt(user.branch_id, 10) : -1;
     return {
       branchId: userBranchId,
       isRestrictedToBranch: true,

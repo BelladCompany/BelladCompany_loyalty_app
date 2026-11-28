@@ -311,6 +311,7 @@ class ReportService {
    */
   static async getReferralConversionReport({
     tenantId = 'bellad_and_company',
+    branchId = null,
     startDate = null,
     endDate = null,
   }) {
@@ -318,6 +319,11 @@ class ReportService {
     let queryParams = [tenantId];
     let paramIdx = 2;
 
+    if (branchId) {
+      whereClauses.push(`(u.branch_id = $${paramIdx} OR v.branch_id = $${paramIdx})`);
+      paramIdx++;
+      queryParams.push(branchId);
+    }
     if (startDate) {
       whereClauses.push(`r.created_at >= $${paramIdx++}`);
       queryParams.push(new Date(startDate));
@@ -332,11 +338,13 @@ class ReportService {
     const sql = `
       SELECT 
         r.status,
-        COUNT(r.referral_id) AS total_count,
+        COUNT(DISTINCT r.referral_id) AS total_count,
         COALESCE(SUM(COALESCE(r.suggested_points, 0)), 0) AS total_suggested_points,
         COALESCE(SUM(COALESCE(r.points_credited, 0)), 0) AS total_credited_points,
         COALESCE(SUM(CASE WHEN r.suggested_points IS NOT NULL AND r.suggested_points != r.points_credited THEN 1 ELSE 0 END), 0) AS override_count
       FROM referrals r
+      LEFT JOIN users u ON r.approved_by = u.user_id
+      LEFT JOIN vehicles v ON (r.referrer_customer_id = v.customer_id)
       WHERE ${whereSql}
       GROUP BY r.status;
     `;
