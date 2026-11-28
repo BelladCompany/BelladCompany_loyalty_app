@@ -118,6 +118,12 @@ export function App() {
   const [isBuilderMode, setIsBuilderMode] = useState(isBuilderPath);
 
   useEffect(() => {
+    if (user?.role === 'cashier' && activeTab === 'invoice_upload') {
+      setActiveTab('dashboard');
+    }
+  }, [user?.role, activeTab]);
+
+  useEffect(() => {
     if (isPublicBalancePass || isPublicReferralLead || isPublicGiftClaim || isPublicOffers || isCustomerPortal) return;
 
     // Validate stored token on mount
@@ -434,7 +440,15 @@ export function App() {
         ) : activeTab === 'master_editor' ? (
           <MasterRuleEditorScreen user={user} />
         ) : activeTab === 'invoice_upload' ? (
-          <AdvisorInvoiceUploadScreen user={user} />
+          user?.role === 'cashier' ? (
+            <CashierDashboard
+              user={user}
+              activeTab="dashboard"
+              resetNonce={searchResetNonce}
+            />
+          ) : (
+            <AdvisorInvoiceUploadScreen user={user} />
+          )
         ) : activeTab === 'reports' ? (
           <ReportsScreen user={user} />
         ) : activeTab === 'kyc_approvals' ? (

@@ -60,9 +60,9 @@
     "semantic_hash": ""
   },
   "client/src/App.jsx": {
-    "mtime": 1795505099.4021947,
-    "seen": 1795505310.4679732,
-    "ast_hash": "ee96dbbccb3192f7b527fe1df87b9098",
+    "mtime": 1795859207.8895776,
+    "seen": 1795859256.927896,
+    "ast_hash": "6017cfd9f63bdd34f08b01deb4c4da57",
     "semantic_hash": ""
   },
   "client/src/components/admin/CorrectionsQueue.jsx": {
@@ -150,9 +150,9 @@
     "semantic_hash": ""
   },
   "client/src/components/layout/SidebarLayout.jsx": {
-    "mtime": 1795505073.465278,
-    "seen": 1795505310.4713583,
-    "ast_hash": "fa33726eec3c2bd733864baf309c2266",
+    "mtime": 1795859177.4100454,
+    "seen": 1795859256.9315536,
+    "ast_hash": "d935d195f37f37d2b7dc6fc8ea459516",
     "semantic_hash": ""
   },
   "client/src/components/portal/EnrollmentScreen.jsx": {

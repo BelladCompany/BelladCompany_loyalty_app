@@ -157,7 +157,6 @@ export const SidebarLayout = ({
             group: 'Counter POS',
             items: [
               { id: 'dashboard', label: 'Customer Search & 360', icon: LayoutDashboard },
-              { id: 'invoice_upload', label: 'Advisor Invoices Queue', icon: UploadCloud },
             ],
           },
         ]

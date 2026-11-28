@@ -1,17 +1,17 @@
 # Graph Report - final-loyaly-app-nov  (2026-11-28)
 
 ## Corpus Check
-- 411 files · ~349,302 words
+- 411 files · ~349,323 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: (none) 9, .example 2, .csv 2)
 
 ## Summary
-- 2362 nodes · 4580 edges · 150 communities (103 shown, 47 thin omitted)
+- 2362 nodes · 4576 edges · 150 communities (103 shown, 47 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 80 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a50631dc`
+- Built from commit: `27a7a0a0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -157,7 +157,7 @@
 - PublicReferralLeadScreen
 
 ## God Nodes (most connected - your core abstractions)
-1. `ApiService` - 203 edges
+1. `ApiService` - 201 edges
 2. `{ Pool }` - 109 edges
 3. `react` - 57 edges
 4. `lucide-react` - 48 edges
@@ -166,9 +166,11 @@
 7. `MasterEditorController` - 30 edges
 8. `authenticateToken()` - 29 edges
 9. `NotificationService` - 28 edges
-10. `StandaloneMasterEditorPortal()` - 27 edges
+10. `ReferralService` - 27 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `7.1 `SidebarLayout`` --references--> `SidebarLayout()`  [INFERRED]
+  DESIGN_SYSTEM.md → client/src/components/layout/SidebarLayout.jsx
 - `9.1 Customer Merge Mechanics (`merge.service.js:203`)` --references--> `MergeService`  [INFERRED]
   AUDIT.md → src/services/merge.service.js
 - `5. Existing Data Reconciliation Audit (A3 Findings)` --references--> `VehicleSalesPointsService`  [INFERRED]
@@ -177,8 +179,6 @@
   RUNBOOK.md → src/cron/gift_expiry_cron.js
 - `7.3 `Input`` --references--> `Input()`  [INFERRED]
   DESIGN_SYSTEM.md → client/src/components/ui/Input.jsx
-- `7.1 `SidebarLayout`` --references--> `SidebarLayout()`  [INFERRED]
-  DESIGN_SYSTEM.md → client/src/components/layout/SidebarLayout.jsx
 
 ## Import Cycles
 - 2-file cycle: `src/services/customer.service.js -> src/services/notification.service.js -> src/services/customer.service.js`
@@ -615,15 +615,15 @@ Nodes (3): cleanObject(), isDangerousKey(), sanitizeMiddleware()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Automobile Dealership Group Loyalty Program - Backend & POS Counter` connect `Automobile Dealership Loyalty Program — Design System` to `reltigrow.provider.js`?**
-  _High betweenness centrality (0.244) - this node is a cross-community bridge._
+  _High betweenness centrality (0.248) - this node is a cross-community bridge._
 - **Should `ApiService` be split into smaller, more focused modules?**
   _Cohesion score 0.05185185185185185 - nodes in this community are weakly interconnected._
 - **Why does `🛠️ Tech Stack & Key Rules` connect `reltigrow.provider.js` to `Automobile Dealership Loyalty Program — Design System`?**
-  _High betweenness centrality (0.243) - this node is a cross-community bridge._
+  _High betweenness centrality (0.245) - this node is a cross-community bridge._
 - **Should `db.js` be split into smaller, more focused modules?**
   _Cohesion score 0.03735632183908046 - nodes in this community are weakly interconnected._
 - **Why does `Automobile Dealership Loyalty Program — Design System` connect `Automobile Dealership Loyalty Program — Design System` to `ui/index.js`?**
-  _High betweenness centrality (0.236) - this node is a cross-community bridge._
+  _High betweenness centrality (0.238) - this node is a cross-community bridge._
 - **Should `react` be split into smaller, more focused modules?**
   _Cohesion score 0.12311265969802555 - nodes in this community are weakly interconnected._
 - **Should `invoiceV2.controller.js` be split into smaller, more focused modules?**
