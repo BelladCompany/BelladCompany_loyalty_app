@@ -378,9 +378,9 @@
     "semantic_hash": ""
   },
   "client/src/screens/StandaloneMasterEditorPortal.jsx": {
-    "mtime": 1795416240.2368152,
-    "seen": 1795419439.7517612,
-    "ast_hash": "e66a064c0b4bc936208dd471a5306e6d",
+    "mtime": 1795847781.636227,
+    "seen": 1795847824.2336025,
+    "ast_hash": "d822a144f96bf1b495aefac9ddd9d064",
     "semantic_hash": ""
   },
   "client/src/screens/TenantManagementScreen.jsx": {

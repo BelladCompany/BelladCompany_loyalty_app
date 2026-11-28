@@ -97,74 +97,18 @@ const DEALERSHIPS = [
 ];
 
 /**
- * Navigation Groups for Sane 2-Column Left Sidebar
- * 1. Scheme Types & Campaigns (TOP)
- * 2. Spend Categories
- * 3. Vehicle & Equipment Types
- * 4. Customer Priority Slabs
- * 5. Dealership & Policy (5th Position)
- * 6. Formulas & Governance
+ * Streamlined Navigation Groups:
+ * 1. Campaign Add-on Engine (TOP)
+ * 2. Formulas & Governance
+ * All messy single-rule set clutter removed for clean, focused layout.
  */
 const NAV_GROUPS = [
   {
-    id: 'schemes_group',
-    title: 'Scheme Types & Campaigns',
-    icon: Sparkles,
+    id: 'campaigns_group',
+    title: 'Campaign Add-on Engine',
+    icon: Zap,
     items: [
       { id: 'campaign_addons', label: 'Campaign Add-ons (v2)', icon: Zap, badge: 'v2' },
-      { id: 'all_schemes', label: 'All Policy Rules', icon: Sparkles, countKey: 'all_schemes' },
-      { id: 'scheme_standard', label: 'Standard Loyalty Schemes', icon: Award, countKey: 'standard' },
-      { id: 'scheme_festive', label: 'Festive Offers', icon: Calendar, countKey: 'festive' },
-      { id: 'scheme_exchange', label: 'In-House Exchange', icon: RotateCcw, countKey: 'exchange' },
-      { id: 'scheme_insurance', label: 'In-House Insurance', icon: ShieldCheck, countKey: 'insurance' },
-      { id: 'scheme_finance', label: 'In-House Finance', icon: Coins, countKey: 'finance' },
-      { id: 'scheme_google', label: 'Google 5★ Reviews', icon: Star, countKey: 'google' },
-      { id: 'scheme_gift_cards', label: 'Gift Card Rewards', icon: Gift, countKey: 'gift_cards' },
-      { id: 'scheme_xyz', label: 'Director Dynamic (xyz)', icon: Star, badge: 'Custom', countKey: 'xyz' },
-    ],
-  },
-  {
-    id: 'spends_group',
-    title: 'Spend Categories',
-    icon: Wrench,
-    items: [
-      { id: 'spend_sale', label: 'Vehicle & Equip. Sales (Ex-Showroom)', icon: Car, countKey: 'sale' },
-      { id: 'spend_service', label: 'Workshop Routine Service', icon: Wrench, countKey: 'service' },
-      { id: 'spend_bodyshop', label: 'Bodyshop & Accidental', icon: Layers, countKey: 'bodyshop' },
-      { id: 'spend_accessories', label: 'Genuine Accessories', icon: ShoppingBag, countKey: 'accessories' },
-      { id: 'spend_spares', label: 'Spare Parts & Consumables', icon: Tag, countKey: 'spares' },
-      { id: 'spend_gift_cards', label: 'Gift Cards', icon: Gift, countKey: 'gift_cards' },
-    ],
-  },
-  {
-    id: 'vehicles_group',
-    title: 'Vehicle & Equipment Types',
-    icon: Truck,
-    items: [
-      { id: 'models_commercial', label: 'Commercial Vehicles (Trucks / Buses)', icon: Truck, badge: 'Commercial', countKey: 'commercial' },
-      { id: 'models_agri', label: 'Machinery & Agriculture Equip.', icon: Tractor, badge: 'Agri', countKey: 'agri' },
-      { id: 'models_4w', label: '4-Wheeler Passenger (4W)', icon: Car, badge: '4W', countKey: '4w' },
-      { id: 'models_2w', label: '2-Wheeler (2W)', icon: Bike, badge: '2W', countKey: '2w' },
-      { id: 'models_ev', label: 'Electric Vehicles (EV)', icon: Zap, badge: 'EV', countKey: 'ev' },
-      { id: 'models_all', label: 'All Vehicle Models', icon: Layers, countKey: 'all_models' },
-      { id: 'model_redemption_caps', label: 'Model Redemption % Caps & Calculator', icon: SlidersHorizontal, badge: 'Dynamic Cap %', isSpecial: true },
-    ],
-  },
-  {
-    id: 'priority_group',
-    title: 'Customer Priority Slabs',
-    icon: Crown,
-    items: [
-      { id: 'tier_slabs', label: 'Silver / Gold / VIP Slabs', icon: Crown, countKey: 'tiers' },
-    ],
-  },
-  {
-    id: 'dealer_group',
-    title: 'Dealership & Policy',
-    icon: Building2,
-    items: [
-      { id: 'dealer_overview', label: 'Dealership Dashboard', icon: Building2 },
-      { id: 'firms_management', label: 'All Dealership Firms', icon: Store },
     ],
   },
   {
@@ -172,8 +116,8 @@ const NAV_GROUPS = [
     title: 'Formulas & Governance',
     icon: Calculator,
     items: [
-      { id: 'model_redemption_caps', label: 'Model Redemption % Caps & Calculator', icon: SlidersHorizontal, badge: 'Active', isSpecial: true },
       { id: 'points_formulas', label: 'Points Gain Formula Studio', icon: Calculator },
+      { id: 'model_redemption_caps', label: 'Model Redemption % Caps & Calculator', icon: SlidersHorizontal, badge: 'Active', isSpecial: true },
       { id: 'director_audit', label: 'Approvals & Audit Register', icon: FileText, countKey: 'audit' },
       { id: 'simulator_test', label: 'Live Policy Simulator', icon: Play, isSpecial: true },
       { id: 'user_access_matrix', label: 'Operator Role Control', icon: UserCheck, countKey: 'users' },
@@ -310,7 +254,7 @@ const DUMMY_CUSTOMERS = [
 export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user }) {
   // Dealership / Tenant Context Selector
   const [selectedTenant, setSelectedTenant] = useState('bellad_and_company');
-  const [activeCategory, setActiveCategory] = useState('all_schemes');
+  const [activeCategory, setActiveCategory] = useState('campaign_addons');
 
   // Rules & Dashboard Data
   const [rules, setRules] = useState([]);
@@ -319,14 +263,10 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
-  // Accordion state for Left Sidebar (clean 2-column)
+  // Accordion state for Left Sidebar (streamlined 2-group layout)
   const [openDropdowns, setOpenDropdowns] = useState({
-    schemes_group: true,
-    spends_group: false,
-    vehicles_group: false,
-    priority_group: false,
-    dealer_group: false,
-    formulas_group: false,
+    campaigns_group: true,
+    formulas_group: true,
   });
 
   const toggleDropdown = (groupId) => {
@@ -1059,7 +999,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                 Live Engine
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium">Dealership Loyalty Rules, Earning Formulas &amp; Discount Studio</p>
+            <p className="text-[11px] text-slate-500 font-medium">Campaign Add-on Engine, Earning Formulas &amp; Policy Governance</p>
           </div>
         </div>
 
@@ -1080,16 +1020,6 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
               ))}
             </select>
           </div>
-
-          {/* Create Rule Set Button */}
-          <button
-            type="button"
-            onClick={() => openCreateModal(activeCategory)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black shadow-xs transition active:scale-[0.98]"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[3]" />
-            <span>+ Create Policy Rule</span>
-          </button>
 
           <div className="h-5 w-px bg-slate-200 mx-1" />
 
@@ -1306,36 +1236,7 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
                 <span className="text-[11px] font-black px-2.5 py-1 rounded-xl bg-white text-indigo-900 border border-indigo-200">
                   Flat Discount Mode
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory('dealer_overview')}
-                  className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 underline"
-                >
-                  Configure Matrix
-                </button>
               </div>
-            </div>
-          )}
-
-          {/* Module Inactive Warning if current category is disabled for active dealer */}
-          {((activeCategory === 'spend_bodyshop' && currentDealerPolicy.modules_config?.bodyshop === false) ||
-            (activeCategory === 'spend_accessories' && currentDealerPolicy.modules_config?.accessories === false) ||
-            (activeCategory === 'spend_spares' && currentDealerPolicy.modules_config?.spares === false) ||
-            (activeCategory === 'spend_gift_cards' && currentDealerPolicy.modules_config?.gift_cards === false)) && (
-            <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                <span>
-                  <strong>Notice:</strong> This spend category is currently <strong>disabled</strong> in <strong>{activeDealer.name}</strong> policy settings. Rules configured here will be inactive for this dealership until enabled.
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveCategory('dealer_overview')}
-                className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-amber-700 text-white"
-              >
-                Enable in Policy Matrix
-              </button>
             </div>
           )}
 
@@ -2333,207 +2234,10 @@ export default function StandaloneMasterEditorPortal({ onExitToCounterApp, user 
             </div>
           )}
 
-          {/* ── VIEW: PROMOTIONAL CAMPAIGN ADD-ONS (V2) ── */}
-          {activeCategory === 'campaign_addons' && (
+          {/* ── VIEW: PROMOTIONAL CAMPAIGN ADD-ONS (V2) (Default & Primary View) ── */}
+          {(activeCategory === 'campaign_addons' ||
+            (!['model_redemption_caps', 'points_formulas', 'director_audit', 'user_access_matrix', 'simulator_test', 'dealer_overview', 'tier_slabs'].includes(activeCategory))) && (
             <CampaignScreen user={user} />
-          )}
-
-          {/* ── VIEW 6: RULES LIST & TABLE (Standard Filterable Work Canvas) ── */}
-          {activeCategory !== 'dealer_overview' &&
-           activeCategory !== 'tier_slabs' &&
-           activeCategory !== 'points_formulas' &&
-           activeCategory !== 'model_redemption_caps' &&
-           activeCategory !== 'director_audit' &&
-           activeCategory !== 'user_access_matrix' &&
-           activeCategory !== 'simulator_test' &&
-           activeCategory !== 'campaign_addons' && (
-            <div className="space-y-4">
-              {/* Header Title & Sane Filter Bar */}
-              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <h1 className="text-2xl font-black text-slate-900">
-                      {NAV_GROUPS.flatMap((g) => g.items).find((i) => i.id === activeCategory)?.label || 'Policy Rules'}
-                    </h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Showing active loyalty policies for <strong>{activeDealer.name}</strong>.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openCreateModal(activeCategory)}
-                      className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black shadow-xs transition"
-                    >
-                      + Create Rule in this Category
-                    </button>
-                  </div>
-                </div>
-
-                {/* Sane Filter Row */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-100">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3.5" />
-                    <input
-                      type="text"
-                      placeholder="Search rules, codes, models..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <select
-                      value={spendCategoryFilter}
-                      onChange={(e) => setSpendCategoryFilter(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700"
-                    >
-                      <option value="ALL">All Spend Categories</option>
-                      <option value="sale">Vehicle Sales (Ex-Showroom)</option>
-                      <option value="service">Routine Service</option>
-                      <option value="bodyshop">Bodyshop</option>
-                      <option value="accessories">Accessories</option>
-                      <option value="spares">Spare Parts</option>
-                      <option value="gift_cards">Gift Cards</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <select
-                      value={vehicleTypeFilter}
-                      onChange={(e) => setVehicleTypeFilter(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700"
-                    >
-                      <option value="ALL">All Vehicle Types</option>
-                      <option value="Commercial">Commercial Vehicles</option>
-                      <option value="Machinery & Agriculture">Machinery &amp; Agriculture</option>
-                      <option value="4W">4-Wheeler (4W)</option>
-                      <option value="2W">2-Wheeler (2W)</option>
-                      <option value="EV">Electric (EV)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <select
-                      value={approvalStatusFilter}
-                      onChange={(e) => setApprovalStatusFilter(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700"
-                    >
-                      <option value="ALL">All Statuses</option>
-                      <option value="approved">Approved &amp; Live</option>
-                      <option value="pending_approval">Pending Approval</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Rules Table */}
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-black uppercase text-[10px]">
-                      <tr>
-                        <th className="px-6 py-4">Policy Code &amp; Name</th>
-                        <th className="px-6 py-4">Category &amp; Vehicle Type</th>
-                        <th className="px-6 py-4">Spend Range (Ex-Showroom)</th>
-                        <th className="px-6 py-4">Discount &amp; Multiplier</th>
-                        <th className="px-6 py-4">Engine State</th>
-                        <th className="px-6 py-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                      {filteredRules.length === 0 ? (
-                        <tr>
-                          <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-bold">
-                            No rules found matching this filter. Click "+ Create Policy Rule" to add one.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredRules.map((r) => {
-                          const isApproved = r.approval_status === 'approved';
-                          const minRs = r.min_spend_paise ? Math.round(Number(r.min_spend_paise) / 100) : 0;
-                          const maxRs = r.max_spend_paise ? Math.round(Number(r.max_spend_paise) / 100) : null;
-
-                          return (
-                            <tr key={r.rule_id || r.id} className="hover:bg-slate-50/80 transition">
-                              <td className="px-6 py-4">
-                                <span className="font-mono text-xs font-black text-indigo-700 block">{r.rule_code}</span>
-                                <span className="font-bold text-slate-900 block text-xs mt-0.5">{r.rule_name}</span>
-                                <span className="text-[11px] text-slate-400 font-medium block truncate max-w-xs">{r.description}</span>
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase bg-slate-100 text-slate-700">
-                                  {r.spend_type}
-                                </span>
-                                <span className="text-[11px] text-slate-500 block capitalize mt-0.5 font-semibold">
-                                  {r.vehicle_type}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 font-mono font-bold text-slate-800">
-                                {minRs === 0 && !maxRs
-                                  ? 'Any Amount'
-                                  : maxRs
-                                  ? `₹${minRs.toLocaleString()} - ₹${maxRs.toLocaleString()}`
-                                  : `₹${minRs.toLocaleString()}+`}
-                                <span className="text-[10px] text-slate-400 block font-sans font-medium">
-                                  {r.spend_type === 'sale' ? 'Ex-Showroom base' : 'Invoice base'}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 font-bold">
-                                {r.discount_value > 0 ? (
-                                  <span className="text-indigo-700 text-xs">
-                                    {r.discount_type === 'percentage' ? `${r.discount_value}% Off` : `₹${r.discount_value} Flat`}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400 text-xs">—</span>
-                                )}
-                                <span className="text-emerald-700 text-[11px] block mt-0.5 font-extrabold">
-                                  {r.points_multiplier_numerator || 1}× Multiplier
-                                </span>
-                              </td>
-                              <td className="px-6 py-4">
-                                {isApproved ? (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-black text-[11px]">
-                                    <Check className="w-3 h-3 text-emerald-600" /> Live
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-black text-[11px]">
-                                    <Clock className="w-3 h-3 text-amber-600" /> Pending
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => openEditModal(r)}
-                                    className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition"
-                                    title="Edit Policy"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDelete(r.rule_id || r.id)}
-                                    className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition"
-                                    title="Delete Policy"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
           )}
         </main>
       </div>
